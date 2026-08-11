@@ -4,10 +4,12 @@
  *   coba API text-embedding-3-small (1536 dim).
  * - Jika gagal / tidak ada key: pakai model lokal
  *   @xenova/transformers multilingual-e5-small (384 dim).
+ * - Di serverless environment (Vercel), local model disabled.
  */
 import { getAiApiConfig, isOpenAICompatible } from "@/lib/ai";
 
 const LOCAL_MODEL = "Xenova/multilingual-e5-small";
+const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
 
 interface EmbedResult {
   data: Float32Array;
@@ -19,6 +21,10 @@ type LocalExtractor = (texts: string[], opts: object) => Promise<EmbedResult>;
 let extractorPromise: Promise<LocalExtractor> | null = null;
 
 function getLocalExtractor(): Promise<LocalExtractor> {
+  if (isServerless) {
+    throw new Error("Local embedding model not available in serverless environment");
+  }
+  
   if (!extractorPromise) {
     extractorPromise = (async () => {
       const { pipeline, env } = await import("@xenova/transformers");
@@ -53,11 +59,20 @@ export async function embedTexts(
         .sort((a, b) => a.index - b.index)
         .map((d) => d.embedding);
     } catch (e) {
-      console.warn(
-        "[embed] API embedding gagal, fallback ke model lokal:",
-        e
-      );
+      console.error("[embed] API embedding failed:", e);
+      
+      // In serverless, we can't fallback to local model
+      if (isServerless) {
+        throw new Error("Embedding API failed and local model not available in serverless environment");
+      }
+      
+      console.warn("[embed] Falling back to local model");
     }
+  }
+
+  // Only try local model if not in serverless environment
+  if (isServerless) {
+    throw new Error("No AI API key configured and local model not available in serverless environment");
   }
 
   const extractor = await getLocalExtractor();
