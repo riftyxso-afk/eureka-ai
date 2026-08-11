@@ -82,6 +82,7 @@ export async function POST(
       title,
       summary: String(body?.summary ?? "").slice(0, 1000),
       changedBy: String(body?.changedBy ?? "Pengguna").slice(0, 60),
+      createdAt: new Date().toISOString(),
     });
     return NextResponse.json({ version });
   } catch (e) {

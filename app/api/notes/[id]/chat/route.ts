@@ -78,9 +78,11 @@ export async function POST(
       id,
       String(body?.senderName ?? "Pengguna").slice(0, 60),
       content,
-      body?.parentId || undefined,
-      false,
-      extractMentions(content)
+      {
+        parentId: body?.parentId || undefined,
+        isAI: false,
+        mentions: extractMentions(content),
+      }
     );
     return NextResponse.json({ message });
   } catch (e) {

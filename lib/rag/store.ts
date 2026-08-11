@@ -13,6 +13,8 @@ interface StoredChunk {
   embedding: number[];
 }
 
+export type { StoredChunk };
+
 interface SupabaseNote extends Omit<Note, 'chunks'> {
   chunks?: any[];
 }
