@@ -2,8 +2,7 @@
  * Supabase Integration for Notes & Chunks (RAG)
  */
 
-import { supabase, type Database } from './client';
-import type { Chunk } from '../types';
+import { supabase } from './client';
 
 export async function getNoteWithChunks(noteId: string) {
   const { data: note, error: noteError } = await supabase

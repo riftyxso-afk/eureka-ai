@@ -49,8 +49,8 @@ interface NoteSearchResult {
  * Save a note with its chunks to Supabase
  */
 export async function saveNoteWithChunks(
-  note: Note & { user_id: string },
-  chunks: string[],
+  note: Note & { user_id?: string },
+  chunks: StoredChunk[],
   chapterId: number = 0
 ): Promise<Note> {
   try {
@@ -61,8 +61,8 @@ export async function saveNoteWithChunks(
         id: note.id,
         title: note.title,
         summary: note.summary,
-        subject: note.subject,
-        user_id: note.user_id,
+        subject: note.subject ?? null,
+        user_id: note.user_id ?? 'anonymous',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -71,19 +71,21 @@ export async function saveNoteWithChunks(
 
     if (noteError) throw noteError;
 
-    // Then, insert all chunks with embedding null (will be updated later by background job)
-    const chunkRecords = chunks.map((text, index) => ({
+    // Then, insert all chunks with embeddings
+    const chunkRecords = chunks.map((chunk) => ({
       note_id: note.id,
       chapter_id: chapterId,
-      text: text.trim(),
-      embedding: null,
+      text: chunk.text.trim(),
+      embedding: chunk.embedding ?? null,
     }));
 
-    const { error: chunksError } = await supabase
-      .from('chunks')
-      .insert(chunkRecords);
+    if (chunkRecords.length > 0) {
+      const { error: chunksError } = await supabase
+        .from('chunks')
+        .insert(chunkRecords);
 
-    if (chunksError) throw chunksError;
+      if (chunksError) throw chunksError;
+    }
 
     return savedNote as Note;
   } catch (error) {
