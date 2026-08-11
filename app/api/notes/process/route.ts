@@ -72,6 +72,15 @@ export async function POST(req: NextRequest) {
     let fileName: string | undefined;
     if (file && typeof file !== "string" && "arrayBuffer" in file) {
       const upload = file as File;
+      if (upload.size > 4 * 1024 * 1024) {
+        return NextResponse.json(
+          {
+            error:
+              "File terlalu besar (maksimal 4 MB). Unggah versi ringkas atau gunakan link YouTube/Web.",
+          },
+          { status: 413 }
+        );
+      }
       const buffer = Buffer.from(await upload.arrayBuffer());
       if (!buffer.length) {
         return NextResponse.json(

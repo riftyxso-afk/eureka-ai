@@ -13,6 +13,7 @@ import {
   NotebookPen,
 } from "lucide-react";
 import { NoteFlow } from "@/components/note/NoteFlow";
+import { ChapterAIChat } from "@/components/note/ChapterAIChat";
 
 interface Chapter {
   id: number;
@@ -108,7 +109,13 @@ export default function ChapterNotepadPage() {
   const [userNote, setUserNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [toast, setToast] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const notify = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -279,6 +286,23 @@ export default function ChapterNotepadPage() {
           className="input-clay min-h-[180px] w-full resize-y !rounded-2xl !text-base !font-medium !leading-relaxed"
         />
       </div>
+
+      {/* Tanya AI tentang bab ini */}
+      <ChapterAIChat
+        noteId={note.id}
+        chapterId={String(chapter.id)}
+        userNote={userNote}
+        notify={notify}
+      />
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2">
+          <div className="card-clay whitespace-normal px-5 py-3 text-sm font-extrabold text-clay-dark shadow-clay">
+            {toast}
+          </div>
+        </div>
+      )}
 
       {/* Navigasi bab */}
       <div className="mt-6 flex items-center justify-between gap-3 border-t-2 border-clay-shadow/20 pt-5">

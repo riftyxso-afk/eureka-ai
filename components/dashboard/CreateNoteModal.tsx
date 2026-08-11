@@ -117,6 +117,14 @@ const PROCESS_STEPS_WEB = [
   "📦 Menyimpan ke knowledge base...",
 ];
 
+// Batas unggah: platform serverless membatasi body request (~4.5MB).
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
 interface CreateNoteModalProps {
   open: boolean;
   onClose: () => void;
@@ -275,19 +283,20 @@ export const CreateNoteModal = ({
    */
   const completeFromJob = async (jobId: string) => {
     if (doneHandledRef.current) return;
-    doneHandledRef.current = true;
     try {
       const jres = await fetch(`/api/notes/jobs/${encodeURIComponent(jobId)}`);
       const jdata = await jres.json();
       const job = jdata?.job;
       if (!job) return;
       if (job.status === "error") {
+        doneHandledRef.current = true;
         removeActiveJobId(jobId);
         setError(job.error || "Gagal memproses materi. Coba lagi.");
         setProcessing(false);
         return;
       }
-      if (job.status !== "done" || !job.noteId) return; // biarkan watcher yang menuntaskan
+      if (job.status !== "done" || !job.noteId) return; // belum selesai — tunggu panggilan berikutnya
+      doneHandledRef.current = true;
       const nres = await fetch(`/api/notes/${job.noteId}`);
       const ndata = await nres.json();
       if (nres.ok && ndata.note) {
@@ -367,6 +376,9 @@ export const CreateNoteModal = ({
         setProgressMessage(
           "Materi sedang dirangkum di latar belakang — kamu boleh lanjut menjelajah"
         );
+        // Race: SSE bisa melaporkan 100% sebelum jobId diterima di atas.
+        // Cek status job sekali langsung setelah dapat jobId.
+        void completeFromJob(jobId);
         // Minta izin notifikasi browser (sekali) agar selesai tetap terasa.
         if (
           typeof Notification !== "undefined" &&
@@ -731,7 +743,16 @@ export const CreateNoteModal = ({
                             accept={current.accept}
                             className="hidden"
                             onChange={(e) => {
-                              setFile(e.target.files?.[0] ?? null);
+                              const picked = e.target.files?.[0] ?? null;
+                              if (picked && picked.size > MAX_UPLOAD_BYTES) {
+                                setFile(null);
+                                setError(
+                                  `File terlalu besar (${formatBytes(picked.size)}). Maksimal ${formatBytes(MAX_UPLOAD_BYTES)} — unggah versi ringkas atau gunakan link YouTube/Web.`
+                                );
+                                e.target.value = "";
+                                return;
+                              }
+                              setFile(picked);
                               setError(null);
                             }}
                           />

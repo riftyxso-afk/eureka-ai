@@ -73,32 +73,3 @@ export const LOADING_TEXTS: string[] = [
   "⚙️ Mengaktifkan Agentic Engine untuk kebutuhanmu...",
   "✨ Siap!",
 ];
-
-export interface ResultFeature {
-  icon: string;
-  title: string;
-  desc: string;
-}
-
-export const RESULT_FEATURES: ResultFeature[] = [
-  {
-    icon: "🧠",
-    title: "Socratic AI",
-    desc: "Bertanya balik, BUKAN kasih jawaban instan.",
-  },
-  {
-    icon: "📋",
-    title: "Agentic Planner",
-    desc: "AI bikin rencana belajar 3 hari ke depan khusus buat kamu.",
-  },
-  {
-    icon: "🎯",
-    title: "Fokus di Kelemahanmu",
-    desc: "Kami catat topik yang kamu pusingin untuk dipelajari pertama.",
-  },
-  {
-    icon: "👁️",
-    title: "Reasoning Trace",
-    desc: "Lihat alur pikir AI step-by-step di balik layar.",
-  },
-];

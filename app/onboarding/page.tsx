@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import ButtonClay from "@/components/ui/ButtonClay";
@@ -9,13 +9,76 @@ import InputClay from "@/components/ui/InputClay";
 import ProgressBarClay from "@/components/ui/ProgressBarClay";
 import AvatarClay from "@/components/ui/AvatarClay";
 import { useOnboarding } from "@/context/OnboardingContext";
-import {
-  ONBOARDING_STEPS,
-  LOADING_TEXTS,
-  RESULT_FEATURES,
-} from "@/lib/onboardingContent";
+import { ONBOARDING_STEPS, LOADING_TEXTS } from "@/lib/onboardingContent";
 
 type Phase = "form" | "loading" | "result";
+
+interface AnalysisRecommendation {
+  icon: string;
+  title: string;
+  desc: string;
+}
+
+interface ProfileAnalysis {
+  tagline: string;
+  learningStyle: string;
+  recommendations: AnalysisRecommendation[];
+  studyTips: string[];
+}
+
+const ANALYSIS_STORAGE_KEY = "eureka_profile_analysis";
+
+const DEFAULT_ANALYSIS: ProfileAnalysis = {
+  tagline: "Tutor Socratic-mu siap bikin kamu paham, bukan cuma hafal!",
+  learningStyle:
+    "Profil belajarmu sudah tercatat. Saat materi baru masuk, Eureka akan menyesuaikan cara membimbingmu.",
+  recommendations: [
+    {
+      icon: "🧠",
+      title: "Socratic AI",
+      desc: "Bertanya balik, BUKAN kasih jawaban instan.",
+    },
+    {
+      icon: "📋",
+      title: "Agentic Planner",
+      desc: "AI bikin rencana belajar 3 hari ke depan khusus buat kamu.",
+    },
+    {
+      icon: "🎯",
+      title: "Fokus di Kelemahanmu",
+      desc: "Kami catat topik yang kamu pusingin untuk dipelajari pertama.",
+    },
+    {
+      icon: "👁️",
+      title: "Reasoning Trace",
+      desc: "Lihat alur pikir AI step-by-step di balik layar.",
+    },
+  ],
+  studyTips: [
+    "Belajar rutin 25 menit per sesi lebih efektif daripada maraton panjang.",
+  ],
+};
+
+function readStoredAnalysis(): ProfileAnalysis | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(ANALYSIS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ProfileAnalysis>;
+    return {
+      tagline: parsed.tagline || DEFAULT_ANALYSIS.tagline,
+      learningStyle: parsed.learningStyle || DEFAULT_ANALYSIS.learningStyle,
+      recommendations: Array.isArray(parsed.recommendations)
+        ? parsed.recommendations
+        : DEFAULT_ANALYSIS.recommendations,
+      studyTips: Array.isArray(parsed.studyTips)
+        ? parsed.studyTips
+        : DEFAULT_ANALYSIS.studyTips,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -23,18 +86,66 @@ export default function OnboardingPage() {
   const [phase, setPhase] = useState<Phase>("form");
   const [step, setStep] = useState(0);
   const [loadingIdx, setLoadingIdx] = useState(0);
+  const [analysis, setAnalysis] = useState<ProfileAnalysis | null>(
+    readStoredAnalysis
+  );
+  const analyzedRef = useRef(false);
 
   const current = ONBOARDING_STEPS[step];
+
+  const runAnalysis = useCallback(async () => {
+    if (analyzedRef.current) return;
+    analyzedRef.current = true;
+    // Beri waktu minimal untuk animasi loading (loadingIdx maju tiap 1.4s).
+    const minWait = new Promise((r) => setTimeout(r, 4800));
+    const [res] = await Promise.all([
+      fetch("/api/onboarding/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }).catch(() => null),
+      minWait,
+    ]);
+    let next: ProfileAnalysis = DEFAULT_ANALYSIS;
+    if (res?.ok) {
+      try {
+        const payload = await res.json();
+        if (payload.analysis) {
+          next = {
+            tagline:
+              payload.analysis.tagline || DEFAULT_ANALYSIS.tagline,
+            learningStyle:
+              payload.analysis.learningStyle || DEFAULT_ANALYSIS.learningStyle,
+            recommendations: Array.isArray(payload.analysis.recommendations)
+              ? payload.analysis.recommendations
+              : DEFAULT_ANALYSIS.recommendations,
+            studyTips: Array.isArray(payload.analysis.studyTips)
+              ? payload.analysis.studyTips
+              : DEFAULT_ANALYSIS.studyTips,
+          };
+        }
+      } catch {
+        // biarkan fallback
+      }
+    }
+    setAnalysis(next);
+    try {
+      window.localStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // storage unavailable
+    }
+  }, [data]);
 
   useEffect(() => {
     if (phase !== "loading") return;
     if (loadingIdx < LOADING_TEXTS.length - 1) {
-      const t = setTimeout(() => setLoadingIdx((i) => i + 1), 1500);
+      const t = setTimeout(() => setLoadingIdx((i) => i + 1), 1400);
       return () => clearTimeout(t);
     }
+    runAnalysis();
     const t = setTimeout(() => setPhase("result"), 1600);
     return () => clearTimeout(t);
-  }, [phase, loadingIdx]);
+  }, [phase, loadingIdx, runAnalysis]);
 
   const canProceed =
     current.key === "name"
@@ -233,12 +344,22 @@ export default function OnboardingPage() {
                     Profil Selesai, {data.name.split(" ")[0]}!
                   </h1>
                   <p className="mt-3 text-lg font-semibold text-clay-muted">
-                    Tutor Socratic-mu siap bikin kamu paham, bukan cuma hafal!
+                    {analysis?.tagline || DEFAULT_ANALYSIS.tagline}
                   </p>
                 </div>
 
-                <div className="mt-8 flex flex-col gap-4">
-                  {RESULT_FEATURES.map((f) => (
+                {/* Analisis pribadi dari AI */}
+                <div className="mt-6 rounded-clay-md border-2 border-clay-primary/30 bg-clay-primary/5 p-5 shadow-clay-sm">
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-clay-primary">
+                    📊 Hasil Analisis AI
+                  </p>
+                  <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-dark">
+                    {analysis?.learningStyle || DEFAULT_ANALYSIS.learningStyle}
+                  </p>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-4">
+                  {(analysis?.recommendations ?? DEFAULT_ANALYSIS.recommendations).map((f) => (
                     <div
                       key={f.title}
                       className="flex items-start gap-4 rounded-clay-md bg-clay-beige/70 p-5 shadow-clay-sm"
@@ -254,7 +375,29 @@ export default function OnboardingPage() {
                   ))}
                 </div>
 
-                <div className="mt-8 rounded-clay-md border-2 border-clay-borderLight bg-clay-primary/5 p-6 text-center shadow-clay-sm">
+                {(analysis?.studyTips ?? DEFAULT_ANALYSIS.studyTips).length >
+                  0 && (
+                  <div className="mt-6 rounded-clay-md bg-clay-inputBg p-5 shadow-clay-inset">
+                    <p className="text-xs font-extrabold uppercase tracking-widest text-clay-muted">
+                      💡 Tips Belajarmu
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {(analysis?.studyTips ?? DEFAULT_ANALYSIS.studyTips).map(
+                        (tip, i) => (
+                          <li
+                            key={i}
+                            className="flex items-start gap-2 text-sm font-semibold text-clay-dark"
+                          >
+                            <span className="text-clay-primary">•</span>
+                            <span>{tip}</span>
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="mt-6 rounded-clay-md border-2 border-clay-borderLight bg-clay-primary/5 p-6 text-center shadow-clay-sm">
                   <p className="text-xs font-extrabold uppercase tracking-widest text-clay-muted">
                     Paket Pro
                   </p>

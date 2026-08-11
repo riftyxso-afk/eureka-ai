@@ -31,6 +31,26 @@ export function isFirecrawlConfigured(): boolean {
 const IMAGE_MARKDOWN_RE = /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
 const IMAGE_BLOCK_RE = /\[!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\]\(https?:\/\/[^)\s]+\)/g;
 
+/** Ubah HTML kasar menjadi teks polos yang bisa dijadikan catatan. */
+function htmlToText(html: string): string {
+  const withoutTags = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|tr|section|article|blockquote)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/gi, "'")
+    .replace(/\u00a0/g, " ");
+  return withoutTags.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function isLikelyContentImage(url: string): boolean {
   const clean = url.toLowerCase();
   if (clean.includes(".svg") || clean.includes("data:")) return false;
@@ -85,7 +105,14 @@ export async function scrapeWebUrl(url: string): Promise<WebScrapeResult> {
   }
 
   const data = await res.json();
-  const markdown = String(data?.data?.markdown ?? "").trim();
+  let markdown = String(data?.data?.markdown ?? "").trim();
+
+  // Fallback: beberapa situs hanya mengembalikan HTML — ubah ke teks polos.
+  if (!markdown) {
+    const html = String(data?.data?.html ?? data?.data?.rawHtml ?? "").trim();
+    if (html) markdown = htmlToText(html);
+  }
+
   if (!markdown) {
     throw new Error(
       "Halaman tidak menghasilkan teks (mungkin butuh login/browser). Coba URL lain."
