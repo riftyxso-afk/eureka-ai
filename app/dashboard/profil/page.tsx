@@ -16,6 +16,7 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { getUserId, getUserName, setUserName } from "@/lib/identity";
+import { logoutUser } from "@/lib/auth";
 
 const SCHOOL_KEY = "eureka_school";
 
@@ -124,7 +125,8 @@ export default function ProfilPage() {
 
   const handleLogout = () => {
     if (window.confirm("Yakin ingin keluar dari Eureka.AI?")) {
-      showToast("Sampai jumpa lagi! 👋");
+      logoutUser();
+      window.location.href = "/login";
     }
   };
 
