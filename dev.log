@@ -1,0 +1,324 @@
+
+> eureka-ai@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.6s
+ ○ Compiling /api/notes/[id]/chat ...
+ ✓ Compiled /api/notes/[id]/chat in 798ms (61 modules)
+ ✓ Compiled (63 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 2889ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 2922ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 2952ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 2963ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 67ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 63ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 92ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 60ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 68ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 79ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 62ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 60ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 71ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 51ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 60ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 68ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 68ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 63ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 58ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 59ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 79ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 53ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 177ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 20ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 18ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 18ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 27ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 21ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 45ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 44ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 53ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 21ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 29ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 52ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 32ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 21ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 25ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 17ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 18ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 42ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 47ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 24ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 19ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 24ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 21ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 21ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 19ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 25ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 21ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 25ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 18ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 36ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 67ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 67ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 63ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 38ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 28ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 17ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 47ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 18ms
+   Reload env: .env.local
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 558ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 629ms
+ ✓ Compiled in 3.1s (266 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 56ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 18ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 22ms
+ ✓ Compiled /favicon.ico in 468ms (92 modules)
+ GET /favicon.ico 200 in 2471ms
+ ✓ Compiled /api/notes/[id]/quiz in 121ms (95 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 238ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 26ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 25ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 33ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 20ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/quiz 500 in 11125ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 28ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 18ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 34ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 21ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 16ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 27ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 28ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 117ms
+ ✓ Compiled /api/notes/[id]/flashcards in 305ms (97 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 31ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 28ms
+ ○ Compiling /dashboard/note/[id]/bab/[chapterId] ...
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/flashcards 500 in 13826ms
+ ✓ Compiled /dashboard/note/[id]/bab/[chapterId] in 15.4s (1478 modules)
+ ✓ Compiled in 456ms (698 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 7707ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 16200ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 6801ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 18ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 20ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=1786356168187 200 in 46ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 43ms
+ ✓ Compiled /api/notes/[id]/bab/[chapterId] in 327ms (782 modules)
+ GET /favicon.ico 200 in 830ms
+ GET /favicon.ico 200 in 263ms
+ GET /favicon.ico 200 in 21ms
+ GET /favicon.ico 200 in 57ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/bab/3 200 in 3656ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/bab/3 200 in 31ms
+ GET /favicon.ico 200 in 33ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/bab/4 200 in 58ms
+ GET /favicon.ico 200 in 33ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/bab/4 200 in 114ms
+ GET /favicon.ico 200 in 98ms
+ ○ Compiling /dashboard/note/[id] ...
+ ✓ Compiled /dashboard/note/[id] in 1464ms (1534 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 108ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 166ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 190ms
+ ✓ Compiled /api/notes/[id] in 461ms (818 modules)
+ GET /favicon.ico 200 in 868ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 785ms
+ GET /favicon.ico 200 in 64ms
+ GET /favicon.ico 200 in 24ms
+ ○ Compiling /dashboard ...
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15 200 in 2099ms
+ ✓ Compiled /dashboard in 1607ms (1576 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15 200 in 1115ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat 200 in 1091ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat 200 in 36ms
+ ○ Compiling /api/notes ...
+ ✓ Compiled /api/notes in 1895ms (841 modules)
+ GET /favicon.ico 200 in 4924ms
+ GET /api/notes 200 in 4994ms
+ GET /favicon.ico 200 in 85ms
+ GET /api/notes 200 in 42ms
+ GET /favicon.ico 200 in 174ms
+ GET /favicon.ico 200 in 14ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15 200 in 122ms
+ GET /favicon.ico 200 in 342ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 394ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15 200 in 278ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat 200 in 140ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 120ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 526ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 529ms
+ GET /favicon.ico 200 in 84ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat 200 in 81ms
+ GET /favicon.ico 200 in 56ms
+ ✓ Compiled /api/notes/[id]/quiz in 452ms (843 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 198ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 116ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/quiz 500 in 210ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 22ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/quiz 500 in 7449ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 24ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 77ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 87ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 79ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 508ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 133ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 53ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/quiz 500 in 7640ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 87ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 31ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 17ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 48ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 80ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 533ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 570ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 594ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 69ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 37ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 143ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 40ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 33ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 181ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 120ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 39ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 33ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 33ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 66ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 74ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 43ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 30ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 36ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 25ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 24ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 38ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 46ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 27ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 28ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 42ms
+ GET /favicon.ico 200 in 79ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 51ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 19ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 54ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 49ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 39ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 39ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 26ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 34ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 24ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 25ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 32ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 113ms
+ GET /favicon.ico 200 in 40ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 71ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 27ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 27ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 29ms
+ ✓ Compiled in 850ms (843 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 1453ms
+ ✓ Compiled in 665ms (751 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 668ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 42ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 27ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 28ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 19ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 24ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 33ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 17ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 28ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 29ms
+ ✓ Compiled /api/notes/[id]/quiz in 119ms (95 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 24ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 18ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 29ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/quiz 500 in 8365ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 37ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 44ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 23ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 26ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 21ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 17ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 34ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 21ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 21ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 25ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 20ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 20ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 19ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 23ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 94ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 16ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 19ms
+ ✓ Compiled /api/notes/[id] in 301ms (65 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15 200 in 1423ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 116ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 43ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 50ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 39ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 27ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 25ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 24ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 17ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 44ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 49ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 20ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 29ms
+ ✓ Compiled /api/notes/[id]/quiz in 102ms (68 modules)
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 47ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 23ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 39ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 48ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 53ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/quiz 500 in 10140ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 25ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 26ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 24ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 37ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 26ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 26ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 28ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 30ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 18ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 62ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 63ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 29ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 180ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 51ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 140ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 98ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 52ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1138ms (95 modules)
+ GET /favicon.ico 200 in 2685ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 2539ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 22ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 25ms
+ GET /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/chat?after=0 200 in 84ms
+ POST /api/notes/36e21a6f-0167-43ef-9ac4-0f83e7c80b15/presence 200 in 464ms

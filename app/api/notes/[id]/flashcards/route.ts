@@ -1,0 +1,51 @@
+import { NextRequest, NextResponse } from "next/server";
+
+import { getNoteWithChunks } from "@/lib/rag/store";
+import { generateFlashcards, getFlashcards } from "@/lib/studyTools";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+export async function POST(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    // Flashcards otomatis (mode Standar/Lengkap) sudah dibuat saat catatan dibuat.
+    const saved = await getFlashcards(id);
+    if (saved.length > 0) {
+      return NextResponse.json({ cards: saved, cached: true });
+    }
+
+    const found = await getNoteWithChunks(id);
+    if (!found) {
+      return NextResponse.json(
+        { error: "Catatan tidak ditemukan." },
+        { status: 404 }
+      );
+    }
+
+    const chapters = found.note.chapters ?? [];
+    if (chapters.length === 0) {
+      return NextResponse.json(
+        { error: "Catatan belum punya bab. Buat catatan ulang agar bisa dibuatkan flashcards." },
+        { status: 422 }
+      );
+    }
+
+    const cards = await generateFlashcards(id, chapters, 8);
+    if (cards.length === 0) {
+      return NextResponse.json(
+        { error: "AI tidak menghasilkan kartu yang valid. Coba lagi." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ cards });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Gagal membuat flashcards.";
+    console.error("[api/notes/[id]/flashcards]", e);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}

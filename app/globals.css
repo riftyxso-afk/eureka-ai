@@ -1,0 +1,95 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap");
+@import "katex/dist/katex.min.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-clay-beige text-clay-dark font-sans antialiased;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .btn-clay-primary {
+    @apply bg-clay-primary text-white font-extrabold text-base py-3 px-8
+           rounded-clay-full border-3 border-clay-borderLight
+           shadow-clay-btn transition-all duration-75 ease-in-out
+           active:shadow-clay-btn-active active:translate-y-1
+           hover:-translate-y-0.5 hover:shadow-clay-btn-hover
+           cursor-pointer min-h-[60px] flex items-center justify-center
+           disabled:opacity-60 disabled:pointer-events-none
+           select-none;
+  }
+
+  .btn-clay-secondary {
+    @apply bg-white text-clay-primary font-extrabold text-base py-3 px-8
+           rounded-clay-full border-3 border-clay-primary
+           shadow-clay-sm transition-all duration-75
+           active:shadow-clay-sm active:translate-y-1
+           hover:-translate-y-0.5 hover:shadow-[0_8px_0_#D1C4B4]
+           cursor-pointer min-h-[60px] flex items-center justify-center
+           disabled:opacity-60 disabled:pointer-events-none
+           select-none;
+  }
+
+  .btn-clay-ghost {
+    @apply bg-white text-clay-primary font-extrabold text-base py-3 px-8
+           rounded-clay-full border-3 border-clay-shadow/40
+           shadow-clay-sm transition-all duration-75
+           active:shadow-clay-sm active:translate-y-1
+           hover:-translate-y-0.5 hover:bg-clay-beige hover:shadow-[0_8px_0_#D1C4B4]
+           cursor-pointer min-h-[60px] flex items-center justify-center
+           disabled:opacity-60 disabled:pointer-events-none
+           select-none;
+  }
+
+  .card-clay {
+    @apply bg-white rounded-clay shadow-clay p-8 border-2 border-gray-100;
+  }
+
+  .input-clay {
+    @apply bg-clay-inputBg text-clay-dark rounded-clay-md
+           shadow-clay-inset px-6 py-4 w-full
+           border-none outline-none transition-all duration-200
+           focus:border-3 focus:border-clay-primary
+           focus:shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)];
+    height: 56px;
+    font-weight: 600;
+  }
+
+  /* Stabilo (highlighter) — seperti buku yang distabilo */
+  .hl-yellow {
+    background: linear-gradient(120deg, #fde047 0%, #fde047 40%, transparent 80%);
+    padding: 0 4px;
+    border-radius: 4px;
+  }
+
+  .hl-pink {
+    background: linear-gradient(120deg, #f472b6 0%, #f472b6 40%, transparent 80%);
+    padding: 0 4px;
+    border-radius: 4px;
+  }
+
+  .hl-blue {
+    background: linear-gradient(120deg, #93c5fd 0%, #93c5fd 40%, transparent 80%);
+    padding: 0 4px;
+    border-radius: 4px;
+  }
+
+  /* Shimmer animation untuk progress bar */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+}
