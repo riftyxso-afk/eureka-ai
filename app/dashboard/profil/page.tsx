@@ -123,9 +123,9 @@ export default function ProfilPage() {
     showToast("Profil berhasil disimpan! ✅");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm("Yakin ingin keluar dari Eureka.AI?")) {
-      logoutUser();
+      await logoutUser();
       window.location.href = "/login";
     }
   };

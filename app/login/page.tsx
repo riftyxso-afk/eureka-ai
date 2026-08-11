@@ -8,7 +8,6 @@ import AvatarClay from "@/components/ui/AvatarClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
-import { getUserId } from "@/lib/identity";
 import { isLoggedIn, loginUser } from "@/lib/auth";
 
 export default function LoginPage() {
@@ -47,26 +46,11 @@ export default function LoginPage() {
     }
 
     setSubmitting(true);
-    const result = loginUser({ email, password });
+    const result = await loginUser({ email, password });
     if (!result.ok) {
       setError(result.error ?? "Gagal masuk. Coba lagi.");
       setSubmitting(false);
       return;
-    }
-
-    // Sinkronkan identitas ke backend teman/kolaborasi agar nama terdaftar.
-    try {
-      await fetch("/api/friends", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "register",
-          userId: getUserId(),
-          name: result.user!.name,
-        }),
-      });
-    } catch {
-      // abaikan
     }
 
     router.replace("/dashboard");

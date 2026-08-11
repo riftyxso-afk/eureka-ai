@@ -1,11 +1,11 @@
 /**
- * Supabase Integration for Notes & Chunks (RAG)
+ * Supabase Integration for Notes & Chunks (RAG) — admin client
  */
 
-import { supabase } from './client';
+import { db } from './admin';
 
 export async function getNoteWithChunks(noteId: string) {
-  const { data: note, error: noteError } = await supabase
+  const { data: note, error: noteError } = await db()
     .from('notes')
     .select('*')
     .eq('id', noteId)
@@ -14,7 +14,7 @@ export async function getNoteWithChunks(noteId: string) {
   if (noteError || !note) return null;
 
   // Get all chunks for this note
-  const { data: chunks } = await supabase
+  const { data: chunks } = await db()
     .from('chunks')
     .select('*')
     .eq('note_id', noteId)
@@ -39,7 +39,7 @@ export async function saveNote(data: {
     updated_at: new Date().toISOString(),
   };
 
-  const { data: savedNote, error } = await supabase
+  const { data: savedNote, error } = await db()
     .from('notes')
     .upsert({
       ...noteData,
@@ -60,7 +60,7 @@ export async function updateNote(
     subject: string | null;
   }>
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await db()
     .from('notes')
     .update({
       ...updates,
@@ -75,7 +75,7 @@ export async function updateNote(
 }
 
 export async function deleteNote(noteId: string) {
-  const { error } = await supabase
+  const { error } = await db()
     .from('notes')
     .delete()
     .eq('id', noteId);
@@ -84,7 +84,7 @@ export async function deleteNote(noteId: string) {
 }
 
 export async function getNotesByUser(userId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await db()
     .from('notes')
     .select('*')
     .eq('user_id', userId)
@@ -110,7 +110,7 @@ export async function insertChunksForNote({
     embedding: null,
   }));
 
-  const { error } = await supabase.from('chunks').insert(chunkRecords);
+  const { error } = await db().from('chunks').insert(chunkRecords);
 
   if (error) throw error;
 }
@@ -127,7 +127,7 @@ export async function updateChunksEmbeddings(
 
   // Note: In production, you'd need chunk IDs. For now, we'll update all chunks for this note
   for (const emb of embeddings) {
-    await supabase.rpc('match_chunks', {
+    await db().rpc('match_chunks', {
       query_embedding: emb as number[],
       note_id: noteId,
       similarity_threshold: 0,
@@ -141,7 +141,7 @@ export async function searchChunks(
   topK: number = 4,
   noteId?: string
 ) {
-  const { data, error } = await supabase.rpc('match_chunks', {
+  const { data, error } = await db().rpc('match_chunks', {
     query_embedding: embedding as number[],
     note_id: noteId,
     similarity_threshold: 0.78,
@@ -153,7 +153,7 @@ export async function searchChunks(
 }
 
 export async function getAllSubjects() {
-  const { data, error } = await supabase
+  const { data, error } = await db()
     .from('subjects')
     .select('*')
     .order('name');

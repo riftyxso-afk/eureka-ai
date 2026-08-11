@@ -1,9 +1,9 @@
 /**
- * Supabase-based Collaboration System
+ * Supabase-based Collaboration System (admin client)
  * Complete replacement of file-based collab system with database storage
  */
 
-import { supabase } from './supabase/client';
+import { db } from './supabase/admin';
 import { randomUUID } from 'crypto';
 
 export type CollabRole = "editor" | "viewer";
@@ -56,7 +56,7 @@ const PRESENCE_TTL_MS = 60_000; // 1 minute TTL for presence entries
  */
 export async function getNoteCollaboration(noteId: string) {
   try {
-    const { data: versions, error } = await supabase
+    const { data: versions, error } = await db()
       .from('note_versions')
       .select('*')
       .eq('note_id', noteId)
@@ -99,7 +99,7 @@ export async function addCollaborator(
     const token = randomUUID().replace(/-/g, "").slice(0, 16);
     
     // Create invite token record
-    await supabase.from('invite_tokens').insert({
+    await db().from('invite_tokens').insert({
       token: token,
       note_id: noteId,
       invitee_name: name,
@@ -129,7 +129,7 @@ export async function addCollaborator(
  */
 export async function acceptInvite(noteId: string, token: string): Promise<boolean> {
   try {
-    const { data: invite, error: fetchError } = await supabase
+    const { data: invite, error: fetchError } = await db()
       .from('invite_tokens')
       .select('*')
       .eq('token', token)
@@ -145,13 +145,13 @@ export async function acceptInvite(noteId: string, token: string): Promise<boole
     }
 
     // Mark as accepted
-    await supabase
+    await db()
       .from('invite_tokens')
       .update({ status: 'accepted' })
       .eq('token', token);
 
     // Add to collaborators table
-    await supabase.from('collaborators').upsert({
+    await db().from('collaborators').upsert({
       note_id: noteId,
       user_id: "", // User ID will be set when they login
       name: invite.invitee_name,
@@ -172,7 +172,7 @@ export async function acceptInvite(noteId: string, token: string): Promise<boole
  */
 export async function removeCollaborator(noteId: string, userId: string): Promise<void> {
   try {
-    await supabase
+    await db()
       .from('collaborators')
       .delete()
       .eq('note_id', noteId)
@@ -192,7 +192,7 @@ export async function setCollaboratorStatus(
   status: "pending" | "accepted"
 ): Promise<boolean> {
   try {
-    const { error } = await supabase
+    const { error } = await db()
       .from('collaborators')
       .update({ status })
       .eq('note_id', noteId)
@@ -209,7 +209,7 @@ export async function setCollaboratorStatus(
  */
 export async function listChatMessages(noteId: string, limit = 50): Promise<ChatMessage[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('chat_messages')
       .select('*')
       .eq('note_id', noteId)
@@ -238,7 +238,7 @@ export async function addChatMessage(
   }
 ): Promise<string> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('chat_messages')
       .insert({
         note_id: noteId,
@@ -269,7 +269,7 @@ export async function setPresence(
   entry: PresenceEntry
 ): Promise<void> {
   try {
-    await supabase
+    await db()
       .from('presence')
       .upsert({
         note_id: noteId,
@@ -294,7 +294,7 @@ export async function listPresence(noteId: string): Promise<Map<string, Presence
   try {
     const now = Date.now();
     
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('presence')
       .select('*')
       .eq('note_id', noteId);
@@ -325,7 +325,7 @@ export async function listPresence(noteId: string): Promise<Map<string, Presence
  */
 export async function removePresence(noteId: string, userId: string): Promise<void> {
   try {
-    await supabase
+    await db()
       .from('presence')
       .delete()
       .eq('note_id', noteId)
@@ -344,7 +344,7 @@ export async function addVersion(
 ): Promise<NoteVersion> {
   try {
     // Get current max version
-    const { data: existingVersions } = await supabase
+    const { data: existingVersions } = await db()
       .from('note_versions')
       .select('version_number')
       .eq('note_id', noteId)
@@ -353,7 +353,7 @@ export async function addVersion(
 
     const nextVersion = (existingVersions?.[0]?.version_number ?? 0) + 1;
     
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('note_versions')
       .insert({
         note_id: noteId,
@@ -380,7 +380,7 @@ export async function addVersion(
  */
 export async function listVersions(noteId: string): Promise<NoteVersion[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('note_versions')
       .select('*')
       .eq('note_id', noteId)
@@ -402,7 +402,7 @@ export async function getVersion(
   versionNumber: number
 ): Promise<NoteVersion | null> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('note_versions')
       .select('*')
       .eq('note_id', noteId)

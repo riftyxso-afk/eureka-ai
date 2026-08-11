@@ -1,13 +1,23 @@
 /**
- * Supabase Client Setup
+ * Supabase Client Setup (anon key — untuk auth di sisi client).
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export function isSupabaseConfigured(): boolean {
+  return (
+    supabaseUrl.includes(".supabase.co") &&
+    supabaseAnonKey.length > 40 &&
+    supabaseAnonKey.startsWith("eyJ")
+  );
+}
+
+export const supabase = isSupabaseConfigured()
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 export type Database = {
   public: {

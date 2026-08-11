@@ -1,13 +1,8 @@
 /**
- * Store MVP untuk Highlight (stabilo) catatan.
- * Persistensi file JSON lokal: data/highlights.json
+ * Store Highlight (stabilo) catatan — Supabase.
+ * Tabel: highlights
  */
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const HIGHLIGHTS_FILE = path.join(DATA_DIR, "highlights.json");
+import { db } from "./supabase/admin";
 
 export type HighlightColor = "yellow" | "pink" | "blue";
 
@@ -21,99 +16,97 @@ export interface HighlightEntry {
   createdAt: string;
 }
 
-let lock: Promise<unknown> = Promise.resolve();
-
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = lock.then(fn, fn);
-  lock = run.then(
-    () => undefined,
-    () => undefined
-  );
-  return run;
-}
-
-async function readStore(): Promise<HighlightEntry[]> {
-  try {
-    const raw = await fs.readFile(HIGHLIGHTS_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as HighlightEntry[];
-    return Array.isArray(parsed) ? parsed.filter((h) => h && h.id) : [];
-  } catch {
-    return [];
-  }
-}
-
-async function writeStore(store: HighlightEntry[]) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(HIGHLIGHTS_FILE, JSON.stringify(store, null, 2), "utf-8");
+function mapRow(row: any): HighlightEntry {
+  return {
+    id: row.id,
+    noteId: row.note_id,
+    chapterId: row.chapter_id,
+    text: row.text,
+    color: row.color,
+    userId: row.user_id,
+    createdAt: row.created_at,
+  };
 }
 
 /** Daftar highlight sebuah catatan (opsional difilter per bab). */
-export function listHighlights(
+export async function listHighlights(
   noteId: string,
   chapterId?: number
 ): Promise<HighlightEntry[]> {
-  return withLock(async () => {
-    const store = await readStore();
-    return store
-      .filter((h) => h.noteId === noteId && (chapterId == null || h.chapterId === chapterId))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  });
+  const client = db();
+  let query = client
+    .from("highlights")
+    .select("*")
+    .eq("note_id", noteId)
+    .order("created_at", { ascending: false });
+  if (chapterId != null) {
+    query = query.eq("chapter_id", chapterId);
+  }
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return (data ?? []).map(mapRow);
 }
 
 /** Tambah highlight (dedupe bila teks+chapter+warna sudah ada). */
-export function addHighlight(
+export async function addHighlight(
   input: Omit<HighlightEntry, "id" | "createdAt">
 ): Promise<HighlightEntry | null> {
-  return withLock(async () => {
-    const store = await readStore();
-    const key = input.text.trim().toLowerCase();
-    const exists = store.some(
-      (h) =>
-        h.noteId === input.noteId &&
-        h.chapterId === input.chapterId &&
-        h.color === input.color &&
-        h.text.trim().toLowerCase() === key
-    );
-    if (exists) return null;
-    const entry: HighlightEntry = {
-      ...input,
+  const client = db();
+  const key = input.text.trim().toLowerCase();
+
+  const { data: dup } = await client
+    .from("highlights")
+    .select("id")
+    .eq("note_id", input.noteId)
+    .eq("chapter_id", input.chapterId)
+    .eq("color", input.color)
+    .ilike("text", key)
+    .maybeSingle();
+  if (dup) return null;
+
+  const { data, error } = await client
+    .from("highlights")
+    .insert({
+      note_id: input.noteId,
+      chapter_id: input.chapterId,
       text: input.text.trim().slice(0, 500),
-      id: randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    store.push(entry);
-    await writeStore(store);
-    return entry;
-  });
+      color: input.color,
+      user_id: input.userId,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapRow(data);
 }
 
 /** Hapus satu highlight. */
-export function removeHighlight(
+export async function removeHighlight(
   noteId: string,
   highlightId: string
 ): Promise<boolean> {
-  return withLock(async () => {
-    const store = await readStore();
-    const next = store.filter(
-      (h) => !(h.id === highlightId && h.noteId === noteId)
-    );
-    if (next.length === store.length) return false;
-    await writeStore(next);
-    return true;
-  });
+  const client = db();
+  const { error } = await client
+    .from("highlights")
+    .delete()
+    .eq("id", highlightId)
+    .eq("note_id", noteId);
+
+  if (error) throw error;
+  return true;
 }
 
 /** Hapus semua highlight otomatis dari AI (untuk regenerasi stabilo). */
-export function removeAiHighlights(noteId: string): Promise<number> {
-  return withLock(async () => {
-    const store = await readStore();
-    const before = store.length;
-    const next = store.filter(
-      (h) => !(h.noteId === noteId && h.userId === "ai")
-    );
-    if (next.length !== before) {
-      await writeStore(next);
-    }
-    return before - next.length;
-  });
+export async function removeAiHighlights(noteId: string): Promise<number> {
+  const client = db();
+  const { data, error } = await client
+    .from("highlights")
+    .delete()
+    .eq("note_id", noteId)
+    .eq("user_id", "ai")
+    .select("id");
+
+  if (error) throw error;
+  return (data ?? []).length;
 }

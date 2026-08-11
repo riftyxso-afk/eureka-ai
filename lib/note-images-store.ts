@@ -1,13 +1,8 @@
 /**
- * Store MVP untuk Gambar Catatan (ilustrasi seperti buku).
- * Persistensi file JSON lokal: data/note-images.json
+ * Store Gambar Catatan (ilustrasi seperti buku) — Supabase.
+ * Tabel: note_images
  */
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const IMAGES_FILE = path.join(DATA_DIR, "note-images.json");
+import { db } from "./supabase/admin";
 
 export type ImageAlignment = "left" | "center" | "right";
 export type ImageSize = "small" | "medium" | "large";
@@ -26,76 +21,83 @@ export interface NoteImage {
   createdAt: string;
 }
 
-let lock: Promise<unknown> = Promise.resolve();
-
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = lock.then(fn, fn);
-  lock = run.then(
-    () => undefined,
-    () => undefined
-  );
-  return run;
-}
-
-async function readStore(): Promise<NoteImage[]> {
-  try {
-    const raw = await fs.readFile(IMAGES_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as NoteImage[];
-    return Array.isArray(parsed) ? parsed.filter((i) => i && i.id) : [];
-  } catch {
-    return [];
-  }
-}
-
-async function writeStore(store: NoteImage[]) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(IMAGES_FILE, JSON.stringify(store, null, 2), "utf-8");
+function mapRow(row: any): NoteImage {
+  return {
+    id: row.id,
+    noteId: row.note_id,
+    chapterId: row.chapter_id ?? undefined,
+    url: row.url,
+    caption: row.caption ?? undefined,
+    alignment: row.alignment,
+    size: row.size,
+    source: row.source,
+    position: row.position,
+    createdAt: row.created_at,
+  };
 }
 
 /** Daftar gambar sebuah catatan (urut posisi). */
-export function listImages(noteId: string): Promise<NoteImage[]> {
-  return withLock(async () => {
-    const store = await readStore();
-    return store
-      .filter((i) => i.noteId === noteId)
-      .sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt));
-  });
+export async function listImages(noteId: string): Promise<NoteImage[]> {
+  const client = db();
+  const { data, error } = await client
+    .from("note_images")
+    .select("*")
+    .eq("note_id", noteId)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(mapRow);
 }
 
 /** Tambah satu gambar (upload user atau hasil scrape web). */
-export function addImage(
+export async function addImage(
   input: Omit<NoteImage, "id" | "position" | "createdAt">
 ): Promise<NoteImage> {
-  return withLock(async () => {
-    const store = await readStore();
-    const noteImages = store.filter((i) => i.noteId === input.noteId);
-    const position =
-      noteImages.length > 0
-        ? Math.max(...noteImages.map((i) => i.position)) + 1
-        : 0;
-    const entry: NoteImage = {
-      ...input,
-      id: randomUUID(),
+  const client = db();
+  const { data: maxRow } = await client
+    .from("note_images")
+    .select("position")
+    .eq("note_id", input.noteId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const position = (maxRow?.position ?? -1) + 1;
+
+  const { data, error } = await client
+    .from("note_images")
+    .insert({
+      note_id: input.noteId,
+      chapter_id: input.chapterId ?? null,
+      url: input.url,
+      caption: input.caption ?? null,
+      alignment: input.alignment,
+      size: input.size,
+      source: input.source,
       position,
-      createdAt: new Date().toISOString(),
-    };
-    store.push(entry);
-    await writeStore(store);
-    return entry;
-  });
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapRow(data);
 }
 
 /** Hapus gambar; kembalikan URL-nya agar file ikut dihapus oleh pemanggil. */
-export function removeImage(
+export async function removeImage(
   noteId: string,
   imageId: string
 ): Promise<{ ok: boolean; url?: string }> {
-  return withLock(async () => {
-    const store = await readStore();
-    const target = store.find((i) => i.id === imageId && i.noteId === noteId);
-    if (!target) return { ok: false };
-    const next = store.filter((i) => i.id !== imageId);
-    await writeStore(next);
-    return { ok: true, url: target.url };
-  });
+  const client = db();
+  const { data, error } = await client
+    .from("note_images")
+    .delete()
+    .eq("id", imageId)
+    .eq("note_id", noteId)
+    .select("url");
+
+  if (error) throw error;
+  if (!data || data.length === 0) return { ok: false };
+  return { ok: true, url: data[0].url };
 }

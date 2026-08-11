@@ -62,9 +62,17 @@ export default function RegisterPage() {
     }
 
     setSubmitting(true);
-    const result = registerUser({ name, email, password });
+    const result = await registerUser({ name, email, password });
     if (!result.ok) {
       setError(result.error ?? "Gagal mendaftar. Coba lagi.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (result.needsConfirmation) {
+      setError(
+        "Akun dibuat! Silakan cek email kamu untuk verifikasi, lalu masuk."
+      );
       setSubmitting(false);
       return;
     }

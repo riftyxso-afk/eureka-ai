@@ -3,7 +3,7 @@
  * Complete migration from local file system to Supabase database
  */
 
-import { supabase } from '../supabase/client';
+import { db } from '../supabase/admin';
 import type { Note } from '../types';
 
 interface StoredChunk {
@@ -55,7 +55,7 @@ export async function saveNoteWithChunks(
 ): Promise<Note> {
   try {
     // First, insert the note
-    const { data: savedNote, error: noteError } = await supabase
+    const { data: savedNote, error: noteError } = await db()
       .from('notes')
       .insert({
         id: note.id,
@@ -80,7 +80,7 @@ export async function saveNoteWithChunks(
     }));
 
     if (chunkRecords.length > 0) {
-      const { error: chunksError } = await supabase
+      const { error: chunksError } = await db()
         .from('chunks')
         .insert(chunkRecords);
 
@@ -99,7 +99,7 @@ export async function saveNoteWithChunks(
  */
 export async function listNotes(): Promise<Note[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('notes')
       .select('*')
       .order('updated_at', { ascending: false });
@@ -130,7 +130,7 @@ export async function updateNote(
   patch: Partial<Pick<Note, "title" | "summary">>
 ): Promise<Note | null> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('notes')
       .update({
         ...patch,
@@ -157,7 +157,7 @@ export async function getNoteWithChunks(
 ): Promise<{ note: Note; chunks: any[] } | null> {
   try {
     // Get note
-    const { data: note, error: noteError } = await supabase
+    const { data: note, error: noteError } = await db()
       .from('notes')
       .select('*')
       .eq('id', noteId)
@@ -166,7 +166,7 @@ export async function getNoteWithChunks(
     if (noteError || !note) return null;
 
     // Get chunks
-    const { data: chunks, error: chunksError } = await supabase
+    const { data: chunks, error: chunksError } = await db()
       .from('chunks')
       .select('*')
       .eq('note_id', noteId)
@@ -197,7 +197,7 @@ export async function getNoteWithChunks(
  */
 export async function deleteNote(noteId: string): Promise<void> {
   try {
-    const { error } = await supabase
+    const { error } = await db()
       .from('notes')
       .delete()
       .eq('id', noteId);
@@ -214,7 +214,7 @@ export async function deleteNote(noteId: string): Promise<void> {
  */
 export async function updateChunksEmbeddings(noteId: string, embeddings: number[][]): Promise<void> {
   try {
-    const { data: chunks } = await supabase
+    const { data: chunks } = await db()
       .from('chunks')
       .select('id')
       .eq('note_id', noteId)
@@ -226,7 +226,7 @@ export async function updateChunksEmbeddings(noteId: string, embeddings: number[
 
     // Update each chunk's embedding
     for (const [index, embedding] of embeddings.entries()) {
-      await supabase
+      await db()
         .from('chunks')
         .update({ embedding: embedding })
         .eq('id', chunks[index].id);
@@ -249,7 +249,7 @@ export async function searchChunks(
 ): Promise<NoteSearchResult[]> {
   try {
     // Use Supabase RPC function match_chunks
-    const { data, error } = await supabase.rpc('match_chunks', {
+    const { data, error } = await db().rpc('match_chunks', {
       query_embedding: queryEmbedding as number[],
       note_id: noteId,
       similarity_threshold: 0.78,

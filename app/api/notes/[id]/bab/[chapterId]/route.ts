@@ -1,27 +1,9 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getNoteWithChunks } from "@/lib/rag/store";
+import { db } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const NOTES_FILE = path.join(DATA_DIR, "chapter-notes.json");
-
-interface ChapterNoteEntry {
-  content: string;
-  updatedAt: string;
-}
-
-async function readChapterNotes(): Promise<Record<string, ChapterNoteEntry>> {
-  try {
-    const raw = await fs.readFile(NOTES_FILE, "utf-8");
-    return JSON.parse(raw) as Record<string, ChapterNoteEntry>;
-  } catch {
-    return {};
-  }
-}
 
 export async function GET(
   _req: NextRequest,
@@ -47,8 +29,12 @@ export async function GET(
       );
     }
 
-    const key = `${id}:${chapterId}`;
-    const userNotes = await readChapterNotes();
+    const { data } = await db()
+      .from("chapter_notes")
+      .select("content")
+      .eq("note_id", id)
+      .eq("chapter_id", Number(chapterId))
+      .maybeSingle();
 
     return NextResponse.json({
       note: {
@@ -58,7 +44,7 @@ export async function GET(
         createdAt: found.note.createdAt,
       },
       chapter: chapters[chapterIndex],
-      userNote: userNotes[key]?.content ?? "",
+      userNote: data?.content ?? "",
       prev: chapterIndex > 0 ? chapters[chapterIndex - 1] : null,
       next:
         chapterIndex < chapters.length - 1
@@ -83,18 +69,19 @@ export async function PUT(
     } | null;
     const content = String(body?.content ?? "").slice(0, 20000);
 
-    const key = `${id}:${chapterId}`;
-    const userNotes = await readChapterNotes();
-    userNotes[key] = { content, updatedAt: new Date().toISOString() };
+    const { data, error } = await db()
+      .from("chapter_notes")
+      .upsert({
+        note_id: id,
+        chapter_id: Number(chapterId),
+        content,
+      })
+      .select("updated_at")
+      .single();
 
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(
-      NOTES_FILE,
-      JSON.stringify(userNotes, null, 2),
-      "utf-8"
-    );
+    if (error) throw error;
 
-    return NextResponse.json({ ok: true, updatedAt: userNotes[key].updatedAt });
+    return NextResponse.json({ ok: true, updatedAt: data.updated_at });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal menyimpan catatan pribadi.";
     console.error("[api/notes/[id]/bab/[chapterId] PUT", e);

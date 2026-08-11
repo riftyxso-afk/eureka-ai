@@ -1,14 +1,9 @@
 /**
- * Penyimpanan mata pelajaran (data/subjects.json).
- * Total catatan per pelajaran dihitung live dari vector store.
+ * Penyimpanan mata pelajaran — Supabase.
+ * Tabel: subjects. Total catatan per pelajaran dihitung live dari vector store.
  */
-import { promises as fs } from "fs";
-import path from "path";
-
+import { db } from "./supabase/admin";
 import type { Subject } from "@/lib/subjects";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const SUBJECTS_FILE = path.join(DATA_DIR, "subjects.json");
 
 const DEFAULT_SUBJECTS: Subject[] = [
   { id: "s-mtk", name: "Matematika", emoji: "🧮", color: "#8B5CF6", progress: 75 },
@@ -19,24 +14,30 @@ const DEFAULT_SUBJECTS: Subject[] = [
   { id: "s-sej", name: "Sejarah", emoji: "📜", color: "#8B5CF6", progress: 10 },
 ];
 
-async function readSubjects(): Promise<Subject[]> {
-  try {
-    const raw = await fs.readFile(SUBJECTS_FILE, "utf-8");
-    return JSON.parse(raw) as Subject[];
-  } catch {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(SUBJECTS_FILE, JSON.stringify(DEFAULT_SUBJECTS, null, 2), "utf-8");
-    return DEFAULT_SUBJECTS;
-  }
-}
-
-async function writeSubjects(subjects: Subject[]) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(SUBJECTS_FILE, JSON.stringify(subjects, null, 2), "utf-8");
+function mapRow(row: any): Subject {
+  return {
+    id: row.id,
+    name: row.name,
+    emoji: row.icon ?? "📖",
+    color: row.color ?? "#8B5CF6",
+    progress: row.progress ?? 0,
+  };
 }
 
 export async function getSubjects(): Promise<Subject[]> {
-  return readSubjects();
+  try {
+    const client = db();
+    const { data, error } = await client
+      .from("subjects")
+      .select("*")
+      .order("name");
+
+    if (error) throw error;
+    const rows = data ?? [];
+    return rows.length > 0 ? rows.map(mapRow) : DEFAULT_SUBJECTS;
+  } catch {
+    return DEFAULT_SUBJECTS;
+  }
 }
 
 export async function addSubject(input: {
@@ -44,11 +45,15 @@ export async function addSubject(input: {
   emoji?: string;
   color?: string;
 }): Promise<Subject> {
-  const subjects = await readSubjects();
+  const client = db();
   const name = input.name.trim();
   if (!name) throw new Error("Nama mata pelajaran tidak boleh kosong.");
 
-  const existing = subjects.find((s) => s.name.toLowerCase() === name.toLowerCase());
+  const { data: existing } = await client
+    .from("subjects")
+    .select("id")
+    .ilike("name", name)
+    .maybeSingle();
   if (existing) throw new Error(`"${name}" sudah ada di daftar.`);
 
   const subject: Subject = {
@@ -58,12 +63,25 @@ export async function addSubject(input: {
     color: input.color || "#8B5CF6",
     progress: 0,
   };
-  subjects.push(subject);
-  await writeSubjects(subjects);
-  return subject;
+
+  const { data, error } = await client
+    .from("subjects")
+    .insert({
+      id: subject.id,
+      name,
+      icon: subject.emoji,
+      color: subject.color,
+      progress: 0,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapRow(data);
 }
 
 export async function deleteSubject(id: string): Promise<void> {
-  const subjects = await readSubjects();
-  await writeSubjects(subjects.filter((s) => s.id !== id));
+  const client = db();
+  const { error } = await client.from("subjects").delete().eq("id", id);
+  if (error) throw error;
 }

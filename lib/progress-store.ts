@@ -1,14 +1,9 @@
 /**
- * Store MVP untuk Progres Belajar (XP, Level, Streak, Kartu Hafalan).
- * Persistensi file JSON lokal: data/progress.json
+ * Store Progres Belajar (XP, Level, Streak, Kartu Hafalan) — Supabase.
+ * Tabel: progress, activity_log, flashcards
  */
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
+import { db } from "./supabase/admin";
 import { listFriends } from "./friends-store";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const PROGRESS_FILE = path.join(DATA_DIR, "progress.json");
 
 export const XP_TO_NEXT_LEVEL = 100;
 export const LEVEL_TITLE = "PELAJAR KONSISTEN";
@@ -49,121 +44,147 @@ export interface ProgressStats {
   recentActivity: ActivityEntry[];
 }
 
-interface ProgressStore {
-  users: Record<string, UserProgress>;
-}
-
-let lock: Promise<unknown> = Promise.resolve();
-
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = lock.then(fn, fn);
-  lock = run.then(
-    () => undefined,
-    () => undefined
-  );
-  return run;
-}
-
-async function readStore(): Promise<ProgressStore> {
-  try {
-    const raw = await fs.readFile(PROGRESS_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as Partial<ProgressStore>;
-    return { users: {}, ...parsed };
-  } catch {
-    return { users: {} };
-  }
-}
-
-async function writeStore(store: ProgressStore) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(PROGRESS_FILE, JSON.stringify(store, null, 2), "utf-8");
-}
-
-function emptyProgress(): UserProgress {
-  return { xp: 0, activeDays: [], cards: [], activityLog: [] };
-}
-
 function todayKey(d: Date = new Date()): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
+async function loadUserProgress(userId: string): Promise<UserProgress> {
+  const client = db();
+  const { data: row } = await client
+    .from("progress")
+    .select("xp, active_days")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const { data: cards } = await client
+    .from("flashcards")
+    .select("id, note_id, front, back, due_date, review_count")
+    .eq("user_id", userId);
+
+  const { data: log } = await client
+    .from("activity_log")
+    .select("xp, label, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  return {
+    xp: row?.xp ?? 0,
+    activeDays: row?.active_days ?? [],
+    cards: (cards ?? []).map((c) => ({
+      id: c.id,
+      noteId: c.note_id,
+      front: c.front,
+      back: c.back,
+      dueDate: c.due_date,
+      reviewCount: c.review_count,
+    })),
+    activityLog: (log ?? []).map((e) => ({
+      date: e.created_at,
+      xp: e.xp,
+      label: e.label ?? "Aktivitas belajar",
+    })),
+  };
+}
+
 /** Catat aktivitas hari ini (untuk streak) dan tambah XP bila > 0. */
-export function recordActivity(
+export async function recordActivity(
   userId: string,
   xpGain: number,
   label?: string
 ): Promise<UserProgress> {
-  return withLock(async () => {
-    const store = await readStore();
-    const p = store.users[userId] ?? emptyProgress();
-    if (xpGain > 0) {
-      p.xp += xpGain;
-      p.activityLog.unshift({
-        date: new Date().toISOString(),
-        xp: xpGain,
-        label: (label ?? "Aktivitas belajar").slice(0, 80),
-      });
-      if (p.activityLog.length > 50) p.activityLog.length = 50;
-    }
-    const key = todayKey();
-    if (!p.activeDays.includes(key)) {
-      p.activeDays.push(key);
-      p.activeDays.sort();
-    }
-    store.users[userId] = p;
-    await writeStore(store);
-    return p;
+  const client = db();
+
+  const { data: row } = await client
+    .from("progress")
+    .select("xp, active_days")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const prevXp = row?.xp ?? 0;
+  const prevDays = row?.active_days ?? [];
+  const key = todayKey();
+  const nextDays = prevDays.includes(key)
+    ? prevDays
+    : [...prevDays, key].sort();
+
+  await client.from("progress").upsert({
+    user_id: userId,
+    xp: prevXp + Math.max(0, xpGain),
+    active_days: nextDays,
   });
+
+  if (xpGain > 0) {
+    await client.from("activity_log").insert({
+      user_id: userId,
+      xp: xpGain,
+      label: (label ?? "Aktivitas belajar").slice(0, 80),
+    });
+  }
+
+  return loadUserProgress(userId);
 }
 
 /** Simpan kartu hafalan baru; jatuh tempo besok (jadwal SRS 24 jam). */
-export function addCards(
+export async function addCards(
   userId: string,
   noteId: string,
   cards: { front: string; back: string }[]
 ): Promise<UserProgress> {
-  return withLock(async () => {
-    const store = await readStore();
-    const p = store.users[userId] ?? emptyProgress();
-    const dueDate = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
-    for (const c of cards) {
-      p.cards.push({
-        id: randomUUID(),
-        noteId,
+  const client = db();
+  const dueDate = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+
+  if (cards.length > 0) {
+    await client.from("flashcards").insert(
+      cards.map((c) => ({
+        user_id: userId,
+        note_id: noteId,
         front: c.front,
         back: c.back,
-        dueDate,
-        reviewCount: 0,
-      });
-    }
-    store.users[userId] = p;
-    await writeStore(store);
-    return p;
-  });
+        due_date: dueDate,
+      }))
+    );
+  }
+
+  return loadUserProgress(userId);
 }
 
 /** Tandai semua kartu dari satu catatan sebagai direview; jadwal berikutnya +24 jam. */
-export function reviewAllCards(
+export async function reviewAllCards(
   userId: string,
   noteId: string
 ): Promise<number> {
-  return withLock(async () => {
-    const store = await readStore();
-    const p = store.users[userId];
-    if (!p) return 0;
-    let reviewed = 0;
-    const nextDue = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
-    p.cards = p.cards.map((c) => {
-      if (c.noteId !== noteId) return c;
-      reviewed++;
-      return { ...c, reviewCount: c.reviewCount + 1, dueDate: nextDue };
-    });
-    store.users[userId] = p;
-    await writeStore(store);
-    return reviewed;
-  });
+  const client = db();
+  const { data } = await client
+    .from("flashcards")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("note_id", noteId);
+
+  if (!data || data.length === 0) return 0;
+
+  const nextDue = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+
+  // Increment review_count per kartu (Supabase JS tidak mendukung increment
+  // ekspresi, jadi ambil lalu update satu per satu — jumlah kartu kecil).
+  const { data: cards } = await client
+    .from("flashcards")
+    .select("id, review_count")
+    .eq("user_id", userId)
+    .eq("note_id", noteId);
+
+  if (cards) {
+    for (const c of cards) {
+      await client
+        .from("flashcards")
+        .update({ review_count: c.review_count + 1, due_date: nextDue })
+        .eq("id", c.id);
+    }
+  }
+
+  return data.length;
 }
 
 function calcStreak(activeDays: string[]): number {
@@ -200,8 +221,8 @@ function calcLongestStreak(activeDays: string[]): number {
  * di antara diri sendiri + teman (berdasarkan XP).
  */
 export async function getStats(userId: string): Promise<ProgressStats> {
-  const store = await readStore();
-  const p = store.users[userId] ?? emptyProgress();
+  const client = db();
+  const p = await loadUserProgress(userId);
   const now = Date.now();
   const dueCards = p.cards.filter((c) => new Date(c.dueDate).getTime() <= now)
     .length;
@@ -214,12 +235,20 @@ export async function getStats(userId: string): Promise<ProgressStats> {
     } catch {
       friendIds = [];
     }
-    const scores = [userId, ...friendIds].map((id) => ({
-      id,
-      xp: store.users[id]?.xp ?? 0,
-    }));
+    const { data: rows } = await client
+      .from("progress")
+      .select("user_id, xp")
+      .in("user_id", [userId, ...friendIds]);
+
+    const scores = rows?.length
+      ? rows.map((r) => ({ id: r.user_id, xp: r.xp ?? 0 }))
+      : [];
+    if (!rows?.some((r) => r.user_id === userId)) {
+      scores.push({ id: userId, xp: p.xp });
+    }
     scores.sort((a, b) => b.xp - a.xp || a.id.localeCompare(b.id));
     rank = scores.findIndex((s) => s.id === userId) + 1;
+    if (rank === 0) rank = null;
   }
 
   return {
@@ -233,8 +262,6 @@ export async function getStats(userId: string): Promise<ProgressStats> {
     totalDays: p.activeDays.length,
     dueCards,
     rank,
-    recentActivity: [...p.activityLog].sort((a, b) =>
-      b.date.localeCompare(a.date)
-    ),
+    recentActivity: p.activityLog,
   };
 }

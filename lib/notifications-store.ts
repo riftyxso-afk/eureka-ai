@@ -1,13 +1,8 @@
 /**
- * Store MVP untuk Notifikasi (realtime via polling).
- * Persistensi file JSON lokal: data/notifications.json
+ * Store Notifikasi — Supabase.
+ * Tabel: notifications
  */
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const NOTIF_FILE = path.join(DATA_DIR, "notifications.json");
+import { db } from "./supabase/admin";
 
 export type NotificationType =
   | "friend_request"
@@ -34,88 +29,86 @@ interface NotificationInput {
   link?: string;
 }
 
-let lock: Promise<unknown> = Promise.resolve();
-
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = lock.then(fn, fn);
-  lock = run.then(
-    () => undefined,
-    () => undefined
-  );
-  return run;
-}
-
-async function readStore(): Promise<AppNotification[]> {
-  try {
-    const raw = await fs.readFile(NOTIF_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as AppNotification[];
-    return Array.isArray(parsed) ? parsed.filter((n) => n && n.id) : [];
-  } catch {
-    return [];
-  }
-}
-
-async function writeStore(store: AppNotification[]) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(NOTIF_FILE, JSON.stringify(store, null, 2), "utf-8");
+function mapRow(row: any): AppNotification {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    title: row.title,
+    message: row.message,
+    link: row.link ?? undefined,
+    read: row.read,
+    createdAt: row.created_at,
+  };
 }
 
 /** Kirim notifikasi untuk satu user. */
-export function pushNotification(
+export async function pushNotification(
   userId: string,
   input: NotificationInput
 ): Promise<AppNotification> {
-  return withLock(async () => {
-    const store = await readStore();
-    const notification: AppNotification = {
-      id: randomUUID(),
-      userId,
-      ...input,
-      read: false,
-      createdAt: new Date().toISOString(),
-    };
-    store.push(notification);
-    await writeStore(store);
-    return notification;
-  });
+  const client = db();
+  const { data, error } = await client
+    .from("notifications")
+    .insert({
+      user_id: userId,
+      type: input.type,
+      title: input.title,
+      message: input.message,
+      link: input.link ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapRow(data);
 }
 
 /** Daftar notifikasi terbaru dulu. */
-export function listNotifications(
+export async function listNotifications(
   userId: string,
   limit = 30
 ): Promise<AppNotification[]> {
-  return withLock(async () => {
-    const store = await readStore();
-    return store
-      .filter((n) => n.userId === userId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, limit);
-  });
+  const client = db();
+  const { data, error } = await client
+    .from("notifications")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapRow);
 }
 
-export function countUnread(userId: string): Promise<number> {
-  return withLock(async () => {
-    const store = await readStore();
-    return store.filter((n) => n.userId === userId && !n.read).length;
-  });
+export async function countUnread(userId: string): Promise<number> {
+  const client = db();
+  const { data, error } = await client
+    .from("notifications")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("read", false);
+
+  if (error) throw error;
+  return (data ?? []).length;
 }
 
 /** Tandai dibaca: semua bila ids kosong, atau hanya id yang dipilih. */
-export function markNotificationsRead(
+export async function markNotificationsRead(
   userId: string,
   ids?: string[]
 ): Promise<number> {
-  return withLock(async () => {
-    const store = await readStore();
-    let changed = 0;
-    for (const n of store) {
-      if (n.userId !== userId || n.read) continue;
-      if (ids && ids.length > 0 && !ids.includes(n.id)) continue;
-      n.read = true;
-      changed++;
-    }
-    if (changed > 0) await writeStore(store);
-    return changed;
-  });
+  const client = db();
+  let query = client
+    .from("notifications")
+    .update({ read: true })
+    .eq("user_id", userId)
+    .eq("read", false);
+  if (ids && ids.length > 0) {
+    query = query.in("id", ids);
+  }
+  const { data, error } = await query.select("id");
+
+  if (error) throw error;
+  return (data ?? []).length;
 }

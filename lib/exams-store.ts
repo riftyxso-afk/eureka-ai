@@ -1,13 +1,8 @@
 /**
- * Store MVP untuk fitur Ujian (jadwal + hasil).
- * Persistensi file JSON lokal: data/exams.json
+ * Store fitur Ujian (jadwal + hasil) — Supabase.
+ * Tabel: exams
  */
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const EXAMS_FILE = path.join(DATA_DIR, "exams.json");
+import { db } from "./supabase/admin";
 
 export interface ExamEntry {
   id: string;
@@ -19,45 +14,31 @@ export interface ExamEntry {
   createdAt: string;
 }
 
-interface ExamsStore {
-  users: Record<string, ExamEntry[]>;
+function mapRow(row: any): ExamEntry {
+  return {
+    id: row.id,
+    subject: row.subject,
+    title: row.title,
+    date: row.date,
+    status: row.status,
+    score: row.score,
+    createdAt: row.created_at,
+  };
 }
 
-let lock: Promise<unknown> = Promise.resolve();
+export async function listExams(userId: string): Promise<ExamEntry[]> {
+  const client = db();
+  const { data, error } = await client
+    .from("exams")
+    .select("*")
+    .eq("user_id", userId)
+    .order("date", { ascending: true });
 
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = lock.then(fn, fn);
-  lock = run.then(
-    () => undefined,
-    () => undefined
-  );
-  return run;
+  if (error) throw error;
+  return (data ?? []).map(mapRow);
 }
 
-async function readStore(): Promise<ExamsStore> {
-  try {
-    const raw = await fs.readFile(EXAMS_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as Partial<ExamsStore>;
-    return { users: {}, ...parsed };
-  } catch {
-    return { users: {} };
-  }
-}
-
-async function writeStore(store: ExamsStore) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(EXAMS_FILE, JSON.stringify(store, null, 2), "utf-8");
-}
-
-export function listExams(userId: string): Promise<ExamEntry[]> {
-  return withLock(async () => {
-    const store = await readStore();
-    const exams = store.users[userId] ?? [];
-    return [...exams].sort((a, b) => a.date.localeCompare(b.date));
-  });
-}
-
-export function addExam(
+export async function addExam(
   userId: string,
   data: {
     subject: string;
@@ -66,38 +47,42 @@ export function addExam(
     score?: number | null;
   }
 ): Promise<ExamEntry> {
-  return withLock(async () => {
-    const store = await readStore();
-    const exams = store.users[userId] ?? [];
-    const status: ExamEntry["status"] =
-      Number.isFinite(data.score) && data.score !== null
-        ? "completed"
-        : "upcoming";
-    const entry: ExamEntry = {
-      id: randomUUID(),
+  const client = db();
+  const status: ExamEntry["status"] =
+    Number.isFinite(data.score) && data.score !== null
+      ? "completed"
+      : "upcoming";
+  const title = data.title.trim().slice(0, 120);
+  if (!title) throw new Error("Nama ujian tidak boleh kosong.");
+
+  const { data: row, error } = await client
+    .from("exams")
+    .insert({
+      user_id: userId,
       subject: data.subject.trim().slice(0, 80) || "Umum",
-      title: data.title.trim().slice(0, 120),
+      title,
       date: data.date,
       status,
       score: status === "completed" ? data.score! : null,
-      createdAt: new Date().toISOString(),
-    };
-    if (!entry.title) throw new Error("Nama ujian tidak boleh kosong.");
-    exams.push(entry);
-    store.users[userId] = exams;
-    await writeStore(store);
-    return entry;
-  });
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapRow(row);
 }
 
-export function deleteExam(userId: string, examId: string): Promise<boolean> {
-  return withLock(async () => {
-    const store = await readStore();
-    const exams = store.users[userId] ?? [];
-    const before = exams.length;
-    store.users[userId] = exams.filter((e) => e.id !== examId);
-    if (store.users[userId].length === before) return false;
-    await writeStore(store);
-    return true;
-  });
+export async function deleteExam(
+  userId: string,
+  examId: string
+): Promise<boolean> {
+  const client = db();
+  const { error } = await client
+    .from("exams")
+    .delete()
+    .eq("id", examId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+  return true;
 }

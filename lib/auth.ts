@@ -1,12 +1,13 @@
 /**
- * Auth MVP berbasis localStorage (tanpa server/auth provider).
+ * Auth — Supabase Auth (email & password).
  *
- * NOTE: untuk produksi penuh, ganti dengan Supabase Auth (lib/supabase/client.ts
- * sudah disiapkan) — struktur fungsi di sini dibuat agar mudah di-swap.
+ * Fungsi yang membaca sesi (isLoggedIn/getSession/getCurrentUser) bersifat
+ * sinkron dari cache localStorage agar komponen UI tidak perlu refactor.
+ * Sesi di-refresh oleh syncAuthSession() (dipanggil di guard dashboard).
  */
-import { setUserName } from "./identity";
+import { supabase, isSupabaseConfigured } from "./supabase/client";
+import { setUserName, setUserId, clearIdentity } from "./identity";
 
-const USERS_KEY = "eureka_users";
 const SESSION_KEY = "eureka_session";
 
 export interface AuthUser {
@@ -17,6 +18,8 @@ export interface AuthUser {
 }
 
 export interface AuthSession {
+  userId: string;
+  name: string;
   email: string;
   loggedInAt: string;
 }
@@ -49,18 +52,6 @@ function safeRemove(key: string) {
   }
 }
 
-function listUsers(): AuthUser[] {
-  return safeGet<AuthUser[]>(USERS_KEY) ?? [];
-}
-
-function saveUsers(users: AuthUser[]) {
-  safeSet(USERS_KEY, users);
-}
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
 export function isEmailValid(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
@@ -76,24 +67,41 @@ export function getSession(): AuthSession | null {
 export function getCurrentUser(): AuthUser | null {
   const session = getSession();
   if (!session) return null;
-  const users = listUsers();
-  return users.find((u) => u.email === session.email) ?? null;
+  return {
+    name: session.name,
+    email: session.email,
+    password: "",
+    createdAt: session.loggedInAt,
+  };
 }
 
 export interface AuthResult {
   ok: boolean;
   error?: string;
   user?: AuthUser;
+  /** True bila pendaftaran butuh verifikasi email (konfirmasi diaktifkan). */
+  needsConfirmation?: boolean;
 }
 
-/** Buat akun baru + langsung login. Mengembalikan error bila email sudah terdaftar. */
-export function registerUser(input: {
+function cacheSession(userId: string, name: string, email: string) {
+  safeSet(SESSION_KEY, {
+    userId,
+    name,
+    email,
+    loggedInAt: new Date().toISOString(),
+  } satisfies AuthSession);
+  setUserId(userId);
+  setUserName(name);
+}
+
+/** Buat akun via Supabase Auth. */
+export async function registerUser(input: {
   name: string;
   email: string;
   password: string;
-}): AuthResult {
+}): Promise<AuthResult> {
   const name = input.name.trim().slice(0, 60);
-  const email = normalizeEmail(input.email);
+  const email = input.email.trim().toLowerCase();
   const password = input.password;
 
   if (name.length < 2) {
@@ -105,55 +113,132 @@ export function registerUser(input: {
   if (password.length < 6) {
     return { ok: false, error: "Kata sandi minimal 6 karakter." };
   }
+  if (!isSupabaseConfigured()) {
+    return {
+      ok: false,
+      error:
+        "Supabase belum dikonfigurasi. Isi kunci asli di .env.local lalu jalankan supabase_schema.sql.",
+    };
+  }
 
-  const users = listUsers();
-  if (users.some((u) => u.email === email)) {
-    return { ok: false, error: "Email sudah terdaftar. Silakan masuk." };
+  const { data, error } = await supabase!.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { name },
+    },
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === "email_taken" || error.message.includes("already registered")
+          ? "Email sudah terdaftar. Silakan masuk."
+          : error.message,
+    };
+  }
+
+  const authUser = data.user;
+  if (!authUser) {
+    return { ok: false, error: "Gagal membuat akun. Coba lagi." };
   }
 
   const user: AuthUser = {
     name,
     email,
-    password,
-    createdAt: new Date().toISOString(),
+    password: "",
+    createdAt: authUser.created_at,
   };
-  users.push(user);
-  saveUsers(users);
-  openSession(user);
-  return { ok: true, user };
+
+  if (data.session) {
+    // Verifikasi email nonaktif → langsung login.
+    cacheSession(authUser.id, name, email);
+    return { ok: true, user };
+  }
+
+  // Verifikasi email aktif → beri tahu user untuk cek email.
+  return { ok: true, user, needsConfirmation: true };
 }
 
-/** Cek kredensial lalu buka sesi. */
-export function loginUser(input: {
+/** Masuk via Supabase Auth. */
+export async function loginUser(input: {
   email: string;
   password: string;
-}): AuthResult {
-  const email = normalizeEmail(input.email);
-  const users = listUsers();
-  const user = users.find((u) => u.email === email);
-  if (!user) {
-    return { ok: false, error: "Email belum terdaftar." };
+}): Promise<AuthResult> {
+  const email = input.email.trim().toLowerCase();
+
+  if (!isEmailValid(email)) {
+    return { ok: false, error: "Format email tidak valid." };
   }
-  if (user.password !== input.password) {
-    return { ok: false, error: "Kata sandi salah." };
+  if (!isSupabaseConfigured()) {
+    return {
+      ok: false,
+      error:
+        "Supabase belum dikonfigurasi. Isi kunci asli di .env.local lalu jalankan supabase_schema.sql.",
+    };
   }
-  openSession(user);
-  return { ok: true, user };
+
+  const { data, error } = await supabase!.auth.signInWithPassword({
+    email,
+    password: input.password,
+  });
+
+  if (error || !data.user) {
+    return {
+      ok: false,
+      error:
+        error?.code === "invalid_credentials"
+          ? "Email atau kata sandi salah."
+          : error?.message || "Gagal masuk. Coba lagi.",
+    };
+  }
+
+  const name =
+    String(data.user.user_metadata?.name ?? "").trim().slice(0, 60) ||
+    email.split("@")[0] ||
+    "Pengguna";
+
+  cacheSession(data.user.id, name, email);
+
+  return {
+    ok: true,
+    user: {
+      name,
+      email,
+      password: "",
+      createdAt: data.user.created_at,
+    },
+  };
 }
 
-function openSession(user: AuthUser) {
-  safeSet(SESSION_KEY, {
-    email: user.email,
-    loggedInAt: new Date().toISOString(),
-  } satisfies AuthSession);
-  // Sinkronkan identitas kolaborasi lokal (nama dipakai di catatan & teman).
-  try {
-    setUserName(user.name);
-  } catch {
-    // abaikan
+/**
+ * Sinkronkan cache sesi dengan Supabase Auth (mis. setelah refresh halaman).
+ * Panggil sekali dari guard dashboard.
+ */
+export async function syncAuthSession(): Promise<void> {
+  if (typeof window === "undefined" || !isSupabaseConfigured()) return;
+
+  const { data } = await supabase!.auth.getSession();
+  const session = data.session;
+
+  if (session?.user) {
+    const name =
+      String(session.user.user_metadata?.name ?? "").trim().slice(0, 60) ||
+      session.user.email?.split("@")[0] ||
+      "Pengguna";
+    cacheSession(session.user.id, name, session.user.email ?? "");
+  } else {
+    safeRemove(SESSION_KEY);
+    clearIdentity();
   }
 }
 
-export function logoutUser() {
+/** Keluar dari Supabase Auth. */
+export async function logoutUser(): Promise<void> {
   safeRemove(SESSION_KEY);
+  clearIdentity();
+  if (typeof window !== "undefined" && isSupabaseConfigured() && supabase) {
+    await supabase.auth.signOut().catch(() => undefined);
+  }
 }
