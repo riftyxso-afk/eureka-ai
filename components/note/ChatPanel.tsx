@@ -242,7 +242,12 @@ export default function ChatPanel({
     fetch("/api/progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "activity", userId, xp: 2 }),
+      body: JSON.stringify({
+        action: "activity",
+        userId,
+        xp: 2,
+        label: "Diskusi di catatan",
+      }),
     }).catch(() => {});
   };
 

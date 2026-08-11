@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
       userId?: string;
       xp?: number;
       noteId?: string;
+      label?: string;
       cards?: { front: string; back: string }[];
     } | null;
     const userId = String(body?.userId ?? "");
@@ -47,9 +48,10 @@ export async function POST(req: NextRequest) {
     const action = String(body?.action ?? "");
     const xp = Math.max(0, Number(body?.xp ?? 0) || 0);
     const noteId = String(body?.noteId ?? "");
+    const label = String(body?.label ?? "");
 
     if (action === "activity") {
-      await recordActivity(userId, xp);
+      await recordActivity(userId, xp, label || undefined);
       const stats: ProgressStats = await getStats(userId);
       return NextResponse.json({ ok: true, stats });
     }
@@ -57,14 +59,14 @@ export async function POST(req: NextRequest) {
     if (action === "cards_add") {
       const cards = Array.isArray(body?.cards) ? body.cards : [];
       await addCards(userId, noteId, cards);
-      if (xp > 0) await recordActivity(userId, xp);
+      if (xp > 0) await recordActivity(userId, xp, label || undefined);
       const stats: ProgressStats = await getStats(userId);
       return NextResponse.json({ ok: true, added: cards.length, stats });
     }
 
     if (action === "cards_review_all") {
       const reviewed = await reviewAllCards(userId, noteId);
-      if (xp > 0) await recordActivity(userId, xp);
+      if (xp > 0) await recordActivity(userId, xp, label || undefined);
       const stats: ProgressStats = await getStats(userId);
       return NextResponse.json({ ok: true, reviewed, stats });
     }

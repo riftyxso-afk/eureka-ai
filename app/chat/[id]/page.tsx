@@ -189,7 +189,12 @@ export default function ChatPage() {
     fetch("/api/progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "activity", userId: getUserId(), xp: 2 }),
+      body: JSON.stringify({
+        action: "activity",
+        userId: getUserId(),
+        xp: 2,
+        label: "Belajar dengan Eureka",
+      }),
     }).catch(() => {});
 
     const applyReply = (reply: string) => {

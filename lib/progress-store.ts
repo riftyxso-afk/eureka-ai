@@ -22,10 +22,17 @@ export interface ProgressCard {
   reviewCount: number;
 }
 
+export interface ActivityEntry {
+  date: string;
+  xp: number;
+  label: string;
+}
+
 export interface UserProgress {
   xp: number;
   activeDays: string[];
   cards: ProgressCard[];
+  activityLog: ActivityEntry[];
 }
 
 export interface ProgressStats {
@@ -39,6 +46,7 @@ export interface ProgressStats {
   totalDays: number;
   dueCards: number;
   rank: number | null;
+  recentActivity: ActivityEntry[];
 }
 
 interface ProgressStore {
@@ -72,7 +80,7 @@ async function writeStore(store: ProgressStore) {
 }
 
 function emptyProgress(): UserProgress {
-  return { xp: 0, activeDays: [], cards: [] };
+  return { xp: 0, activeDays: [], cards: [], activityLog: [] };
 }
 
 function todayKey(d: Date = new Date()): string {
@@ -84,12 +92,21 @@ function todayKey(d: Date = new Date()): string {
 /** Catat aktivitas hari ini (untuk streak) dan tambah XP bila > 0. */
 export function recordActivity(
   userId: string,
-  xpGain: number
+  xpGain: number,
+  label?: string
 ): Promise<UserProgress> {
   return withLock(async () => {
     const store = await readStore();
     const p = store.users[userId] ?? emptyProgress();
-    if (xpGain > 0) p.xp += xpGain;
+    if (xpGain > 0) {
+      p.xp += xpGain;
+      p.activityLog.unshift({
+        date: new Date().toISOString(),
+        xp: xpGain,
+        label: (label ?? "Aktivitas belajar").slice(0, 80),
+      });
+      if (p.activityLog.length > 50) p.activityLog.length = 50;
+    }
     const key = todayKey();
     if (!p.activeDays.includes(key)) {
       p.activeDays.push(key);
@@ -216,5 +233,8 @@ export async function getStats(userId: string): Promise<ProgressStats> {
     totalDays: p.activeDays.length,
     dueCards,
     rank,
+    recentActivity: [...p.activityLog].sort((a, b) =>
+      b.date.localeCompare(a.date)
+    ),
   };
 }

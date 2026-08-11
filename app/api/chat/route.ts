@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { aiChat, hasAiKey } from "@/lib/ai";
-import { replyBank } from "@/lib/mockMessages";
 
 export const runtime = "nodejs";
 
@@ -36,11 +35,12 @@ export async function POST(req: NextRequest) {
     const topic = String(body?.topic ?? "").slice(0, 200);
     const history = turns.slice(-16);
 
-    // Fallback offline bila API key AI belum diatur (balasan demo).
+    // Fallback offline bila API key AI belum diatur.
     if (!hasAiKey()) {
-      const studentTurns = history.filter((m) => m.role === "user").length;
-      const idx = Math.min(Math.max(studentTurns - 1, 0), replyBank.length - 1);
-      return NextResponse.json({ reply: replyBank[idx].text });
+      return NextResponse.json({
+        reply:
+          "API key AI belum diatur. Isi OPENAGENTIC_API_KEY atau OPENROUTER_API_KEY di .env.local untuk mulai belajar bersama Eureka.",
+      });
     }
 
     let userPrompt: string;

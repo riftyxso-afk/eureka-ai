@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
               console.warn("[api/notes/process] Notifikasi dilewati:", e);
             }
             try {
-              await recordActivity(userId, 30);
+              await recordActivity(userId, 30, "Catatan baru selesai dibuat");
             } catch (e) {
               console.warn("[api/notes/process] XP dilewati:", e);
             }

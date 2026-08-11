@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import {
   Award,
   BookOpen,
@@ -8,40 +9,98 @@ import {
   Flame,
   TrendingUp,
 } from "lucide-react";
+import { getUserId } from "@/lib/identity";
 
-const mockStreakData = {
-  currentStreak: 7,
-  longestStreak: 15,
-  totalXP: 2450,
-  level: 3,
-  levelTitle: "PELAJAR KONSISTEN",
-  milestones: [
-    { day: 3, label: "🔥 Mulai Konsisten", achieved: true },
-    { day: 7, label: "⭐ Pekan Pertama", achieved: true },
-    { day: 14, label: "🎯 Dua Pekan", achieved: false },
-    { day: 30, label: "🏆 Sebulan Penuh", achieved: false },
-    { day: 100, label: "👑 Legenda", achieved: false },
-  ],
-  recentActivity: [
-    { date: "2026-08-10", xp: 50, note: "Belajar Turunan" },
-    { date: "2026-08-09", xp: 30, note: "Review Integral" },
-    { date: "2026-08-08", xp: 45, note: "Latihan Soal" },
-    { date: "2026-08-07", xp: 20, note: "Membaca Materi" },
-  ],
-};
+interface Milestone {
+  day: number;
+  label: string;
+  achieved: boolean;
+}
+
+interface ActivityEntry {
+  date: string;
+  xp: number;
+  label: string;
+}
+
+const MILESTONE_DEFS: { day: number; label: string }[] = [
+  { day: 3, label: "🔥 Mulai Konsisten" },
+  { day: 7, label: "⭐ Pekan Pertama" },
+  { day: 14, label: "🎯 Dua Pekan" },
+  { day: 30, label: "🏆 Sebulan Penuh" },
+  { day: 100, label: "👑 Legenda" },
+];
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("id-ID", {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("id-ID", {
     day: "numeric",
     month: "short",
   });
 }
 
 export default function StreaksPage() {
-  const stats = [
-    { icon: TrendingUp, label: "Total XP", value: mockStreakData.totalXP },
-    { icon: Award, label: "Level", value: mockStreakData.level },
-    { icon: BookOpen, label: "Total Catatan", value: 12 },
+  const [stats, setStats] = useState({
+    currentStreak: 0,
+    longestStreak: 0,
+    totalXP: 0,
+    level: 1,
+    levelTitle: "PELAJAR KONSISTEN",
+    totalNotes: 0,
+    recentActivity: [] as ActivityEntry[],
+  });
+
+  const loadStats = useCallback(async () => {
+    try {
+      const userId = getUserId();
+      const [progressRes, notesRes] = await Promise.all([
+        fetch(`/api/progress?userId=${encodeURIComponent(userId)}`),
+        fetch("/api/notes"),
+      ]);
+      if (progressRes.ok) {
+        const payload = await progressRes.json();
+        if (payload.stats) {
+          const s = payload.stats;
+          setStats((prev) => ({
+            ...prev,
+            currentStreak: s.streak,
+            longestStreak: s.longestStreak,
+            totalXP: s.xp,
+            level: s.level,
+            levelTitle: s.levelTitle,
+            recentActivity: s.recentActivity ?? [],
+          }));
+        }
+      }
+      if (notesRes.ok) {
+        const payload = await notesRes.json();
+        setStats((prev) => ({
+          ...prev,
+          totalNotes: Array.isArray(payload.notes) ? payload.notes.length : 0,
+        }));
+      }
+    } catch {
+      // biarkan nilai awal
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStats();
+    const timer = setInterval(loadStats, 15000);
+    return () => clearInterval(timer);
+  }, [loadStats]);
+
+  const milestones: Milestone[] = MILESTONE_DEFS.map((m) => ({
+    day: m.day,
+    label: m.label,
+    achieved: stats.currentStreak >= m.day,
+  }));
+
+  const cards = [
+    { icon: TrendingUp, label: "Total XP", value: stats.totalXP },
+    { icon: Award, label: "Level", value: stats.level },
+    { icon: BookOpen, label: "Total Catatan", value: stats.totalNotes },
   ];
 
   return (
@@ -57,26 +116,28 @@ export default function StreaksPage() {
           <Flame size={40} className="text-clay-primary" />
         </div>
         <p className="mt-6 text-6xl font-extrabold text-clay-primary">
-          {mockStreakData.currentStreak}
+          {stats.currentStreak}
         </p>
         <p className="mt-2 text-base font-bold text-clay-muted">
           Hari Berturut-turut
         </p>
         <p className="mt-1 text-sm font-bold text-clay-muted">
-          Terpanjang: {mockStreakData.longestStreak} hari
+          Terpanjang: {stats.longestStreak} hari
         </p>
         <span className="mt-4 inline-block rounded-clay-full border-2 border-clay-primary bg-clay-primary/10 px-5 py-1.5 text-sm font-extrabold text-clay-primary">
-          {mockStreakData.levelTitle}
+          {stats.levelTitle}
         </span>
       </div>
 
       {/* Statistik cepat */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {stats.map((s) => (
+        {cards.map((s) => (
           <div key={s.label} className="card-clay flex flex-col items-center gap-1 !p-4 text-center sm:!p-5">
             <s.icon size={18} className="text-clay-primary sm:hidden" />
             <s.icon size={20} className="hidden text-clay-primary sm:block" />
-            <p className="text-xl font-extrabold sm:text-2xl">{s.value}</p>
+            <p className="text-xl font-extrabold sm:text-2xl">
+              {s.value.toLocaleString("id-ID")}
+            </p>
             <p className="text-xs font-bold text-clay-muted">{s.label}</p>
           </div>
         ))}
@@ -85,7 +146,7 @@ export default function StreaksPage() {
       {/* Milestone */}
       <h2 className="mt-10 text-base font-extrabold text-clay-dark sm:text-lg">Capaian (Milestone)</h2>
       <div className="mt-4 flex flex-col gap-3">
-        {mockStreakData.milestones.map((m) => (
+        {milestones.map((m) => (
           <div
             key={m.day}
             className={`card-clay flex items-center gap-4 !p-4 !shadow-clay-sm ${
@@ -112,20 +173,26 @@ export default function StreaksPage() {
       {/* Aktivitas terakhir */}
       <h2 className="mt-10 text-base font-extrabold text-clay-dark sm:text-lg">Aktivitas Terakhir</h2>
       <div className="card-clay mt-4 !p-2">
-        {mockStreakData.recentActivity.map((a, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between gap-3 px-4 py-3.5 even:bg-clay-beige/60"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-base font-bold text-clay-dark">{a.note}</p>
-              <p className="text-sm font-bold text-clay-muted">{formatDate(a.date)}</p>
+        {stats.recentActivity.length === 0 ? (
+          <p className="px-4 py-8 text-center text-sm font-semibold text-clay-muted">
+            Belum ada aktivitas. Mulai belajar untuk mengumpulkan XP! 🚀
+          </p>
+        ) : (
+          stats.recentActivity.map((a, i) => (
+            <div
+              key={`${a.date}-${i}`}
+              className="flex items-center justify-between gap-3 px-4 py-3.5 even:bg-clay-beige/60"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-base font-bold text-clay-dark">{a.label}</p>
+                <p className="text-sm font-bold text-clay-muted">{formatDate(a.date)}</p>
+              </div>
+              <span className="shrink-0 text-base font-extrabold text-clay-primary">
+                +{a.xp} XP
+              </span>
             </div>
-            <span className="shrink-0 text-base font-extrabold text-clay-primary">
-              +{a.xp} XP
-            </span>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

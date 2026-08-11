@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, ClipboardCheck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { CalendarDays, ClipboardCheck, Plus, Trash2 } from "lucide-react";
+import ButtonClay from "@/components/ui/ButtonClay";
+import InputClay from "@/components/ui/InputClay";
+import { getUserId } from "@/lib/identity";
 
 interface Exam {
-  id: number;
+  id: string;
   subject: string;
   title: string;
   date: string;
@@ -12,15 +15,10 @@ interface Exam {
   score: number | null;
 }
 
-const mockExams: Exam[] = [
-  { id: 1, subject: "Matematika", title: "UTS Matematika Wajib", date: "2026-08-15", status: "upcoming", score: null },
-  { id: 2, subject: "Fisika", title: "UAS Fisika", date: "2026-08-20", status: "upcoming", score: null },
-  { id: 3, subject: "Kimia", title: "Ulangan Harian Kimia", date: "2026-08-05", status: "completed", score: 85 },
-  { id: 4, subject: "Biologi", title: "UTS Biologi", date: "2026-07-28", status: "completed", score: 90 },
-];
-
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("id-ID", {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("id-ID", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -29,15 +27,137 @@ function formatDate(iso: string): string {
 
 export default function UjianPage() {
   const [tab, setTab] = useState<"upcoming" | "completed">("upcoming");
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ subject: "", title: "", date: "" });
+  const [toast, setToast] = useState<string | null>(null);
 
-  const filtered = mockExams.filter((e) => e.status === tab);
+  const notify = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  const loadExams = useCallback(async () => {
+    try {
+      const userId = getUserId();
+      const res = await fetch(`/api/exams?userId=${encodeURIComponent(userId)}`);
+      if (!res.ok) return;
+      const payload = await res.json();
+      if (Array.isArray(payload.exams)) setExams(payload.exams);
+    } catch {
+      // biarkan
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadExams();
+    const timer = setInterval(loadExams, 15000);
+    return () => clearInterval(timer);
+  }, [loadExams]);
+
+  const handleAdd = async () => {
+    if (!form.title.trim() || !form.date) {
+      notify("Isi nama ujian dan tanggalnya! ⚠️");
+      return;
+    }
+    try {
+      const userId = getUserId();
+      const res = await fetch("/api/exams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add",
+          userId,
+          subject: form.subject,
+          title: form.title,
+          date: form.date,
+        }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error ?? "Gagal menambah ujian.");
+      setForm({ subject: "", title: "", date: "" });
+      setShowForm(false);
+      notify("Ujian ditambahkan! ✅");
+      loadExams();
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Gagal menambah ujian.");
+    }
+  };
+
+  const handleDelete = async (exam: Exam) => {
+    if (!window.confirm(`Hapus ujian "${exam.title}"?`)) return;
+    try {
+      const userId = getUserId();
+      const res = await fetch("/api/exams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete",
+          userId,
+          examId: exam.id,
+        }),
+      });
+      if (res.ok) {
+        notify("Ujian dihapus.");
+        loadExams();
+      }
+    } catch {
+      // abaikan
+    }
+  };
+
+  const filtered = exams.filter((e) => e.status === tab);
 
   return (
     <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <h1 className="text-2xl font-extrabold sm:text-3xl">Ujian</h1>
-      <p className="mt-2 text-base font-semibold text-clay-muted">
-        Kelola jadwal ujian dan lihat hasilmu
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold sm:text-3xl">Ujian</h1>
+          <p className="mt-2 text-base font-semibold text-clay-muted">
+            Kelola jadwal ujian dan lihat hasilmu
+          </p>
+        </div>
+        <ButtonClay
+          onClick={() => setShowForm((v) => !v)}
+          className="!min-h-[44px] !px-4 text-sm"
+        >
+          <Plus size={16} className="mr-2" />
+          Tambah Ujian
+        </ButtonClay>
+      </div>
+
+      {/* Form tambah */}
+      {showForm && (
+        <div className="card-clay mt-6 space-y-4 !p-5">
+          <h2 className="text-base font-extrabold">Ujian Baru</h2>
+          <InputClay
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="Nama ujian (contoh: UTS Matematika)"
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <InputClay
+              value={form.subject}
+              onChange={(e) => setForm({ ...form, subject: e.target.value })}
+              placeholder="Mata pelajaran (contoh: Matematika)"
+            />
+            <input
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className="w-full rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-5 py-4 text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none"
+            />
+          </div>
+          <div className="flex justify-end">
+            <ButtonClay onClick={handleAdd} className="!min-h-[44px] !px-5 text-sm">
+              Simpan Ujian
+            </ButtonClay>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 flex gap-3">
         {(
@@ -61,7 +181,11 @@ export default function UjianPage() {
       </div>
 
       <div className="mt-6 flex flex-col gap-4">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="card-clay flex items-center justify-center py-14 text-center">
+            <p className="text-sm font-bold text-clay-muted">Memuat ujian...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="card-clay flex flex-col items-center py-14 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
               <ClipboardCheck size={36} className="text-clay-muted" />
@@ -71,7 +195,7 @@ export default function UjianPage() {
             </h3>
             <p className="mt-2 max-w-sm text-base font-semibold text-clay-muted">
               {tab === "upcoming"
-                ? "Santai dulu — ujian baru akan muncul di sini."
+                ? "Santai dulu — tambah ujianmu agar jadwalnya terpantau."
                 : "Selesaikan ujian dan hasilnya akan tampil di sini."}
             </p>
           </div>
@@ -90,8 +214,17 @@ export default function UjianPage() {
                   {formatDate(exam.date)}
                 </span>
                 {exam.status === "upcoming" ? (
-                  <span className="rounded-clay-full bg-clay-secondary/20 px-3 py-1 text-xs font-extrabold text-clay-secondary">
-                    Akan Datang
+                  <span className="flex items-center gap-3">
+                    <span className="rounded-clay-full bg-clay-secondary/20 px-3 py-1 text-xs font-extrabold text-clay-secondary">
+                      Akan Datang
+                    </span>
+                    <button
+                      onClick={() => handleDelete(exam)}
+                      aria-label="Hapus ujian"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-clay-shadow/30 bg-white/90 text-clay-muted transition-colors hover:border-red-300 hover:text-red-500"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </span>
                 ) : (
                   <span className="flex items-center gap-3">
@@ -108,6 +241,12 @@ export default function UjianPage() {
           ))
         )}
       </div>
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

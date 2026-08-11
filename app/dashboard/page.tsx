@@ -20,12 +20,8 @@ import { NoteItem } from "@/components/dashboard/NoteItem";
 import { CreateNoteModal } from "@/components/dashboard/CreateNoteModal";
 import { BackgroundJobPopup } from "@/components/dashboard/BackgroundJobPopup";
 import { useOnboarding } from "@/context/OnboardingContext";
-import { getUserId } from "@/lib/identity";
+import { getUserId, getUserName } from "@/lib/identity";
 import type { Note } from "@/lib/types";
-
-const userData = {
-  name: "Riftyxso",
-};
 
 function formatUpdatedAt(iso: string): string {
   const d = new Date(iso);
@@ -66,7 +62,7 @@ export default function DashboardPage() {
     rank: null as number | null,
   });
 
-  const userName = data.name || userData.name;
+  const userName = data.name || getUserName();
 
   const loadProgress = async () => {
     try {

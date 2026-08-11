@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   BookOpen,
-  Calendar,
   Flame,
   GraduationCap,
   LogOut,
@@ -15,47 +14,110 @@ import {
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
+import { useOnboarding } from "@/context/OnboardingContext";
+import { getUserId, getUserName, setUserName } from "@/lib/identity";
 
-const mockUserProfile = {
-  name: "Riftyxso",
-  email: "riftyxso@email.com",
-  school: "SMA Negeri 1 Jakarta",
-  grade: "11 SMA",
-  level: 5,
-  levelTitle: "PELAJAR KONSISTEN",
-  xp: 4200,
-  totalNotes: 12,
-  streak: 7,
-  joinedAt: "2026-01-15",
-  avatar: "🧑‍🎓",
-};
+const SCHOOL_KEY = "eureka_school";
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+function readSchool(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(SCHOOL_KEY) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 export default function ProfilPage() {
+  const { data, update } = useOnboarding();
+  const userId = getUserId();
   const [form, setForm] = useState({
-    name: mockUserProfile.name,
-    email: mockUserProfile.email,
-    school: mockUserProfile.school,
-    grade: mockUserProfile.grade,
+    name: getUserName(),
+    email: "",
+    school: readSchool(),
+    grade: "",
   });
   const [toast, setToast] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    xp: 0,
+    level: 1,
+    streak: 0,
+    rank: null as number | null,
+    totalNotes: 0,
+  });
 
-  const showToast = (msg: string) => {
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      name: getUserName(),
+      email: prev.email || "akun-lokal@eureka.local",
+      grade: data.grade || prev.grade,
+    }));
+  }, [data.grade]);
+
+  const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
-  };
+  }, []);
 
-  const handleSave = () => {
+  const loadStats = useCallback(async () => {
+    try {
+      const [progressRes, notesRes] = await Promise.all([
+        fetch(`/api/progress?userId=${encodeURIComponent(userId)}`),
+        fetch("/api/notes"),
+      ]);
+      if (progressRes.ok) {
+        const payload = await progressRes.json();
+        if (payload.stats) {
+          setStats((prev) => ({
+            ...prev,
+            xp: payload.stats.xp,
+            level: payload.stats.level,
+            streak: payload.stats.streak,
+            rank: payload.stats.rank,
+          }));
+        }
+      }
+      if (notesRes.ok) {
+        const payload = await notesRes.json();
+        setStats((prev) => ({
+          ...prev,
+          totalNotes: Array.isArray(payload.notes) ? payload.notes.length : 0,
+        }));
+      }
+    } catch {
+      // biarkan nilai awal
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  const handleSave = async () => {
     if (!form.name.trim()) {
       showToast("Nama tidak boleh kosong! ⚠️");
       return;
+    }
+    setUserName(form.name);
+    update({ name: form.name.trim(), grade: form.grade });
+    try {
+      window.localStorage.setItem(SCHOOL_KEY, form.school.trim());
+    } catch {
+      // abaikan
+    }
+    try {
+      await fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "register",
+          userId,
+          name: form.name.trim(),
+        }),
+      });
+    } catch {
+      // abaikan
     }
     showToast("Profil berhasil disimpan! ✅");
   };
@@ -66,10 +128,10 @@ export default function ProfilPage() {
     }
   };
 
-  const stats = [
-    { icon: TrendingUp, label: "Total XP", value: mockUserProfile.xp },
-    { icon: BookOpen, label: "Total Catatan", value: mockUserProfile.totalNotes },
-    { icon: Flame, label: "Streak", value: mockUserProfile.streak },
+  const statCards = [
+    { icon: TrendingUp, label: "Total XP", value: stats.xp },
+    { icon: BookOpen, label: "Total Catatan", value: stats.totalNotes },
+    { icon: Flame, label: "Streak", value: stats.streak },
   ];
 
   return (
@@ -82,22 +144,24 @@ export default function ProfilPage() {
       {/* Avatar + info ringkas */}
       <div className="card-clay mt-6 flex flex-col items-center py-8 text-center">
         <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-clay-primary/20 text-5xl shadow-clay-sm">
-          {mockUserProfile.avatar}
+          🧑‍🎓
         </div>
         <p className="mt-4 text-2xl font-extrabold text-clay-dark">{form.name}</p>
         <p className="text-sm font-bold text-clay-muted">{form.email}</p>
         <span className="mt-3 inline-block rounded-clay-full border-2 border-clay-primary bg-clay-primary/10 px-5 py-1.5 text-sm font-extrabold text-clay-primary">
-          Level {mockUserProfile.level} · {mockUserProfile.levelTitle}
+          Level {stats.level} · PELAJAR KONSISTEN
         </span>
       </div>
 
       {/* Statistik akun */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {stats.map((s) => (
+        {statCards.map((s) => (
           <div key={s.label} className="card-clay flex flex-col items-center gap-1 !p-4 text-center sm:!p-5">
             <s.icon size={18} className="text-clay-primary sm:hidden" />
             <s.icon size={20} className="hidden text-clay-primary sm:block" />
-            <p className="text-xl font-extrabold sm:text-2xl">{s.value}</p>
+            <p className="text-xl font-extrabold sm:text-2xl">
+              {s.value.toLocaleString("id-ID")}
+            </p>
             <p className="text-xs font-bold text-clay-muted">{s.label}</p>
           </div>
         ))}
@@ -156,9 +220,9 @@ export default function ProfilPage() {
                 onChange={(e) => setForm({ ...form, grade: e.target.value })}
                 className="w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-5 py-4 pr-12 text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none"
               >
-                {["10 SMA", "11 SMA", "12 SMA", "Mahasiswa"].map((g) => (
+                {["", "10 SMA", "11 SMA", "12 SMA", "Mahasiswa"].map((g) => (
                   <option key={g} value={g}>
-                    {g}
+                    {g || "Pilih kelas..."}
                   </option>
                 ))}
               </select>
@@ -167,11 +231,6 @@ export default function ProfilPage() {
               </span>
             </div>
           </div>
-
-          <p className="flex items-center gap-1.5 text-sm font-bold text-clay-muted">
-            <Calendar size={15} />
-            Bergabung sejak {formatDate(mockUserProfile.joinedAt)}
-          </p>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
             <ButtonClay onClick={handleSave} className="sm:flex-1">

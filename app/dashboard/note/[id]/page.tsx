@@ -10,6 +10,7 @@ import {
   Calendar,
   CheckCircle2,
   ClipboardCheck,
+  FileQuestion,
   FileText,
   History,
   ImagePlus,
@@ -55,29 +56,6 @@ interface NoteDetail {
   subject: string;
   keyPoints?: string[];
 }
-
-const mockNoteDetail: NoteDetail = {
-  id: "1",
-  title: "Model murah paling worth? GPT-5.6 Luna review & real world test",
-  summary:
-    "OpenAI merilis update harga model GPT-5.6 — versi tera turun 20%, dan Luna hadir dengan harga lebih terjangkau untuk pemakaian harian.",
-  keyPoints: [
-    "Harga GPT-5.6 versi tera turun 20% dari versi sebelumnya.",
-    "Versi Luna hadir dengan harga jauh lebih terjangkau untuk penggunaan harian.",
-    "Pembaruan dirilis bersamaan dengan update harga model yang signifikan.",
-  ],
-  chapters: [
-    {
-      id: 1,
-      title: "Pembaruan Harga & Versi GPT-5.6",
-      content:
-        "Open AI kemarin merilis update harga model mereka. Untuk GPT-5.6 versi tera, harganya turun 20% — jauh lebih murah dibanding versi sebelumnya. Sementara versi Luna hadir dengan harga yang jauh lebih terjangkau untuk penggunaan sehari-hari.",
-      timestamp: "00:00",
-    },
-  ],
-  createdAt: "2026-08-10",
-  subject: "Teknologi",
-};
 
 function firstSentence(text: string): string {
   const match = text.match(/^.{1,90}?[.!?](\s|$)/);
@@ -240,7 +218,7 @@ export default function NoteDetailPage() {
         });
       }
     } catch {
-      // Biarkan mock data tampil
+      // catatan tidak ditemukan
     } finally {
       setLoading(false);
     }
@@ -401,7 +379,39 @@ export default function NoteDetailPage() {
     };
   }, [params.id, userId]);
 
-  const data = note ?? mockNoteDetail;
+  if (loading) {
+    return (
+      <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+        <div className="card-clay flex items-center justify-center py-16 text-clay-muted">
+          <p className="text-base font-extrabold">Memuat catatan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!note) {
+    return (
+      <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+        <div className="card-clay flex flex-col items-center py-16 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
+            <FileQuestion size={36} className="text-clay-muted" />
+          </div>
+          <h3 className="mt-6 text-xl font-extrabold">Catatan tidak ditemukan</h3>
+          <p className="mt-2 max-w-sm text-base font-semibold text-clay-muted">
+            Catatan ini mungkin sudah dihapus atau tautannya salah.
+          </p>
+          <Link
+            href="/dashboard"
+            className="btn-clay-primary mt-6 !min-h-[44px] !px-5 text-sm"
+          >
+            Kembali ke Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const data = note;
   const chapters = useMemo(() => data.chapters, [data.chapters]);
 
   // Intersection Observer → deteksi bab yang sedang dibaca
@@ -433,16 +443,6 @@ export default function NoteDetailPage() {
   const openNotepad = (chapter: Chapter) => {
     router.push(`/dashboard/note/${data.id}/bab/${chapter.id}`);
   };
-
-  if (loading) {
-    return (
-      <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-        <div className="card-clay flex items-center justify-center py-16 text-clay-muted">
-          <p className="text-base font-extrabold">Memuat catatan...</p>
-        </div>
-      </div>
-    );
-  }
 
   const handleAction = (label: string) => {
     if (label === "Kuis") {
