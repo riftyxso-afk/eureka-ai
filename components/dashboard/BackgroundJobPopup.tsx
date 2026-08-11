@@ -39,39 +39,39 @@ export const BackgroundJobPopup = () => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 24, scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        className="fixed bottom-6 left-6 z-40"
+        className="fixed bottom-4 left-4 right-4 z-40 sm:bottom-6 sm:left-6 sm:right-auto"
       >
         {expanded ? (
-          <div className="w-[320px] rounded-clay border-3 border-clay-borderLight bg-white shadow-clay-lg">
-            <div className="flex items-center justify-between border-b-2 border-clay-shadow/30 px-4 py-3">
+          <div className="w-full rounded-clay border-3 border-clay-borderLight bg-white shadow-clay-lg sm:w-[320px]">
+            <div className="flex items-center justify-between border-b-2 border-clay-shadow/30 px-3 py-3 sm:px-4">
               <div className="flex items-center gap-2">
-                <Loader2 size={16} className="animate-spin text-clay-primary" />
-                <p className="text-sm font-extrabold text-clay-dark">
+                <Loader2 size={16} className="animate-spin text-clay-primary sm:size-4" />
+                <p className="text-xs font-extrabold text-clay-dark sm:text-sm">
                   Dirangkum di Latar Belakang
                 </p>
               </div>
               <button
                 onClick={() => setDismissed(true)}
                 aria-label="Sembunyikan popup"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-clay-muted hover:bg-clay-beige"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-clay-muted hover:bg-clay-beige sm:h-7 sm:w-7"
               >
-                <X size={15} />
+                <X size={18} className="sm:size-[15px]" />
               </button>
             </div>
 
-            <div className="max-h-[260px] space-y-3 overflow-y-auto px-4 py-3">
+            <div className="max-h-[260px] space-y-3 overflow-y-auto px-3 py-3 sm:px-4">
               {runningJobs.map((job) => (
                 <div key={job.id}>
                   <div className="flex items-start justify-between gap-2">
-                    <span className="flex items-center gap-1.5 text-xs font-extrabold text-clay-dark">
-                      <FileText size={13} className="shrink-0 text-clay-primary" />
+                    <span className="flex items-center gap-1.5 text-xs font-extrabold text-clay-dark sm:gap-2">
+                      <FileText size={14} className="shrink-0 text-clay-primary sm:size-[13px]" />
                       <span className="truncate">{job.message}</span>
                     </span>
                     <span className="shrink-0 text-xs font-extrabold text-clay-muted">
                       {job.percent}%
                     </span>
                   </div>
-                  <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-clay-full border-2 border-clay-shadow/30 bg-clay-inputBg shadow-clay-inset">
+                  <div className="mt-1.5 h-3 w-full overflow-hidden rounded-clay-full border-2 border-clay-shadow/30 bg-clay-inputBg shadow-clay-inset sm:h-2.5">
                     <motion.div
                       className="h-full rounded-clay-full bg-gradient-to-r from-clay-primary to-clay-accent"
                       initial={{ width: "0%" }}
@@ -83,10 +83,10 @@ export const BackgroundJobPopup = () => {
               ))}
             </div>
 
-            <div className="border-t-2 border-clay-shadow/20 px-4 py-2.5">
+            <div className="border-t-2 border-clay-shadow/20 px-3 py-2.5 sm:px-4">
               <button
                 onClick={() => setExpanded(false)}
-                className="w-full rounded-clay-md py-1.5 text-xs font-extrabold text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-dark"
+                className="w-full rounded-clay-md py-3 text-xs font-extrabold text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-dark sm:py-1.5"
               >
                 Lipat & sembunyikan ↓
               </button>
@@ -96,14 +96,14 @@ export const BackgroundJobPopup = () => {
           <button
             onClick={() => setExpanded(true)}
             aria-label="Lihat progres pembuatan catatan"
-            className="flex items-center gap-3 rounded-clay-full border-3 border-clay-borderLight bg-white py-2.5 pl-3.5 pr-4 shadow-clay-lg transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
+            className="flex w-full items-center gap-2 rounded-clay-full border-3 border-clay-borderLight bg-white py-3 pl-4 pr-4 shadow-clay-lg transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:w-auto sm:gap-3 sm:py-2.5 sm:pl-3.5"
           >
             <Loader2 size={18} className="shrink-0 animate-spin text-clay-primary" />
-            <span className="text-left">
+            <span className="min-w-0 flex-1 text-left sm:flex-initial">
               <span className="block text-xs font-extrabold text-clay-dark">
                 Dirangkum di latar belakang
               </span>
-              <span className="block max-w-[180px] truncate text-[11px] font-bold text-clay-muted">
+              <span className="block truncate text-[11px] font-bold text-clay-muted sm:max-w-[180px]">
                 {topJob.message} · {topPercent}%
               </span>
             </span>

@@ -72,31 +72,31 @@ export default function FlashcardModal({
       onClick={onClose}
     >
       <div
-        className="card-clay max-h-[85vh] w-full max-w-md overflow-y-auto !p-6"
+        className="card-clay max-h-[85vh] w-full max-w-md overflow-y-auto p-3 sm:!p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-extrabold text-clay-dark">
+        <div className="mb-3 sm:mb-4 flex items-center justify-between">
+          <h2 className="text-base sm:text-lg font-extrabold text-clay-dark">
             Flashcards AI
           </h2>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="btn-clay-ghost !min-h-[36px] !px-2.5"
+            className="btn-clay-ghost !min-h-[44px] !px-2.5"
           >
             <X size={16} />
           </button>
         </div>
 
         {!cards && (
-          <div className="space-y-4">
-            <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4 text-center text-sm font-semibold text-clay-muted">
+          <div className="space-y-3 sm:space-y-4">
+            <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
               Ubah materi catatan menjadi kartu hafalan untuk belajar cepat! 🃏
             </p>
             <button
               onClick={generate}
               disabled={generating}
-              className="btn-clay-primary w-full !min-h-[46px] disabled:opacity-60"
+              className="btn-clay-primary w-full !min-h-[46px] sm:!min-h-[48px] disabled:opacity-60"
             >
               {generating ? (
                 <>
@@ -108,7 +108,7 @@ export default function FlashcardModal({
               )}
             </button>
             {error && (
-              <p className="rounded-2xl border-2 border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-600">
+              <p className="rounded-2xl border-2 border-red-200 bg-red-50 p-3 sm:p-4 text-xs sm:text-sm font-semibold text-red-600">
                 {error}
               </p>
             )}
@@ -116,7 +116,7 @@ export default function FlashcardModal({
         )}
 
         {card && (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="text-center text-xs font-bold text-clay-muted">
               Kartu {index + 1} dari {cards!.length}
             </div>
@@ -127,30 +127,30 @@ export default function FlashcardModal({
                 onClick={() => setFlipped((f) => !f)}
                 animate={{ rotateY: flipped ? 180 : 0 }}
                 transition={{ duration: 0.55, type: "tween", ease: "easeInOut" }}
-                className="relative flex min-h-[220px] cursor-pointer [transform-style:preserve-3d]"
+                className="relative flex min-h-[200px] sm:min-h-[220px] cursor-pointer [transform-style:preserve-3d]"
               >
                 {/* Sisi depan: Pertanyaan */}
-                <div className="card-clay absolute inset-0 flex flex-col items-center justify-center !p-6 text-center [backface-visibility:hidden]">
+                <div className="card-clay absolute inset-0 flex flex-col items-center justify-center !p-4 sm:!p-6 text-center [backface-visibility:hidden]">
                   <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-clay-muted">
                     Pertanyaan
                   </div>
-                  <p className="text-base font-extrabold leading-relaxed text-clay-dark">
+                  <p className="text-sm sm:text-base font-extrabold leading-relaxed text-clay-dark">
                     {card.front}
                   </p>
-                  <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-clay-muted">
+                  <div className="mt-3 sm:mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-clay-muted">
                     <RotateCw size={12} />
                     Klik untuk balik
                   </div>
                 </div>
                 {/* Sisi belakang: Jawaban */}
-                <div className="card-clay absolute inset-0 flex flex-col items-center justify-center !p-6 text-center [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                <div className="card-clay absolute inset-0 flex flex-col items-center justify-center !p-4 sm:!p-6 text-center [backface-visibility:hidden] [transform:rotateY(180deg)]">
                   <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-clay-primary">
                     Jawaban
                   </div>
-                  <p className="text-base font-bold leading-relaxed text-clay-dark">
+                  <p className="text-sm sm:text-base font-bold leading-relaxed text-clay-dark">
                     {card.back}
                   </p>
-                  <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-clay-muted">
+                  <div className="mt-3 sm:mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-clay-muted">
                     <RotateCw size={12} />
                     Klik untuk balik
                   </div>
@@ -158,7 +158,7 @@ export default function FlashcardModal({
               </motion.div>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
               <button
                 onClick={() => {
                   setIndex((i) => Math.max(0, i - 1));
@@ -170,7 +170,7 @@ export default function FlashcardModal({
                 <ChevronLeft size={17} className="mr-1" />
                 Sebelumnya
               </button>
-              <span className="text-sm font-extrabold text-clay-dark">
+              <span className="text-sm font-extrabold text-clay-dark text-center">
                 {index + 1}/{cards!.length}
               </span>
               <button

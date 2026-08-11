@@ -80,36 +80,36 @@ export default function EditNoteModal({
       onClick={onClose}
     >
       <div
-        className="card-clay max-h-[85vh] w-full max-w-md overflow-y-auto !p-6"
+        className="card-clay max-h-[85vh] w-full max-w-md overflow-y-auto p-3 sm:!p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-3 sm:mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Pencil size={18} className="text-clay-primary" />
-            <h2 className="text-lg font-extrabold text-clay-dark">Ubah Catatan</h2>
+            <h2 className="text-base sm:text-lg font-extrabold text-clay-dark">Ubah Catatan</h2>
           </div>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="btn-clay-ghost !min-h-[36px] !px-2.5"
+            className="btn-clay-ghost !min-h-[44px] !px-2.5"
           >
             <X size={16} />
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 sm:space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-bold text-clay-muted">
+            <label className="mb-1.5 block text-xs font-bold text-clay-muted">
               Judul
             </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="input-clay w-full"
+              className="input-clay w-full min-h-[44px]"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold text-clay-muted">
+            <label className="mb-1.5 block text-xs font-bold text-clay-muted">
               Ringkasan
             </label>
             <textarea
@@ -122,7 +122,7 @@ export default function EditNoteModal({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="btn-clay-primary w-full !min-h-[46px] disabled:opacity-60"
+            className="btn-clay-primary w-full !min-h-[46px] sm:!min-h-[48px] disabled:opacity-60"
           >
             {saving ? "Menyimpan..." : "Simpan Perubahan"}
           </button>

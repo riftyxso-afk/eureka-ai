@@ -483,7 +483,7 @@ export default function NoteDetailPage() {
   return (
     <div className="mx-auto w-full max-w-clay space-y-6 px-4 py-6 sm:px-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href="/dashboard"

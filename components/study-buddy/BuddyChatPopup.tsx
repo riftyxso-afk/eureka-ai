@@ -122,18 +122,18 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
       initial={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
       animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
-      className="fixed bottom-32 right-6 z-50 w-96 h-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
+      className="fixed inset-x-4 bottom-20 sm:inset-x-auto sm:bottom-32 sm:right-6 sm:left-auto z-50 w-auto sm:w-96 max-h-[70vh] sm:h-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
     >
-      {/* Header */}
+      {/* Header - Mobile Responsive */}
       <div 
-        className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"
+        className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"
         style={{
           background: `linear-gradient(135deg, ${template.colors.primary}15, ${template.colors.primary}05)`,
         }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div 
-            className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-white"
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg font-bold text-white flex-shrink-0"
             style={{ backgroundColor: template.colors.primary }}
           >
             {character === 'fox' && '🦊'}
@@ -141,30 +141,32 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
             {character === 'cat' && '🐱'}
             {character === 'bear' && '🐻'}
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">{template.name}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{template.personality}</p>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate">{template.name}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{template.personality}</p>
           </div>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-0.5 sm:gap-1 flex-shrink-0">
           <button
             onClick={handleClearHistory}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
             title="Clear chat"
+            aria-label="Clear chat history"
           >
             <Trash2 className="w-4 h-4 text-gray-500" />
           </button>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+            aria-label="Close chat"
           >
             <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      {/* Messages - Mobile Responsive */}
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
             <p className="text-sm">Hai! Aku {template.name} 👋</p>
@@ -177,13 +179,13 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] px-4 py-2 rounded-2xl ${
+                className={`max-w-[85%] sm:max-w-[80%] px-3 sm:px-4 py-2 rounded-2xl ${
                   msg.role === 'user'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.content}</p>
               </div>
             </div>
           ))
@@ -198,8 +200,8 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+      {/* Input - Mobile Responsive */}
+      <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-800">
         <div className="flex gap-2">
           <input
             type="text"
@@ -208,12 +210,13 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
             onKeyPress={handleKeyPress}
             placeholder="Ketik pesan..."
             disabled={isLoading}
-            className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+            className="flex-1 px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 touch-manipulation"
           />
           <button
             onClick={handleSend}
             disabled={!inputValue.trim() || isLoading}
-            className="p-2 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 sm:p-2.5 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex-shrink-0"
+            aria-label="Send message"
           >
             <Send className="w-4 h-4" />
           </button>

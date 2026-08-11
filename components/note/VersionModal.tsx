@@ -79,20 +79,20 @@ export default function VersionModal({
       onClick={onClose}
     >
       <div
-        className="card-clay max-h-[85vh] w-full max-w-md overflow-y-auto !p-6"
+        className="card-clay max-h-[85vh] w-full max-w-md overflow-y-auto p-3 sm:!p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-3 sm:mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History size={18} className="text-clay-primary" />
-            <h2 className="text-lg font-extrabold text-clay-dark">
+            <h2 className="text-base sm:text-lg font-extrabold text-clay-dark">
               Riwayat Versi
             </h2>
           </div>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="btn-clay-ghost !min-h-[36px] !px-2.5"
+            className="btn-clay-ghost !min-h-[44px] !px-2.5"
           >
             <X size={16} />
           </button>

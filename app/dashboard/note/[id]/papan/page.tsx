@@ -311,7 +311,7 @@ export default function WhiteboardPage() {
   return (
     <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href={`/dashboard/note/${params.id}`}
@@ -332,26 +332,26 @@ export default function WhiteboardPage() {
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             onClick={() => handleCall("audio")}
-            className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+            className="btn-clay-ghost !min-h-[44px] !px-3 text-sm sm:!px-4"
             title="Panggilan suara (segera hadir)"
           >
-            <Phone size={16} className="mr-2" />
-            Panggilan
+            <Phone size={16} />
+            <span className="ml-2 hidden sm:inline">Panggilan</span>
           </button>
           <button
             onClick={() => handleCall("vc")}
-            className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+            className="btn-clay-ghost !min-h-[44px] !px-3 text-sm sm:!px-4"
             title="Video call (segera hadir)"
           >
-            <Video size={16} className="mr-2" />
-            Video Call
+            <Video size={16} />
+            <span className="ml-2 hidden sm:inline">Video Call</span>
           </button>
           <button
             onClick={handleShare}
-            className="btn-clay-primary !min-h-[44px] !px-4 text-sm"
+            className="btn-clay-primary !min-h-[44px] !px-3 text-sm sm:!px-4"
           >
-            <Share2 size={16} className="mr-2" />
-            Bagikan
+            <Share2 size={16} />
+            <span className="ml-2 hidden sm:inline">Bagikan</span>
           </button>
         </div>
       </div>

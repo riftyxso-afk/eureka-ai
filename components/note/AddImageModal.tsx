@@ -64,26 +64,26 @@ export default function AddImageModal({
       onClick={onClose}
     >
       <div
-        className="card-clay w-full max-w-md !p-6"
+        className="card-clay w-full max-w-md p-3 sm:!p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-extrabold text-clay-dark">
+        <div className="mb-3 sm:mb-4 flex items-center justify-between">
+          <h2 className="text-base sm:text-lg font-extrabold text-clay-dark">
             Tambah Gambar
           </h2>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="btn-clay-ghost !min-h-[36px] !px-2.5"
+            className="btn-clay-ghost !min-h-[44px] !px-2.5"
           >
             <X size={16} />
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <button
             onClick={() => inputRef.current?.click()}
-            className={`flex w-full flex-col items-center justify-center gap-2 rounded-clay-md border-3 border-dashed px-5 py-8 text-sm font-extrabold transition-all duration-75 active:translate-y-1 ${
+            className={`flex w-full flex-col items-center justify-center gap-2 rounded-clay-md border-3 border-dashed px-4 sm:px-5 py-6 sm:py-8 text-xs sm:text-sm font-extrabold transition-all duration-75 active:translate-y-1 min-h-[100px] ${
               file
                 ? "border-clay-primary bg-clay-primary/10 text-clay-primary"
                 : "border-clay-shadow/60 text-clay-muted hover:border-clay-primary"
@@ -103,17 +103,17 @@ export default function AddImageModal({
             }}
           />
 
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-clay-muted">
-              Keterangan (caption)
-            </span>
-            <input
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Contoh: Ilustrasi apel jatuh dari pohon"
-              className="input-clay !h-12"
-            />
-          </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-clay-muted">
+                Keterangan (caption)
+              </span>
+              <input
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Contoh: Ilustrasi apel jatuh dari pohon"
+                className="input-clay !h-12 sm:!h-11"
+              />
+            </label>
 
           {chapters.length > 0 && (
             <label className="block">
@@ -123,7 +123,7 @@ export default function AddImageModal({
               <select
                 value={chapterId}
                 onChange={(e) => setChapterId(e.target.value)}
-                className="w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-4 py-3 text-sm font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none"
+                className="w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-4 py-3 sm:py-2.5 text-sm font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[44px]"
               >
                 <option value="">— Bagian Ilustrasi (akhir) —</option>
                 {chapters.map((c) => (
@@ -135,7 +135,7 @@ export default function AddImageModal({
             </label>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-clay-muted">
                 Posisi
@@ -145,7 +145,7 @@ export default function AddImageModal({
                   <button
                     key={a}
                     onClick={() => setAlignment(a)}
-                    className={`flex-1 rounded-clay-md border-2 py-2 text-[11px] font-extrabold transition-all duration-75 ${
+                    className={`flex-1 rounded-clay-md border-2 py-2.5 sm:py-2 text-[11px] font-extrabold transition-all duration-75 min-h-[44px] ${
                       alignment === a
                         ? "border-clay-primary bg-clay-primary text-white"
                         : "border-clay-shadow/40 bg-white text-clay-muted"
@@ -165,7 +165,7 @@ export default function AddImageModal({
                   <button
                     key={s}
                     onClick={() => setSize(s)}
-                    className={`flex-1 rounded-clay-md border-2 py-2 text-[11px] font-extrabold transition-all duration-75 ${
+                    className={`flex-1 rounded-clay-md border-2 py-2.5 sm:py-2 text-[11px] font-extrabold transition-all duration-75 min-h-[44px] ${
                       size === s
                         ? "border-clay-primary bg-clay-primary text-white"
                         : "border-clay-shadow/40 bg-white text-clay-muted"
@@ -179,7 +179,7 @@ export default function AddImageModal({
           </div>
 
           {error && (
-            <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+            <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-red-600">
               {error}
             </p>
           )}
@@ -187,7 +187,7 @@ export default function AddImageModal({
           <button
             onClick={handleUpload}
             disabled={uploading || !file}
-            className="btn-clay-primary w-full !min-h-[48px] disabled:opacity-60"
+            className="btn-clay-primary w-full !min-h-[46px] sm:!min-h-[48px] disabled:opacity-60"
           >
             {uploading ? (
               <>

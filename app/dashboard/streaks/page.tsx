@@ -71,18 +71,19 @@ export default function StreaksPage() {
       </div>
 
       {/* Statistik cepat */}
-      <div className="mt-6 grid grid-cols-3 gap-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {stats.map((s) => (
-          <div key={s.label} className="card-clay flex flex-col items-center gap-1 !p-5 text-center">
-            <s.icon size={20} className="text-clay-primary" />
-            <p className="text-2xl font-extrabold">{s.value}</p>
+          <div key={s.label} className="card-clay flex flex-col items-center gap-1 !p-4 text-center sm:!p-5">
+            <s.icon size={18} className="text-clay-primary sm:hidden" />
+            <s.icon size={20} className="hidden text-clay-primary sm:block" />
+            <p className="text-xl font-extrabold sm:text-2xl">{s.value}</p>
             <p className="text-xs font-bold text-clay-muted">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* Milestone */}
-      <h2 className="mt-10 text-lg font-extrabold text-clay-dark">Capaian (Milestone)</h2>
+      <h2 className="mt-10 text-base font-extrabold text-clay-dark sm:text-lg">Capaian (Milestone)</h2>
       <div className="mt-4 flex flex-col gap-3">
         {mockStreakData.milestones.map((m) => (
           <div
@@ -109,7 +110,7 @@ export default function StreaksPage() {
       </div>
 
       {/* Aktivitas terakhir */}
-      <h2 className="mt-10 text-lg font-extrabold text-clay-dark">Aktivitas Terakhir</h2>
+      <h2 className="mt-10 text-base font-extrabold text-clay-dark sm:text-lg">Aktivitas Terakhir</h2>
       <div className="card-clay mt-4 !p-2">
         {mockStreakData.recentActivity.map((a, i) => (
           <div

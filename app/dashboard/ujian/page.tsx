@@ -49,7 +49,7 @@ export default function UjianPage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`btn-clay-ghost !min-h-[40px] !px-4 !py-1 text-sm ${
+            className={`btn-clay-ghost !min-h-[44px] flex-1 !px-4 !py-2 text-sm ${
               tab === t.id
                 ? "border-clay-primary bg-clay-primary/10 text-clay-primary"
                 : ""

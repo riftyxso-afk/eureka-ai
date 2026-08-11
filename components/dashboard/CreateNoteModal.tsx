@@ -124,7 +124,7 @@ interface CreateNoteModalProps {
 }
 
 const selectClayClass =
-  "w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-5 py-4 pr-12 text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none";
+  "w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-3 py-3 pr-10 text-sm sm:px-5 sm:py-4 sm:pr-12 sm:text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[44px]";
 
 export const CreateNoteModal = ({
   open,
@@ -398,7 +398,7 @@ export const CreateNoteModal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={close}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4"
         >
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.95 }}
@@ -406,59 +406,59 @@ export const CreateNoteModal = ({
             exit={{ opacity: 0, y: 24, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg"
+            className="w-full max-w-lg max-h-[95vh] overflow-y-auto"
           >
             <CardClay className="shadow-clay-lg">
               {createdNote ? (
-                <div className="flex flex-col items-center px-6 py-12 text-center">
+                <div className="flex flex-col items-center px-4 py-8 sm:px-6 sm:py-12 text-center">
                   <motion.div
                     initial={{ scale: 0, rotate: -30 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ type: "spring", stiffness: 260, damping: 14 }}
-                    className="flex h-24 w-24 items-center justify-center rounded-full bg-clay-success shadow-clay-btn"
+                    className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-clay-success shadow-clay-btn"
                   >
-                    <PartyPopper size={44} className="text-white" />
+                    <PartyPopper size={36} className="text-white sm:w-11 sm:h-11" />
                   </motion.div>
-                  <h2 className="mt-6 text-2xl font-extrabold">
+                  <h2 className="mt-4 sm:mt-6 text-xl sm:text-2xl font-extrabold px-2">
                     Catatan berhasil dibuat! 🎉
                   </h2>
-                  <p className="mt-2 line-clamp-2 max-w-md text-base font-semibold text-clay-muted">
-                    “{createdNote.title}” sudah masuk ke dashboard kamu dan siap
+                  <p className="mt-2 line-clamp-2 max-w-md text-sm sm:text-base font-semibold text-clay-muted px-4">
+                    "{createdNote.title}" sudah masuk ke dashboard kamu dan siap
                     dipelajari.
                   </p>
-                  <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-                    <ButtonClay variant="secondary" onClick={close}>
+                  <div className="mt-6 sm:mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row px-4">
+                    <ButtonClay variant="secondary" onClick={close} className="w-full sm:w-auto">
                       Selesai
                     </ButtonClay>
-                    <ButtonClay onClick={openCreatedNote}>
+                    <ButtonClay onClick={openCreatedNote} className="w-full sm:w-auto">
                       <BookOpen size={18} className="mr-2" />
                       Buka Catatan
                     </ButtonClay>
                   </div>
                 </div>
               ) : processing ? (
-                <div className="flex flex-col items-center px-6 py-12 text-center">
-                  <div className="relative h-16 w-16">
+                <div className="flex flex-col items-center px-4 py-8 sm:px-6 sm:py-12 text-center">
+                  <div className="relative h-12 w-12 sm:h-16 sm:w-16">
                     <div className="absolute inset-0 animate-ping rounded-full bg-clay-primary/30" />
                     <Loader2
-                      size={64}
-                      className="animate-spin text-clay-primary"
+                      size={48}
+                      className="animate-spin text-clay-primary sm:w-16 sm:h-16"
                     />
                   </div>
                   <motion.p
                     key={progressMessage}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-8 min-h-[28px] text-lg font-extrabold"
+                    className="mt-6 sm:mt-8 min-h-[28px] text-base sm:text-lg font-extrabold px-2"
                   >
                     {progressMessage}
                   </motion.p>
-                  <div className="mt-6 w-full max-w-sm">
+                  <div className="mt-4 sm:mt-6 w-full max-w-sm px-2">
                     <div className="flex justify-between text-xs font-extrabold text-clay-muted">
                       <span>Membuat catatan kamu...</span>
                       <span>{progressPercent}%</span>
                     </div>
-                    <div className="mt-2 h-6 w-full overflow-hidden rounded-clay-full border-3 border-clay-shadow/40 bg-clay-inputBg shadow-clay-inset">
+                    <div className="mt-2 h-5 sm:h-6 w-full overflow-hidden rounded-clay-full border-3 border-clay-shadow/40 bg-clay-inputBg shadow-clay-inset">
                       <motion.div
                         className="relative h-full rounded-clay-full bg-gradient-to-r from-clay-primary to-clay-accent shadow-clay-btn overflow-hidden"
                         initial={{ width: "0%" }}
@@ -474,33 +474,33 @@ export const CreateNoteModal = ({
                       </motion.div>
                     </div>
                   </div>
-                  <p className="mt-4 text-sm font-semibold text-clay-muted">
+                  <p className="mt-4 text-xs sm:text-sm font-semibold text-clay-muted px-4">
                     Berjalan di latar belakang — kamu boleh pindah halaman.
                     Kami beri tahu lewat notifikasi saat selesai.
                   </p>
                   <button
                     onClick={close}
-                    className="mt-4 text-sm font-extrabold text-clay-primary underline-offset-2 hover:underline"
+                    className="mt-4 text-xs sm:text-sm font-extrabold text-clay-primary underline-offset-2 hover:underline min-h-[44px] px-4"
                   >
                     Tutup & lanjutkan di latar belakang →
                   </button>
                 </div>
               ) : step === 1 ? (
                 <>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h2 className="text-2xl font-extrabold">Buat Catatan Baru</h2>
-                      <p className="mt-2 text-base font-semibold text-clay-muted">
+                      <h2 className="text-xl sm:text-2xl font-extrabold">Buat Catatan Baru</h2>
+                      <p className="mt-1 sm:mt-2 text-sm sm:text-base font-semibold text-clay-muted">
                         Pilih sumber materi kamu
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-clay-full bg-clay-inputBg px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                      <span className="rounded-clay-full bg-clay-inputBg px-2 sm:px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
                         Langkah 1/2
                       </span>
                       <button
                         onClick={close}
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset"
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset min-h-[44px] min-w-[44px]"
                         aria-label="Tutup modal"
                       >
                         <X size={18} />
@@ -508,18 +508,18 @@ export const CreateNoteModal = ({
                     </div>
                   </div>
 
-                  <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="mt-4 sm:mt-6 grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
                     {SOURCES.map((s) => (
                       <button
                         key={s.id}
                         onClick={() => pickSource(s.id)}
-                        className="card-clay flex flex-col items-start gap-2 border-clay-shadow/40 p-5 text-left transition-all duration-75 hover:-translate-y-0.5 hover:border-clay-primary active:translate-y-1"
+                        className="card-clay flex flex-col items-start gap-2 border-clay-shadow/40 p-4 sm:p-5 text-left transition-all duration-75 hover:-translate-y-0.5 hover:border-clay-primary active:translate-y-1 min-h-[88px]"
                       >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
+                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
                           <s.icon size={20} className="text-clay-primary" />
                         </div>
-                        <span className="text-lg font-extrabold">{s.label}</span>
-                        <span className="text-sm font-semibold text-clay-muted">
+                        <span className="text-base sm:text-lg font-extrabold">{s.label}</span>
+                        <span className="text-xs sm:text-sm font-semibold text-clay-muted">
                           {s.desc}
                         </span>
                       </button>
@@ -528,20 +528,20 @@ export const CreateNoteModal = ({
                 </>
               ) : (
                 <>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h2 className="text-2xl font-extrabold">Atur Catatan</h2>
-                      <p className="mt-2 text-base font-semibold text-clay-muted">
+                      <h2 className="text-xl sm:text-2xl font-extrabold">Atur Catatan</h2>
+                      <p className="mt-1 sm:mt-2 text-sm sm:text-base font-semibold text-clay-muted">
                         Pilih mata pelajaran dan preferensi gaya catatan
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-clay-full bg-clay-inputBg px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                      <span className="rounded-clay-full bg-clay-inputBg px-2 sm:px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
                         Langkah 2/2
                       </span>
                       <button
                         onClick={close}
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset"
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset min-h-[44px] min-w-[44px]"
                         aria-label="Tutup modal"
                       >
                         <X size={18} />
@@ -549,10 +549,10 @@ export const CreateNoteModal = ({
                     </div>
                   </div>
 
-                  <div className="mt-6 space-y-6">
+                  <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
                     {/* Mata Pelajaran */}
                     <div>
-                      <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                      <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
                         MATA PELAJARAN/KULIAH{" "}
                         <span className="text-red-500">*</span>
                       </label>
@@ -582,12 +582,12 @@ export const CreateNoteModal = ({
                         </select>
                         <ChevronDown
                           size={18}
-                          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-clay-muted"
+                          className="pointer-events-none absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-clay-muted"
                         />
                       </div>
 
                       {addingSubject && (
-                        <div className="mt-3 flex items-center gap-2">
+                        <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                           <InputClay
                             placeholder="Nama mata pelajaran (contoh: Teknologi)"
                             value={newSubjectName}
@@ -600,17 +600,18 @@ export const CreateNoteModal = ({
                                 setSubjectError(null);
                               }
                             }}
+                            className="flex-1"
                           />
                           <button
                             onClick={addNewSubject}
-                            className="btn-clay-primary shrink-0 !min-h-[44px] !px-5 text-sm"
+                            className="btn-clay-primary shrink-0 !min-h-[44px] !px-5 text-sm w-full sm:w-auto"
                           >
                             Tambah
                           </button>
                         </div>
                       )}
                       {subjectError && (
-                        <p className="mt-2 text-sm font-bold text-red-500">
+                        <p className="mt-2 text-xs sm:text-sm font-bold text-red-500">
                           {subjectError}
                         </p>
                       )}
@@ -618,27 +619,27 @@ export const CreateNoteModal = ({
 
                     {/* Mode Belajar */}
                     <div>
-                      <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                      <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
                         MODE BELAJAR
                       </label>
-                      <div className="flex gap-3">
+                      <div className="flex gap-2 sm:gap-3">
                         {STUDY_MODES.map((mode) => {
                           const active = studyMode === mode.value;
                           return (
                             <button
                               key={mode.value}
                               onClick={() => setStudyMode(mode.value)}
-                              className={`flex flex-1 flex-col items-center rounded-clay-md border-3 p-3 transition-all duration-75 ${
+                              className={`flex flex-1 flex-col items-center rounded-clay-md border-3 p-2 sm:p-3 transition-all duration-75 min-h-[56px] ${
                                 active
                                   ? "border-clay-borderLight bg-clay-primary text-white shadow-[0_6px_0_#5B21B6]"
                                   : "border-clay-shadow/50 bg-white text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
                               }`}
                             >
-                              <span className="text-sm font-extrabold">
+                              <span className="text-xs sm:text-sm font-extrabold">
                                 {mode.label}
                               </span>
                               <span
-                                className={`text-[11px] font-bold ${
+                                className={`text-[10px] sm:text-[11px] font-bold ${
                                   active ? "text-white/85" : "text-clay-muted"
                                 }`}
                               >
@@ -652,7 +653,7 @@ export const CreateNoteModal = ({
 
                     {/* Gaya Penulisan */}
                     <div>
-                      <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                      <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
                         GAYA PENULISAN
                       </label>
                       <div className="relative">
@@ -669,14 +670,14 @@ export const CreateNoteModal = ({
                         </select>
                         <ChevronDown
                           size={18}
-                          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-clay-muted"
+                          className="pointer-events-none absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-clay-muted"
                         />
                       </div>
                     </div>
 
                     {/* Bahasa */}
                     <div>
-                      <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                      <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
                         BAHASA
                       </label>
                       <div className="relative">
@@ -693,14 +694,14 @@ export const CreateNoteModal = ({
                         </select>
                         <ChevronDown
                           size={18}
-                          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-clay-muted"
+                          className="pointer-events-none absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-clay-muted"
                         />
                       </div>
                     </div>
 
                     {/* Sumber materi */}
                     <div>
-                      <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                      <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
                         SUMBER MATERI ({current.label})
                       </label>
                       {isLinkSource ? (
@@ -714,14 +715,15 @@ export const CreateNoteModal = ({
                         <>
                           <button
                             onClick={() => fileInputRef.current?.click()}
-                            className={`flex w-full items-center justify-center gap-3 rounded-clay-md border-3 border-dashed px-5 py-6 text-base font-extrabold transition-all duration-75 active:translate-y-1 ${
+                            className={`flex w-full items-center justify-center gap-3 rounded-clay-md border-3 border-dashed px-4 py-8 sm:px-5 sm:py-6 text-sm sm:text-base font-extrabold transition-all duration-75 active:translate-y-1 min-h-[88px] ${
                               file
                                 ? "border-clay-primary bg-clay-primary/10 text-clay-primary"
                                 : "border-clay-shadow/60 text-clay-muted hover:border-clay-primary"
                             }`}
                           >
-                            <Upload size={20} />
-                            {file ? file.name : `Pilih file ${current.label}...`}
+                            <Upload size={20} className="sm:block hidden" />
+                            <Upload size={24} className="sm:hidden block" />
+                            <span className="text-center">{file ? file.name : `Pilih file ${current.label}...`}</span>
                           </button>
                           <input
                             ref={fileInputRef}
@@ -738,23 +740,24 @@ export const CreateNoteModal = ({
                     </div>
 
                     {error && (
-                      <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                      <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-red-600">
                         {error}
                       </p>
                     )}
                   </div>
 
-                  <div className="mt-8 flex flex-col gap-3 border-t-2 border-clay-shadow/20 pt-5 sm:flex-row sm:justify-end">
+                  <div className="mt-6 sm:mt-8 flex flex-col gap-3 border-t-2 border-clay-shadow/20 pt-4 sm:pt-5 sm:flex-row sm:justify-end">
                     <ButtonClay
                       variant="secondary"
                       onClick={() => {
                         setStep(1);
                         setError(null);
                       }}
+                      className="w-full sm:w-auto"
                     >
                       Kembali
                     </ButtonClay>
-                    <ButtonClay onClick={handleSubmit} disabled={!canSubmit}>
+                    <ButtonClay onClick={handleSubmit} disabled={!canSubmit} className="w-full sm:w-auto">
                       <CheckCircle2 size={18} className="mr-2" />
                       Buat Catatan
                     </ButtonClay>

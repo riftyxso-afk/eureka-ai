@@ -158,12 +158,12 @@ export default function DashboardPage() {
   return (
     <div className="pb-24">
       <main className="mx-auto w-full max-w-clay px-4 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">
               {getGreeting()}, {userName.split(" ")[0]}! 👋
             </h1>
-            <p className="mt-1 text-sm font-semibold text-clay-muted">
+            <p className="mt-1 text-sm font-semibold text-clay-muted sm:text-base">
               Siap belajar hari ini?
             </p>
           </div>
@@ -177,7 +177,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             icon={FileText}
             label="Total Catatan"
@@ -196,14 +196,14 @@ export default function DashboardPage() {
           />
         </div>
 
-        <CardClay className="mt-4 !p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <CardClay className="mt-4 !p-4 sm:!p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-clay-md bg-clay-primary/10 text-lg">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-lg sm:h-12 sm:w-12 sm:text-xl">
                 🏅
               </span>
               <div>
-                <p className="text-lg font-extrabold leading-tight">
+                <p className="text-base font-extrabold leading-tight sm:text-lg">
                   Level {progress.level}
                 </p>
                 <p className="text-xs font-bold text-clay-muted">
@@ -211,7 +211,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <p className="text-sm font-bold text-clay-muted">
+            <p className="text-xs font-bold text-clay-muted sm:text-sm">
               {progress.xpInLevel} / {progress.xpToNext} XP
             </p>
           </div>
@@ -229,7 +229,7 @@ export default function DashboardPage() {
         </CardClay>
 
         <section className="mt-8">
-          <h2 className="text-xl font-extrabold">Catatan Kamu</h2>
+          <h2 className="text-lg font-extrabold sm:text-xl">Catatan Kamu</h2>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -241,15 +241,15 @@ export default function DashboardPage() {
                 placeholder="Cari catatan..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 !h-12"
+                className="pl-10 !h-12 text-sm sm:text-base"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {chips.map((chip) => (
                 <button
                   key={chip.id}
                   onClick={() => setActiveFilter(chip.id)}
-                  className={`min-h-[36px] rounded-clay-full border-3 px-3.5 text-xs font-extrabold transition-all duration-75 active:translate-y-0.5 ${
+                  className={`min-h-[44px] shrink-0 rounded-clay-full border-3 px-4 text-xs font-extrabold transition-all duration-75 active:translate-y-0.5 sm:min-h-[40px] sm:px-3.5 ${
                     activeFilter === chip.id
                       ? "border-clay-primary bg-clay-primary text-white shadow-clay-sm"
                       : "border-clay-shadow/50 bg-white text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
@@ -306,10 +306,11 @@ export default function DashboardPage() {
 
       <button
         onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-6 right-6 z-10 flex h-16 w-16 items-center justify-center rounded-full bg-clay-primary text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
+        className="fixed bottom-6 right-4 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-clay-primary text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:bottom-6 sm:right-6 sm:h-16 sm:w-16"
         aria-label="Buat catatan baru"
       >
-        <Plus size={28} />
+        <Plus size={24} className="sm:hidden" />
+        <Plus size={28} className="hidden sm:block" />
       </button>
 
       <CreateNoteModal

@@ -121,37 +121,37 @@ export default function InviteModal({
       onClick={onClose}
     >
       <div
-        className="card-clay max-h-[85vh] w-full max-w-md overflow-y-auto !p-6"
+        className="card-clay max-h-[85vh] w-full max-w-md overflow-y-auto p-3 sm:!p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-extrabold text-clay-dark">
+        <div className="mb-3 sm:mb-4 flex items-center justify-between">
+          <h2 className="text-base sm:text-lg font-extrabold text-clay-dark">
             Undang Teman
           </h2>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="btn-clay-ghost !min-h-[36px] !px-2.5"
+            className="btn-clay-ghost !min-h-[44px] !px-2.5"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Form undang */}
-        <div className="space-y-3">
+        <div className="space-y-3 sm:space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-bold text-clay-muted">
+            <label className="mb-1.5 block text-xs font-bold text-clay-muted">
               Nama teman
             </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="contoh: Budi Santoso"
-              className="input-clay w-full"
+              className="input-clay w-full min-h-[44px]"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold text-clay-muted">
+            <label className="mb-1.5 block text-xs font-bold text-clay-muted">
               Peran
             </label>
             <div className="flex gap-2">
@@ -164,7 +164,7 @@ export default function InviteModal({
                 <button
                   key={r.key}
                   onClick={() => setRole(r.key)}
-                  className={`btn-clay-ghost flex-1 !min-h-[40px] !px-3 text-sm ${
+                  className={`btn-clay-ghost flex-1 !min-h-[44px] !px-3 text-sm ${
                     role === r.key
                       ? "!border-clay-primary !bg-clay-primary !text-white !shadow-clay-sm"
                       : ""
@@ -178,7 +178,7 @@ export default function InviteModal({
           <button
             onClick={handleInvite}
             disabled={sending}
-            className="btn-clay-primary w-full !min-h-[46px] disabled:opacity-60"
+            className="btn-clay-primary w-full !min-h-[46px] sm:!min-h-[48px] disabled:opacity-60"
           >
             <Plus size={18} className="mr-2" />
             {sending ? "Mengundang..." : "Kirim Undangan"}
@@ -198,7 +198,7 @@ export default function InviteModal({
               </code>
               <button
                 onClick={handleCopy}
-                className="btn-clay-ghost shrink-0 !min-h-[36px] !px-3"
+                className="btn-clay-ghost shrink-0 !min-h-[44px] !px-3"
                 aria-label="Salin link"
               >
                 <Copy size={15} />
@@ -244,15 +244,15 @@ export default function InviteModal({
             Kolaborator ({collaborators.length})
           </h3>
           {collaborators.length === 0 ? (
-            <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4 text-center text-sm font-semibold text-clay-muted">
+            <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
               Belum ada kolaborator. Undang temanmu untuk belajar bareng!
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-2 sm:space-y-2.5">
               {collaborators.map((c, i) => (
                 <li
                   key={c.id}
-                  className="flex items-center gap-3 rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3"
+                  className="flex items-center gap-3 rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3 sm:p-3.5"
                 >
                   <span
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}
@@ -275,7 +275,7 @@ export default function InviteModal({
                   <button
                     onClick={() => handleRemove(c.id)}
                     aria-label={`Hapus ${c.name}`}
-                    className="btn-clay-ghost !min-h-[34px] !px-2.5"
+                    className="btn-clay-ghost !min-h-[44px] !px-2.5"
                   >
                     <Trash2 size={15} className="text-clay-muted" />
                   </button>

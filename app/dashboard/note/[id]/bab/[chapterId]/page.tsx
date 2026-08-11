@@ -200,7 +200,7 @@ export default function ChapterNotepadPage() {
   return (
     <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href={`/dashboard/note/${note.id}`}
@@ -213,7 +213,7 @@ export default function ChapterNotepadPage() {
             <div className="text-xs font-bold uppercase tracking-wide text-clay-muted">
               Bab {chapter.id} · {note.title}
             </div>
-            <h1 className="mt-1 line-clamp-2 text-xl font-extrabold text-clay-dark sm:text-2xl">
+            <h1 className="mt-1 line-clamp-2 text-lg font-extrabold text-clay-dark sm:text-xl">
               {chapter.title}
             </h1>
           </div>

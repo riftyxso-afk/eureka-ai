@@ -247,17 +247,17 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="card-clay !p-5">
+    <div className="card-clay !p-3 sm:!p-5">
       <div className="mb-3 flex items-center gap-2">
-        <MessageCircle size={18} className="text-clay-primary" />
-        <h2 className="text-lg font-extrabold text-clay-dark">
+        <MessageCircle size={18} className="text-clay-primary shrink-0" />
+        <h2 className="text-base sm:text-lg font-extrabold text-clay-dark">
           Diskusi{" "}
-          <span className="text-sm font-bold text-clay-muted">
+          <span className="text-xs sm:text-sm font-bold text-clay-muted">
             ({messages.length})
           </span>
         </h2>
         {newMentions > 0 && (
-          <span className="ml-auto rounded-full bg-clay-primary px-2.5 py-0.5 text-xs font-extrabold text-white shadow-clay-sm">
+          <span className="ml-auto rounded-full bg-clay-primary px-2 sm:px-2.5 py-0.5 text-xs font-extrabold text-white shadow-clay-sm shrink-0">
             @ Kamu {newMentions}
           </span>
         )}
@@ -266,10 +266,10 @@ export default function ChatPanel({
       {/* Daftar pesan */}
       <div
         ref={listRef}
-        className="max-h-[320px] space-y-3 overflow-y-auto pr-1"
+        className="max-h-[280px] sm:max-h-[320px] space-y-2.5 sm:space-y-3 overflow-y-auto pr-1 -mr-1"
       >
         {messages.length === 0 ? (
-          <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-5 text-center text-sm font-semibold text-clay-muted">
+          <p className="rounded-xl sm:rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4 sm:p-5 text-center text-xs sm:text-sm font-semibold text-clay-muted">
             Belum ada diskusi. Mulai chat untuk belajar bareng! 💬
           </p>
         ) : (
@@ -279,32 +279,32 @@ export default function ChatPanel({
             return (
               <div
                 key={m.id}
-                className={`flex gap-2.5 ${mine ? "flex-row-reverse" : ""}`}
+                className={`flex gap-2 sm:gap-2.5 ${mine ? "flex-row-reverse" : ""}`}
               >
                 <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${AVATAR_COLORS[colorIndex(m.senderName)]}`}
+                  className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full text-[10px] sm:text-[11px] font-extrabold ${AVATAR_COLORS[colorIndex(m.senderName)]}`}
                 >
                   {initials(m.senderName)}
                 </span>
-                <div className={`max-w-[75%] ${mine ? "text-right" : ""}`}>
+                <div className={`max-w-[80%] sm:max-w-[75%] min-w-0 ${mine ? "text-right" : ""}`}>
                   {m.isAI && (
-                    <span className="mb-0.5 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold text-violet-700">
+                    <span className="mb-0.5 inline-block rounded-full bg-violet-100 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold text-violet-700">
                       ✨ AI
                     </span>
                   )}
-                  <div className="mb-0.5 flex items-baseline gap-2 text-xs font-bold text-clay-muted">
-                    <span>{mine ? "Kamu" : m.senderName}</span>
-                    <span>{formatTime(m.createdAt)}</span>
+                  <div className="mb-0.5 flex items-baseline gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold text-clay-muted">
+                    <span className="truncate">{mine ? "Kamu" : m.senderName}</span>
+                    <span className="shrink-0">{formatTime(m.createdAt)}</span>
                   </div>
                   {parent && (
-                    <div className="mb-1 rounded-xl border-l-4 border-clay-primary/40 bg-white/70 px-2.5 py-1.5 text-[11px] font-semibold text-clay-muted">
+                    <div className="mb-1 rounded-lg sm:rounded-xl border-l-4 border-clay-primary/40 bg-white/70 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold text-clay-muted">
                       <span className="font-extrabold">{parent.senderName}:</span>{" "}
-                      {parent.content.slice(0, 60)}
-                      {parent.content.length > 60 ? "..." : ""}
+                      {parent.content.slice(0, 40)}
+                      {parent.content.length > 40 ? "..." : ""}
                     </div>
                   )}
                   <div
-                    className={`inline-block rounded-2xl px-3.5 py-2 text-left text-sm font-medium leading-relaxed ${
+                    className={`inline-block rounded-xl sm:rounded-2xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-left text-[13px] sm:text-sm font-medium leading-relaxed break-words ${
                       mine
                         ? "rounded-tr-sm bg-clay-primary text-white"
                         : "rounded-tl-sm bg-clay-beige text-clay-dark"
@@ -330,7 +330,8 @@ export default function ChatPanel({
                   <div className="mt-0.5">
                     <button
                       onClick={() => setReplyTo(m)}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-clay-muted hover:text-clay-primary"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-clay-muted hover:text-clay-primary active:text-clay-primary min-h-[44px] sm:min-h-0 -my-2 sm:my-0 py-2 sm:py-0"
+                      aria-label={`Balas pesan dari ${m.senderName}`}
                     >
                       <CornerUpLeft size={11} />
                       Balas
@@ -345,17 +346,17 @@ export default function ChatPanel({
 
       {/* Reply bar */}
       {replyTo && (
-        <div className="mt-3 flex items-center justify-between rounded-xl border-2 border-clay-shadow/40 bg-white/70 px-3 py-2">
-          <span className="truncate text-xs font-semibold text-clay-muted">
-            Membalas <b>{replyTo.senderName}</b>: {replyTo.content.slice(0, 40)}
-            {replyTo.content.length > 40 ? "..." : ""}
+        <div className="mt-3 flex items-center justify-between rounded-xl border-2 border-clay-shadow/40 bg-white/70 px-2.5 sm:px-3 py-2">
+          <span className="truncate text-[11px] sm:text-xs font-semibold text-clay-muted min-w-0 pr-2">
+            Membalas <b>{replyTo.senderName}</b>: {replyTo.content.slice(0, 30)}
+            {replyTo.content.length > 30 ? "..." : ""}
           </span>
           <button
             onClick={() => setReplyTo(null)}
             aria-label="Batal balas"
-            className="btn-clay-ghost !min-h-[28px] !px-2"
+            className="btn-clay-ghost !min-h-[44px] !min-w-[44px] !px-2 shrink-0 flex items-center justify-center"
           >
-            <X size={13} />
+            <X size={14} className="sm:w-[13px] sm:h-[13px]" />
           </button>
         </div>
       )}
@@ -363,7 +364,7 @@ export default function ChatPanel({
       {/* Input */}
       <div className="relative mt-3">
         {mentionQuery !== null && mentionCandidates.length > 0 && (
-          <div className="absolute bottom-full left-0 z-10 mb-2 w-full rounded-2xl border-2 border-clay-shadow/40 bg-white p-2 shadow-clay">
+          <div className="absolute bottom-full left-0 z-10 mb-2 w-full rounded-xl sm:rounded-2xl border-2 border-clay-shadow/40 bg-white p-1.5 sm:p-2 shadow-clay max-h-48 overflow-y-auto">
             {mentionCandidates.map((name) => (
               <button
                 key={name}
@@ -371,10 +372,10 @@ export default function ChatPanel({
                   e.preventDefault();
                   selectMention(name);
                 }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige"
+                className="flex w-full items-center gap-2 rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-2.5 sm:py-2 text-left text-sm font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige active:bg-clay-beige min-h-[44px] sm:min-h-0"
               >
                 <span
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-extrabold ${AVATAR_COLORS[colorIndex(name)]}`}
+                  className={`flex h-6 w-6 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-extrabold ${AVATAR_COLORS[colorIndex(name)]}`}
                 >
                   {initials(name)}
                 </span>
@@ -403,13 +404,13 @@ export default function ChatPanel({
               setMentionQuery(null);
             }}
             placeholder="Tulis pesan... (ketik @ untuk menyebut teman)"
-            className="input-clay min-w-0 flex-1"
+            className="input-clay min-w-0 flex-1 !min-h-[44px] text-sm sm:text-base"
           />
           <button
             onClick={handleSend}
             disabled={sending || !input.trim()}
             aria-label="Kirim pesan"
-            className="btn-clay-primary !min-h-[44px] !px-4 disabled:opacity-60"
+            className="btn-clay-primary !min-h-[44px] !min-w-[44px] !px-3 sm:!px-4 disabled:opacity-60 shrink-0 flex items-center justify-center"
           >
             <Send size={17} />
           </button>

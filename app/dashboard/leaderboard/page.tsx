@@ -106,9 +106,10 @@ export default function LeaderboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Trophy size={28} className="text-clay-primary" />
+          <Trophy size={24} className="text-clay-primary sm:hidden" />
+          <Trophy size={28} className="hidden text-clay-primary sm:block" />
           <h1 className="text-2xl font-extrabold sm:text-3xl">Leaderboard</h1>
         </div>
         <div className="flex gap-2">
@@ -121,7 +122,7 @@ export default function LeaderboardPage() {
             <button
               key={mode.key}
               onClick={() => setView(mode.key)}
-              className={`btn-clay-ghost !min-h-[38px] !px-4 text-sm ${
+              className={`btn-clay-ghost !min-h-[44px] flex-1 !px-4 text-sm sm:flex-initial sm:!min-h-[40px] ${
                 view === mode.key
                   ? "!border-clay-primary !bg-clay-primary !text-white !shadow-clay-sm"
                   : ""
@@ -200,12 +201,12 @@ export default function LeaderboardPage() {
                   )}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
+              <div className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3">
                 {isTop3 && TOP3_STYLE[entry.rank - 1].icon}
-                <span className="text-sm font-extrabold text-clay-muted">
+                <span className="text-xs font-extrabold text-clay-muted sm:text-sm">
                   Level {entry.level}
                 </span>
-                <span className="text-base font-extrabold text-clay-primary">
+                <span className="text-sm font-extrabold text-clay-primary sm:text-base">
                   {formatXP(entry.xp)} XP
                 </span>
               </div>

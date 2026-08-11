@@ -31,7 +31,7 @@ export default function HighlightToolbar({
   const [state, setState] = useState<ToolbarState | null>(null);
 
   useEffect(() => {
-    const onMouseUp = () => {
+    const handleSelection = () => {
       const sel = window.getSelection();
       const text = sel?.toString().trim();
       if (!sel || sel.isCollapsed || !text) {
@@ -54,8 +54,14 @@ export default function HighlightToolbar({
       const rect = sel.getRangeAt(0).getBoundingClientRect();
       setState({ x: rect.left + rect.width / 2, y: rect.top, chapterId, text });
     };
-    document.addEventListener("mouseup", onMouseUp);
-    return () => document.removeEventListener("mouseup", onMouseUp);
+    
+    // Handle both mouse and touch events
+    document.addEventListener("mouseup", handleSelection);
+    document.addEventListener("touchend", handleSelection);
+    return () => {
+      document.removeEventListener("mouseup", handleSelection);
+      document.removeEventListener("touchend", handleSelection);
+    };
   }, []);
 
   const clear = () => {
@@ -128,14 +134,43 @@ export default function HighlightToolbar({
 
   if (!state) return null;
 
+  // Calculate position with viewport bounds check for mobile
+  const calculatePosition = () => {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const toolbarWidth = 280; // Approximate toolbar width
+    const toolbarHeight = 60; // Approximate toolbar height
+    const padding = 8;
+
+    let left = state.x;
+    let top = state.y;
+
+    // Keep toolbar within horizontal bounds
+    if (left - toolbarWidth / 2 < padding) {
+      left = toolbarWidth / 2 + padding;
+    } else if (left + toolbarWidth / 2 > viewportWidth - padding) {
+      left = viewportWidth - toolbarWidth / 2 - padding;
+    }
+
+    // Keep toolbar within vertical bounds
+    if (top - toolbarHeight - padding < 0) {
+      // Show below selection if not enough space above
+      top = state.y + padding;
+    }
+
+    return { left, top };
+  };
+
+  const { left, top } = calculatePosition();
+
   return (
     <div
       className="fixed z-[70] -translate-x-1/2 -translate-y-[calc(100%+8px)]"
-      style={{ left: state.x, top: state.y }}
+      style={{ left, top }}
     >
-      <div className="flex items-center gap-1 rounded-clay-full border-3 border-clay-borderLight bg-white p-1 shadow-clay-lg">
-        <span className="pl-2 pr-1 text-clay-muted">
-          <Highlighter size={14} />
+      <div className="flex flex-wrap items-center gap-1.5 rounded-clay-full border-3 border-clay-borderLight bg-white p-1.5 shadow-clay-lg sm:gap-1 sm:p-1 max-w-[calc(100vw-16px)]">
+        <span className="pl-2 pr-1 text-clay-muted sm:pl-2 sm:pr-1">
+          <Highlighter className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
         </span>
         {COLORS.map((c) => (
           <button
@@ -143,7 +178,7 @@ export default function HighlightToolbar({
             onClick={() => apply(c.key)}
             title={`Stabilo ${c.label}`}
             aria-label={`Stabilo ${c.label}`}
-            className="h-8 w-8 rounded-full border-2 border-clay-shadow/30 transition-transform duration-75 hover:scale-110 active:scale-95"
+            className="min-h-[44px] min-w-[44px] rounded-full border-2 border-clay-shadow/30 transition-transform duration-75 hover:scale-110 active:scale-95 sm:min-h-[32px] sm:min-w-[32px] touch-manipulation"
             style={{ backgroundColor: c.swatch }}
           />
         ))}
@@ -151,9 +186,9 @@ export default function HighlightToolbar({
           onClick={remove}
           title="Hapus stabilo"
           aria-label="Hapus stabilo"
-          className="btn-clay-ghost !min-h-[32px] !min-w-[32px] !rounded-clay-full !px-2.5"
+          className="btn-clay-ghost !min-h-[44px] !min-w-[44px] !rounded-clay-full !px-3 sm:!min-h-[32px] sm:!min-w-[32px] sm:!px-2.5 touch-manipulation"
         >
-          <Eraser size={14} />
+          <Eraser className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
         </button>
       </div>
     </div>
