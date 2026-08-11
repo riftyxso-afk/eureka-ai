@@ -9,6 +9,10 @@ import { randomUUID } from "crypto";
 const DATA_DIR = path.join(process.cwd(), "data");
 const COLLAB_FILE = path.join(DATA_DIR, "collab.json");
 
+// In-memory store for serverless environments (Vercel)
+let memoryStore: CollabStore | null = null;
+const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
 export type CollabRole = "editor" | "viewer";
 
 export interface Collaborator {
@@ -79,6 +83,15 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 async function readCollab(): Promise<CollabStore> {
+  // Use in-memory store for serverless environments
+  if (isServerless) {
+    if (!memoryStore) {
+      memoryStore = emptyStore();
+    }
+    return memoryStore;
+  }
+  
+  // Use file system for local/persistent environments
   try {
     const raw = await fs.readFile(COLLAB_FILE, "utf-8");
     const parsed = JSON.parse(raw) as Partial<CollabStore>;
@@ -89,6 +102,13 @@ async function readCollab(): Promise<CollabStore> {
 }
 
 async function writeCollab(store: CollabStore) {
+  // Use in-memory store for serverless environments
+  if (isServerless) {
+    memoryStore = store;
+    return;
+  }
+  
+  // Write to file system for local/persistent environments
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(COLLAB_FILE, JSON.stringify(store, null, 2), "utf-8");
 }
