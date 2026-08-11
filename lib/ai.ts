@@ -65,7 +65,11 @@ interface ProviderConfig {
 
 function getProviderConfig(): ProviderConfig | null {
   if (AI_PROVIDER === "openagentic") {
-    if (!OPENAGENTIC_API_KEY) return null;
+    if (!OPENAGENTIC_API_KEY) {
+      console.error('[AI Error] OPENAGENTIC_API_KEY is not set in environment variables');
+      return null;
+    }
+    console.log('[AI] Using OpenAgentic provider');
     return {
       baseURL: OPENAGENTIC_BASE_URL,
       apiKey: OPENAGENTIC_API_KEY,
@@ -74,7 +78,11 @@ function getProviderConfig(): ProviderConfig | null {
     };
   }
   if (AI_PROVIDER === "openai") {
-    if (!AI_API_KEY) return null;
+    if (!AI_API_KEY) {
+      console.error('[AI Error] AI_API_KEY is not set for OpenAI provider');
+      return null;
+    }
+    console.log('[AI] Using OpenAI provider');
     return {
       baseURL: process.env.OPENAI_BASE_URL ?? OPENAI_BASE_URL,
       apiKey: AI_API_KEY,
@@ -82,7 +90,11 @@ function getProviderConfig(): ProviderConfig | null {
       name: "OpenAI",
     };
   }
-  if (!AI_API_KEY) return null;
+  if (!AI_API_KEY) {
+    console.error('[AI Error] AI_API_KEY is not set for AIMurah provider');
+    return null;
+  }
+  console.log('[AI] Using AIMurah provider');
   return {
     baseURL: AI_BASE_URL,
     apiKey: AI_API_KEY,
@@ -169,7 +181,17 @@ export function extractJsonObject<T = Record<string, unknown>>(
  */
 export async function aiChat(options: AiChatOptions): Promise<string> {
   const providers = getProviderChain();
+  
+  console.log('[AI] aiChat called with options:', {
+    hasSystem: !!options.system,
+    userLength: options.user?.length || 0,
+    maxTokens: options.maxTokens,
+    temperature: options.temperature,
+  });
+  console.log('[AI] Provider chain length:', providers.length);
+  
   if (providers.length === 0) {
+    console.error('[AI Error] No providers available in chain');
     const hint =
       AI_PROVIDER === "openagentic"
         ? "Isi OPENAGENTIC_API_KEY di .env.local (daftar & buat key di openagentic.id)."
@@ -191,10 +213,13 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
 
   const doRequest = async (provider: ProviderConfig): Promise<string> => {
     body.model = provider.model;
+    console.log('[AI] Making request to:', provider.name, provider.baseURL);
+    console.log('[AI] Using model:', provider.model);
+    
     const res = await fetch(`${provider.baseURL}/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
+        Authorization: `Bearer ${provider.apiKey.substring(0, 10)}...`,
         "Content-Type": "application/json",
         ...(provider.name === "OpenRouter"
           ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
@@ -204,11 +229,14 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
       signal: AbortSignal.timeout(180_000),
     });
 
+    console.log('[AI] Response status:', res.status, res.statusText);
+
     if (!res.ok) {
       let detail = "";
       try {
         const err = await res.json();
         detail = err?.error?.message ?? "";
+        console.error('[AI Error] API error details:', err);
       } catch {
         // abaikan
       }
@@ -220,8 +248,10 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
     const data = await res.json();
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== "string" || content.trim().length === 0) {
+      console.error('[AI Error] Empty response from API');
       throw new Error("AI mengembalikan respons kosong.");
     }
+    console.log('[AI] Response received, length:', content.length);
     return content;
   };
 
