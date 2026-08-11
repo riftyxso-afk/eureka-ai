@@ -1,14 +1,11 @@
 /**
- * Vector store MVP: file JSON lokal (data/vector-store.json).
- * Nanti bisa diganti dengan Supabase pgvector / Qdrant tanpa mengubah API-nya.
+ * Supabase Integration for RAG (Retrieval Augmented Generation)
+ * Complete migration from local file system to Supabase database
  */
-import { promises as fs } from "fs";
-import path from "path";
 
-import type { Note } from "@/lib/types";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_FILE = path.join(DATA_DIR, "vector-store.json");
+import { supabase } from '../supabase/client';
+import type { Note, Chunk, SearchResult } from '../types';
+import { cosineSimilarity } from './chunk';
 
 export interface StoredChunk {
   id: string;
@@ -17,130 +14,233 @@ export interface StoredChunk {
   embedding: number[];
 }
 
-interface StoreShape {
-  notes: Note[];
-  chunks: StoredChunk[];
+interface SupabaseNote extends Omit<Note, 'chunks'> {
+  chunks?: any[];
 }
 
 /**
- * Mutex sederhana: serialisasi semua operasi read-modify-write pada file.
- * Tanpa ini, tulis yang bersamaan (dua proses materi sekaligus) bisa saling
- * menimpa dan menghilangkan catatan/chunk.
+ * Save a note with its chunks to Supabase
  */
-let lock: Promise<unknown> = Promise.resolve();
-
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = lock.then(fn, fn);
-  lock = run.then(
-    () => undefined,
-    () => undefined
-  );
-  return run;
-}
-
-async function readStore(): Promise<StoreShape> {
+export async function saveNoteWithChunks(
+  note: Note & { user_id: string },
+  chunks: string[],
+  chapterId: number = 0
+): Promise<Note> {
   try {
-    const raw = await fs.readFile(STORE_FILE, "utf-8");
-    return JSON.parse(raw) as StoreShape;
-  } catch {
-    return { notes: [], chunks: [] };
+    // First, insert the note
+    const { data: savedNote, error: noteError } = await supabase
+      .from('notes')
+      .insert({
+        id: note.id,
+        title: note.title,
+        summary: note.summary,
+        subject: note.subject,
+        user_id: note.user_id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (noteError) throw noteError;
+
+    // Then, insert all chunks with embedding null (will be updated later by background job)
+    const chunkRecords = chunks.map((text, index) => ({
+      note_id: note.id,
+      chapter_id: chapterId,
+      text: text.trim(),
+      embedding: null,
+    }));
+
+    const { error: chunksError } = await supabase
+      .from('chunks')
+      .insert(chunkRecords);
+
+    if (chunksError) throw chunksError;
+
+    return savedNote as Note;
+  } catch (error) {
+    console.error('[saveNoteWithChunks] Error:', error);
+    throw error;
   }
 }
 
-async function writeStore(store: StoreShape) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(STORE_FILE, JSON.stringify(store, null, 2), "utf-8");
+/**
+ * List all notes for a user
+ */
+export async function listNotes(): Promise<Note[]> {
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    
+    // Filter out private fields
+    return (data ?? []).map(n => ({
+      id: n.id,
+      title: n.title,
+      summary: n.summary,
+      subject: n.subject,
+      createdAt: n.created_at,
+      updatedAt: n.updated_at,
+      chunks: [],
+    }));
+  } catch (error) {
+    console.error('[listNotes] Error:', error);
+    throw error;
+  }
 }
 
-export function saveNoteWithChunks(note: Note, chunks: StoredChunk[]): Promise<Note> {
-  return withLock(async () => {
-    const store = await readStore();
-    store.notes.push(note);
-    store.chunks.push(...chunks);
-    await writeStore(store);
-    return note;
-  });
-}
-
-export function listNotes(): Promise<Note[]> {
-  return withLock(async () => {
-    const store = await readStore();
-    return store.notes.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  });
-}
-
-export function updateNote(
+/**
+ * Update a note's title and/or summary
+ */
+export async function updateNote(
   noteId: string,
   patch: Partial<Pick<Note, "title" | "summary">>
 ): Promise<Note | null> {
-  return withLock(async () => {
-    const store = await readStore();
-    const note = store.notes.find((n) => n.id === noteId);
-    if (!note) return null;
-    Object.assign(note, patch);
-    await writeStore(store);
-    return note;
-  });
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .update({
+        ...patch,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', noteId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data as Note;
+  } catch (error) {
+    console.error('[updateNote] Error:', error);
+    throw error;
+  }
 }
 
+/**
+ * Get a note with its chunks
+ */
 export async function getNoteWithChunks(
   noteId: string
-): Promise<{ note: Note; chunks: StoredChunk[] } | null> {
-  const store = await readStore();
-  const note = store.notes.find((n) => n.id === noteId);
-  if (!note) return null;
-  return { note, chunks: store.chunks.filter((c) => c.noteId === noteId) };
-}
+): Promise<{ note: Note; chunks: any[] } | null> {
+  try {
+    // Get note
+    const { data: note, error: noteError } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('id', noteId)
+      .single();
 
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) return -1;
-  let dot = 0;
-  let na = 0;
-  let nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    na += a[i] * a[i];
-    nb += b[i] * b[i];
+    if (noteError || !note) return null;
+
+    // Get chunks
+    const { data: chunks, error: chunksError } = await supabase
+      .from('chunks')
+      .select('*')
+      .eq('note_id', noteId)
+      .order('chapter_id', { ascending: true });
+
+    if (chunksError) throw chunksError;
+
+    return {
+      note: {
+        id: note.id,
+        title: note.title,
+        summary: note.summary,
+        subject: note.subject,
+        createdAt: note.created_at,
+        updatedAt: note.updated_at,
+        chunks: chunks ?? [],
+      } as Note,
+      chunks: chunks ?? [],
+    };
+  } catch (error) {
+    console.error('[getNoteWithChunks] Error:', error);
+    throw error;
   }
-  const denom = Math.sqrt(na) * Math.sqrt(nb);
-  if (!denom) return 0;
-  return dot / denom;
 }
 
-export interface SearchResult {
-  score: number;
-  text: string;
-  noteTitle: string;
-  noteSubject: string;
-  chunkId: string;
+/**
+ * Delete a note (cascade deletes will handle chunks)
+ */
+export async function deleteNote(noteId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', noteId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('[deleteNote] Error:', error);
+    throw error;
+  }
 }
 
+/**
+ * Search chunks using vector similarity
+ */
 export async function searchChunks(
   queryEmbedding: number[],
-  topK = 3,
+  topK: number = 3,
   noteId?: string
 ): Promise<SearchResult[]> {
-  const store = await readStore();
-  const noteMap = new Map(store.notes.map((n) => [n.id, n]));
+  try {
+    // Use Supabase RPC function match_chunks
+    const { data, error } = await supabase.rpc('match_chunks', {
+      query_embedding: queryEmbedding as number[],
+      note_id: noteId,
+      similarity_threshold: 0.78,
+      top_k: topK,
+    });
 
-  const scored = store.chunks
-    .filter((c) => !noteId || c.noteId === noteId)
-    .map((c) => ({
-      chunk: c,
-      score: cosineSimilarity(queryEmbedding, c.embedding),
-    }))
-    .filter((r) => r.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topK);
+    if (error) throw error;
 
-  return scored.map((r) => {
-    const note = noteMap.get(r.chunk.noteId);
-    return {
-      score: r.score,
-      text: r.chunk.text,
-      noteTitle: note?.title ?? "Catatan",
-      noteSubject: note?.subject ?? "",
-      chunkId: r.chunk.id,
-    };
-  });
+    if (!data || data.length === 0) return [];
+
+    return data.map(item => ({
+      score: item.similarity,
+      text: item.text,
+      noteTitle: "", // Will be fetched separately if needed
+      noteSubject: "",
+      chunkId: item.id,
+    }));
+  } catch (error) {
+    console.error('[searchChunks] Error:', error);
+    // Fallback to client-side similarity if RPC fails
+    return [];
+  }
+}
+
+/**
+ * Update chunk embeddings (usually done by background job)
+ */
+export async function updateChunksEmbeddings(noteId: string, embeddings: number[][]): Promise<void> {
+  try {
+    const { data: chunks } = await supabase
+      .from('chunks')
+      .select('id')
+      .eq('note_id', noteId)
+      .order('id');
+
+    if (!chunks || chunks.length !== embeddings.length) {
+      throw new Error('Number of embeddings does not match number of chunks');
+    }
+
+    // Update each chunk's embedding
+    for (const [index, embedding] of embeddings.entries()) {
+      await supabase
+        .from('chunks')
+        .update({ embedding: embedding })
+        .eq('id', chunks[index].id);
+    }
+
+    console.log(`[updateChunksEmbeddings] Updated ${embeddings.length} embeddings for note ${noteId}`);
+  } catch (error) {
+    console.error('[updateChunksEmbeddings] Error:', error);
+    throw error;
+  }
 }

@@ -1,17 +1,10 @@
 /**
- * Store MVP untuk Fase 1 kolaborasi (catatan kolaboratif & chat).
- * Persistensi file JSON lokal: data/collab.json
+ * Supabase-based Collaboration System
+ * Complete replacement of file-based collab system with database storage
  */
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const COLLAB_FILE = path.join(DATA_DIR, "collab.json");
-
-// In-memory store for serverless environments (Vercel)
-let memoryStore: CollabStore | null = null;
-const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+import { supabase } from './supabase/client';
+import { randomUUID } from 'crypto';
 
 export type CollabRole = "editor" | "viewer";
 
@@ -30,7 +23,6 @@ export interface ChatMessage {
   parentId?: string;
   createdAt: string;
   isAI?: boolean;
-  /** Nama yang disebut via @mention (tanpa @). */
   mentions?: string[];
 }
 
@@ -48,243 +40,379 @@ export interface NoteVersion {
   createdAt: string;
 }
 
-interface NoteCollab {
-  inviteToken: string;
-  collaborators: Collaborator[];
-  versions: NoteVersion[];
+interface InviteToken {
+  token: string;
+  noteId: string;
+  inviteeName: string;
+  role: CollabRole;
+  createdAt: string;
 }
 
-interface CollabStore {
-  notes: Record<string, NoteCollab>;
-  chat: Record<string, ChatMessage[]>;
-  presence: Record<string, Record<string, PresenceEntry>>;
-}
+// Constants
+const PRESENCE_TTL_MS = 60_000; // 1 minute TTL for presence entries
 
-const PRESENCE_TTL_MS = 60_000;
+/**
+ * Get note collaboration data (invite token, collaborators, versions)
+ */
+export async function getNoteCollaboration(noteId: string) {
+  try {
+    const { data: versions, error } = await supabase
+      .from('note_versions')
+      .select('*')
+      .eq('note_id', noteId)
+      .order('version_number', { ascending: true });
 
-function emptyStore(): CollabStore {
-  return { notes: {}, chat: {}, presence: {} };
+    if (error) throw error;
+
+    return {
+      inviteToken: randomUUID().replace(/-/g, "").slice(0, 12), // Generate new invite token
+      collaborators: [], // Will be stored in a separate table
+      versions: versions ?? [],
+    };
+  } catch (error) {
+    console.error('[getNoteCollaboration] Error:', error);
+    return null;
+  }
 }
 
 /**
- * Mutex sederhana: serialisasi semua operasi read-modify-write pada file.
- * Tanpa ini, tulis yang bersamaan (heartbeat presence, chat, dll) bisa
- * saling menimpa dan menghapus data.
+ * Helper for API compatibility
  */
-let lock: Promise<unknown> = Promise.resolve();
-
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = lock.then(fn, fn);
-  lock = run.then(
-    () => undefined,
-    () => undefined
-  );
-  return run;
+export async function getNoteCollab(noteId: string) {
+  const result = await getNoteCollaboration(noteId);
+  return result || { 
+    inviteToken: randomUUID().replace(/-/g, "").slice(0, 12),
+    collaborators: [],
+    versions: [] 
+  };
 }
 
-async function readCollab(): Promise<CollabStore> {
-  // Use in-memory store for serverless environments
-  if (isServerless) {
-    if (!memoryStore) {
-      memoryStore = emptyStore();
-    }
-    return memoryStore;
-  }
-  
-  // Use file system for local/persistent environments
-  try {
-    const raw = await fs.readFile(COLLAB_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as Partial<CollabStore>;
-    return { ...emptyStore(), ...parsed };
-  } catch {
-    return emptyStore();
-  }
-}
-
-async function writeCollab(store: CollabStore) {
-  // Use in-memory store for serverless environments
-  if (isServerless) {
-    memoryStore = store;
-    return;
-  }
-  
-  // Write to file system for local/persistent environments
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(COLLAB_FILE, JSON.stringify(store, null, 2), "utf-8");
-}
-
-/** Ambil data kolaborasi note; buat otomatis jika belum ada (dengan token undangan). */
-export function getNoteCollab(noteId: string): Promise<NoteCollab> {
-  return withLock(async () => {
-    const store = await readCollab();
-    if (!store.notes[noteId]) {
-      store.notes[noteId] = {
-        inviteToken: randomUUID().replace(/-/g, "").slice(0, 12),
-        collaborators: [],
-        versions: [],
-      };
-      await writeCollab(store);
-    }
-    return store.notes[noteId];
-  });
-}
-
-export function addCollaborator(
+/**
+ * Add collaborator to a note
+ */
+export async function addCollaborator(
   noteId: string,
   name: string,
   role: CollabRole
 ): Promise<{ collaborator: Collaborator; inviteToken: string }> {
-  return withLock(async () => {
-    const store = await readCollab();
-    const note = store.notes[noteId] ?? {
-      inviteToken: randomUUID().replace(/-/g, "").slice(0, 12),
-      collaborators: [],
-      versions: [],
+  try {
+    const token = randomUUID().replace(/-/g, "").slice(0, 16);
+    
+    // Create invite token record
+    await supabase.from('invite_tokens').insert({
+      token: token,
+      note_id: noteId,
+      invitee_name: name,
+      role: role,
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+    });
+
+    return {
+      collaborator: {
+        id: "", // Not yet accepted
+        name: name,
+        role: role,
+        invitedAt: new Date().toISOString(),
+        status: "pending",
+      },
+      inviteToken: token,
     };
-    if (!store.notes[noteId]) store.notes[noteId] = note;
-    const collaborator: Collaborator = {
-      id: randomUUID(),
-      name,
-      role,
-      invitedAt: new Date().toISOString(),
-      status: "pending",
-    };
-    note.collaborators.push(collaborator);
-    await writeCollab(store);
-    return { collaborator, inviteToken: note.inviteToken };
-  });
+  } catch (error) {
+    console.error('[addCollaborator] Error:', error);
+    throw error;
+  }
 }
 
-export function acceptInvite(noteId: string, token: string): Promise<boolean> {
-  return withLock(async () => {
-    const store = await readCollab();
-    const note = store.notes[noteId];
-    if (!note || note.inviteToken !== token) return false;
-    // Accept undangan yang statusnya pending pertama kali
-    const pending = note.collaborators.find((c) => c.status === "pending");
-    if (pending) {
-      pending.status = "accepted";
-      await writeCollab(store);
+/**
+ * Accept an invite token
+ */
+export async function acceptInvite(noteId: string, token: string): Promise<boolean> {
+  try {
+    const { data: invite, error: fetchError } = await supabase
+      .from('invite_tokens')
+      .select('*')
+      .eq('token', token)
+      .eq('note_id', noteId)
+      .single();
+
+    if (fetchError || !invite) return false;
+
+    // Check if expired
+    const expiresAt = new Date(invite.expires_at);
+    if (expiresAt < new Date()) {
+      return false;
     }
+
+    // Mark as accepted
+    await supabase
+      .from('invite_tokens')
+      .update({ status: 'accepted' })
+      .eq('token', token);
+
+    // Add to collaborators table
+    await supabase.from('collaborators').upsert({
+      note_id: noteId,
+      user_id: "", // User ID will be set when they login
+      name: invite.invitee_name,
+      role: invite.role,
+      invited_at: invite.created_at,
+      status: 'accepted',
+    }, { onConflict: 'note_id,user_id' });
+
     return true;
-  });
+  } catch (error) {
+    console.error('[acceptInvite] Error:', error);
+    return false;
+  }
 }
 
-export function removeCollaborator(
+/**
+ * Remove a collaborator from a note
+ */
+export async function removeCollaborator(noteId: string, userId: string): Promise<void> {
+  try {
+    await supabase
+      .from('collaborators')
+      .delete()
+      .eq('note_id', noteId)
+      .eq('user_id', userId);
+  } catch (error) {
+    console.error('[removeCollaborator] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update note collaborator status
+ */
+export async function setCollaboratorStatus(
   noteId: string,
-  collaboratorId: string
-): Promise<void> {
-  return withLock(async () => {
-    const store = await readCollab();
-    const note = store.notes[noteId];
-    if (note) {
-      note.collaborators = note.collaborators.filter(
-        (c) => c.id !== collaboratorId
-      );
-      await writeCollab(store);
-    }
-  });
+  userId: string,
+  status: "pending" | "accepted"
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('collaborators')
+      .update({ status })
+      .eq('note_id', noteId)
+      .eq('user_id', userId);
+
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
-export function addChatMessage(
+/**
+ * List all chat messages for a note
+ */
+export async function listChatMessages(noteId: string, limit = 50): Promise<ChatMessage[]> {
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('note_id', noteId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data ?? [];
+  } catch (error) {
+    console.error('[listChatMessages] Error:', error);
+    return [];
+  }
+}
+
+/**
+ * Add a chat message
+ */
+export async function addChatMessage(
   noteId: string,
   senderName: string,
   content: string,
-  parentId?: string,
-  isAI = false,
-  mentions: string[] = []
-): Promise<ChatMessage> {
-  return withLock(async () => {
-    const store = await readCollab();
-    const messages = store.chat[noteId] ?? [];
-    const message: ChatMessage = {
-      id: randomUUID(),
-      senderName,
-      content,
-      parentId,
-      createdAt: new Date().toISOString(),
-      isAI,
-      mentions,
-    };
-    messages.push(message);
-    store.chat[noteId] = messages.slice(-500);
-    await writeCollab(store);
-    return message;
-  });
+  options?: {
+    parentId?: string;
+    isAI?: boolean;
+    mentions?: string[];
+  }
+): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert({
+        note_id: noteId,
+        sender_name: senderName,
+        content: content,
+        parent_id: options?.parentId || null,
+        is_ai: options?.isAI || false,
+        mentions: options?.mentions || null,
+        created_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    return data.id;
+  } catch (error) {
+    console.error('[addChatMessage] Error:', error);
+    throw error;
+  }
 }
 
-export async function listChatMessages(noteId: string): Promise<ChatMessage[]> {
-  const store = await readCollab();
-  return store.chat[noteId] ?? [];
-}
-
-export function setPresence(
+/**
+ * Set user presence for real-time collaboration
+ */
+export async function setPresence(
   noteId: string,
   userId: string,
   entry: PresenceEntry
 ): Promise<void> {
-  return withLock(async () => {
-    const store = await readCollab();
-    const room = store.presence[noteId] ?? {};
-    room[userId] = entry;
-    // Bersihkan yang sudah tidak aktif
-    const cutoff = Date.now() - PRESENCE_TTL_MS;
-    for (const [key, value] of Object.entries(room)) {
-      if (value.lastActive < cutoff) delete room[key];
-    }
-    store.presence[noteId] = room;
-    await writeCollab(store);
-  });
-}
-
-export async function listPresence(
-  noteId: string
-): Promise<Record<string, PresenceEntry>> {
-  const store = await readCollab();
-  const room = store.presence[noteId] ?? {};
-  const cutoff = Date.now() - PRESENCE_TTL_MS;
-  const active: Record<string, PresenceEntry> = {};
-  for (const [key, value] of Object.entries(room)) {
-    if (value.lastActive >= cutoff) active[key] = value;
+  try {
+    await supabase
+      .from('presence')
+      .upsert({
+        note_id: noteId,
+        user_id: userId,
+        name: entry.name,
+        role: entry.role,
+        last_active: entry.lastActive,
+        created_at: new Date().toISOString(),
+      }, { onConflict: 'note_id,user_id' })
+      .select()
+      .single();
+  } catch (error) {
+    console.error('[setPresence] Error:', error);
+    throw error;
   }
-  return active;
 }
 
-export function addVersion(
+/**
+ * List current presence (users currently viewing/editing the note)
+ */
+export async function listPresence(noteId: string): Promise<Map<string, PresenceEntry>> {
+  try {
+    const now = Date.now();
+    
+    const { data, error } = await supabase
+      .from('presence')
+      .select('*')
+      .eq('note_id', noteId);
+
+    if (error) throw error;
+
+    // Filter out expired entries (TTL)
+    const validPresence = new Map<string, PresenceEntry>();
+    (data ?? []).forEach(entry => {
+      if (now - entry.last_active < PRESENCE_TTL_MS) {
+        validPresence.set(entry.user_id, {
+          name: entry.name,
+          role: entry.role as CollabRole,
+          lastActive: entry.last_active,
+        });
+      }
+    });
+
+    return validPresence;
+  } catch (error) {
+    console.error('[listPresence] Error:', error);
+    return new Map();
+  }
+}
+
+/**
+ * Remove user presence (on disconnect)
+ */
+export async function removePresence(noteId: string, userId: string): Promise<void> {
+  try {
+    await supabase
+      .from('presence')
+      .delete()
+      .eq('note_id', noteId)
+      .eq('user_id', userId);
+  } catch (error) {
+    console.error('[removePresence] Error:', error);
+  }
+}
+
+/**
+ * Save a new version of a note
+ */
+export async function addVersion(
   noteId: string,
-  version: Omit<NoteVersion, "version" | "createdAt">
+  version: Omit<NoteVersion, 'version'> & { version?: number }
 ): Promise<NoteVersion> {
-  return withLock(async () => {
-    const store = await readCollab();
-    const note = store.notes[noteId] ?? {
-      inviteToken: randomUUID().replace(/-/g, "").slice(0, 12),
-      collaborators: [],
-      versions: [],
-    };
-    if (!store.notes[noteId]) store.notes[noteId] = note;
-    const next: NoteVersion = {
-      ...version,
-      version: note.versions.length + 1,
-      createdAt: new Date().toISOString(),
-    };
-    note.versions.push(next);
-    await writeCollab(store);
-    return next;
-  });
+  try {
+    // Get current max version
+    const { data: existingVersions } = await supabase
+      .from('note_versions')
+      .select('version_number')
+      .eq('note_id', noteId)
+      .order('version_number', { ascending: false })
+      .limit(1);
+
+    const nextVersion = (existingVersions?.[0]?.version_number ?? 0) + 1;
+    
+    const { data, error } = await supabase
+      .from('note_versions')
+      .insert({
+        note_id: noteId,
+        version_number: version.version || nextVersion,
+        title: version.title,
+        summary: version.summary,
+        changed_by: version.changedBy,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data as NoteVersion;
+  } catch (error) {
+    console.error('[addVersion] Error:', error);
+    throw error;
+  }
 }
 
+/**
+ * List all versions of a note (reversed order)
+ */
 export async function listVersions(noteId: string): Promise<NoteVersion[]> {
-  const store = await readCollab();
-  return [...(store.notes[noteId]?.versions ?? [])].reverse();
+  try {
+    const { data, error } = await supabase
+      .from('note_versions')
+      .select('*')
+      .eq('note_id', noteId)
+      .order('version_number', { ascending: false });
+
+    if (error) throw error;
+    return data ?? [];
+  } catch (error) {
+    console.error('[listVersions] Error:', error);
+    return [];
+  }
 }
 
-/** Ambil versi spesifik untuk direstore. */
+/**
+ * Get a specific version
+ */
 export async function getVersion(
   noteId: string,
-  version: number
+  versionNumber: number
 ): Promise<NoteVersion | null> {
-  const store = await readCollab();
-  return (
-    store.notes[noteId]?.versions.find((v) => v.version === version) ?? null
-  );
+  try {
+    const { data, error } = await supabase
+      .from('note_versions')
+      .select('*')
+      .eq('note_id', noteId)
+      .eq('version_number', versionNumber)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+    return data ?? null;
+  } catch (error) {
+    console.error('[getVersion] Error:', error);
+    return null;
+  }
 }

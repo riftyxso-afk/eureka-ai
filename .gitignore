@@ -37,3 +37,4 @@ next-env.d.ts
 
 # Vector store lokal (RAG)
 data/
+.vercel
