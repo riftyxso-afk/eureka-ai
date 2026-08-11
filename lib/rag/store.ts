@@ -4,10 +4,9 @@
  */
 
 import { supabase } from '../supabase/client';
-import type { Note, Chunk, SearchResult } from '../types';
-import { cosineSimilarity } from './chunk';
+import type { Note } from '../types';
 
-export interface StoredChunk {
+interface StoredChunk {
   id: string;
   noteId: string;
   text: string;
@@ -16,6 +15,32 @@ export interface StoredChunk {
 
 interface SupabaseNote extends Omit<Note, 'chunks'> {
   chunks?: any[];
+}
+
+/**
+ * Cosine similarity calculation (client-side fallback)
+ */
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return -1;
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  if (!denom) return 0;
+  return dot / denom;
+}
+
+interface NoteSearchResult {
+  score: number;
+  text: string;
+  noteTitle: string;
+  noteSubject: string;
+  chunkId: string;
 }
 
 /**
@@ -181,41 +206,6 @@ export async function deleteNote(noteId: string): Promise<void> {
 }
 
 /**
- * Search chunks using vector similarity
- */
-export async function searchChunks(
-  queryEmbedding: number[],
-  topK: number = 3,
-  noteId?: string
-): Promise<SearchResult[]> {
-  try {
-    // Use Supabase RPC function match_chunks
-    const { data, error } = await supabase.rpc('match_chunks', {
-      query_embedding: queryEmbedding as number[],
-      note_id: noteId,
-      similarity_threshold: 0.78,
-      top_k: topK,
-    });
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) return [];
-
-    return data.map(item => ({
-      score: item.similarity,
-      text: item.text,
-      noteTitle: "", // Will be fetched separately if needed
-      noteSubject: "",
-      chunkId: item.id,
-    }));
-  } catch (error) {
-    console.error('[searchChunks] Error:', error);
-    // Fallback to client-side similarity if RPC fails
-    return [];
-  }
-}
-
-/**
  * Update chunk embeddings (usually done by background job)
  */
 export async function updateChunksEmbeddings(noteId: string, embeddings: number[][]): Promise<void> {
@@ -242,5 +232,40 @@ export async function updateChunksEmbeddings(noteId: string, embeddings: number[
   } catch (error) {
     console.error('[updateChunksEmbeddings] Error:', error);
     throw error;
+  }
+}
+
+/**
+ * Search chunks using vector similarity
+ */
+export async function searchChunks(
+  queryEmbedding: number[],
+  topK: number = 3,
+  noteId?: string
+): Promise<NoteSearchResult[]> {
+  try {
+    // Use Supabase RPC function match_chunks
+    const { data, error } = await supabase.rpc('match_chunks', {
+      query_embedding: queryEmbedding as number[],
+      note_id: noteId,
+      similarity_threshold: 0.78,
+      top_k: topK,
+    });
+
+    if (error || !data || data.length === 0) {
+      console.error('[searchChunks] Error:', error);
+      return [];
+    }
+
+    return data.map((item: any) => ({
+      score: item.similarity,
+      text: item.text,
+      noteTitle: "",
+      noteSubject: "",
+      chunkId: item.id,
+    }));
+  } catch (error) {
+    console.error('[searchChunks] Error:', error);
+    return [];
   }
 }

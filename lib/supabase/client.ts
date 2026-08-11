@@ -159,7 +159,7 @@ export type Database = {
           id: string;
           email: string;
           name: string | null;
-          profile_data: JSONB | null;
+          profile_data: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -167,7 +167,7 @@ export type Database = {
           id: string;
           email: string;
           name?: string | null;
-          profile_data?: JSONB | null;
+          profile_data?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -175,7 +175,7 @@ export type Database = {
           id?: string;
           email?: string;
           name?: string | null;
-          profile_data?: JSONB | null;
+          profile_data?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -186,7 +186,7 @@ export type Database = {
           url: string;
           status: 'pending' | 'processing' | 'completed' | 'failed';
           source_type: 'pdf' | 'web' | 'drive';
-          metadata: JSONB | null;
+          metadata: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -195,7 +195,7 @@ export type Database = {
           url: string;
           status?: 'pending' | 'processing' | 'completed' | 'failed';
           source_type: 'pdf' | 'web' | 'drive';
-          metadata?: JSONB | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -204,7 +204,7 @@ export type Database = {
           url?: string;
           status?: 'pending' | 'processing' | 'completed' | 'failed';
           source_type?: 'pdf' | 'web' | 'drive';
-          metadata?: JSONB | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -216,7 +216,7 @@ export type Database = {
           progress: number;
           status: 'queued' | 'processing' | 'completed' | 'failed';
           message: string | null;
-          result: JSONB | null;
+          result: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -226,7 +226,7 @@ export type Database = {
           progress: number;
           status: 'queued' | 'processing' | 'completed' | 'failed';
           message?: string | null;
-          result?: JSONB | null;
+          result?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -236,7 +236,7 @@ export type Database = {
           progress?: number;
           status?: 'queued' | 'processing' | 'completed' | 'failed';
           message?: string | null;
-          result?: JSONB | null;
+          result?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
