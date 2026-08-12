@@ -17,7 +17,7 @@ export async function GET(
 ) {
   try {
     const { jobId } = await params;
-    const job = getJob(jobId);
+    const job = await getJob(jobId);
     if (!job) {
       return NextResponse.json(
         { error: "Job tidak ditemukan atau sudah kedaluwarsa." },
@@ -53,14 +53,14 @@ export async function POST(
 ) {
   try {
     const { jobId } = await params;
-    const job = getJob(jobId);
+    const job = await getJob(jobId);
     if (!job) {
       return NextResponse.json(
         { error: "Job tidak ditemukan atau sudah selesai." },
         { status: 404 }
       );
     }
-    if (!cancelJob(jobId)) {
+    if (!(await cancelJob(jobId))) {
       return NextResponse.json(
         { message: "Job sudah selesai atau gagal — tidak ada yang dibatalkan.", cancelled: false },
         { status: 409 }

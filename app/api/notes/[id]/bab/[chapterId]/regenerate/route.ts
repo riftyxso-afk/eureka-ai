@@ -6,12 +6,12 @@
  * job background (pola sama dengan /api/notes/process) → 202 { jobId }.
  * Status: GET /api/notes/jobs/[jobId].
  */
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { randomUUID } from "crypto";
 
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { regenerateChapter } from "@/lib/regenerate";
-import { createJob, updateJob } from "@/lib/jobQueue";
+import { createJob, executeJob, updateJob } from "@/lib/jobQueue";
 
 export const runtime = "nodejs";
 
@@ -80,6 +80,11 @@ export async function POST(
           });
         }
       },
+    });
+
+    // Jalankan setelah respons (serverless-safe), bukan setImmediate.
+    after(() => {
+      void executeJob(jobId);
     });
 
     return NextResponse.json(

@@ -130,7 +130,7 @@ export async function processNoteForBackground(
 
   const noteId = randomUUID();
 
-  if (input.jobId && isJobCancelled(input.jobId)) {
+  if (input.jobId && (await isJobCancelled(input.jobId))) {
     throw new JobCancelledError();
   }
 
@@ -149,7 +149,7 @@ export async function processNoteForBackground(
       true,
       (fraction: number, label: string) => advance("chapters", fraction, label)
     );
-    if (input.jobId && isJobCancelled(input.jobId)) {
+    if (input.jobId && (await isJobCancelled(input.jobId))) {
       throw new JobCancelledError();
     }
     chapters = processed.chapters;
@@ -166,7 +166,7 @@ export async function processNoteForBackground(
       prefs,
       (fraction: number, label: string) => advance("chapters", fraction, label)
     );
-    if (input.jobId && isJobCancelled(input.jobId)) {
+    if (input.jobId && (await isJobCancelled(input.jobId))) {
       throw new JobCancelledError();
     }
     chapters = processed.chapters;
@@ -180,12 +180,12 @@ export async function processNoteForBackground(
       extracted.segments,
       prefs
     );
-    if (input.jobId && isJobCancelled(input.jobId)) {
+    if (input.jobId && (await isJobCancelled(input.jobId))) {
       throw new JobCancelledError();
     }
     advance("chapters", 0.8, "Membuat ringkasan...");
     summary = await generateAiSummary(extracted.text, prefs);
-    if (input.jobId && isJobCancelled(input.jobId)) {
+    if (input.jobId && (await isJobCancelled(input.jobId))) {
       throw new JobCancelledError();
     }
   }
@@ -244,7 +244,7 @@ export async function processNoteForBackground(
   }
 
   // FASE 3: Validasi & enrichment per-bab via web search (50-80%)
-  if (input.jobId && isJobCancelled(input.jobId)) {
+  if (input.jobId && (await isJobCancelled(input.jobId))) {
     throw new JobCancelledError();
   }
   if (chapters && chapters.length > 0) {
@@ -286,7 +286,7 @@ export async function processNoteForBackground(
   done("enrichment", "Validasi & enrichment selesai.");
 
   // FASE 4: RAG — chunk, embed, simpan (80-90%)
-  if (input.jobId && isJobCancelled(input.jobId)) {
+  if (input.jobId && (await isJobCancelled(input.jobId))) {
     throw new JobCancelledError();
   }
   advance("rag", 0.1, "Memecah materi menjadi potongan kecil...");
@@ -328,7 +328,7 @@ export async function processNoteForBackground(
   }
 
   // FASE 5: Kuis & flashcards otomatis sesuai Mode Belajar (90-100%)
-  if (input.jobId && isJobCancelled(input.jobId)) {
+  if (input.jobId && (await isJobCancelled(input.jobId))) {
     throw new JobCancelledError();
   }
   const studyCounts: Record<string, number> = { ringkas: 0, standar: 5, lengkap: 10 };

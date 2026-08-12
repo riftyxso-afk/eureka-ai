@@ -1,18 +1,24 @@
 /**
- * Job background untuk pembuatan catatan (pola in-memory seperti
- * ProgressTracker, konsisten dengan arsitektur file-JSON single-process).
+ * Job background untuk pembuatan catatan (pola in-memory + persist Supabase).
  *
- * POST /api/notes/process kini langsung membalas 202 { jobId } dan pekerjaan
- * berat berjalan di latar belakang via createJob — user bebas pindah halaman
- * tanpa membatalkan proses. Status job dipantau lewat GET /api/notes/jobs/[id].
+ * POST /api/notes/process membalas 202 { jobId } seketika; pekerjaan berat
+ * (ekstraksi, bab AI, enrichment, RAG, kuis) dijalankan setelah respons lewat
+ * `after()` (Next.js 16 — jalan di Vercel maupun self-hosted). User bebas
+ * pindah halaman tanpa membatalkan proses; status job dipantau lewat
+ * GET /api/notes/jobs/[id].
  *
- * Catatan (tradeoff MVP):
- * - Job hilang bila server di-restart di tengah proses (aman: catatan hanya
- *   disimpan di akhir, jadi tidak ada data korup).
- * - Di Vercel serverless, worker ini mati setelah respons — desain ini untuk
- *   self-hosted (next start / dev), sesuai storage file JSON lokal.
+ * Status juga di-persist ke tabel `public.jobs` Supabase sehingga polling
+ * tetap menemukan job walaupun request berikutnya masuk ke instance
+ * serverless yang berbeda (sebelumnya in-memory saja → 404 lintas instance).
+ *
+ * Catatan:
+ * - Di Vercel, kerja `after()` berjalan dalam batas maxDuration; bila terpotong,
+ *   job tertinggal berstatus "running" dan dianggap gagal saat sudah basi
+ *   (lihat STALE_RUNNING_MS).
+ * - Tanpa Supabase terkonfigurasi (dev), fallback ke in-memory.
  */
 import { randomUUID } from "crypto";
+import { db } from "@/lib/supabase/admin";
 
 export type JobStatus = "running" | "done" | "error";
 
@@ -40,8 +46,103 @@ export interface CreateJobOptions {
 
 const JOBS_TTL_MS = 60 * 60 * 1000;
 const MAX_JOBS = 200;
+/** Job yang basi (tidak ada update) dianggap mati, agar klien tidak menunggu selamanya. */
+const STALE_RUNNING_MS = 10 * 60 * 1000;
 
 const jobs = new Map<string, NoteJob>();
+const runners = new Map<string, (jobId: string) => Promise<void>>();
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function toDbStatus(status: JobStatus): string {
+  return status === "running" ? "processing" : status === "done" ? "completed" : "failed";
+}
+
+function fromDbStatus(status: string | null, cancelled: boolean): JobStatus {
+  if (cancelled) return "error";
+  if (status === "completed") return "done";
+  if (status === "failed") return "error";
+  return "running";
+}
+
+/** Persist status ke tabel jobs Supabase. Gagal diam-diam (fallback memory). */
+async function persist(job: NoteJob): Promise<void> {
+  try {
+    await db()
+      .from("jobs")
+      .upsert(
+        {
+          id: job.id,
+          progress: job.percent,
+          status: toDbStatus(job.status),
+          message: job.message,
+          note_id: job.noteId ?? null,
+          result: {
+            noteTitle: job.noteTitle ?? null,
+            error: job.error ?? null,
+            cancelled: job.cancelled ?? false,
+          },
+          updated_at: nowIso(),
+        },
+        { onConflict: "id" }
+      );
+  } catch {
+    // Supabase tidak terkonfigurasi — tetap jalan in-memory.
+  }
+}
+
+async function loadFromDb(jobId: string): Promise<NoteJob | null> {
+  try {
+    const { data } = await db()
+      .from("jobs")
+      .select("*")
+      .eq("id", jobId)
+      .maybeSingle();
+    if (!data) return null;
+    const result = (data.result ?? {}) as {
+      noteTitle?: string | null;
+      error?: string | null;
+      cancelled?: boolean;
+    };
+    const status = fromDbStatus(data.status, !!result.cancelled);
+    if (
+      status === "running" &&
+      Date.now() - new Date(data.updated_at ?? data.created_at).getTime() >
+        STALE_RUNNING_MS
+    ) {
+      // Job "processing" yang basi = mati di tengah jalan (mis. fungsi terpotong).
+      return {
+        id: data.id,
+        sessionId: "",
+        userId: "",
+        status: "error",
+        percent: 100,
+        message: "Proses gagal.",
+        error: "Waktu proses habis. Coba lagi.",
+        createdAt: new Date(data.created_at).getTime(),
+        updatedAt: Date.now(),
+      };
+    }
+    return {
+      id: data.id,
+      sessionId: "",
+      userId: "",
+      status,
+      percent: data.progress ?? 0,
+      message: data.message ?? "",
+      noteId: data.note_id ?? undefined,
+      noteTitle: result.noteTitle ?? undefined,
+      error: result.error ?? undefined,
+      cancelled: result.cancelled,
+      createdAt: new Date(data.created_at).getTime(),
+      updatedAt: new Date(data.updated_at).getTime(),
+    };
+  } catch {
+    return null;
+  }
+}
 
 function cleanup() {
   const now = Date.now();
@@ -49,12 +150,12 @@ function cleanup() {
     if (now - job.updatedAt > JOBS_TTL_MS) jobs.delete(id);
   }
   if (jobs.size > MAX_JOBS) {
-    // Buang yang paling lama tidak diperbarui
     const sorted = [...jobs.entries()].sort(
       (a, b) => a[1].updatedAt - b[1].updatedAt
     );
     for (const [id] of sorted.slice(0, jobs.size - MAX_JOBS)) {
       jobs.delete(id);
+      runners.delete(id);
     }
   }
 }
@@ -62,7 +163,7 @@ function cleanup() {
 export function createJob(options: CreateJobOptions): string {
   cleanup();
   const id = randomUUID();
-  jobs.set(id, {
+  const job: NoteJob = {
     id,
     sessionId: options.sessionId,
     userId: options.userId,
@@ -71,60 +172,59 @@ export function createJob(options: CreateJobOptions): string {
     message: "Menyiapkan proses...",
     createdAt: Date.now(),
     updatedAt: Date.now(),
-  });
-
-  // Jalankan kerja di latar belakang (tidak menahan respons HTTP).
-  const exec = async () => {
-    try {
-      await options.run(id);
-    } catch (e) {
-      const msg =
-        e instanceof Error ? e.message : "Terjadi kesalahan saat memproses materi.";
-      console.error("[jobQueue] Job gagal:", e);
-      updateJob(id, {
-        status: "error",
-        error: msg,
-        message: "Proses gagal.",
-        percent: 100,
-      });
-    }
   };
-  setImmediate(() => {
-    void exec();
-  });
-
+  jobs.set(id, job);
+  runners.set(id, options.run);
+  void persist(job);
   return id;
 }
 
-export function updateJob(
+/**
+ * Jalankan kerja job setelah respons HTTP selesai.
+ * Dipanggil lewat `after()` di route handler (Vercel & self-hosted).
+ */
+export function executeJob(jobId: string): Promise<void> {
+  const run = runners.get(jobId) ?? (async () => {});
+  return run(jobId);
+}
+
+export async function updateJob(
   jobId: string,
   patch: Partial<Pick<NoteJob, "status" | "percent" | "message" | "noteId" | "noteTitle" | "error">>
-): void {
-  const job = jobs.get(jobId);
+): Promise<void> {
+  const job = jobs.get(jobId) ?? (await loadFromDb(jobId));
   if (!job) return;
   Object.assign(job, patch, { updatedAt: Date.now() });
+  jobs.set(jobId, job);
+  void persist(job);
 }
 
-export function getJob(jobId: string): NoteJob | null {
+export async function getJob(jobId: string): Promise<NoteJob | null> {
   cleanup();
-  return jobs.get(jobId) ?? null;
+  const cached = jobs.get(jobId);
+  if (cached) return cached;
+  const fromDb = await loadFromDb(jobId);
+  if (fromDb) jobs.set(jobId, fromDb);
+  return fromDb;
 }
 
-export function cancelJob(jobId: string): boolean {
-  const job = jobs.get(jobId);
+export async function cancelJob(jobId: string): Promise<boolean> {
+  const job = jobs.get(jobId) ?? (await loadFromDb(jobId));
   if (!job || job.status !== "running") return false;
   job.cancelled = true;
-  updateJob(jobId, {
-    status: "error",
-    error: "Dibatalkan oleh pengguna.",
-    message: "Proses dibatalkan.",
-  });
+  job.status = "error";
+  job.error = "Dibatalkan oleh pengguna.";
+  job.message = "Proses dibatalkan.";
+  job.updatedAt = Date.now();
+  jobs.set(jobId, job);
+  void persist(job);
   return true;
 }
 
 /** Apakah job sudah dibatalkan (dipakai prosesor untuk berhenti di antara fase). */
-export function isJobCancelled(jobId: string): boolean {
-  return jobs.get(jobId)?.cancelled ?? false;
+export async function isJobCancelled(jobId: string): Promise<boolean> {
+  const job = jobs.get(jobId) ?? (await loadFromDb(jobId));
+  return job?.cancelled ?? false;
 }
 
 /** Error yang dilempar saat job dibatalkan di tengah proses. */

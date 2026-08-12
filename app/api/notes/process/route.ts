@@ -9,10 +9,16 @@
  * - Status job untuk polling: GET /api/notes/jobs/[jobId]
  * - Notifikasi selesai: lonceng (pushNotification) + toast/notifikasi browser.
  */
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { randomUUID } from "crypto";
 
-import { createJob, updateJob, isJobCancelled, JobCancelledError } from "@/lib/jobQueue";
+import {
+  createJob,
+  executeJob,
+  updateJob,
+  isJobCancelled,
+  JobCancelledError,
+} from "@/lib/jobQueue";
 import { ProgressTracker, phaseToPercent } from "@/lib/progressTracker";
 import {
   processNoteForBackground,
@@ -168,7 +174,7 @@ export async function POST(req: NextRequest) {
             }
           }
         } catch (e) {
-          if (e instanceof JobCancelledError || isJobCancelled(id)) {
+          if (e instanceof JobCancelledError || (await isJobCancelled(id))) {
             tracker.emit("extract", jobProgress ? 100 : 100, "Proses dibatalkan.");
             return;
           }
@@ -188,6 +194,12 @@ export async function POST(req: NextRequest) {
       },
     });
     jobIdRef.current = jobId;
+
+    // Eksekusi setelah respons HTTP (Vercel & self-hosted) — bukan setImmediate
+    // yang mati saat fungsi dibekukan di serverless.
+    after(() => {
+      void executeJob(jobId);
+    });
 
     return NextResponse.json(
       { jobId, status: "queued", message: "Proses berjalan di latar belakang." },
