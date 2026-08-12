@@ -834,11 +834,11 @@ export default function NoteDetailPage() {
       {/* Konfirmasi tulis ulang seluruh catatan */}
       {confirmRegen && (
         <div
-          className="fixed inset-0 z-[70] flex items-end justify-center overflow-y-auto bg-black/40 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
+          className="fixed inset-0 z-[70] flex items-end justify-center overflow-y-auto bg-black/40 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
           onClick={() => setConfirmRegen(false)}
         >
           <div
-            className="card-clay m-auto w-full max-w-md max-h-[85vh] overflow-y-auto !p-6 sm:!p-8 rounded-t-clay sm:rounded-clay"
+            className="card-clay m-auto w-full max-w-md max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] !p-6 sm:!p-8 rounded-t-clay sm:rounded-clay"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-extrabold text-clay-dark">

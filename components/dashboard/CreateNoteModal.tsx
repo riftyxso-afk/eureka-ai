@@ -529,7 +529,7 @@ export const CreateNoteModal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={close}
-          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 pb-[max(8px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
         >
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.95 }}
@@ -537,7 +537,7 @@ export const CreateNoteModal = ({
             exit={{ opacity: 0, y: 24, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
-            className="m-auto w-full max-w-lg max-h-[95vh] overflow-y-auto rounded-t-clay sm:rounded-clay"
+            className="m-auto w-full max-w-lg max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] rounded-t-clay sm:rounded-clay"
           >
             <CardClay className="shadow-clay-lg !p-4 sm:!p-8">
               {createdNote ? (

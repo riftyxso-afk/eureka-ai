@@ -32,7 +32,9 @@ export default function KemerdekaanPopup() {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm">
+      {/* Wrapper: tengah bila muat, bisa di-scroll bila tinggi (anti terpotong di HP kecil) */}
+      <div className="flex min-h-full items-center justify-center p-4 py-8">
       {/* Confetti-like decorative elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-[10%] top-[15%] text-4xl opacity-60 animate-bounce" style={{ animationDelay: "0s" }}>🇮🇩</div>
@@ -131,6 +133,7 @@ export default function KemerdekaanPopup() {
         >
           <X size={18} strokeWidth={3} />
         </button>
+        </div>
       </div>
     </div>
   );

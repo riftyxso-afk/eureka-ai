@@ -59,11 +59,11 @@ export default function QuizModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="card-clay m-auto w-full max-w-lg max-h-[85vh] overflow-y-auto p-3 sm:!p-6 rounded-t-clay sm:rounded-clay"
+        className="card-clay m-auto w-full max-w-lg max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] p-3 sm:!p-6 rounded-t-clay sm:rounded-clay"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 sm:mb-4 flex items-center justify-between">

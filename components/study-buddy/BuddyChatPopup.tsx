@@ -123,7 +123,7 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
       initial={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
       animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
-      className="fixed inset-x-4 bottom-28 sm:inset-x-auto sm:bottom-32 sm:right-6 sm:left-auto z-50 w-auto sm:w-96 max-h-[70vh] sm:h-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
+      className="fixed inset-x-4 bottom-28 sm:inset-x-auto sm:bottom-32 sm:right-6 sm:left-auto z-50 w-auto sm:w-96 max-h-[70dvh] sm:h-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
     >
       {/* Header - Mobile Responsive */}
       <div 

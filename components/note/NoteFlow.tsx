@@ -17,8 +17,8 @@ export const NoteFlow = ({ flow }: NoteFlowProps) => {
       </div>
       <div className="flex flex-wrap items-center gap-y-3">
         {flow.map((step, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <div className="rounded-clay-md border-3 border-clay-primary/30 bg-clay-primary/10 px-3 py-2 text-xs font-extrabold leading-snug text-clay-primary shadow-clay-sm">
+          <div key={i} className="flex max-w-full items-center gap-3">
+            <div className="min-w-0 max-w-full break-words rounded-clay-md border-3 border-clay-primary/30 bg-clay-primary/10 px-3 py-2 text-xs font-extrabold leading-snug text-clay-primary shadow-clay-sm">
               <span className="mr-1.5 text-clay-muted">{i + 1}.</span>
               {step}
             </div>
