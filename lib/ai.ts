@@ -191,6 +191,27 @@ export function extractJsonObject<T = Record<string, unknown>>(
 }
 
 /**
+ * Error khusus saat provider AI sibuk / kehabisan kuota (429/5xx).
+ * Dipakai pemroses materi untuk menghentikan job dengan pesan jelas,
+ * bukan diam-diam jatuh ke parsing manual (subtitle mentah).
+ */
+export class AiBusyError extends Error {
+  codes: number[];
+  constructor(codes: number[]) {
+    super(
+      `Server AI sedang sibuk (kode ${codes.join(", ")}). Coba lagi dalam beberapa menit.`
+    );
+    this.name = "AiBusyError";
+    this.codes = codes;
+  }
+}
+
+/** Apakah error berasal dari AI sibuk/kuota (429/5xx)? */
+export function isAiBusyError(e: unknown): boolean {
+  return e instanceof AiBusyError;
+}
+
+/**
  * Panggil Chat Completions (OpenAI-compatible) → kembalikan teks jawaban.
  * - Retry otomatis untuk error transien (429, 5xx, timeout/putus jaringan);
  * - Fallback ke provider berikutnya (mis. OpenRouter) bila provider utama
@@ -251,6 +272,7 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
     console.log('[AI] Response status:', res.status, res.statusText);
 
     if (!res.ok) {
+      codesSeen.add(res.status);
       let detail = "";
       try {
         const errText = await res.text();
@@ -295,7 +317,9 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
       if (/fetch failed|terminated|ECONNRESET|UndiciError/i.test(e.message))
         return true;
       const m = e.message.match(/API error (\d{3})/);
-      if (m) return ["429", "500", "502", "503", "504"].includes(m[1]);
+      // 429 (kuota/rate limit) TIDAK di-retry: biasanya kuota harian habis
+      // dengan retry_after panjang — menunggu hanya membuang waktu user.
+      if (m) return ["500", "502", "503", "504"].includes(m[1]);
     }
     return false;
   };
@@ -306,6 +330,8 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
   // Error transien (502/saturasi) ditangani retry di dalam loop attempt.
   const attemptsPerProvider = 4;
   const tried: string[] = [];
+  // Kode HTTP yang pernah gagal — dipakai untuk pesan error "server sibuk".
+  const codesSeen = new Set<number>();
   for (const provider of providers) {
     tried.push(`${provider.name}/${provider.model}`);
     let useJsonFormat = Boolean(options.json);
@@ -318,7 +344,7 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
       } catch (e) {
         const retryable = isRetryable(e);
         if (retryable && attempt < attemptsPerProvider) {
-          // 429/5xx/timeout → upstream sibuk: tunggu sebentar lalu ulangi
+          // 5xx/timeout → upstream sibuk: tunggu sebentar lalu ulangi
           await sleep(2_000);
           continue;
         }
@@ -335,6 +361,14 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
         break;
       }
     }
+  }
+  // Provider sibuk/kuota habis (429/5xx) → error khusus agar diproses
+  // sebagai "server sedang sibuk" di UI, bukan fallback subtitle mentah.
+  const busyCodes = [...new Set(codesSeen)].filter(
+    (c) => c === 429 || (c >= 500 && c <= 599)
+  );
+  if (busyCodes.length > 0) {
+    throw new AiBusyError(busyCodes);
   }
   throw new Error(
     `Semua provider AI gagal (${tried.join(" → ")}). Coba lagi nanti.`

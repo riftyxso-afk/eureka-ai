@@ -243,9 +243,12 @@ export function JobWatcherProvider({
                 variant: "info",
               });
             } else {
+              const errMsg = job.error || "Terjadi kesalahan. Coba buat catatan lagi.";
               showToast({
-                title: "Gagal merangkum materi",
-                message: job.error || "Terjadi kesalahan. Coba buat catatan lagi.",
+                title: /sibuk|kuota|quota|rate limit/i.test(errMsg)
+                  ? "Server sedang sibuk"
+                  : "Gagal merangkum materi",
+                message: errMsg,
                 variant: "error",
               });
             }

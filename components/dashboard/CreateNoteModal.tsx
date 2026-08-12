@@ -13,6 +13,8 @@ import {
   Loader2,
   Music,
   PartyPopper,
+  RotateCcw,
+  ServerOff,
   Square,
   SquarePlay,
   Upload,
@@ -152,6 +154,21 @@ function formatBytes(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+/** Ambil kode error dari pesan (mis. "kode 429" / "HTTP 429") → "429". */
+function extractErrorCode(msg: string): string | null {
+  const m = msg.match(/kode\s+([\d,\s]+)/i) ?? msg.match(/HTTP\s+(\d{3})/i);
+  if (m) {
+    const cleaned = m[1].replace(/\s+/g, " ").trim();
+    if (cleaned) return cleaned;
+  }
+  return null;
+}
+
+/** Apakah pesan error menunjukkan server AI sibuk / kehabisan kuota? */
+function isBusyError(msg: string): boolean {
+  return /sedang sibuk|sibuk|kuota|quota|rate limit|terlalu banyak/i.test(msg);
+}
+
 interface CreateNoteModalProps {
   open: boolean;
   onClose: () => void;
@@ -184,6 +201,9 @@ export const CreateNoteModal = ({
   const [progressPercent, setProgressPercent] = useState(0);
   const [progressMessage, setProgressMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Error dari proses background (job gagal) — tampil sebagai popup penuh
+  // berisi kode error + pesan "server sedang sibuk", dengan tombol coba lagi.
+  const [jobError, setJobError] = useState<{ message: string; code?: string | null } | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [addingSubject, setAddingSubject] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
@@ -278,6 +298,7 @@ export const CreateNoteModal = ({
     setBahasa("Bahasa Indonesia");
     setChapterCount(4);
     setError(null);
+    setJobError(null);
     setProgressPercent(0);
     progressPercentRef.current = 0;
     setProgressMessage("");
@@ -376,9 +397,10 @@ export const CreateNoteModal = ({
         doneHandledRef.current = true;
         removeActiveJobId(jobId);
         stopPolling();
-        setError(
-          "Proses terhenti karena server sempat restart. Silakan coba buat catatan lagi."
-        );
+        const msg =
+          "Proses terhenti karena server sempat restart. Silakan coba buat catatan lagi.";
+        setError(msg);
+        setJobError({ message: msg, code: "404" });
         setProcessing(false);
         return;
       }
@@ -389,7 +411,9 @@ export const CreateNoteModal = ({
         doneHandledRef.current = true;
         removeActiveJobId(jobId);
         stopPolling();
-        setError(job.error || "Gagal memproses materi. Coba lagi.");
+        const msg = job.error || "Gagal memproses materi. Coba lagi.";
+        setError(msg);
+        setJobError({ message: msg, code: extractErrorCode(msg) });
         setProcessing(false);
         return;
       }
@@ -548,11 +572,22 @@ export const CreateNoteModal = ({
       setCreatedNote(data.note as Note);
       setProcessing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Terjadi kesalahan.");
+      const msg = e instanceof Error ? e.message : "Terjadi kesalahan.";
+      setError(msg);
+      setJobError({ message: msg, code: extractErrorCode(msg) });
       setProcessing(false);
       eventSourceRef.current?.close();
       eventSourceRef.current = null;
     }
+  };
+
+  /** Coba lagi dari popup error — form & langkah terakhir tetap tersimpan. */
+  const retrySubmit = () => {
+    setJobError(null);
+    setError(null);
+    // Kembali ke langkah terakhir wizard biar user bisa cek ulang, lalu submit.
+    if (step < 4) setStep(4);
+    void handleSubmit();
   };
 
   return (
@@ -574,7 +609,42 @@ export const CreateNoteModal = ({
             className="m-auto w-full max-w-lg max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] rounded-clay"
           >
             <CardClay className="!shadow-none !p-4 sm:!p-8">
-              {createdNote ? (
+              {jobError ? (
+                <div className="flex flex-col items-center px-4 py-8 sm:px-6 sm:py-12 text-center">
+                  <motion.div
+                    initial={{ scale: 0, rotate: -30 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 14 }}
+                    className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-red-100 shadow-clay-inset"
+                  >
+                    <ServerOff size={28} className="text-red-500 sm:w-9 sm:h-9" />
+                  </motion.div>
+                  <h2 className="mt-4 sm:mt-6 text-xl sm:text-2xl font-extrabold px-2">
+                    {isBusyError(jobError.message)
+                      ? "Server sedang sibuk"
+                      : "Gagal membuat catatan"}
+                  </h2>
+                  {jobError.code && (
+                    <span className="mt-3 inline-flex items-center gap-1.5 rounded-clay-full border-2 border-red-200 bg-red-50 px-3 py-1 text-xs font-extrabold text-red-600">
+                      Kode error: {jobError.code}
+                    </span>
+                  )}
+                  <p className="mt-3 max-w-md text-sm sm:text-base font-semibold text-clay-muted px-4">
+                    {isBusyError(jobError.message)
+                      ? "Server AI sedang sibuk atau kehabisan kuota. Tunggu sebentar lalu coba lagi — materi kamu tidak hilang."
+                      : jobError.message}
+                  </p>
+                  <div className="mt-6 sm:mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row px-4">
+                    <ButtonClay variant="secondary" onClick={close} className="w-full sm:w-auto">
+                      Tutup
+                    </ButtonClay>
+                    <ButtonClay onClick={retrySubmit} className="w-full sm:w-auto">
+                      <RotateCcw size={16} className="mr-2" />
+                      Coba Lagi
+                    </ButtonClay>
+                  </div>
+                </div>
+              ) : createdNote ? (
                 <div className="flex flex-col items-center px-4 py-8 sm:px-6 sm:py-12 text-center">
                   <motion.div
                     initial={{ scale: 0, rotate: -30 }}

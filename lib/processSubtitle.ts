@@ -8,7 +8,7 @@
  */
 import type { NoteChapter } from "./types";
 import type { TranscriptSegment } from "./rag/extract";
-import { aiChatJson, extractJsonObject, hasAiKey } from "./ai";
+import { aiChatJson, extractJsonObject, hasAiKey, isAiBusyError } from "./ai";
 import type { PhaseProgressFn } from "./progressTracker";
 import {
   buildChapterContentGuide,
@@ -357,6 +357,9 @@ export async function processSubtitleToChapters(
     try {
       return await chaptersWithAI(clean, segments, prefs);
     } catch (e) {
+      // AI sibuk/kuota habis → jangan jatuh ke subtitle mentah, biarkan
+      // error naik ke job agar muncul popup "server sedang sibuk".
+      if (isAiBusyError(e)) throw e;
       console.warn("[processSubtitle] AI gagal, pakai parsing manual:", e);
     }
   }
@@ -668,7 +671,10 @@ async function summarizeWithAI(
         chapters
       );
       chapters.push(chapter);
-    } catch {
+    } catch (e) {
+      // AI sibuk/kuota habis → gagalkan proses SEKARANG (jangan lanjut
+      // menulis bab lain yang pasti gagal juga). Popup error akan muncul.
+      if (isAiBusyError(e)) throw e;
       // Satu bab gagal (upstream sibuk) jangan menggagalkan SEMUA bab —
       // pakai cuplikan subtitle yang ringkas agar bab lain tetap hasil AI.
       const sentences = splitIntoSentences(text);
@@ -756,6 +762,9 @@ export async function processYouTubeSubtitle(
       );
       return result;
     } catch (e) {
+      // AI sibuk/kuota habis → jangan jatuh ke subtitle mentah, biarkan
+      // error naik ke job agar muncul popup "server sedang sibuk".
+      if (isAiBusyError(e)) throw e;
       console.warn("[processYouTubeSubtitle] AI gagal, pakai parsing manual:", e);
     }
   } else if (useAI && !hasAiKey()) {
