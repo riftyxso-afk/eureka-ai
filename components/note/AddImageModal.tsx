@@ -65,7 +65,7 @@ export default function AddImageModal({
       onClick={onClose}
     >
       <div
-        className="card-clay m-auto w-full max-w-md max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] p-3 sm:!p-6 rounded-t-clay sm:rounded-clay"
+        className="card-clay m-auto w-full max-w-md max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] p-3 sm:!p-6 rounded-clay !shadow-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 sm:mb-4 flex items-center justify-between">

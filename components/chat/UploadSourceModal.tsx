@@ -80,9 +80,9 @@ export const UploadSourceModal = ({
             exit={{ opacity: 0, y: 24, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
-            className="m-auto w-full max-w-md max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] rounded-t-clay sm:rounded-clay"
+            className="m-auto w-full max-w-md max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] rounded-clay"
           >
-            <CardClay className="shadow-clay-lg !p-4 sm:!p-8">
+            <CardClay className="!shadow-none !p-4 sm:!p-8">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl sm:text-2xl font-extrabold">Tambah Soal</h2>
                 <button

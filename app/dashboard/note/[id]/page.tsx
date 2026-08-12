@@ -838,7 +838,7 @@ export default function NoteDetailPage() {
           onClick={() => setConfirmRegen(false)}
         >
           <div
-            className="card-clay m-auto w-full max-w-md max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] !p-6 sm:!p-8 rounded-t-clay sm:rounded-clay"
+            className="card-clay m-auto w-full max-w-md max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] !p-6 sm:!p-8 rounded-clay !shadow-none"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-extrabold text-clay-dark">

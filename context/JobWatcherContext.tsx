@@ -280,7 +280,7 @@ export function JobWatcherProvider({
             className="fixed bottom-6 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2"
           >
             <div
-              className={`rounded-clay border-3 p-4 shadow-clay-lg ${
+              className={`rounded-clay border-3 p-4 shadow-xl ${
                 toast.variant === "success"
                   ? "border-clay-borderLight bg-white"
                   : "border-red-200 bg-red-50"
