@@ -9,6 +9,12 @@
  *   Kosongkan saat dev → otomatis pakai http://localhost:3001
  */
 
+/**
+ * Fallback URL backend untuk production bila NEXT_PUBLIC_API_URL tidak di-set
+ * saat build. Sesuaikan dengan domain backend kamu (mis. "https://api-eureka.web.id").
+ */
+const PRODUCTION_API_FALLBACK = "https://api-eureka.web.id";
+
 /** URL dasar backend API */
 function getApiBase(): string {
   const envUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
@@ -21,6 +27,14 @@ function getApiBase(): string {
     if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
       return "http://localhost:3001";
     }
+    // Production tanpa env: pakai fallback backend supaya frontend & backend
+    // tetap terhubung (kalau fallback kosong, dipakai same-origin).
+    if (PRODUCTION_API_FALLBACK) return PRODUCTION_API_FALLBACK;
+    console.warn(
+      "[apiClient] NEXT_PUBLIC_API_URL belum di-set dan PRODUCTION_API_FALLBACK kosong — " +
+        "semua panggilan memakai same-origin (bukan backend terpisah). " +
+        "Atur NEXT_PUBLIC_API_URL di Vercel (Settings → Environment Variables) lalu Redeploy."
+    );
   }
   // Fallback: same-origin (akan redirect ke backend via reverse proxy)
   return "";

@@ -11,6 +11,7 @@ import {
   Plus,
   Search,
   Trophy,
+  X,
 } from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
@@ -65,6 +66,24 @@ export default function DashboardPage() {
   });
 
   const userName = data.name || getUserName();
+
+  // Banner info versi pengembangan — bisa ditutup, diingat di localStorage.
+  const [bannerHidden, setBannerHidden] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("eureka-dev-banner-hidden") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const hideBanner = () => {
+    setBannerHidden(true);
+    try {
+      localStorage.setItem("eureka-dev-banner-hidden", "1");
+    } catch {
+      // abaikan
+    }
+  };
 
   const lastLevelRef = useRef<number | null>(null);
 
@@ -171,6 +190,24 @@ export default function DashboardPage() {
   return (
     <div className="pb-24">
       <main className="mx-auto w-full max-w-clay px-4 sm:px-6">
+        {!bannerHidden && (
+          <div className="mb-4 flex items-center gap-2 rounded-clay-md border-2 border-amber-300 bg-amber-50 px-3 py-2 shadow-clay-sm">
+            <span className="text-sm" aria-hidden="true">
+              ⚠️
+            </span>
+            <p className="flex-1 text-xs font-bold text-amber-800 sm:text-sm">
+              Versi pengembangan — sebagian fitur mungkin belum berfungsi optimal.
+            </p>
+            <button
+              onClick={hideBanner}
+              aria-label="Tutup pemberitahuan"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-amber-700 transition-colors hover:bg-amber-200"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">

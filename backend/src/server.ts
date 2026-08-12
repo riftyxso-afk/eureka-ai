@@ -56,6 +56,13 @@ app.use(
     credentials: true,
   })
 );
+console.log(
+  `[backend] CORS origin: ${
+    corsOrigins.includes("*")
+      ? "* (semua origin diizinkan — set CORS_ORIGIN di .env.local untuk membatasi)"
+      : corsOrigins.join(", ")
+  }`
+);
 
 // ─── Health check ──────────────────────────────────────────
 app.get("/api/health", (c) =>
