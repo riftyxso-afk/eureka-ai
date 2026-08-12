@@ -209,11 +209,11 @@ export default function ChatPage() {
       });
       const json = await res.json();
       const reply =
-        json.reply ?? "Hmm, AI-nya belum menjawab. Coba tanya lagi ya ðŸ™";
+        json.reply ?? "Hmm, AI-nya belum menjawab. Coba tanya lagi ya 🙏";
       setTimeout(() => applyReply(reply), 1200);
     } catch {
       setTimeout(
-        () => applyReply("Koneksi terputus. Coba kirim pesanmu lagi ya ðŸ™"),
+        () => applyReply("Koneksi terputus. Coba kirim pesanmu lagi ya 🙏"),
         400
       );
     }
@@ -233,7 +233,7 @@ export default function ChatPage() {
   };
 
   const handleYouTubeLink = (link: string) => {
-    setUploadedName(`â–¶ï¸ ${link}`);
+    setUploadedName(`▶️ ${link}`);
     setIsUploadOpen(false);
   };
 
@@ -251,20 +251,20 @@ export default function ChatPage() {
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-lg font-extrabold shadow-clay-sm transition-all duration-75 active:translate-y-1"
             aria-label="Kembali ke dashboard"
           >
-            â†
+            ←
           </Link>
           <AvatarClay name="Eureka" size={44} />
           <div className="min-w-0">
             <p className="text-lg font-extrabold leading-tight">Eureka.AI</p>
             <p className="truncate text-xs font-bold text-clay-muted">
               {data.learningHabit === "coba_sendiri"
-                ? "Mode: Kamu pegang kendali ðŸ”¥"
-                : "Tutor Socratic sabar â€” nggak ada yang salah â¤ï¸"}
+                ? "Mode: Kamu pegang kendali 🔥"
+                : "Tutor Socratic sabar — nggak ada yang salah ❤️"}
             </p>
           </div>
         </div>
         <span className="shrink-0 rounded-full bg-clay-inputBg px-3 py-1.5 text-xs font-extrabold text-clay-muted shadow-clay-inset sm:px-4">
-          {params.id === "demo" ? "Mode demo" : "Tutor AI Â· langsung"}
+          {params.id === "demo" ? "Mode demo" : "Tutor AI · langsung"}
         </span>
       </header>
 
@@ -287,14 +287,14 @@ export default function ChatPage() {
           {uploadedName && (
             <div className="mb-3 flex items-center gap-2 rounded-clay-md bg-clay-inputBg px-4 py-2.5 shadow-clay-inset">
               <span className="min-w-0 flex-1 truncate text-sm font-bold text-clay-dark">
-                ðŸ“· {uploadedName} â€” menunggu OCR...
+                📷 {uploadedName} — menunggu OCR...
               </span>
               <button
                 onClick={() => setUploadedName(null)}
                 aria-label="Batalkan unggahan"
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-extrabold text-clay-muted hover:bg-white/70"
               >
-                âœ•
+                ✕
               </button>
             </div>
           )}
@@ -304,7 +304,7 @@ export default function ChatPage() {
               className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-clay-sm transition-all duration-75 active:translate-y-1"
               aria-label="Tambah soal"
             >
-              ðŸ“·
+              📷
             </button>
             <input
               ref={fileInputRef}
@@ -328,7 +328,7 @@ export default function ChatPage() {
               className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-clay-primary text-xl text-white shadow-clay-btn transition-all duration-75 active:translate-y-1 disabled:opacity-50 disabled:pointer-events-none"
               aria-label="Kirim"
             >
-              â†‘
+              ↑
             </button>
           </div>
         </div>
@@ -343,7 +343,7 @@ export default function ChatPage() {
             className="pointer-events-none fixed inset-x-0 bottom-24 z-10 flex justify-center px-4"
           >
             <div className="rounded-clay-full border-3 border-clay-borderLight bg-clay-success px-8 py-4 text-xl font-extrabold text-white shadow-clay-btn">
-              EUREKA! ðŸŽ‰
+              EUREKA! 🎉
             </div>
           </motion.div>
         )}

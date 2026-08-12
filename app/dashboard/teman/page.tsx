@@ -135,9 +135,9 @@ export default function FriendsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Gagal menambah teman.");
       if (data.relation === "friend") {
-        notify(`${targetName} sekarang temanmu! ðŸŽ‰`);
+        notify(`${targetName} sekarang temanmu! 🎉`);
       } else {
-        notify(`Permintaan pertemanan dikirim ke ${targetName} âœ‰ï¸`);
+        notify(`Permintaan pertemanan dikirim ke ${targetName} ✉️`);
       }
       setQuery("");
       setResults([]);
@@ -158,7 +158,7 @@ export default function FriendsPage() {
         body: JSON.stringify({ action, userId, fromId, name: userName }),
       });
       notify(
-        action === "accept" ? `${name} diterima sebagai teman! ðŸŽ‰` : `Permintaan ${name} ditolak.`
+        action === "accept" ? `${name} diterima sebagai teman! 🎉` : `Permintaan ${name} ditolak.`
       );
       await loadAll();
     } catch {
@@ -183,12 +183,16 @@ export default function FriendsPage() {
   };
 
   const renderRow = (
+    key: string,
     name: string,
     sub: string,
     actions: React.ReactNode,
     busy = false
   ) => (
-    <li className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3">
+    <li
+      key={key}
+      className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3"
+    >
       <span
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${AVATAR_COLORS[colorIndex(name)]}`}
       >
@@ -243,32 +247,31 @@ export default function FriendsPage() {
 
         {!searching && results.length > 0 && (
           <ul className="mt-3 space-y-2">
-            {results.map((r) => (
-              <li key={r.id}>
-                {renderRow(
-                  r.name,
-                  RELATION_LABEL[r.relation] ?? "",
-                  r.relation === "self" ? (
-                    <span className="rounded-full bg-clay-beige px-3 py-1 text-xs font-extrabold text-clay-muted">
-                      Kamu
-                    </span>
-                  ) : r.relation === "none" || r.relation === "incoming" ? (
-                    <button
-                      onClick={() => addFriend(r.name)}
-                      className="btn-clay-primary !min-h-[44px] !px-3 text-xs"
-                    >
-                      <UserPlus size={14} className="mr-1" />
-                      {r.relation === "incoming" ? "Terima" : "Tambah"}
-                    </button>
-                  ) : (
-                    <span className="rounded-full bg-clay-beige px-3 py-1 text-xs font-extrabold text-clay-muted">
-                      âœ“ {RELATION_LABEL[r.relation]}
-                    </span>
-                  ),
-                  busyId === `add-${r.name}`
-                )}
-              </li>
-            ))}
+            {results.map((r) =>
+              renderRow(
+                r.id,
+                r.name,
+                RELATION_LABEL[r.relation] ?? "",
+                r.relation === "self" ? (
+                  <span className="rounded-full bg-clay-beige px-3 py-1 text-xs font-extrabold text-clay-muted">
+                    Kamu
+                  </span>
+                ) : r.relation === "none" || r.relation === "incoming" ? (
+                  <button
+                    onClick={() => addFriend(r.name)}
+                    className="btn-clay-primary !min-h-[44px] !px-3 text-xs"
+                  >
+                    <UserPlus size={14} className="mr-1" />
+                    {r.relation === "incoming" ? "Terima" : "Tambah"}
+                  </button>
+                ) : (
+                  <span className="rounded-full bg-clay-beige px-3 py-1 text-xs font-extrabold text-clay-muted">
+                    ✓ {RELATION_LABEL[r.relation]}
+                  </span>
+                ),
+                busyId === `add-${r.name}`
+              )
+            )}
           </ul>
         )}
 
@@ -276,7 +279,7 @@ export default function FriendsPage() {
           <div className="mt-3 rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4">
             <p className="text-sm font-semibold text-clay-muted">
               Tidak ada pengguna bernama{" "}
-              <b className="text-clay-dark">â€œ{query.trim()}â€</b> yang terdaftar.
+              <b className="text-clay-dark">“{query.trim()}”</b> yang terdaftar.
               Pastikan temanmu sudah membuat akun Eureka.AI, lalu cari dengan
               nama atau @username-nya.
             </p>
@@ -293,6 +296,7 @@ export default function FriendsPage() {
           <ul className="space-y-2">
             {incoming.map((r) =>
               renderRow(
+                r.id,
                 r.name,
                 "Ingin berteman denganmu",
                 <>
@@ -326,9 +330,9 @@ export default function FriendsPage() {
           </h2>
           <ul className="space-y-2">
             {outgoing.map((r) =>
-              renderRow(r.name, "Permintaan menunggu respons", (
+              renderRow(r.id, r.name, "Permintaan menunggu respons", (
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-700">
-                  â³ Menunggu
+                  ⏳ Menunggu
                 </span>
               ))
             )}
@@ -343,12 +347,13 @@ export default function FriendsPage() {
         </h2>
         {friends.length === 0 ? (
           <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
-            Belum ada teman. Cari dan undang temanmu di atas! ðŸ‘‹
+            Belum ada teman. Cari dan undang temanmu di atas! 👋
           </p>
         ) : (
           <ul className="space-y-2">
             {friends.map((f) =>
               renderRow(
+                f.id,
                 f.name,
                 "Teman",
                 <button

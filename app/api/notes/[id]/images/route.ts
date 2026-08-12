@@ -13,7 +13,17 @@ import {
 
 export const runtime = "nodejs";
 
-const IMAGES_DIR = path.join(process.cwd(), "public", "images", "notes");
+/** Resolve path relative to project root (works in both Next.js and standalone backend) */
+function rootPath(...segments: string[]): string {
+  // In Next.js: process.cwd() = project root
+  // In backend/: process.cwd() = backend/ → go up one level
+  const root = process.cwd().endsWith("backend")
+    ? path.resolve(process.cwd(), "..")
+    : process.cwd();
+  return path.join(root, ...segments);
+}
+
+const IMAGES_DIR = rootPath("public", "images", "notes");
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
 
@@ -112,7 +122,7 @@ export async function DELETE(
     const result = await removeImage(id, imageId);
     if (result.ok && result.url) {
       try {
-        const filePath = path.join(process.cwd(), "public", result.url);
+        const filePath = rootPath("public", result.url);
         await fs.unlink(filePath);
       } catch {
         // file mungkin sudah tidak ada

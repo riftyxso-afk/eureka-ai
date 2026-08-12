@@ -125,7 +125,7 @@ export default function DashboardPage() {
     loadNotes();
   }, [loadNotes]);
 
-  // Catatan baru selesai dirangkum di latar belakang â†’ muat ulang daftar.
+  // Catatan baru selesai dirangkum di latar belakang → muat ulang daftar.
   useEffect(() => {
     const refresh = () => {
       void loadNotes();
@@ -174,7 +174,7 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">
-              {getGreeting()}, {userName.split(" ")[0]}! ðŸ‘‹
+              {getGreeting()}, {userName.split(" ")[0]}! 👋
             </h1>
             <p className="mt-1 text-sm font-semibold text-clay-muted sm:text-base">
               Siap belajar hari ini?
@@ -184,7 +184,7 @@ export default function DashboardPage() {
             <NotificationBell />
             <Link href="/chat/belajar">
               <ButtonClay className="min-h-[44px] px-5 py-2 text-sm">
-                ðŸš€ Mulai Belajar
+                🚀 Mulai Belajar
               </ButtonClay>
             </Link>
           </div>
@@ -205,7 +205,7 @@ export default function DashboardPage() {
           <StatsCard
             icon={Trophy}
             label="Peringkat"
-            value={progress.rank === null ? "â€”" : progress.rank}
+            value={progress.rank === null ? "—" : progress.rank}
           />
         </div>
 
@@ -213,14 +213,14 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-lg sm:h-12 sm:w-12 sm:text-xl">
-                ðŸ…
+                🏅
               </span>
               <div>
                 <p className="text-base font-extrabold leading-tight sm:text-lg">
                   Level {progress.level}
                 </p>
                 <p className="text-xs font-bold text-clay-muted">
-                  {progress.levelTitle} Â· {progress.streak} hari
+                  {progress.levelTitle} · {progress.streak} hari
                 </p>
               </div>
             </div>

@@ -27,7 +27,7 @@ export default function EditNoteModal({
 
   const handleSave = async () => {
     if (!title.trim()) {
-      notify("Judul tidak boleh kosong! âš ï¸");
+      notify("Judul tidak boleh kosong! ⚠️");
       return;
     }
     setSaving(true);
@@ -62,14 +62,14 @@ export default function EditNoteModal({
       ]);
 
       if (patchRes.ok && versionRes.ok) {
-        notify("Catatan berhasil diperbarui âœ…");
+        notify("Catatan berhasil diperbarui ✅");
         onSaved();
         onClose();
       } else {
-        notify("Gagal menyimpan perubahan âš ï¸");
+        notify("Gagal menyimpan perubahan ⚠️");
       }
     } catch {
-      notify("Gagal menyimpan perubahan âš ï¸");
+      notify("Gagal menyimpan perubahan ⚠️");
     } finally {
       setSaving(false);
     }

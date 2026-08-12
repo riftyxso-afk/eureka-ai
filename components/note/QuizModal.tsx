@@ -110,7 +110,7 @@ export default function QuizModal({
                   Membuat soal...
                 </>
               ) : (
-                "âœ¨ Buat Kuis dari Catatan"
+                "✨ Buat Kuis dari Catatan"
               )}
             </button>
             {error && (
@@ -175,7 +175,7 @@ export default function QuizModal({
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-clay-dark">
                 {submitted
-                  ? `Skor: ${score}/${questions.length} ðŸŽ¯`
+                  ? `Skor: ${score}/${questions.length} 🎯`
                   : `${questions.length} soal`}
               </div>
               <button
@@ -240,7 +240,7 @@ export default function QuizModal({
                   </div>
                   {submitted && q.explanation && (
                     <p className="mt-2 rounded-xl bg-clay-beige px-3 py-2 text-xs font-medium text-clay-dark leading-relaxed">
-                      ðŸ’¡ {q.explanation}
+                      💡 {q.explanation}
                     </p>
                   )}
                 </div>
@@ -251,7 +251,7 @@ export default function QuizModal({
               <button
                 onClick={() => {
                   if (Object.keys(answers).length < questions.length) {
-                    notify("Jawab semua soal dulu ya! âš ï¸");
+                    notify("Jawab semua soal dulu ya! ⚠️");
                     return;
                   }
                   setSubmitted(true);

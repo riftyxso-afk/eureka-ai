@@ -135,7 +135,7 @@ export default function MataPelajaranPage() {
           </div>
           <h3 className="mt-6 text-xl font-extrabold">Belum ada mata pelajaran</h3>
           <p className="mt-2 max-w-sm text-base font-semibold text-clay-muted">
-            Tambahkan mata pelajaran pertamamu â€” otomatis muncul di menu Buat Catatan.
+            Tambahkan mata pelajaran pertamamu — otomatis muncul di menu Buat Catatan.
           </p>
         </div>
       ) : (

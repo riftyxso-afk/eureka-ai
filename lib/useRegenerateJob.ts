@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Hook pemantau job regenerate (bab/catatan) â€” pola sama seperti polling
- * job pembuatan catatan: POST â†’ 202 { jobId } â†’ poll GET /api/notes/jobs/[id]
+ * Hook pemantau job regenerate (bab/catatan) — pola sama seperti polling
+ * job pembuatan catatan: POST → 202 { jobId } → poll GET /api/notes/jobs/[id]
  * sampai done/error. Bisa dihentikan lewat POST cancel.
  */
 import { useCallback, useEffect, useRef, useState } from "react";

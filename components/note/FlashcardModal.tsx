@@ -89,7 +89,7 @@ export default function FlashcardModal({
         {!cards && !generating && (
           <div className="space-y-3 sm:space-y-4">
             <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
-              Ubah materi catatan menjadi kartu hafalan untuk belajar cepat! ðŸƒ
+              Ubah materi catatan menjadi kartu hafalan untuk belajar cepat! 🃏
             </p>
             <button
               onClick={generate}
@@ -102,7 +102,7 @@ export default function FlashcardModal({
                   Membuat kartu...
                 </>
               ) : (
-                "âœ¨ Buat Flashcards"
+                "✨ Buat Flashcards"
               )}
             </button>
             {error && (
@@ -150,7 +150,7 @@ export default function FlashcardModal({
               Kartu {index + 1} dari {cards!.length}
             </div>
 
-            {/* Kartu 3D â€” klik untuk balik */}
+            {/* Kartu 3D — klik untuk balik */}
             <div className="[perspective:1400px]">
               <motion.div
                 onClick={() => setFlipped((f) => !f)}
@@ -206,7 +206,7 @@ export default function FlashcardModal({
                 onClick={() => {
                   if (index === cards!.length - 1) {
                     setIndex(0);
-                    notify("Selesai! Ulangi dari awal ðŸ”");
+                    notify("Selesai! Ulangi dari awal 🔁");
                     void postProgress({
                       action: "cards_review_all",
                       userId: getUserId(),

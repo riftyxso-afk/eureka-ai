@@ -1,5 +1,5 @@
 ﻿-- ============================================================
--- Eureka.AI â€” Supabase Database Schema (LENGKAP)
+-- Eureka.AI — Supabase Database Schema (LENGKAP)
 -- Jalankan sekali di Supabase Dashboard > SQL Editor
 -- ============================================================
 
@@ -195,12 +195,12 @@ CREATE TABLE public.subjects (
 );
 
 INSERT INTO public.subjects (id, name, icon, color, progress) VALUES
-    ('s-mtk', 'Matematika', 'ðŸ§®', '#8B5CF6', 75),
-    ('s-fis', 'Fisika', 'âš¡', '#F59E0B', 60),
-    ('s-kim', 'Kimia', 'ðŸ§ª', '#10B981', 45),
-    ('s-bio', 'Biologi', 'ðŸ§¬', '#3B82F6', 30),
-    ('s-eko', 'Ekonomi', 'ðŸ“Š', '#EF4444', 20),
-    ('s-sej', 'Sejarah', 'ðŸ“œ', '#8B5CF6', 10)
+    ('s-mtk', 'Matematika', '🧮', '#8B5CF6', 75),
+    ('s-fis', 'Fisika', '⚡', '#F59E0B', 60),
+    ('s-kim', 'Kimia', '🧪', '#10B981', 45),
+    ('s-bio', 'Biologi', '🧬', '#3B82F6', 30),
+    ('s-eko', 'Ekonomi', '📊', '#EF4444', 20),
+    ('s-sej', 'Sejarah', '📜', '#8B5CF6', 10)
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
@@ -383,7 +383,7 @@ CREATE TRIGGER update_whiteboards_timestamp BEFORE UPDATE ON public.whiteboards
     FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
 
 -- ============================================================
--- TRIGGER: user baru dari auth.users â†’ public.users
+-- TRIGGER: user baru dari auth.users → public.users
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.sync_user()
 RETURNS TRIGGER

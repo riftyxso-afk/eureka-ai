@@ -120,12 +120,12 @@ export default function ProfilPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      showToast("Nama tidak boleh kosong! âš ï¸");
+      showToast("Nama tidak boleh kosong! ⚠️");
       return;
     }
     const cleanUsername = form.username.trim().toLowerCase().replace(/^@+/, "");
     if (cleanUsername && !/^[a-z0-9_]{3,20}$/.test(cleanUsername)) {
-      showToast("Username hanya huruf kecil, angka, dan _ (3â€“20). âš ï¸");
+      showToast("Username hanya huruf kecil, angka, dan _ (3–20). ⚠️");
       return;
     }
     setUserName(form.name);
@@ -151,17 +151,17 @@ export default function ProfilPage() {
       });
       const payload = await res.json();
       if (!res.ok) {
-        showToast(payload?.error ?? "Gagal menyimpan profil. âš ï¸");
+        showToast(payload?.error ?? "Gagal menyimpan profil. ⚠️");
         return;
       }
       if (payload?.user?.userNumber != null) {
         setUserNumber(Number(payload.user.userNumber));
       }
     } catch {
-      showToast("Gagal menyimpan profil. âš ï¸");
+      showToast("Gagal menyimpan profil. ⚠️");
       return;
     }
-    showToast("Profil berhasil disimpan! âœ…");
+    showToast("Profil berhasil disimpan! ✅");
   };
 
   const handleLogout = async () => {
@@ -187,7 +187,7 @@ export default function ProfilPage() {
       {/* Avatar + info ringkas */}
       <div className="card-clay mt-6 flex flex-col items-center py-8 text-center">
         <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-clay-primary/20 text-5xl shadow-clay-sm">
-          ðŸ§‘â€ðŸŽ“
+          🧑‍🎓
         </div>
         <p className="mt-4 text-2xl font-extrabold text-clay-dark">{form.name}</p>
         <p className="text-sm font-bold text-clay-muted">{form.email}</p>
@@ -202,7 +202,7 @@ export default function ProfilPage() {
           </p>
         )}
         <span className="mt-3 inline-block rounded-clay-full border-2 border-clay-primary bg-clay-primary/10 px-5 py-1.5 text-sm font-extrabold text-clay-primary">
-          Level {stats.level} Â· PELAJAR KONSISTEN
+          Level {stats.level} · PELAJAR KONSISTEN
         </span>
       </div>
 
@@ -300,7 +300,7 @@ export default function ProfilPage() {
                 ))}
               </select>
               <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-clay-muted">
-                â–¾
+                ▾
               </span>
             </div>
           </div>

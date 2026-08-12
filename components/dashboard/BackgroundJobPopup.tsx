@@ -113,7 +113,7 @@ export const BackgroundJobPopup = () => {
                 onClick={() => setExpanded(false)}
                 className="w-full rounded-clay-md py-3 text-xs font-extrabold text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-dark sm:py-1.5"
               >
-                Lipat & sembunyikan â†“
+                Lipat & sembunyikan ↓
               </button>
             </div>
           </div>
@@ -129,7 +129,7 @@ export const BackgroundJobPopup = () => {
                 Dirangkum di latar belakang
               </span>
               <span className="block truncate text-[11px] font-bold text-clay-muted sm:max-w-[180px]">
-                {topJob.message} Â· {topPercent}%
+                {topJob.message} · {topPercent}%
               </span>
             </span>
             <ChevronUp size={15} className="shrink-0 text-clay-muted" />

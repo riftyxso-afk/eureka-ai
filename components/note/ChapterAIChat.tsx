@@ -16,7 +16,7 @@ interface ChapterAIChatProps {
   notify: (msg: string) => void;
 }
 
-/** "Tanya apa saja tentang bab ini" â€” AI menjawab hanya dari isi bab. */
+/** "Tanya apa saja tentang bab ini" — AI menjawab hanya dari isi bab. */
 export const ChapterAIChat = ({
   noteId,
   chapterId,

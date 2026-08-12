@@ -243,7 +243,7 @@ export default function NoteDetailPage() {
       loadNote();
       setRegenNote(false);
       setConfirmRegen(false);
-      notify("Catatan berhasil ditulis ulang! âœ¨");
+      notify("Catatan berhasil ditulis ulang! ✨");
     } else if (regenNote && regen.error) {
       setRegenNote(false);
       setConfirmRegen(false);
@@ -313,7 +313,7 @@ export default function NoteDetailPage() {
   };
 
   const generateAiHighlights = async () => {
-    notify("AI sedang menstabilo catatanmu... âœ¨");
+    notify("AI sedang menstabilo catatanmu... ✨");
     try {
       const res = await apiFetch(`/api/notes/${params.id}/highlights/generate`, {
         method: "POST",
@@ -322,7 +322,7 @@ export default function NoteDetailPage() {
       if (!res.ok) throw new Error(data.error ?? "Gagal membuat stabilo AI.");
       notify(
         data.count > 0
-          ? `Stabilo AI diterapkan (${data.count} bagian)! âœ¨`
+          ? `Stabilo AI diterapkan (${data.count} bagian)! ✨`
           : "Tidak ada bagian baru yang layak distabilo."
       );
       refreshHighlights();
@@ -355,7 +355,7 @@ export default function NoteDetailPage() {
     } catch {
       // abaikan
     }
-    notify(next ? "Disimpan ke bookmark! ðŸ”–" : "Bookmark dihapus");
+    notify(next ? "Disimpan ke bookmark! 🔖" : "Bookmark dihapus");
   };
 
   // Bergabung via link undangan (?invite=TOKEN)
@@ -370,7 +370,7 @@ export default function NoteDetailPage() {
           body: JSON.stringify({ action: "join", token }),
         });
         if (res.ok) {
-          notify("Kamu bergabung sebagai kolaborator! ðŸŽ‰");
+          notify("Kamu bergabung sebagai kolaborator! 🎉");
           router.replace(`/dashboard/note/${params.id}`);
         }
       } catch {
@@ -562,7 +562,7 @@ export default function NoteDetailPage() {
           </Link>
           <button
             onClick={() =>
-              notify("Panggilan suara & video call segera hadir! ðŸš§")
+              notify("Panggilan suara & video call segera hadir! 🚧")
             }
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
@@ -820,7 +820,7 @@ export default function NoteDetailPage() {
           chapters={chapters}
           onClose={() => setShowAddImage(false)}
           onAdded={() => {
-            notify("Gambar ditambahkan! ðŸ–¼ï¸");
+            notify("Gambar ditambahkan! 🖼️");
             apiFetch(`/api/notes/${params.id}/images`)
               .then((r) => (r.ok ? r.json() : null))
               .then((d) => {
@@ -842,15 +842,15 @@ export default function NoteDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-extrabold text-clay-dark">
-              Tulis ulang seluruh catatan? âœ¨
+              Tulis ulang seluruh catatan? ✨
             </h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-muted">
               AI akan menulis ulang semua bab dari{" "}
               <span className="font-extrabold text-clay-dark">
-                â€œ{data.title}â€
+                “{data.title}”
               </span>{" "}
               ({chapters.length} bab) berdasarkan konten yang ada. Proses ini
-              bisa memakan waktu beberapa menit â€” kamu bisa menunggu di halaman
+              bisa memakan waktu beberapa menit — kamu bisa menunggu di halaman
               ini atau membiarkannya jalan.
             </p>
             <div className="mt-6 flex gap-3">

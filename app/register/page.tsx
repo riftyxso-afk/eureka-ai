@@ -155,11 +155,11 @@ export default function RegisterPage() {
 
         <CardClay className="!p-8 sm:!p-10">
           <h1 className="text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
-            Daftar Gratis Sekarang ðŸš€
+            Daftar Gratis Sekarang 🚀
           </h1>
           <p className="mt-2 text-center text-base font-semibold text-clay-muted">
             {step === "form"
-              ? "Isi nama & email â€” akun dibuat otomatis setelah kode OTP kamu verifikasi"
+              ? "Isi nama & email — akun dibuat otomatis setelah kode OTP kamu verifikasi"
               : "Cek emailmu untuk kode verifikasi"}
           </p>
 
@@ -256,7 +256,7 @@ export default function RegisterPage() {
                   pattern="[0-9]*"
                   maxLength={6}
                   autoFocus
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••"
                   value={otpCode}
                   onChange={(e) =>
                     setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
@@ -310,7 +310,7 @@ export default function RegisterPage() {
           </p>
           <p className="mt-3 text-center text-xs font-semibold text-clay-muted">
             <Link href="/" className="text-clay-muted underline-offset-2 hover:underline">
-              â† Kembali ke beranda
+              ← Kembali ke beranda
             </Link>
           </p>
         </CardClay>

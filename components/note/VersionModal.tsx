@@ -61,14 +61,14 @@ export default function VersionModal({
         body: JSON.stringify({ action: "restore", version }),
       });
       if (res.ok) {
-        notify(`Catatan dipulihkan ke versi ${version} âœ…`);
+        notify(`Catatan dipulihkan ke versi ${version} ✅`);
         onRestored();
       } else {
         const err = await res.json().catch(() => ({}));
-        notify(err.error ?? "Gagal memulihkan âš ï¸");
+        notify(err.error ?? "Gagal memulihkan ⚠️");
       }
     } catch {
-      notify("Gagal memulihkan âš ï¸");
+      notify("Gagal memulihkan ⚠️");
     } finally {
       setRestoring(null);
     }

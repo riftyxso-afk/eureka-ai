@@ -137,10 +137,10 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
             className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg font-bold text-white flex-shrink-0"
             style={{ backgroundColor: template.colors.primary }}
           >
-            {character === 'fox' && 'ðŸ¦Š'}
-            {character === 'owl' && 'ðŸ¦‰'}
-            {character === 'cat' && 'ðŸ±'}
-            {character === 'bear' && 'ðŸ»'}
+            {character === 'fox' && '🦊'}
+            {character === 'owl' && '🦉'}
+            {character === 'cat' && '🐱'}
+            {character === 'bear' && '🐻'}
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate">{template.name}</h3>
@@ -170,7 +170,7 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-            <p className="text-sm">Hai! Aku {template.name} ðŸ‘‹</p>
+            <p className="text-sm">Hai! Aku {template.name} 👋</p>
             <p className="text-xs mt-2">Tanya aku apa saja tentang pelajaranmu!</p>
           </div>
         ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, lazy, Suspense } from "react";
 import { NotebookPen } from "lucide-react";
 import {
   parseNoteContent,
@@ -9,7 +9,11 @@ import {
 } from "@/lib/parseNoteContent";
 import type { HighlightEntry } from "@/lib/highlights-store";
 import { NoteFlow } from "@/components/note/NoteFlow";
-import { MindMap } from "@/components/note/MindMap";
+
+// Dynamic import MindMap to avoid loading heavy mermaid library at build time
+const MindMap = lazy(() =>
+  import("@/components/note/MindMap").then((m) => ({ default: m.MindMap }))
+);
 
 interface Chapter {
   id: number;
@@ -141,7 +145,18 @@ function renderParsed(items: ParsedContent[], highlights: HighlightEntry[]) {
           </div>
         );
       case "mindmap":
-        return <MindMap key={index} content={item.content} />;
+        return (
+          <Suspense
+            key={index}
+            fallback={
+              <div className="my-6 flex items-center justify-center rounded-clay-md border-2 border-clay-shadow/20 bg-white p-6">
+                <p className="text-sm font-bold text-clay-muted">Memuat mind map...</p>
+              </div>
+            }
+          >
+            <MindMap content={item.content} />
+          </Suspense>
+        );
       default:
         return null;
     }

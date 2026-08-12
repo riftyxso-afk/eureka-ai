@@ -99,27 +99,27 @@ const SUBJECT_COLORS = [
 ];
 
 const PROCESS_STEPS = [
-  "ðŸ§  Menganalisis materi kamu...",
-  "ðŸ“„ Mengekstrak konten teks...",
-  "âœ‚ï¸ Memecah menjadi potongan kecil...",
-  "ðŸ§² Mengubah menjadi vektor (embedding)...",
-  "ðŸ“¦ Menyimpan ke knowledge base...",
+  "🧠 Menganalisis materi kamu...",
+  "📄 Mengekstrak konten teks...",
+  "✂️ Memecah menjadi potongan kecil...",
+  "🧲 Mengubah menjadi vektor (embedding)...",
+  "📦 Menyimpan ke knowledge base...",
 ];
 
 const PROCESS_STEPS_YOUTUBE = [
-  "ðŸŽ¬ Mengambil subtitle video...",
-  "âœ¨ Merangkum subtitle dengan AI...",
-  "âœ‚ï¸ Memecah menjadi potongan kecil...",
-  "ðŸ§² Mengubah menjadi vektor (embedding)...",
-  "ðŸ“¦ Menyimpan ke knowledge base...",
+  "🎬 Mengambil subtitle video...",
+  "✨ Merangkum subtitle dengan AI...",
+  "✂️ Memecah menjadi potongan kecil...",
+  "🧲 Mengubah menjadi vektor (embedding)...",
+  "📦 Menyimpan ke knowledge base...",
 ];
 
 const PROCESS_STEPS_WEB = [
-  "ðŸŒ Membaca halaman web...",
-  "ðŸ–¼ï¸ Mengumpulkan gambar halaman...",
-  "âœï¸ Menulis bab satu per satu dengan AI...",
-  "ðŸ§² Mengubah menjadi vektor (embedding)...",
-  "ðŸ“¦ Menyimpan ke knowledge base...",
+  "🌐 Membaca halaman web...",
+  "🖼️ Mengumpulkan gambar halaman...",
+  "✍️ Menulis bab satu per satu dengan AI...",
+  "🧲 Mengubah menjadi vektor (embedding)...",
+  "📦 Menyimpan ke knowledge base...",
 ];
 
 // Batas unggah: platform serverless membatasi body request (~4.5MB).
@@ -260,7 +260,7 @@ export const CreateNoteModal = ({
   };
 
   const close = () => {
-    // Selama proses berjalan di latar belakang, modal BOLEH ditutup â€”
+    // Selama proses berjalan di latar belakang, modal BOLEH ditutup —
     // job tetap jalan dan notifikasi selesai muncul lewat watcher.
     if (createdNote) {
       const note = createdNote;
@@ -311,7 +311,7 @@ export const CreateNoteModal = ({
   const pickSource = (id: string) => {
     const src = SOURCES.find((s) => s.id === id);
     if (src?.comingSoon) {
-      setError("Sumber ini belum tersedia. Segera hadir! âœ¨");
+      setError("Sumber ini belum tersedia. Segera hadir! ✨");
       return;
     }
     setError(null);
@@ -322,14 +322,14 @@ export const CreateNoteModal = ({
   };
 
   /**
-   * SSE melaporkan 100% (selesai ATAU gagal â€” dicek lewat status job).
-   * Ambil catatan jadi â†’ tampilkan panel sukses.
+   * SSE melaporkan 100% (selesai ATAU gagal — dicek lewat status job).
+   * Ambil catatan jadi → tampilkan panel sukses.
    */
   const completeFromJob = async (jobId: string) => {
     if (doneHandledRef.current) return;
     try {
       const jres = await apiFetch(`/api/notes/jobs/${encodeURIComponent(jobId)}`);
-      // Job hilang (server restart / kedaluwarsa) â†’ hentikan proses dengan pesan jelas.
+      // Job hilang (server restart / kedaluwarsa) → hentikan proses dengan pesan jelas.
       if (jres.status === 404) {
         doneHandledRef.current = true;
         removeActiveJobId(jobId);
@@ -349,7 +349,7 @@ export const CreateNoteModal = ({
         setProcessing(false);
         return;
       }
-      if (job.status !== "done" || !job.noteId) return; // belum selesai â€” tunggu panggilan berikutnya
+      if (job.status !== "done" || !job.noteId) return; // belum selesai — tunggu panggilan berikutnya
       doneHandledRef.current = true;
       const nres = await apiFetch(`/api/notes/${job.noteId}`);
       const ndata = await nres.json();
@@ -393,7 +393,7 @@ export const CreateNoteModal = ({
     form.append("sessionId", sessionId);
 
     // Progress realtime 0-100% via Server-Sent Events (tetap terbuka selama
-    // modal tampil â€” job berjalan di latar belakang walau modal ditutup).
+    // modal tampil — job berjalan di latar belakang walau modal ditutup).
     const eventSource = apiEventSource(
       `/api/notes/process-progress/${sessionId}`
     );
@@ -411,7 +411,7 @@ export const CreateNoteModal = ({
           void completeFromJob(jobId);
         }
       } catch {
-        // event bukan JSON â€” abaikan
+        // event bukan JSON — abaikan
       }
     };
 
@@ -431,7 +431,7 @@ export const CreateNoteModal = ({
         setActiveJobId(jobId);
         addActiveJobId(jobId);
         setProgressMessage(
-          "Materi sedang dirangkum di latar belakang â€” kamu boleh lanjut menjelajah"
+          "Materi sedang dirangkum di latar belakang — kamu boleh lanjut menjelajah"
         );
         // Race: SSE bisa melaporkan 100% sebelum jobId diterima di atas.
         // Cek status job sekali langsung setelah dapat jobId.
@@ -446,7 +446,7 @@ export const CreateNoteModal = ({
         return; // SSE tetap terbuka; job dituntaskan via completeFromJob/watcher.
       }
 
-      // Jalur lama (server memproses sinkron â€” seharusnya tidak terjadi).
+      // Jalur lama (server memproses sinkron — seharusnya tidak terjadi).
       setProgressPercent(100);
       setProgressMessage("Selesai!");
       setCreatedNote(data.note as Note);
@@ -489,7 +489,7 @@ export const CreateNoteModal = ({
                     <PartyPopper size={36} className="text-white sm:w-11 sm:h-11" />
                   </motion.div>
                   <h2 className="mt-4 sm:mt-6 text-xl sm:text-2xl font-extrabold px-2">
-                    Catatan berhasil dibuat! ðŸŽ‰
+                    Catatan berhasil dibuat! 🎉
                   </h2>
                   <p className="mt-2 line-clamp-2 max-w-md text-sm sm:text-base font-semibold text-clay-muted px-4">
                     &quot;{createdNote.title}&quot; sudah masuk ke dashboard kamu dan siap
@@ -544,14 +544,14 @@ export const CreateNoteModal = ({
                     </div>
                   </div>
                   <p className="mt-4 text-xs sm:text-sm font-semibold text-clay-muted px-4">
-                    Berjalan di latar belakang â€” kamu boleh pindah halaman.
+                    Berjalan di latar belakang — kamu boleh pindah halaman.
                     Kami beri tahu lewat notifikasi saat selesai.
                   </p>
                   <button
                     onClick={close}
                     className="mt-4 text-xs sm:text-sm font-extrabold text-clay-primary underline-offset-2 hover:underline min-h-[44px] px-4"
                   >
-                    Tutup & lanjutkan di latar belakang â†’
+                    Tutup & lanjutkan di latar belakang →
                   </button>
                   <button
                     onClick={stopProcessing}
@@ -655,14 +655,14 @@ export const CreateNoteModal = ({
                           }}
                         >
                           <option value="">
-                            {subjects.length ? "Pilih mata pelajaran..." : "Belum ada mata pelajaran â€” tambahkan dulu"}
+                            {subjects.length ? "Pilih mata pelajaran..." : "Belum ada mata pelajaran — tambahkan dulu"}
                           </option>
                           {subjects.map((s) => (
                             <option key={s.id} value={s.name}>
                               {s.emoji} {s.name}
                             </option>
                           ))}
-                          <option value="__add__">âž• Tambah mata pelajaran baru...</option>
+                          <option value="__add__">➕ Tambah mata pelajaran baru...</option>
                         </select>
                         <ChevronDown
                           size={18}
@@ -821,7 +821,7 @@ export const CreateNoteModal = ({
                               if (picked && picked.size > MAX_UPLOAD_BYTES) {
                                 setFile(null);
                                 setError(
-                                  `File terlalu besar (${formatBytes(picked.size)}). Maksimal ${formatBytes(MAX_UPLOAD_BYTES)} â€” unggah versi ringkas atau gunakan link YouTube/Web.`
+                                  `File terlalu besar (${formatBytes(picked.size)}). Maksimal ${formatBytes(MAX_UPLOAD_BYTES)} — unggah versi ringkas atau gunakan link YouTube/Web.`
                                 );
                                 e.target.value = "";
                                 return;

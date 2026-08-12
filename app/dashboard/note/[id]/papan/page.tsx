@@ -284,7 +284,7 @@ export default function WhiteboardPage() {
       });
       clearedAtRef.current = Date.now();
       setStrokes([]);
-      notify("Papan dibersihkan ðŸ§¹");
+      notify("Papan dibersihkan 🧹");
     } catch {
       notify("Gagal membersihkan papan.");
     }
@@ -295,7 +295,7 @@ export default function WhiteboardPage() {
       await navigator.clipboard.writeText(
         `${window.location.origin}/dashboard/note/${params.id}/papan`
       );
-      notify("Link papan tulis disalin! ðŸ”—");
+      notify("Link papan tulis disalin! 🔗");
     } catch {
       notify("Gagal menyalin link.");
     }
@@ -304,8 +304,8 @@ export default function WhiteboardPage() {
   const handleCall = (type: "vc" | "audio") => {
     notify(
       type === "vc"
-        ? "Video call segera hadir! ðŸš§"
-        : "Panggilan suara segera hadir! ðŸš§"
+        ? "Video call segera hadir! 🚧"
+        : "Panggilan suara segera hadir! 🚧"
     );
   };
 
@@ -442,7 +442,7 @@ export default function WhiteboardPage() {
           />
         </div>
         <p className="px-2 py-2 text-center text-xs font-semibold text-clay-muted">
-          Gambar bersama temanmu secara realtime â€” setiap goresan langsung
+          Gambar bersama temanmu secara realtime — setiap goresan langsung
           tersinkron otomatis
         </p>
       </div>

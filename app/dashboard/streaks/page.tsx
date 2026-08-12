@@ -25,11 +25,11 @@ interface ActivityEntry {
 }
 
 const MILESTONE_DEFS: { day: number; label: string }[] = [
-  { day: 3, label: "ðŸ”¥ Mulai Konsisten" },
-  { day: 7, label: "â­ Pekan Pertama" },
-  { day: 14, label: "ðŸŽ¯ Dua Pekan" },
-  { day: 30, label: "ðŸ† Sebulan Penuh" },
-  { day: 100, label: "ðŸ‘‘ Legenda" },
+  { day: 3, label: "🔥 Mulai Konsisten" },
+  { day: 7, label: "⭐ Pekan Pertama" },
+  { day: 14, label: "🎯 Dua Pekan" },
+  { day: 30, label: "🏆 Sebulan Penuh" },
+  { day: 100, label: "👑 Legenda" },
 ];
 
 function formatDate(iso: string): string {
@@ -176,7 +176,7 @@ export default function StreaksPage() {
       <div className="card-clay mt-4 !p-2">
         {stats.recentActivity.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm font-semibold text-clay-muted">
-            Belum ada aktivitas. Mulai belajar untuk mengumpulkan XP! ðŸš€
+            Belum ada aktivitas. Mulai belajar untuk mengumpulkan XP! 🚀
           </p>
         ) : (
           stats.recentActivity.map((a, i) => (

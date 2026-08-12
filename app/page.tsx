@@ -71,6 +71,13 @@ const STEPS = [
   },
 ];
 
+const AI_MODELS = [
+  { name: "OpenAI", logo: "/images/ai-models/openai-color.svg" },
+  { name: "Claude", logo: "/images/ai-models/claude-color.svg" },
+  { name: "DeepSeek", logo: "/images/ai-models/deepseek-color.svg" },
+  { name: "NVIDIA", logo: "/images/ai-models/nvidia-color.svg" },
+];
+
 export default function LandingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
 
@@ -121,7 +128,7 @@ export default function LandingPage() {
                   href="/register"
                   className="btn-clay-primary !min-h-[44px] !px-3 !py-2 text-sm sm:!px-5"
                 >
-                  Daftar Gratis
+                  Trial
                 </Link>
               </>
             )}
@@ -137,7 +144,7 @@ export default function LandingPage() {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
               <span className="inline-flex items-center gap-2 rounded-clay-full border-3 border-clay-primary/30 bg-clay-primary/10 px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide text-clay-primary">
-                <Sparkles size={14} /> AI Tutor untuk siswa SMA
+                <Sparkles size={14} /> AI Tutor untuk Semua Pelajar
               </span>
               <h1 className="mt-6 text-4xl font-extrabold leading-[1.15] text-clay-dark sm:text-5xl lg:text-6xl">
                 Bukan ngasih jawaban, tapi ngasih{" "}
@@ -156,7 +163,7 @@ export default function LandingPage() {
                 ) : (
                   <>
                     <Link href="/register" className="btn-clay-primary">
-                      Mulai Gratis <ArrowRight size={18} className="ml-2" />
+                      Mulai Trial <ArrowRight size={18} className="ml-2" />
                     </Link>
                     <Link href="/login" className="btn-clay-secondary">
                       Saya sudah punya akun
@@ -212,6 +219,34 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* AI Models */}
+      <section className="border-t-2 border-clay-shadow/20 py-12 sm:py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="text-center">
+            <p className="text-sm font-extrabold uppercase tracking-widest text-clay-muted">
+              Didukung oleh Model AI Terdepan
+            </p>
+            <h2 className="mt-3 text-2xl font-extrabold text-clay-dark sm:text-3xl">
+              Teknologi di Balik Eureka.AI
+            </h2>
+          </div>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+            {AI_MODELS.map((model) => (
+              <div key={model.name} className="group flex flex-col items-center gap-2">
+                <div className="flex h-16 w-16 items-center justify-center rounded-clay-md border-2 border-clay-shadow/20 bg-white shadow-clay-sm transition-all duration-150 group-hover:-translate-y-1 group-hover:shadow-clay">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={model.logo} alt={model.name} className="h-8 w-8" />
+                </div>
+                <span className="text-xs font-extrabold text-clay-muted">{model.name}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-sm font-semibold text-clay-muted">
+            Multi-model AI — otomatis memilih model terbaik untuk setiap tugas
+          </p>
         </div>
       </section>
 
@@ -335,7 +370,7 @@ export default function LandingPage() {
                 <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Streak, XP & leaderboard</li>
               </ul>
               <Link href="/register" className="btn-clay-ghost mt-8 !min-h-[52px] !px-5 text-sm">
-                Mulai Gratis
+                Mulai Trial
               </Link>
             </div>
             <div className="card-clay relative flex flex-col border-3 border-clay-primary !p-8 shadow-clay-lg">
@@ -375,7 +410,7 @@ export default function LandingPage() {
               Siap mengalami momen Eureka pertamamu?
             </h2>
             <p className="mt-3 max-w-xl text-base font-semibold text-clay-muted">
-              Daftar gratis sekarang, tempel materi pertamamu, dan biarkan AI
+              Mulai trial sekarang, tempel materi pertamamu, dan biarkan AI
               membimbingmu sampai paham — bukan sekadar hafal.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -386,7 +421,7 @@ export default function LandingPage() {
               ) : (
                 <>
                   <Link href="/register" className="btn-clay-primary">
-                    Daftar Gratis Sekarang <ArrowRight size={18} className="ml-2" />
+                    Mulai Trial <ArrowRight size={18} className="ml-2" />
                   </Link>
                   <Link href="/login" className="btn-clay-secondary">
                     Masuk

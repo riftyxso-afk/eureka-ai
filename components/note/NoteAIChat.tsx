@@ -14,7 +14,7 @@ interface NoteAIChatProps {
   notify: (msg: string) => void;
 }
 
-/** "Tanya AI tentang catatannya" â€” RAG Q&A satu pertanyaan â†’ jawaban. */
+/** "Tanya AI tentang catatannya" — RAG Q&A satu pertanyaan → jawaban. */
 export const NoteAIChat = ({ noteId, notify }: NoteAIChatProps) => {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
