@@ -23,6 +23,119 @@ function isResendConfigured(): boolean {
   return key.length > 10 && key.startsWith("re_") && !key.includes("xxx");
 }
 
+const FONT =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+function buildOtpEmailHtml(code: string, email: string): string {
+  const digits = code.split("");
+  const digitBoxes = digits
+    .map(
+      (d) =>
+        `<td align="center" style="width:48px;height:58px;background:#fffdf8;border:1.5px solid #e3c48f;border-radius:10px;color:#1c1917;font-size:28px;font-weight:800;font-family:${FONT};">${d}</td>`
+    )
+    .join("");
+
+  // Tampilan malam hari (dark mode) di Gmail/Apple Mail
+  const dark = `
+    .dark, div[data-ogsc] .main, div[data-ogsb] .main { background-color:#211d16 !important; border-color:#3a332a !important; }
+    .dark, div[data-ogsc] .cardtext, div[data-ogsb] .cardtext, div[data-ogsc] .headline, div[data-ogsb] .headline { color:#f5f0e8 !important; }
+    div[data-ogsc] .subtext, div[data-ogsb] .subtext, div[data-ogsc] .foottext, div[data-ogsb] .foottext { color:#a8a29e !important; }
+    div[data-ogsc] .codebox, div[data-ogsb] .codebox { background:#2a241c !important; border-color:#5a4a30 !important; color:#ffc061 !important; }
+    div[data-ogsc] .infobox, div[data-ogsb] .infobox { background:#2a221a !important; border-color:#4d3f2c !important; }
+    div[data-ogsc] .divider, div[data-ogsb] .divider { border-top-color:#3a332a !important; }
+    div[data-ogsc] .brandmark, div[data-ogsb] .brandmark { background:linear-gradient(135deg,#f59e0b,#b45309) !important; }
+  `;
+
+  return `
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kode Verifikasi Eureka.AI</title>
+    <style>${dark}</style>
+  </head>
+  <body style="margin:0;padding:0;background-color:#f6f0e4;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f6f0e4;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table class="main" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background-color:#ffffff;border:1px solid #efdbbe;border-radius:22px;overflow:hidden;box-shadow:0 14px 44px rgba(94,64,22,0.12);">
+
+            <!-- Header gradient -->
+            <tr>
+              <td style="background:linear-gradient(135deg,#d97706,#b45309);padding:30px 40px 26px;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td class="brandmark" style="width:42px;height:42px;background:rgba(255,255,255,0.18);border-radius:12px;text-align:center;vertical-align:middle;font-family:${FONT};font-size:22px;font-weight:800;color:#ffffff;">E</td>
+                    <td style="padding-left:14px;font-family:${FONT};font-size:20px;font-weight:800;color:#ffffff;letter-spacing:0.3px;">Eureka<span style="color:#ffd9a0;">.AI</span></td>
+                  </tr>
+                </table>
+                <p style="margin:22px 0 4px;font-family:${FONT};font-size:11px;font-weight:700;color:#ffe3bd;letter-spacing:2.5px;">VERIFIKASI AKUN</p>
+                <h1 class="headline" style="margin:0;font-family:${FONT};font-size:24px;font-weight:800;color:#ffffff;line-height:1.35;">Kode Verifikasi Kamu</h1>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td style="padding:28px 40px 0;">
+                <p class="cardtext" style="margin:0;font-family:${FONT};font-size:14.5px;line-height:1.7;color:#44403c;">
+                  Halo! Gunakan kode di bawah ini untuk <b>masuk</b> atau <b>membuat akun</b> di Eureka.AI.
+                  Jangan bagikan kode ini kepada siapa pun.
+                </p>
+              </td>
+            </tr>
+
+            <!-- OTP digit boxes -->
+            <tr>
+              <td align="center" style="padding:24px 40px 6px;">
+                <table class="codebox" role="presentation" cellpadding="0" cellspacing="6" style="background-color:#fffbf3;border:1px solid #f0e0c2;border-radius:16px;padding:14px;">
+                  <tr>${digitBoxes}</tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Info box -->
+            <tr>
+              <td style="padding:18px 40px 6px;">
+                <table class="infobox" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fbf6ec;border:1px solid #f0e2c8;border-radius:12px;">
+                  <tr>
+                    <td style="padding:14px 18px;font-family:${FONT};font-size:12.5px;line-height:1.7;color:#706957;">
+                      <div style="margin-bottom:2px;"><span style="display:inline-block;width:7px;height:7px;background-color:#d97706;border-radius:50%;vertical-align:middle;"></span>&nbsp; Kode berlaku selama <b>5 menit</b> dan hanya bisa dipakai <b>satu kali</b>.</div>
+                      <div><span style="display:inline-block;width:7px;height:7px;background-color:#d97706;border-radius:50%;vertical-align:middle;"></span>&nbsp; Dikirim ke: <b style="color:#44403c;">${email}</b></div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Divider -->
+            <tr>
+              <td class="divider" style="padding:24px 40px 0;border-top:1px solid #f0e6d2;"></td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="padding:0 40px 30px;text-align:center;">
+                <p class="foottext" style="margin:18px 0 0;font-family:${FONT};font-size:12px;line-height:1.8;color:#a8a29e;">
+                  Tidak meminta kode ini? Abaikan saja — akunmu tetap aman.<br />
+                  Eureka.AI tidak akan pernah meminta kode verifikasi melalui telepon atau chat.
+                </p>
+                <p style="margin:16px 0 0;font-family:${FONT};font-size:13px;font-weight:700;color:#57534e;">
+                  Eureka.AI <span style="color:#d97706;">·</span> Belajar lebih cepat dengan AI
+                </p>
+                <a href="https://www.eureka-ai.web.id" style="font-family:${FONT};font-size:12px;font-weight:700;color:#d97706;text-decoration:none;">www.eureka-ai.web.id</a>
+              </td>
+            </tr>
+
+          </table>
+          <p style="margin:16px 0 0;font-family:${FONT};font-size:11px;color:#a8a29e;">© ${new Date().getFullYear()} Eureka.AI — Semua hak dilindungi.</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>`;
+}
+
 async function sendOtpEmail(to: string, code: string): Promise<void> {
   if (!isResendConfigured()) {
     throw new Error(
@@ -33,20 +146,8 @@ async function sendOtpEmail(to: string, code: string): Promise<void> {
   const { error } = await resend.emails.send({
     from: FROM_ADDRESS,
     to,
-    subject: `Kode OTP Eureka.AI kamu: ${code}`,
-    html: `
-      <div style="max-width:440px;margin:0 auto;font-family:Arial,sans-serif;color:#3f3f46;">
-        <div style="text-align:center;padding:28px;background:#faf7f2;border-radius:16px;border:2px solid #eecfa4;">
-          <h1 style="font-size:22px;margin:0 0 8px;">Kode Verifikasi Eureka.AI</h1>
-          <p style="font-size:14px;color:#71717a;margin:0 0 20px;">
-            Gunakan kode ini untuk masuk atau membuat akun. Kode berlaku 5 menit.
-          </p>
-          <div style="font-size:34px;font-weight:800;letter-spacing:10px;color:#d97706;background:#fff;border-radius:12px;padding:16px;">${code}</div>
-          <p style="font-size:12px;color:#a1a1aa;margin-top:20px;">
-            <strong>${to}</strong><br/>Jangan bagikan kode ini ke siapa pun. Jika kamu tidak memintanya, abaikan email ini.
-          </p>
-        </div>
-      </div>`,
+    subject: `${code} adalah kode verifikasi Eureka.AI kamu`,
+    html: buildOtpEmailHtml(code, to),
   });
   if (error) throw new Error(`Kirim email gagal: ${error.message}`);
 }
