@@ -72,7 +72,7 @@ export const UploadSourceModal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
         >
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.95 }}
@@ -80,7 +80,7 @@ export const UploadSourceModal = ({
             exit={{ opacity: 0, y: 24, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md max-h-[85vh] overflow-y-auto"
+            className="m-auto w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-clay sm:rounded-clay"
           >
             <CardClay className="shadow-clay-lg !p-4 sm:!p-8">
               <div className="flex items-center justify-between">
