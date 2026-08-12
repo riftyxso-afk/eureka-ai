@@ -185,15 +185,20 @@ export const Sidebar = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={() => setIsOpen(false)}
-              className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[3px] lg:hidden"
             />
             <motion.aside
-              initial={{ x: -300 }}
+              initial={{ x: "-100%" }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              transition={{ type: "tween", duration: 0.25 }}
-              className="fixed left-0 top-0 z-50 flex h-dvh w-full max-w-[100vw] flex-col gap-2 overflow-y-auto overscroll-contain bg-white p-3 shadow-clay-sm lg:hidden before:absolute before:inset-0 before:pointer-events-none before:bg-gradient-to-b before:from-clay-primary/5 before:to-transparent"
+              exit={{ x: "-100%" }}
+              transition={{
+                type: "tween",
+                duration: 0.3,
+                ease: [0.32, 0.72, 0, 1],
+              }}
+              className="fixed left-0 top-0 z-50 flex h-dvh w-[30%] min-w-[200px] max-w-[85vw] flex-col gap-2 overflow-y-auto overscroll-contain rounded-r-clay-md bg-white p-3 shadow-clay-lg lg:hidden before:absolute before:inset-0 before:pointer-events-none before:rounded-r-clay-md before:bg-gradient-to-b before:from-clay-primary/5 before:to-transparent"
             >
               <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight pb-2">
                 <Link href="/dashboard" onClick={() => setIsOpen(false)}>
