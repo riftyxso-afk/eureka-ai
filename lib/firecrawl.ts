@@ -187,7 +187,12 @@ export async function firecrawlSearch(query: string, limit = 3): Promise<SearchR
   }
 
   const data = await res.json();
-  const results = Array.isArray(data?.data) ? data.data : [];
+  // v2: hasil ada di data.web; v1 lama: data.data (array). Dukung keduanya.
+  const results = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data?.data?.web)
+      ? data.data.web
+      : [];
   return results
     .map((r: Record<string, unknown>) => ({
       url: String(r.url ?? ""),

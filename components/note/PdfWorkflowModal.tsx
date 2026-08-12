@@ -3,10 +3,11 @@
 /**
  * PdfWorkflowModal — modal generate dokumen PDF dengan animasi ALUR KERJA.
  *
- * Membuka koneksi SSE ke /api/notes/:id/pdf/stream lalu menampilkan
- * langkah-langkah realtime (Membaca → Merapikan AI → Python/reportlab →
- * Menulis BAB → Merender). Saat event `done` diterima, PDF (base64)
- * langsung diunduh otomatis.
+ * 1. Layar KONFIGURASI: pilih apakah dokumen disertai gambar ilustrasi
+ *    (diambil dari halaman sumber + CDN stabil via lib/pdfImages).
+ * 2. Koneksi SSE ke /api/notes/:id/pdf/stream?images=1|0 lalu menampilkan
+ *    langkah realtime + LOG STREAMING (pesan Python per-BAB & per-gambar).
+ * 3. Saat event `done` diterima, PDF (base64) langsung diunduh otomatis.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -15,6 +16,7 @@ import {
   CheckCircle2,
   FileText,
   FileWarning,
+  Image as ImageIcon,
   Loader2,
   PenLine,
   Printer,
@@ -36,10 +38,11 @@ interface WorkflowStep {
 const WORKFLOW_STEPS: WorkflowStep[] = [
   { id: 1, label: "Membaca catatan sebagai referensi", icon: FileText },
   { id: 2, label: "Menyusun dokumen baru dengan AI", icon: Wand2 },
-  { id: 3, label: "Menjalankan mesin Python (reportlab)", icon: ServerCog },
-  { id: 4, label: "Menulis isi dokumen satu per satu", icon: PenLine },
-  { id: 5, label: "Merender & memfinalisasi PDF", icon: Printer },
-  { id: 6, label: "PDF siap — unduh otomatis", icon: CheckCircle2 },
+  { id: 3, label: "Mengumpulkan gambar ilustrasi", icon: ImageIcon },
+  { id: 4, label: "Menjalankan mesin Python (reportlab)", icon: ServerCog },
+  { id: 5, label: "Menulis isi dokumen satu per satu", icon: PenLine },
+  { id: 6, label: "Merender & memfinalisasi PDF", icon: Printer },
+  { id: 7, label: "PDF siap — unduh otomatis", icon: CheckCircle2 },
 ];
 
 interface SseProgress {
@@ -47,6 +50,8 @@ interface SseProgress {
   message: string;
   step: number;
 }
+
+type ModalStatus = "config" | "running" | "done" | "error";
 
 export function PdfWorkflowModal({
   noteId,
@@ -59,7 +64,8 @@ export function PdfWorkflowModal({
   onClose: () => void;
   notify: (msg: string) => void;
 }) {
-  const [status, setStatus] = useState<"running" | "done" | "error">("running");
+  const [status, setStatus] = useState<ModalStatus>("config");
+  const [includeImages, setIncludeImages] = useState(true);
   const [progress, setProgress] = useState<SseProgress>({
     percent: 0,
     message: "Menyiapkan...",
@@ -98,8 +104,20 @@ export function PdfWorkflowModal({
     [noteTitle]
   );
 
-  // Coba lagi: tutup koneksi lama, reset state, mulai ulang dari nol.
-  const retry = () => {
+  /** Mulai proses dari layar konfigurasi. */
+  const start = useCallback(() => {
+    abortedRef.current = false;
+    doneRef.current = false;
+    setStatus("running");
+    setErrorMsg("");
+    setSavedBase64(null);
+    setSavedFilename("");
+    setProgress({ percent: 0, message: "Menyiapkan...", step: 0 });
+    setRetryKey((k) => k + 1);
+  }, []);
+
+  // Coba lagi dari popup error — mulai ulang dari nol dengan pengaturan sama.
+  const retry = useCallback(() => {
     abortedRef.current = true;
     doneRef.current = true;
     setStatus("running");
@@ -108,9 +126,10 @@ export function PdfWorkflowModal({
     setSavedFilename("");
     setProgress({ percent: 0, message: "Menyiapkan...", step: 0 });
     setRetryKey((k) => k + 1);
-  };
+  }, []);
 
   useEffect(() => {
+    if (status !== "running") return;
     abortedRef.current = false;
     doneRef.current = false;
 
@@ -118,7 +137,7 @@ export function PdfWorkflowModal({
       apiUrl(
         `/api/notes/${encodeURIComponent(noteId)}/pdf/stream?userId=${encodeURIComponent(
           getUserId()
-        )}`
+        )}&images=${includeImages ? 1 : 0}`
       )
     );
 
@@ -147,7 +166,7 @@ export function PdfWorkflowModal({
           filename?: string;
         };
         if (data.base64) {
-          setProgress((p) => ({ ...p, percent: 100, step: 6, message: "PDF selesai!" }));
+          setProgress((p) => ({ ...p, percent: 100, step: 7, message: "PDF selesai!" }));
           setSavedBase64(data.base64);
           setSavedFilename(data.filename ?? "");
           setStatus("done");
@@ -191,20 +210,34 @@ export function PdfWorkflowModal({
       abortedRef.current = true;
       es.close();
     };
-  }, [noteId, notify, downloadPdf, retryKey]);
+  }, [noteId, notify, downloadPdf, retryKey, status, includeImages]);
 
   const close = () => {
     abortedRef.current = true;
     onClose();
   };
 
-  const stepState = (stepId: number): "pending" | "active" | "done" => {
+  // Langkah yang ditampilkan: step 3 (gambar) hanya bila gambar diaktifkan.
+  // Renumber agar id kontigu (1..N) — cocok dengan mapStep yang menggeser
+  // server step bila step gambar disembunyikan.
+  const shownSteps = WORKFLOW_STEPS.filter(
+    (s) => s.id !== 3 || includeImages
+  ).map((s, i) => ({ ...s, id: i + 1 }));
+  const mapStep = (serverStep: number): number => {
+    if (!includeImages && serverStep > 3) return serverStep - 1;
+    return serverStep;
+  };
+
+  const stepState = (
+    stepId: number
+  ): "pending" | "active" | "done" => {
     if (status === "done") return "done";
     // Saat gagal: semua langkah tampil pending (abu-abu), tidak ada yang
     // hijau — biar jelas proses tidak selesai.
     if (status === "error") return "pending";
-    if (progress.step > stepId) return "done";
-    if (progress.step === stepId) return "active";
+    const active = mapStep(progress.step);
+    if (active > stepId) return "done";
+    if (active === stepId) return "active";
     return "pending";
   };
 
@@ -254,7 +287,7 @@ export function PdfWorkflowModal({
                 </motion.span>
                 <div className="min-w-0">
                   <h3 className="text-base font-extrabold text-white sm:text-lg">
-                    Menyusun Dokumen PDF
+                    {status === "config" ? "Buat Dokumen PDF" : "Menyusun Dokumen PDF"}
                   </h3>
                   <p className="mt-0.5 truncate text-xs font-bold text-white/70">
                     {noteTitle}
@@ -271,165 +304,240 @@ export function PdfWorkflowModal({
             </div>
           </div>
 
-          {/* Isi */}
-          <div className="p-5 sm:p-6">
-            {/* Langkah-langkah alur kerja */}
-            <div className="space-y-2.5">
-              {WORKFLOW_STEPS.map((step) => {
-                const state = stepState(step.id);
-                const Icon = step.icon;
-                return (
-                  <motion.div
-                    key={step.id}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: step.id * 0.08 }}
-                    className={`flex items-center gap-3 rounded-clay-md border-2 px-3 py-2.5 transition-colors duration-300 ${
-                      state === "done"
-                        ? "border-emerald-300 bg-emerald-50"
-                        : state === "active"
-                          ? "border-clay-primary bg-clay-primary/10"
-                          : "border-clay-shadow/25 bg-white/60 opacity-60"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
-                        state === "done"
-                          ? "bg-emerald-500 text-white"
-                          : state === "active"
-                            ? "bg-clay-primary text-white"
-                            : "bg-clay-beige text-clay-muted"
-                      }`}
-                    >
-                      {state === "done" ? (
-                        <Check size={15} strokeWidth={3} />
-                      ) : state === "active" ? (
-                        <Loader2 size={15} className="animate-spin" />
-                      ) : (
-                        <Icon size={14} />
-                      )}
-                    </span>
-                    <span
-                      className={`text-sm font-extrabold ${
-                        state === "done"
-                          ? "text-emerald-800"
-                          : state === "active"
-                            ? "text-clay-dark"
-                            : "text-clay-muted"
-                      }`}
-                    >
-                      {step.label}
-                      {state === "active" && (
-                        <span className="block text-[11px] font-bold text-clay-primary/80">
-                          {progress.message}
-                        </span>
-                      )}
-                    </span>
-                  </motion.div>
-                );
-              })}
-            </div>
+          {/* ── Layar konfigurasi ── */}
+          {status === "config" ? (
+            <div className="p-5 sm:p-6">
+              <h4 className="text-base font-extrabold text-clay-dark">
+                Pengaturan Dokumen
+              </h4>
+              <p className="mt-1 text-xs font-bold text-clay-muted">
+                Dokumen disusun AI sebagai dokumen baru — catatan dipakai sebagai
+                referensi, bukan salinan.
+              </p>
 
-            {/* Progress bar */}
-            <div className="mt-5">
-              <div className="flex items-center justify-between text-xs font-extrabold">
-                <span className="text-clay-muted">
-                  {status === "done"
-                    ? "Selesai!"
-                    : status === "error"
-                      ? "Gagal"
-                      : progress.message}
-                </span>
-                <span className="text-clay-primary">{progress.percent}%</span>
-              </div>
-              <div className="mt-2 h-3.5 w-full overflow-hidden rounded-clay-full border-2 border-clay-shadow/30 bg-clay-inputBg shadow-clay-inset">
-                <motion.div
-                  className={`h-full rounded-clay-full ${
-                    status === "error"
-                      ? "bg-red-400"
-                      : "bg-gradient-to-r from-clay-primary via-violet-500 to-fuchsia-400"
+              {/* Toggle gambar */}
+              <button
+                type="button"
+                onClick={() => setIncludeImages((v) => !v)}
+                aria-pressed={includeImages}
+                className={`mt-4 flex w-full items-center gap-3 rounded-clay-md border-3 p-4 text-left transition-all duration-75 ${
+                  includeImages
+                    ? "border-clay-primary bg-clay-primary/10 shadow-clay-sm"
+                    : "border-clay-shadow/50 bg-white shadow-clay-sm hover:-translate-y-0.5"
+                }`}
+              >
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                    includeImages
+                      ? "bg-clay-primary text-white"
+                      : "bg-clay-beige text-clay-muted shadow-clay-inset"
                   }`}
-                  initial={{ width: "0%" }}
-                  animate={{ width: `${progress.percent}%` }}
-                  transition={{ type: "spring", stiffness: 90, damping: 22 }}
-                />
+                >
+                  <ImageIcon size={18} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-extrabold text-clay-dark">
+                    Sertakan gambar ilustrasi
+                  </span>
+                  <span className="block text-xs font-bold text-clay-muted">
+                    AI &amp; Firecrawl mengambil gambar relevan (prioritas CDN
+                    stabil) lalu menyisipkannya ke tiap bab. Lebih lama sedikit,
+                    tapi dokumen lebih hidup.
+                  </span>
+                </span>
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 ${
+                    includeImages
+                      ? "border-clay-primary bg-clay-primary text-white"
+                      : "border-clay-shadow/40 bg-white text-transparent"
+                  }`}
+                >
+                  <Check size={14} />
+                </span>
+              </button>
+
+              <div className="mt-4 rounded-clay-md border-2 border-clay-shadow/25 bg-clay-beige/60 p-3.5 text-xs font-bold text-clay-muted">
+                Proses butuh koneksi AI. Kalau AI sedang sibuk, kamu bisa coba
+                lagi beberapa menit kemudian — materi kamu tidak hilang.
               </div>
-            </div>
 
-            {/* Status akhir */}
-            <div className="mt-5">
-              {status === "running" && (
-                <p className="flex items-center gap-2 text-xs font-bold text-clay-muted">
-                  <Sparkles size={13} className="text-clay-primary" />
-                  Kamu bisa tutup — PDF tetap diproses & diunduh otomatis.
-                </p>
-              )}
-              {status === "done" && (
-                <div className="rounded-clay-md border-2 border-emerald-300 bg-emerald-50 p-3.5">
-                  <p className="flex items-center gap-2 text-sm font-extrabold text-emerald-800">
-                    <CheckCircle2 size={16} />
-                    PDF berhasil dibuat!
-                  </p>
-                  <p className="mt-1 text-xs font-bold text-emerald-700/80">
-                    Unduhan dimulai otomatis. Kalau tidak muncul, tekan tombol di
-                    bawah.
-                  </p>
-                  {savedBase64 && (
-                    <button
-                      onClick={() => downloadPdf(savedBase64, savedFilename)}
-                      className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-clay-md bg-emerald-600 px-4 py-2.5 text-sm font-extrabold text-white shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-0.5"
-                    >
-                      <FileText size={15} />
-                      Unduh Lagi
-                    </button>
-                  )}
-                </div>
-              )}
-              {status === "error" && (
-                <div className="rounded-clay-md border-2 border-red-200 bg-red-50 p-3.5">
-                  <p className="flex items-center gap-2 text-sm font-extrabold text-red-700">
-                    <FileWarning size={16} />
-                    Dokumen tidak dibuat
-                  </p>
-                  <p className="mt-1 text-xs font-bold text-red-600/80">{errorMsg}</p>
-                  <p className="mt-1.5 text-[11px] font-semibold text-red-500/80">
-                    Dokumen hanya disusun oleh AI sungguhan — tanpa AI, PDF
-                    sengaja tidak digenerate agar isinya tidak sekadar salinan
-                    catatan.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Tombol bawah */}
-            <div className="mt-5 flex gap-3">
-              {status === "error" ? (
-                <>
-                  <button
-                    onClick={retry}
-                    className="btn-clay-primary flex-1 !min-h-[46px] !px-4 text-sm"
-                  >
-                    <RefreshCw size={15} className="mr-2" />
-                    Coba Lagi
-                  </button>
-                  <button
-                    onClick={close}
-                    className="btn-clay-ghost flex-1 !min-h-[46px] !px-4 text-sm"
-                  >
-                    Tutup
-                  </button>
-                </>
-              ) : (
+              <div className="mt-6 flex gap-3">
                 <button
                   onClick={close}
-                  disabled={status === "running"}
-                  className="btn-clay-ghost flex-1 !min-h-[46px] !px-4 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  className="btn-clay-ghost flex-1 !min-h-[46px] !px-4 text-sm"
                 >
-                  {status === "running" ? "Memproses..." : "Selesai"}
+                  Batal
                 </button>
-              )}
+                <button
+                  onClick={start}
+                  className="btn-clay-primary flex-1 !min-h-[46px] !px-4 text-sm"
+                >
+                  <Sparkles size={15} className="mr-2" />
+                  Mulai Susun
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* ── Layar proses / hasil ── */
+            <div className="p-5 sm:p-6">
+              {/* Langkah-langkah alur kerja */}
+              <div className="space-y-2.5">
+                {shownSteps.map((step) => {
+                  const state = stepState(step.id);
+                  const Icon = step.icon;
+                  return (
+                    <motion.div
+                      key={step.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: step.id * 0.08 }}
+                      className={`flex items-center gap-3 rounded-clay-md border-2 px-3 py-2.5 transition-colors duration-300 ${
+                        state === "done"
+                          ? "border-emerald-300 bg-emerald-50"
+                          : state === "active"
+                            ? "border-clay-primary bg-clay-primary/10"
+                            : "border-clay-shadow/25 bg-white/60 opacity-60"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                          state === "done"
+                            ? "bg-emerald-500 text-white"
+                            : state === "active"
+                              ? "bg-clay-primary text-white"
+                              : "bg-clay-beige text-clay-muted"
+                        }`}
+                      >
+                        {state === "done" ? (
+                          <Check size={15} strokeWidth={3} />
+                        ) : state === "active" ? (
+                          <Loader2 size={15} className="animate-spin" />
+                        ) : (
+                          <Icon size={14} />
+                        )}
+                      </span>
+                      <span
+                        className={`text-sm font-extrabold ${
+                          state === "done"
+                            ? "text-emerald-800"
+                            : state === "active"
+                              ? "text-clay-dark"
+                              : "text-clay-muted"
+                        }`}
+                      >
+                        {step.label}
+                        {state === "active" && (
+                          <span className="block text-[11px] font-bold text-clay-primary/80">
+                            {progress.message}
+                          </span>
+                        )}
+                      </span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Progress bar */}
+              <div className="mt-5">
+                <div className="flex items-center justify-between text-xs font-extrabold">
+                  <span className="text-clay-muted">
+                    {status === "done"
+                      ? "Selesai!"
+                      : status === "error"
+                        ? "Gagal"
+                        : progress.message}
+                  </span>
+                  <span className="text-clay-primary">{progress.percent}%</span>
+                </div>
+                <div className="mt-2 h-3.5 w-full overflow-hidden rounded-clay-full border-2 border-clay-shadow/30 bg-clay-inputBg shadow-clay-inset">
+                  <motion.div
+                    className={`h-full rounded-clay-full ${
+                      status === "error"
+                        ? "bg-red-400"
+                        : "bg-gradient-to-r from-clay-primary via-violet-500 to-fuchsia-400"
+                    }`}
+                    initial={{ width: "0%" }}
+                    animate={{ width: `${progress.percent}%` }}
+                    transition={{ type: "spring", stiffness: 90, damping: 22 }}
+                  />
+                </div>
+              </div>
+
+              {/* Status akhir */}
+              <div className="mt-5">
+                {status === "running" && (
+                  <p className="flex items-center gap-2 text-xs font-bold text-clay-muted">
+                    <Sparkles size={13} className="text-clay-primary" />
+                    Kamu bisa tutup — PDF tetap diproses & diunduh otomatis.
+                  </p>
+                )}
+                {status === "done" && (
+                  <div className="rounded-clay-md border-2 border-emerald-300 bg-emerald-50 p-3.5">
+                    <p className="flex items-center gap-2 text-sm font-extrabold text-emerald-800">
+                      <CheckCircle2 size={16} />
+                      PDF berhasil dibuat!
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-emerald-700/80">
+                      Unduhan dimulai otomatis. Kalau tidak muncul, tekan tombol
+                      di bawah.
+                    </p>
+                    {savedBase64 && (
+                      <button
+                        onClick={() => downloadPdf(savedBase64, savedFilename)}
+                        className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-clay-md bg-emerald-600 px-4 py-2.5 text-sm font-extrabold text-white shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-0.5"
+                      >
+                        <FileText size={15} />
+                        Unduh Lagi
+                      </button>
+                    )}
+                  </div>
+                )}
+                {status === "error" && (
+                  <div className="rounded-clay-md border-2 border-red-200 bg-red-50 p-3.5">
+                    <p className="flex items-center gap-2 text-sm font-extrabold text-red-700">
+                      <FileWarning size={16} />
+                      Dokumen tidak dibuat
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-red-600/80">{errorMsg}</p>
+                    <p className="mt-1.5 text-[11px] font-semibold text-red-500/80">
+                      Dokumen hanya disusun oleh AI sungguhan — tanpa AI, PDF
+                      sengaja tidak digenerate agar isinya tidak sekadar salinan
+                      catatan.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Tombol bawah */}
+              <div className="mt-5 flex gap-3">
+                {status === "error" ? (
+                  <>
+                    <button
+                      onClick={retry}
+                      className="btn-clay-primary flex-1 !min-h-[46px] !px-4 text-sm"
+                    >
+                      <RefreshCw size={15} className="mr-2" />
+                      Coba Lagi
+                    </button>
+                    <button
+                      onClick={close}
+                      className="btn-clay-ghost flex-1 !min-h-[46px] !px-4 text-sm"
+                    >
+                      Tutup
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={close}
+                    disabled={status === "running"}
+                    className="btn-clay-ghost flex-1 !min-h-[46px] !px-4 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {status === "running" ? "Memproses..." : "Selesai"}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

@@ -9,13 +9,18 @@ Dibaca dari stdin: satu baris JSON dengan struktur:
   "subject": "...",
   "summary": "...",
   "createdAt": "...",      // ISO date
-  "chapters": [ { "title": "...", "content": "..." }, ... ]
+  "chapters": [ { "title": "...", "content": "..." }, ... ],
+  "images": [ { "chapterIndex": 0, "url": "...", "alt": "..." }, ... ]   // opsional
 }
 
 Ditulis ke stdout (line-based protocol yang dibaca Node/SSE):
   PROGRESS|<persen>|<pesan>
   DONE|<base64-pdf>
 Error → stderr, exit code non-zero.
+
+Gambar: setiap URL diunduh dengan timeout + validasi content-type image/*.
+Bila gagal (jaringan/format/terlalu besar), diganti KOTAK PLACEHOLDER berisi
+teks alt — PDF tetap valid & gambar "selalu tampil" tanpa error.
 
 Dipakai route /api/notes/:id/pdf/stream (Node spawn python3 script ini).
 """
@@ -26,6 +31,7 @@ import json
 import os
 import re
 import sys
+import urllib.request
 from datetime import datetime
 
 try:
@@ -34,13 +40,17 @@ try:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
+    from reportlab.lib.utils import ImageReader
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.platypus import (
+        Image as RLImage,
         PageBreak,
         Paragraph,
         SimpleDocTemplate,
         Spacer,
+        Table,
+        TableStyle,
     )
 except ImportError as e:  # pragma: no cover
     sys.stderr.write("ERROR|reportlab tidak terpasang. Jalankan: pip install reportlab\n")
@@ -67,9 +77,6 @@ DEJAVU_DIRS = [
 
 def _register_fonts() -> None:
     global _FONT, _FONT_BOLD, _FONT_ITALIC
-    candidates = [
-        ("DejaVuSans", "DejaVuSans.ttf", "DejaVuSans-Bold.ttf", "DejaVuSans-Oblique.ttf"),
-    ]
     for base_dir in DEJAVU_DIRS:
         regular = os.path.join(base_dir, "DejaVuSans.ttf")
         if not os.path.exists(regular):
@@ -96,6 +103,9 @@ _register_fonts()
 C_PRIMARY = colors.HexColor("#4C1D95")
 C_DARK = colors.HexColor("#292524")
 C_BG = colors.HexColor("#FFF9EF")
+C_PLACEHOLDER_BG = colors.HexColor("#F1EAD9")
+C_PLACEHOLDER_BORDER = colors.HexColor("#D8CFBA")
+C_PLACEHOLDER_TEXT = colors.HexColor("#8A8578")
 
 # ─── Konversi markdown → paragraf ─────────────────────────────────────
 def _clean(text: str) -> str:
@@ -158,6 +168,90 @@ def markdown_to_paragraphs(raw: str):
     return paragraphs
 
 
+# ─── Gambar: unduh + embed (dengan placeholder bila gagal) ────────────
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+IMAGE_TIMEOUT = 20
+
+
+def download_image(url: str):
+    """Unduh gambar, validasi content-type image/* & ukuran. None bila gagal."""
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (compatible; EurekaAI-PDF/1.0)",
+                "Accept": "image/png,image/jpeg,image/avif,image/*;q=0.8",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=IMAGE_TIMEOUT) as resp:
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+            if not ctype.startswith("image/"):
+                return None
+            data = resp.read(MAX_IMAGE_BYTES + 1)
+            if len(data) > MAX_IMAGE_BYTES:
+                return None
+            return data if data else None
+    except Exception:
+        return None
+
+
+def _placeholder_flowable(alt: str):
+    """Kotak placeholder bergaya — dipakai saat gambar tak bisa diunduh."""
+    text = Paragraph(
+        f"{_clean(alt) or 'Ilustrasi'}"
+        f"<br/><font size='8' color='#8A8578'>(gambar tidak tersedia)</font>",
+        ParagraphStyle(
+            "PhText",
+            fontName=_FONT_ITALIC,
+            fontSize=10,
+            leading=14,
+            textColor=C_PLACEHOLDER_TEXT,
+            alignment=TA_CENTER,
+        ),
+    )
+    t = Table([[text]], colWidths=[140 * mm])
+    t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), C_PLACEHOLDER_BG),
+                ("BOX", (0, 0), (-1, -1), 0.75, C_PLACEHOLDER_BORDER),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 16),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 16),
+            ]
+        )
+    )
+    t.hAlign = "CENTER"
+    return t
+
+
+def make_image_flowable(url: str, alt: str):
+    """
+    Unduh & bungkus gambar jadi flowable reportlab (proporsi dijaga).
+    Gagal → placeholder. Return (flowable, caption_alt_or_None).
+    """
+    data = download_image(url)
+    if not data:
+        return _placeholder_flowable(alt), None
+    try:
+        reader = ImageReader(io.BytesIO(data))
+        iw, ih = reader.getSize()
+        if not iw or not ih:
+            return _placeholder_flowable(alt), None
+        # Skala agar muat (lebar ≤ 150mm, tinggi ≤ 95mm), jangan perbesar.
+        scale = min((150 * mm) / iw, (95 * mm) / ih, 1.0)
+        w, h = iw * scale, ih * scale
+        if w < 30 * mm or h < 18 * mm:
+            # Terlalu kecil untuk ditampilkan → placeholder.
+            return _placeholder_flowable(alt), None
+        img = RLImage(io.BytesIO(data), width=w, height=h)
+        img.hAlign = "CENTER"
+        return img, (alt or "Ilustrasi").strip()[:120] or "Ilustrasi"
+    except Exception:
+        return _placeholder_flowable(alt), None
+
+
 # ─── Bangun PDF ───────────────────────────────────────────────────────
 def build_pdf(data: dict) -> bytes:
     title = (data.get("title") or "Rangkuman Materi").strip()
@@ -170,6 +264,19 @@ def build_pdf(data: dict) -> bytes:
         and isinstance(c.get("title"), str)
         and isinstance(c.get("content"), str)
     ]
+    # Gambar per bab: {chapterIndex: {"url","alt"}}
+    img_by_chapter = {}
+    for im in data.get("images") or []:
+        if (
+            isinstance(im, dict)
+            and isinstance(im.get("chapterIndex"), int)
+            and isinstance(im.get("url"), str)
+            and im["url"].startswith(("http://", "https://"))
+        ):
+            img_by_chapter.setdefault(
+                im["chapterIndex"], {"url": im["url"], "alt": str(im.get("alt") or "Ilustrasi")}
+            )
+
     date_str = ""
     try:
         dt = datetime.fromisoformat(data.get("createdAt", "").replace("Z", "+00:00"))
@@ -229,6 +336,16 @@ def build_pdf(data: dict) -> bytes:
     )
     st_toc = ParagraphStyle(
         "Toc", fontName=_FONT, fontSize=12, leading=18, textColor=C_DARK
+    )
+    st_caption = ParagraphStyle(
+        "Caption",
+        fontName=_FONT_ITALIC,
+        fontSize=9,
+        leading=12,
+        textColor=C_PLACEHOLDER_TEXT,
+        alignment=TA_CENTER,
+        spaceBefore=4,
+        spaceAfter=8,
     )
 
     story = []
@@ -298,6 +415,19 @@ def build_pdf(data: dict) -> bytes:
         story.append(Spacer(1, 4))
         story.append(Paragraph(c["title"], st_h1))
         story.append(Spacer(1, 8))
+
+        # Gambar untuk bab ini (bila ada) — unduh + embed realtime.
+        im = img_by_chapter.get(i)
+        if im:
+            progress(pct, f"Mengunduh gambar untuk BAB {i + 1}...")
+            flow, caption = make_image_flowable(im["url"], im.get("alt", "Ilustrasi"))
+            story.append(Spacer(1, 4))
+            story.append(flow)
+            if caption:
+                story.append(Paragraph(caption, st_caption))
+            else:
+                story.append(Spacer(1, 6))
+            progress(pct, f"Gambar BAB {i + 1} disisipkan.")
 
         paragraphs = markdown_to_paragraphs(c.get("content") or "")
         if not paragraphs:

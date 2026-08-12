@@ -5,10 +5,12 @@
  *  1. Node membaca catatan + menyusun struktur dokumen.
  *  2. AI MERAPIKAN konten (lib/pdfEnrich.ts) — markdown mentah diubah menjadi
  *     paragraf dokumen rapi (tanpa emoji/gambar/tabel mentah).
- *  3. Node spawn Python (backend/scripts/generate_pdf.py, reportlab) —
- *     skrip mencetak PROGRESS|<pct>|<pesan> per langkah → diteruskan ke SSE.
- *  4. Skrip mengirim DONE|<base64-pdf> → dikirim ke klien sebagai event done.
- *  5. Fallback: bila Python/reportlab tidak tersedia, pakai pdfkit (Node)
+ *  3. (opsional) Bila ?images=1 — kumpulkan gambar (embedded + Firecrawl dari
+ *     halaman sumber), pilih gambar relevan per bab (lib/pdfImages.ts).
+ *  4. Node spawn Python (backend/scripts/generate_pdf.py, reportlab) — skrip
+ *     mencetak PROGRESS|<pct>|<pesan> per langkah → diteruskan ke SSE.
+ *  5. Skrip mengirim DONE|<base64-pdf> → dikirim ke klien sebagai event done.
+ *  6. Fallback: bila Python/reportlab tidak tersedia, pakai pdfkit (Node)
  *     dengan progress bertahap, lalu kirim base64 yang sama.
  *
  * Protokol SSE (data JSON):
@@ -23,13 +25,17 @@ import fs from "fs";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { buildNotePdfBuffer } from "@/lib/notePdf";
 import { enrichNoteForPdf } from "@/lib/pdfEnrich";
+import {
+  collectImagesForPdf,
+  assignImagesToChapters,
+  type ChapterImageMap,
+} from "@/lib/pdfImages";
 import { recordActivity } from "@/lib/progress-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Enrich AI bertahap + render Python: beri ruang cukup (bisa > 60s untuk
-// catatan dengan banyak bab).
-export const maxDuration = 180;
+// Enrich AI bertahap + scrape gambar + render Python: beri ruang cukup.
+export const maxDuration = 240;
 
 const encoder = new TextEncoder();
 
@@ -69,18 +75,27 @@ function findPythonScript(): string | null {
   return pythonScriptCache;
 }
 
-/** Hitung tahap alur kerja dari persen (0-100). */
+/**
+ * Hitung tahap alur kerja dari persen (0-100).
+ * 1 membaca · 2 AI menyusun · 3 mengumpulkan gambar · 4 Python ·
+ * 5 menulis BAB · 6 merender · 7 selesai.
+ */
 function stepForPercent(percent: number): number {
-  if (percent < 8) return 1; // membaca & menyusun struktur
-  if (percent < 30) return 2; // AI merapikan konten
-  if (percent < 36) return 3; // python berjalan
-  if (percent < 92) return 4; // menulis BAB
-  if (percent < 100) return 5; // merender & finalisasi
-  return 6; // selesai
+  if (percent < 8) return 1;
+  if (percent < 30) return 2;
+  if (percent < 40) return 3; // mengumpulkan gambar (dilewati bila ?images=0)
+  if (percent < 56) return 4; // Python berjalan
+  if (percent < 93) return 5; // menulis BAB
+  if (percent < 100) return 6; // merender & finalisasi
+  return 7; // selesai
 }
 
 /** Kirim event progress SSE. */
-function emitProgress(controller: ReadableStreamDefaultController<Uint8Array>, percent: number, message: string) {
+function emitProgress(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  percent: number,
+  message: string
+) {
   const payload = JSON.stringify({
     phase: "progress",
     percent: Math.max(0, Math.min(100, Math.round(percent))),
@@ -101,6 +116,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const userId = String(req.nextUrl.searchParams.get("userId") ?? "");
+  const includeImages = req.nextUrl.searchParams.get("images") === "1";
 
   // Pramuat data catatan di luar stream supaya error 404/500 bisa
   // langsung dibalas sebagai JSON biasa.
@@ -109,7 +125,10 @@ export async function GET(
     return Response.json({ error: "Catatan tidak ditemukan." }, { status: 404 });
   }
   const note = found.note;
-  const title = (note.title || "Rangkuman Materi").replace(/[^\w\- ]+/g, "").trim().slice(0, 40) || "rangkuman";
+  const title = (note.title || "Rangkuman Materi")
+    .replace(/[^\w\- ]+/g, "")
+    .trim()
+    .slice(0, 40) || "rangkuman";
   const filename = `${title}.pdf`;
 
   const stream = new ReadableStream<Uint8Array>({
@@ -122,19 +141,49 @@ export async function GET(
         emitProgress(controller, 6, "Menyusun struktur dokumen (sampul, pengantar, BAB)...");
 
         // ── Tahap 2: AI merapikan konten (bukan markdown mentah) ──
-        // Mulai di 8% agar pesan "Merapikan konten dengan AI..." muncul di
-        // step 2 (bukan tersamar di step 1).
         const enriched = await enrichNoteForPdf(note, (pct, msg) =>
           emitProgress(controller, 8 + pct * 0.22, msg)
         );
-        emitProgress(controller, 30, "Konten siap — menyusun dokumen...");
+        emitProgress(controller, 29, "Konten siap — menyusun dokumen...");
+
+        // ── Tahap 2b (opsional): kumpulkan & pilih gambar ──
+        let chapterImages: ChapterImageMap[] = [];
+        if (includeImages) {
+          try {
+            emitProgress(controller, 31, "Mengumpulkan gambar ilustrasi...");
+            const images = await collectImagesForPdf(note, (pct, msg) =>
+              emitProgress(controller, 31 + pct * 0.07, msg)
+            );
+            if (images.length > 0) {
+              emitProgress(controller, 36, "Memilih gambar untuk tiap bab...");
+              chapterImages = assignImagesToChapters(
+                enriched.chapters,
+                images,
+                (pct, msg) => emitProgress(controller, 36 + pct * 0.03, msg)
+              );
+            }
+            emitProgress(
+              controller,
+              39,
+              chapterImages.length > 0
+                ? `Gambar siap (${chapterImages.length} bab) — mulai mencetak...`
+                : "Tanpa gambar tersedia — melanjutkan mencetak..."
+            );
+          } catch (e) {
+            console.warn("[pdf/stream] Tahap gambar dilewati:", e);
+            emitProgress(controller, 40, "Gambar dilewati — melanjutkan mencetak...");
+          }
+        }
+
+        // Payload akhir: konten dokumen + gambar pilihan per bab.
+        const payload = { ...enriched, images: chapterImages };
 
         // ── Tahap 3: Python (reportlab) ──
         const pyBin = findPython();
         const pyScript = findPythonScript();
 
         if (pyBin && pyScript) {
-          emitProgress(controller, 32, "Menjalankan mesin Python (reportlab)...");
+          emitProgress(controller, 42, "Menjalankan mesin Python (reportlab)...");
           const pdfBase64 = await new Promise<string>((resolve, reject) => {
             const child = spawn(pyBin, [pyScript], {
               stdio: ["pipe", "pipe", "pipe"],
@@ -150,7 +199,7 @@ export async function GET(
                 child.kill();
                 reject(new Error("Waktu tunggu Python habis."));
               }
-            }, 45_000);
+            }, 60_000);
 
             child.stdout.on("data", (chunk: Buffer) => {
               const text = chunk.toString("utf8");
@@ -165,9 +214,13 @@ export async function GET(
                   const [, pct, ...msgParts] = trimmed.split("|");
                   const p = Number(pct);
                   if (Number.isFinite(p)) {
-                    // Peta progress python (0-100) ke rentang 32-92 global
-                    // (setelah tahap AI merapikan konten).
-                    emitProgress(controller, 32 + p * 0.6, msgParts.join("|") || "Menulis...");
+                    // Peta progress python (0-100) ke rentang 42-98 global
+                    // (setelah tahap AI + gambar).
+                    emitProgress(
+                      controller,
+                      42 + p * 0.56,
+                      msgParts.join("|") || "Menulis..."
+                    );
                   }
                 } else if (trimmed.startsWith("DONE|")) {
                   resolved = true;
@@ -190,17 +243,21 @@ export async function GET(
               if (!resolved) {
                 resolved = true;
                 clearTimeout(timeout);
-                reject(new Error(errOut.trim() || `Python keluar dengan kode ${code}.`));
+                reject(
+                  new Error(errOut.trim() || `Python keluar dengan kode ${code}.`)
+                );
               }
             });
 
-            child.stdin.write(JSON.stringify(enriched));
+            child.stdin.write(JSON.stringify(payload));
             child.stdin.end();
           });
 
           emitProgress(controller, 98, "PDF selesai — menyiapkan unduhan...");
           controller.enqueue(
-            encoder.encode(`event: done\ndata: ${JSON.stringify({ base64: pdfBase64, filename })}\n\n`)
+            encoder.encode(
+              `event: done\ndata: ${JSON.stringify({ base64: pdfBase64, filename })}\n\n`
+            )
           );
           controller.close();
           success = true;
@@ -209,27 +266,30 @@ export async function GET(
 
         // ── Fallback: pdfkit (Node) tanpa Python ──
         if (!pyBin) {
-          emitProgress(controller, 34, "Python tidak ditemukan — memakai mesin Node (pdfkit)...");
+          emitProgress(controller, 44, "Python tidak ditemukan — memakai mesin Node (pdfkit)...");
         } else {
-          emitProgress(controller, 34, "Skrip Python tidak ditemukan — memakai mesin Node (pdfkit)...");
+          emitProgress(controller, 44, "Skrip Python tidak ditemukan — memakai mesin Node (pdfkit)...");
         }
         const stages: [number, string][] = [
-          [40, "Menyusun halaman sampul..."],
-          [50, "Menulis kata pengantar..."],
-          [60, "Menyusun daftar isi..."],
-          [80, "Menulis BAB..."],
-          [92, "Merender dokumen..."],
+          [50, "Menyusun halaman sampul..."],
+          [58, "Menulis kata pengantar..."],
+          [64, "Menyusun daftar isi..."],
+          [74, "Menulis BAB..."],
+          [90, "Merender dokumen..."],
         ];
         for (const [pct, msg] of stages) {
           emitProgress(controller, pct, msg);
           // Jeda singkat agar alur terasa bertahap.
           await new Promise((r) => setTimeout(r, 250));
         }
-        const pdfBuffer = await buildNotePdfBuffer(enriched);
+        const pdfBuffer = await buildNotePdfBuffer(payload);
         emitProgress(controller, 98, "PDF selesai — menyiapkan unduhan...");
         controller.enqueue(
           encoder.encode(
-            `event: done\ndata: ${JSON.stringify({ base64: pdfBuffer.toString("base64"), filename })}\n\n`
+            `event: done\ndata: ${JSON.stringify({
+              base64: pdfBuffer.toString("base64"),
+              filename,
+            })}\n\n`
           )
         );
         controller.close();
