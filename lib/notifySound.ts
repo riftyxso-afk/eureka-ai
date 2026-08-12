@@ -2,9 +2,15 @@
  * Bunyi lonceng saat catatan selesai dirangkum di latar belakang.
  * Disintesis via Web Audio API (tidak butuh file aset) — nada "ding-dong"
  * yang lembut. Gagal diabaikan (suara murni opsional).
+ *
+ * Catatan iOS Safari & Android: AudioContext hanya bisa aktif setelah gestur
+ * pengguna pertama (tap). Karena itu audio "dibuka kunci" pada gestur pertama
+ * (pointerdown/keydown/touchend) — supaya suara tetap berbunyi walau dipicu
+ * dari job latar belakang (bukan dari tap langsung).
  */
 
 let audioCtx: AudioContext | null = null;
+let unlocked = false;
 
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -20,6 +26,43 @@ function getCtx(): AudioContext | null {
   } catch {
     return null;
   }
+}
+
+/** Buka kunci audio — WAJIB dipanggil dari dalam gestur pengguna (iOS/Android). */
+function unlockAudio(): void {
+  const ctx = getCtx();
+  if (!ctx || unlocked) return;
+  if (ctx.state === "suspended") {
+    void ctx
+      .resume()
+      .then(() => {
+        unlocked = true;
+        // Mainkan buffer senyap agar iOS benar-benar mengizinkan audio
+        // berikutnya diputar tanpa gestur.
+        try {
+          const buf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(ctx.destination);
+          src.start(0);
+        } catch {
+          // abaikan — unlock tetap tercatat
+        }
+      })
+      .catch(() => {
+        // gagal — coba lagi pada gestur berikutnya
+      });
+  } else {
+    unlocked = true;
+  }
+}
+
+// Pasang sekali: gestur pertama pengguna membuka kunci audio di semua browser.
+if (typeof window !== "undefined") {
+  const onGesture = () => unlockAudio();
+  window.addEventListener("pointerdown", onGesture, { passive: true });
+  window.addEventListener("keydown", onGesture, { passive: true });
+  window.addEventListener("touchend", onGesture, { passive: true });
 }
 
 function playTone(

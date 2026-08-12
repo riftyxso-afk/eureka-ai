@@ -885,7 +885,7 @@ export default function NoteDetailPage() {
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2">
-          <div className="card-clay whitespace-nowrap px-5 py-3 text-sm font-extrabold text-clay-dark shadow-clay">
+          <div className="card-clay max-w-[calc(100vw-2rem)] whitespace-normal px-5 py-3 text-sm font-extrabold text-clay-dark shadow-clay">
             {toast}
           </div>
         </div>

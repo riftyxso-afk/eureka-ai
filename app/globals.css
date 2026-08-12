@@ -15,7 +15,7 @@
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: clip;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
     text-rendering: optimizeLegibility;
