@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
     const results = await searchChunks(
       embedding,
       Number(body?.topK) || 3,
-      body?.noteId ? String(body.noteId) : undefined
+      body?.noteId ? String(body.noteId) : undefined,
+      body?.userId ? String(body.userId) : undefined
     );
 
     return NextResponse.json({ results });

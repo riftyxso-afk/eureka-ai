@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CornerUpLeft, MessageCircle, Send, X } from "lucide-react";
 import { getUserId, getUserName } from "@/lib/identity";
+import { postProgress } from "@/lib/levelUp";
 
 interface ChatMessage {
   id: string;
@@ -239,16 +240,12 @@ export default function ChatPanel({
   /** Catat aktivitas chat (+2 XP) ke progres. */
   const trackActivity = () => {
     const userId = getUserId();
-    fetch("/api/progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "activity",
-        userId,
-        xp: 2,
-        label: "Diskusi di catatan",
-      }),
-    }).catch(() => {});
+    void postProgress({
+      action: "activity",
+      userId,
+      xp: 2,
+      label: "Diskusi di catatan",
+    });
   };
 
   return (

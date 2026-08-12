@@ -6,11 +6,15 @@ import {
   ArrowRight,
   BookOpen,
   Brain,
+  Check,
+  Crown,
   FileText,
   Flame,
   MessageCircleQuestion,
+  Rocket,
   Sparkles,
   Trophy,
+  Upload,
   Users,
 } from "lucide-react";
 import AvatarClay from "@/components/ui/AvatarClay";
@@ -51,17 +55,17 @@ const FEATURES = [
 
 const STEPS = [
   {
-    icon: "📥",
+    icon: Upload,
     title: "Masukkan Materi",
     desc: "Tempel link YouTube/web atau unggah PDF/DOCX — apa saja sumber belajarmu.",
   },
   {
-    icon: "✨",
+    icon: Sparkles,
     title: "AI Bikin Catatan",
     desc: "Materi diubah jadi bab-bab rapi, ringkasan, poin penting, kuis, dan flashcards.",
   },
   {
-    icon: "🧠",
+    icon: Brain,
     title: "Belajar sampai Eureka!",
     desc: "Tanya AI per bab, kerjain kuis, dan ulangi kartu hafalan sampai paham banget.",
   },
@@ -96,25 +100,26 @@ export default function LandingPage() {
               Harga
             </a>
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {loggedIn ? (
               <Link
                 href="/dashboard"
-                className="btn-clay-primary !min-h-[44px] !px-5 !py-2 text-sm"
+                className="btn-clay-primary !min-h-[44px] !px-3 !py-2 text-sm sm:!px-5"
               >
-                Buka Dashboard <ArrowRight size={16} className="ml-2" />
+                Buka Dashboard{" "}
+                <ArrowRight size={16} className="ml-1 hidden sm:inline" />
               </Link>
             ) : (
               <>
                 <Link
                   href="/login"
-                  className="btn-clay-ghost !min-h-[44px] !px-5 !py-2 text-sm"
+                  className="btn-clay-ghost !min-h-[44px] !px-3 !py-2 text-sm sm:!px-5"
                 >
                   Masuk
                 </Link>
                 <Link
                   href="/register"
-                  className="btn-clay-primary !min-h-[44px] !px-5 !py-2 text-sm"
+                  className="btn-clay-primary !min-h-[44px] !px-3 !py-2 text-sm sm:!px-5"
                 >
                   Daftar Gratis
                 </Link>
@@ -256,8 +261,8 @@ export default function LandingPage() {
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {STEPS.map((s, i) => (
               <div key={s.title} className="card-clay flex flex-col items-center !p-8 text-center">
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-clay-beige text-3xl shadow-clay-inset">
-                  {s.icon}
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-clay-beige text-clay-primary shadow-clay-inset">
+                  <s.icon size={26} />
                 </span>
                 <span className="mt-4 rounded-clay-full bg-clay-primary px-3 py-1 text-xs font-extrabold text-white">
                   Langkah {i + 1}
@@ -324,10 +329,10 @@ export default function LandingPage() {
                 Rp 0<span className="text-lg font-bold text-clay-muted">/bulan</span>
               </p>
               <ul className="mt-6 flex-1 space-y-3 text-sm font-semibold text-clay-muted">
-                <li>✅ Chat AI Socratic (dengan batas harian)</li>
-                <li>✅ 3 catatan otomatis dari materi</li>
-                <li>✅ Kuis & flashcards dasar</li>
-                <li>✅ Streak, XP & leaderboard</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Chat AI Socratic (dengan batas harian)</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> 3 catatan otomatis dari materi</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Kuis & flashcards dasar</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Streak, XP & leaderboard</li>
               </ul>
               <Link href="/register" className="btn-clay-ghost mt-8 !min-h-[52px] !px-5 text-sm">
                 Mulai Gratis
@@ -345,14 +350,14 @@ export default function LandingPage() {
                 <span className="text-lg font-bold text-clay-muted">/bulan</span>
               </p>
               <ul className="mt-6 flex-1 space-y-3 text-sm font-semibold text-clay-muted">
-                <li>✅ Semua fitur Gratis</li>
-                <li>✅ Chat AI tanpa batas</li>
-                <li>✅ Catatan otomatis tanpa batas</li>
-                <li>✅ Kolaborasi real-time dengan teman</li>
-                <li>✅ Akses fitur baru lebih dulu</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Semua fitur Gratis</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Chat AI tanpa batas</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Catatan otomatis tanpa batas</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Kolaborasi real-time dengan teman</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Akses fitur baru lebih dulu</li>
               </ul>
-              <Link href="/register" className="btn-clay-primary mt-8 !min-h-[52px] !px-5 text-sm">
-                👑 Langganan Pro
+              <Link href="/register" className="btn-clay-primary mt-8 flex !min-h-[52px] items-center justify-center !px-5 text-sm">
+                <Crown size={16} className="mr-2" /> Langganan Pro
               </Link>
             </div>
           </div>
@@ -363,7 +368,9 @@ export default function LandingPage() {
       <section className="px-4 pb-20 pt-4 sm:px-6">
         <div className="mx-auto max-w-4xl">
           <div className="card-clay flex flex-col items-center border-3 border-clay-primary !p-10 text-center shadow-clay-lg">
-            <span className="text-5xl">🚀</span>
+            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
+              <Rocket size={40} />
+            </span>
             <h2 className="mt-4 text-3xl font-extrabold text-clay-dark sm:text-4xl">
               Siap mengalami momen Eureka pertamamu?
             </h2>

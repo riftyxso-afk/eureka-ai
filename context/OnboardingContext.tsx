@@ -13,7 +13,10 @@ const STORAGE_KEY = "eureka_onboarding";
 
 const DEFAULT_DATA: OnboardingData = {
   name: "",
+  username: "",
+  education: "",
   grade: "",
+  psyAnswers: {},
   weakTopic: "",
   learningHabit: "",
   peakHour: "",
@@ -72,6 +75,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const isComplete =
     Boolean(data.name) &&
     Boolean(data.grade) &&
+    Object.keys(data.psyAnswers ?? {}).length > 0 &&
     Boolean(data.weakTopic) &&
     Boolean(data.learningHabit) &&
     Boolean(data.peakHour);

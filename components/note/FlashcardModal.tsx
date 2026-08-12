@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Loader2, RotateCw, X } from "lucide-react";
 import { getUserId } from "@/lib/identity";
+import { postProgress } from "@/lib/levelUp";
 
 interface Flashcard {
   id: number;
@@ -42,20 +43,16 @@ export default function FlashcardModal({
       }
       setCards(data.cards ?? []);
       if (Array.isArray(data.cards) && data.cards.length > 0) {
-        fetch("/api/progress", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "cards_add",
-            userId: getUserId(),
-            noteId,
-            xp: 20,
-            cards: data.cards.map((c: { front: string; back: string }) => ({
-              front: c.front,
-              back: c.back,
-            })),
-          }),
-        }).catch(() => {});
+        void postProgress({
+          action: "cards_add",
+          userId: getUserId(),
+          noteId,
+          xp: 20,
+          cards: data.cards.map((c: { front: string; back: string }) => ({
+            front: c.front,
+            back: c.back,
+          })),
+        });
       }
     } catch {
       setError("Gagal terhubung ke server.");
@@ -88,7 +85,7 @@ export default function FlashcardModal({
           </button>
         </div>
 
-        {!cards && (
+        {!cards && !generating && (
           <div className="space-y-3 sm:space-y-4">
             <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
               Ubah materi catatan menjadi kartu hafalan untuk belajar cepat! 🃏
@@ -112,6 +109,37 @@ export default function FlashcardModal({
                 {error}
               </p>
             )}
+          </div>
+        )}
+
+        {!cards && generating && (
+          <div className="space-y-3 sm:space-y-4" aria-live="polite">
+            <div className="[perspective:1400px] overflow-hidden">
+              <motion.div
+                animate={{
+                  x: [90, 0, -90],
+                  rotateY: [0, 180, 180],
+                  opacity: [0, 1, 1, 0],
+                }}
+                transition={{
+                  duration: 2.2,
+                  times: [0, 0.3, 0.7, 1],
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="card-clay flex min-h-[200px] sm:min-h-[220px] flex-col items-center justify-center !p-4 sm:!p-6 text-center"
+              >
+                <div className="h-3 w-20 animate-pulse rounded-full bg-clay-beige" />
+                <div className="mt-4 h-4 w-3/4 animate-pulse rounded-full bg-clay-beige" />
+                <div className="mt-2 h-4 w-1/2 animate-pulse rounded-full bg-clay-beige" />
+                <div className="mt-2 h-4 w-2/3 animate-pulse rounded-full bg-clay-beige" />
+                <div className="mt-5 h-3 w-28 animate-pulse rounded-full bg-clay-beige" />
+              </motion.div>
+            </div>
+            <p className="flex items-center justify-center gap-2 text-center text-xs font-bold text-clay-muted">
+              <Loader2 size={14} className="animate-spin" />
+              AI sedang menyusun kartu hafalanmu...
+            </p>
           </div>
         )}
 
@@ -178,16 +206,12 @@ export default function FlashcardModal({
                   if (index === cards!.length - 1) {
                     setIndex(0);
                     notify("Selesai! Ulangi dari awal 🔁");
-                    fetch("/api/progress", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        action: "cards_review_all",
-                        userId: getUserId(),
-                        noteId,
-                        xp: 10,
-                      }),
-                    }).catch(() => {});
+                    void postProgress({
+                      action: "cards_review_all",
+                      userId: getUserId(),
+                      noteId,
+                      xp: 10,
+                    });
                   } else {
                     setIndex((i) => i + 1);
                   }

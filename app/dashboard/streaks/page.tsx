@@ -56,7 +56,7 @@ export default function StreaksPage() {
       const userId = getUserId();
       const [progressRes, notesRes] = await Promise.all([
         fetch(`/api/progress?userId=${encodeURIComponent(userId)}`),
-        fetch("/api/notes"),
+        fetch(`/api/notes?userId=${encodeURIComponent(userId)}`),
       ]);
       if (progressRes.ok) {
         const payload = await progressRes.json();

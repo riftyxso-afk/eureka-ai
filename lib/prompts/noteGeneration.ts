@@ -57,6 +57,24 @@ export interface NotePreferences {
   studyMode?: "ringkas" | "standar" | "lengkap";
   gayaPenulisan?: string;
   bahasa?: string;
+  /** Jumlah bab yang diminta user (1-6). */
+  chapterCount?: number;
+}
+
+export const MAX_CHAPTERS_ALLOWED = 6;
+
+/** Clamp jumlah bab ke rentang yang diizinkan (1-6); undefined bila tidak diminta. */
+export function clampChapterCount(value: unknown): number | undefined {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return Math.min(MAX_CHAPTERS_ALLOWED, Math.max(1, Math.floor(n)));
+}
+
+/** Kalimat instruksi jumlah bab untuk prompt AI (bila user memilih jumlah). */
+export function buildChapterCountRule(prefs: NotePreferences): string {
+  const count = clampChapterCount(prefs.chapterCount);
+  if (!count) return "";
+  return `JUMLAH BAB: buat TEPAT ${count} bab — gabungkan topik bila perlu agar pas ${count} bab. Batas maksimal sistem adalah ${MAX_CHAPTERS_ALLOWED} bab.`;
 }
 
 export const STUDY_MODE_RULES: Record<string, string> = {

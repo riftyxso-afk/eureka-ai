@@ -3,21 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  Loader2,
-  Lock,
-  Mail,
-  User,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail, Rocket, User } from "lucide-react";
 import AvatarClay from "@/components/ui/AvatarClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
 import { getUserId } from "@/lib/identity";
-import { isLoggedIn, registerUser } from "@/lib/auth";
+import { isLoggedIn, needsOnboarding, registerUser } from "@/lib/auth";
 
 const REQUIREMENTS = [
   { min: 2, label: "Nama minimal 2 huruf" },
@@ -37,7 +29,10 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (isLoggedIn()) {
-      router.replace("/dashboard");
+      (async () => {
+        const needOnboarding = await needsOnboarding().catch(() => false);
+        router.replace(needOnboarding ? "/onboarding" : "/dashboard");
+      })();
       return;
     }
     setChecked(true);
@@ -185,7 +180,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-clay-muted transition-colors hover:text-clay-primary"
+                  className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-clay-muted transition-colors hover:text-clay-primary"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>

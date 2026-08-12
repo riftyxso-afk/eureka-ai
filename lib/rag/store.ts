@@ -4,7 +4,7 @@
  */
 
 import { db } from '../supabase/admin';
-import type { Note } from '../types';
+import type { Note, NoteChapter } from '../types';
 
 interface StoredChunk {
   id: string;
@@ -55,6 +55,9 @@ export async function saveNoteWithChunks(
 ): Promise<Note> {
   try {
     // First, insert the note
+    if (!note.user_id) {
+      throw new Error("user_id wajib diisi agar catatan tersimpan.");
+    }
     const { data: savedNote, error: noteError } = await db()
       .from('notes')
       .insert({
@@ -62,7 +65,8 @@ export async function saveNoteWithChunks(
         title: note.title,
         summary: note.summary,
         subject: note.subject ?? null,
-        user_id: note.user_id ?? 'anonymous',
+        user_id: note.user_id,
+        chapters: note.chapters ?? [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -76,7 +80,10 @@ export async function saveNoteWithChunks(
       note_id: note.id,
       chapter_id: chapterId,
       text: chunk.text.trim(),
-      embedding: chunk.embedding ?? null,
+      // pgvector butuh format string "[0.1,0.2,...]"
+      embedding: chunk.embedding
+        ? `[${chunk.embedding.map((n) => n.toFixed(6)).join(",")}]`
+        : null,
     }));
 
     if (chunkRecords.length > 0) {
@@ -95,14 +102,20 @@ export async function saveNoteWithChunks(
 }
 
 /**
- * List all notes for a user
+ * List notes for a user (isolasi per-user: tanpa userId = catatan semua user)
  */
-export async function listNotes(): Promise<Note[]> {
+export async function listNotes(userId?: string): Promise<Note[]> {
   try {
-    const { data, error } = await db()
+    let query = db()
       .from('notes')
       .select('*')
       .order('updated_at', { ascending: false });
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     
@@ -180,6 +193,7 @@ export async function getNoteWithChunks(
         title: note.title,
         summary: note.summary,
         subject: note.subject,
+        chapters: note.chapters ?? [],
         createdAt: note.created_at,
         updatedAt: note.updated_at,
         chunks: chunks ?? [],
@@ -205,6 +219,68 @@ export async function deleteNote(noteId: string): Promise<void> {
     if (error) throw error;
   } catch (error) {
     console.error('[deleteNote] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update chapters JSONB + timestamp untuk note yang sudah ada
+ * (dipakai fitur regenerate bab/catatan).
+ */
+export async function updateNoteChapters(
+  noteId: string,
+  chapters: NoteChapter[]
+): Promise<void> {
+  try {
+    const { error } = await db()
+      .from('notes')
+      .update({
+        chapters,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', noteId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('[updateNoteChapters] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Hapus semua chunks note lalu buat ulang dari konten bab (RAG tetap sinkron
+ * setelah regenerate). Embedding dipasok pemanggil agar satu batch embedding.
+ */
+export async function replaceChunksForNote(
+  noteId: string,
+  chunks: {
+    chapterId: number;
+    text: string;
+    embedding: number[];
+  }[]
+): Promise<void> {
+  try {
+    const { error: delError } = await db()
+      .from('chunks')
+      .delete()
+      .eq('note_id', noteId);
+
+    if (delError) throw delError;
+
+    if (chunks.length === 0) return;
+
+    const records = chunks.map((c) => ({
+      note_id: noteId,
+      chapter_id: c.chapterId,
+      text: c.text.trim(),
+      // pgvector butuh format string "[0.1,0.2,...]"
+      embedding: `[${c.embedding.map((n) => n.toFixed(6)).join(",")}]`,
+    }));
+
+    const { error: insError } = await db().from('chunks').insert(records);
+    if (insError) throw insError;
+  } catch (error) {
+    console.error('[replaceChunksForNote] Error:', error);
     throw error;
   }
 }
@@ -245,15 +321,17 @@ export async function updateChunksEmbeddings(noteId: string, embeddings: number[
 export async function searchChunks(
   queryEmbedding: number[],
   topK: number = 3,
-  noteId?: string
+  noteId?: string,
+  userId?: string
 ): Promise<NoteSearchResult[]> {
   try {
     // Use Supabase RPC function match_chunks
     const { data, error } = await db().rpc('match_chunks', {
       query_embedding: queryEmbedding as number[],
-      note_id: noteId,
+      p_note_id: noteId,
       similarity_threshold: 0.78,
       top_k: topK,
+      filter_user_id: userId ?? null,
     });
 
     if (error || !data || data.length === 0) {

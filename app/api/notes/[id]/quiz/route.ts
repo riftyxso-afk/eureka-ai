@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getNoteWithChunks } from "@/lib/rag/store";
-import { generateQuiz, getQuiz } from "@/lib/studyTools";
+import { generateQuiz } from "@/lib/studyTools";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -16,12 +16,6 @@ export async function POST(
       count?: number;
     } | null;
     const count = Math.min(Math.max(Number(body?.count) || 5, 3), 10);
-
-    // Kuis otomatis (mode Standar/Lengkap) sudah dibuat saat catatan dibuat.
-    const saved = await getQuiz(id);
-    if (saved.length > 0) {
-      return NextResponse.json({ questions: saved, cached: true });
-    }
 
     const found = await getNoteWithChunks(id);
     if (!found) {

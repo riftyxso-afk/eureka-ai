@@ -90,7 +90,7 @@ export function notifyBrowserNoteReady(noteId: string, noteTitle: string): void 
 interface ToastState {
   title: string;
   message: string;
-  variant: "success" | "error";
+  variant: "success" | "error" | "info";
   link?: string;
   linkLabel?: string;
 }
@@ -100,6 +100,7 @@ export interface RunningJobInfo {
   id: string;
   percent: number;
   message: string;
+  cancelled?: boolean;
 }
 
 interface JobWatcherContextValue {
@@ -168,7 +169,22 @@ export function JobWatcherProvider({
         );
         for (let i = 0; i < results.length; i++) {
           const res = results[i];
-          if (res.status === "rejected" || !res.value.ok) continue;
+          if (res.status === "rejected" || !res.value.ok) {
+            // Job tidak dikenal (server restart / sudah kedaluwarsa) →
+            // berhenti memantau dan bersihkan, agar tidak nge-poll 404 terus.
+            if (res.status === "fulfilled" && res.value.status === 404) {
+              const lost = ids[i];
+              removeActiveJobId(lost);
+              setRunningJobs((prev) => prev.filter((j) => j.id !== lost));
+              showToast({
+                title: "Proses terhenti",
+                message:
+                  "Server sempat restart, jadi pembuatan catatan tidak bisa dilanjutkan. Coba buat lagi ya.",
+                variant: "error",
+              });
+            }
+            continue;
+          }
           const data = (await res.value.json().catch(() => null)) as {
             job?: {
               id: string;
@@ -178,6 +194,7 @@ export function JobWatcherProvider({
               noteId?: string;
               noteTitle?: string;
               error?: string;
+              cancelled?: boolean;
             };
           } | null;
           const job = data?.job;
@@ -204,11 +221,19 @@ export function JobWatcherProvider({
           } else if (job.status === "error") {
             removeActiveJobId(job.id);
             setRunningJobs((prev) => prev.filter((j) => j.id !== job.id));
-            showToast({
-              title: "Gagal merangkum materi",
-              message: job.error || "Terjadi kesalahan. Coba buat catatan lagi.",
-              variant: "error",
-            });
+            if (job.cancelled) {
+              showToast({
+                title: "Pembuatan catatan dibatalkan",
+                message: "Proses berhenti. Kamu bisa buat catatan lagi kapan saja.",
+                variant: "info",
+              });
+            } else {
+              showToast({
+                title: "Gagal merangkum materi",
+                message: job.error || "Terjadi kesalahan. Coba buat catatan lagi.",
+                variant: "error",
+              });
+            }
           } else {
             // Masih berjalan → simpan status realtime untuk popup progres
             setRunningJobs((prev) => {
@@ -219,6 +244,7 @@ export function JobWatcherProvider({
                   id: job.id,
                   percent: Math.max(0, Math.min(100, Math.round(job.percent))),
                   message: job.message || "Memproses materi...",
+                  cancelled: job.cancelled,
                 },
               ];
             });

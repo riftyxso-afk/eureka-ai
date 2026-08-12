@@ -125,7 +125,7 @@ export const NotificationBell = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-3 w-[320px] rounded-clay border-3 border-clay-borderLight bg-white shadow-clay-lg">
+        <div className="absolute right-0 z-50 mt-3 w-[320px] max-w-[calc(100vw-2rem)] rounded-clay border-3 border-clay-borderLight bg-white shadow-clay-lg">
           <div className="flex items-center justify-between border-b-2 border-clay-shadow/30 px-4 py-3">
             <p className="text-sm font-extrabold text-clay-dark">
               Notifikasi {unread > 0 && `· ${unread} baru`}

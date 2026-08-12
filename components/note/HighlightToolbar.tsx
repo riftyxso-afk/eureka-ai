@@ -64,6 +64,14 @@ export default function HighlightToolbar({
     };
   }, []);
 
+  // Sembunyikan toolbar saat halaman digulir agar tidak melayang dari teks.
+  useEffect(() => {
+    const onScroll = () => setState(null);
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    return () =>
+      document.removeEventListener("scroll", onScroll, { capture: true });
+  }, []);
+
   const clear = () => {
     window.getSelection()?.removeAllRanges();
     setState(null);
@@ -135,15 +143,16 @@ export default function HighlightToolbar({
   if (!state) return null;
 
   // Calculate position with viewport bounds check for mobile
+  const toolbarHeight = 60; // Approximate toolbar height
+  const padding = 8;
+  const showBelow = state.y - toolbarHeight - padding < 0;
+  const top = showBelow ? state.y + padding : state.y - toolbarHeight - padding;
+
   const calculatePosition = () => {
     const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
     const toolbarWidth = 280; // Approximate toolbar width
-    const toolbarHeight = 60; // Approximate toolbar height
-    const padding = 8;
 
     let left = state.x;
-    let top = state.y;
 
     // Keep toolbar within horizontal bounds
     if (left - toolbarWidth / 2 < padding) {
@@ -152,21 +161,15 @@ export default function HighlightToolbar({
       left = viewportWidth - toolbarWidth / 2 - padding;
     }
 
-    // Keep toolbar within vertical bounds
-    if (top - toolbarHeight - padding < 0) {
-      // Show below selection if not enough space above
-      top = state.y + padding;
-    }
-
-    return { left, top };
+    return { left };
   };
 
-  const { left, top } = calculatePosition();
+  const { left } = calculatePosition();
 
   return (
     <div
-      className="fixed z-[70] -translate-x-1/2 -translate-y-[calc(100%+8px)]"
-      style={{ left, top }}
+      className="fixed z-[70]"
+      style={{ left, top, transform: "translateX(-50%)" }}
     >
       <div className="flex flex-wrap items-center gap-1.5 rounded-clay-full border-3 border-clay-borderLight bg-white p-1.5 shadow-clay-lg sm:gap-1 sm:p-1 max-w-[calc(100vw-16px)]">
         <span className="pl-2 pr-1 text-clay-muted sm:pl-2 sm:pr-1">

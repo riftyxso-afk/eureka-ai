@@ -365,7 +365,7 @@ export default function WhiteboardPage() {
               onClick={() => setColor(c.value)}
               title={c.label}
               aria-label={`Warna ${c.label}`}
-              className={`h-8 w-8 rounded-full transition-all duration-75 active:translate-y-0.5 ${
+              className={`h-10 w-10 rounded-full transition-all duration-75 active:translate-y-0.5 sm:h-8 sm:w-8 ${
                 color === c.value
                   ? "ring-2 ring-clay-primary ring-offset-2"
                   : ""
@@ -381,7 +381,7 @@ export default function WhiteboardPage() {
               onClick={() => setSize(s.value)}
               title={s.label}
               aria-label={`Ukuran ${s.label}`}
-              className={`btn-clay-ghost !min-h-[36px] !px-3 text-xs ${
+              className={`btn-clay-ghost !min-h-[44px] !px-3 text-xs sm:!min-h-[36px] ${
                 size === s.value
                   ? "!border-clay-primary !bg-clay-primary !text-white !shadow-clay-sm"
                   : ""
@@ -393,7 +393,7 @@ export default function WhiteboardPage() {
         </div>
         <button
           onClick={handleClear}
-          className="btn-clay-ghost !min-h-[36px] !px-4 text-xs"
+          className="btn-clay-ghost !min-h-[44px] !px-4 text-xs sm:!min-h-[36px]"
         >
           <Eraser size={14} className="mr-1.5" />
           Hapus Semua

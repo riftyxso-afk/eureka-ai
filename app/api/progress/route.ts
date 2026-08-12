@@ -51,24 +51,28 @@ export async function POST(req: NextRequest) {
     const label = String(body?.label ?? "");
 
     if (action === "activity") {
-      await recordActivity(userId, xp, label || undefined);
+      const { levelUp } = await recordActivity(userId, xp, label || undefined);
       const stats: ProgressStats = await getStats(userId);
-      return NextResponse.json({ ok: true, stats });
+      return NextResponse.json({ ok: true, stats, levelUp });
     }
 
     if (action === "cards_add") {
       const cards = Array.isArray(body?.cards) ? body.cards : [];
       await addCards(userId, noteId, cards);
-      if (xp > 0) await recordActivity(userId, xp, label || undefined);
+      const { levelUp } = xp > 0
+        ? await recordActivity(userId, xp, label || undefined)
+        : { levelUp: false };
       const stats: ProgressStats = await getStats(userId);
-      return NextResponse.json({ ok: true, added: cards.length, stats });
+      return NextResponse.json({ ok: true, added: cards.length, stats, levelUp });
     }
 
     if (action === "cards_review_all") {
       const reviewed = await reviewAllCards(userId, noteId);
-      if (xp > 0) await recordActivity(userId, xp, label || undefined);
+      const { levelUp } = xp > 0
+        ? await recordActivity(userId, xp, label || undefined)
+        : { levelUp: false };
       const stats: ProgressStats = await getStats(userId);
-      return NextResponse.json({ ok: true, reviewed, stats });
+      return NextResponse.json({ ok: true, reviewed, stats, levelUp });
     }
 
     return NextResponse.json(

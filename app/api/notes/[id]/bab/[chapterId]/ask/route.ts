@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { aiChat, hasAiKey } from "@/lib/ai";
+import { db } from "@/lib/supabase/admin";
+import { getProfileMd } from "@/lib/profile";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,6 +30,7 @@ export async function POST(
       question?: string;
       messages?: ChatTurn[];
       userNote?: string;
+      userId?: string;
     } | null;
     const question = String(body?.question ?? "").trim().slice(0, 1000);
     if (!question) {
@@ -35,6 +38,27 @@ export async function POST(
         { error: "Pertanyaan tidak boleh kosong." },
         { status: 400 }
       );
+    }
+
+    let profileMd = "";
+    const userId = String(body?.userId ?? "");
+    if (userId) {
+      const { data } = await db()
+        .from("users")
+        .select("name, username, user_number, profile_data, profile_md")
+        .eq("id", userId)
+        .maybeSingle();
+      if (data) {
+        profileMd = getProfileMd(
+          data as {
+            profile_md?: string | null;
+            name?: string | null;
+            username?: string | null;
+            user_number?: number | null;
+            profile_data?: Record<string, unknown> | null;
+          }
+        );
+      }
     }
 
     const found = await getNoteWithChunks(id);
@@ -93,8 +117,7 @@ export async function POST(
         : "";
 
     const answer = await aiChat({
-      system:
-        "Kamu adalah asisten belajar Eureka.AI yang ramah dan sabar. Jawab pertanyaan HANYA berdasarkan isi BAB yang diberikan, dalam bahasa Indonesia yang jelas, terstruktur, dan mudah dipahami. Jika jawaban tidak ada di isi bab, katakan dengan jujur bahwa hal itu tidak dibahas di bab ini, lalu beri petunjuk di mana mungkin bisa ditemukan (bab lain, atau sarankan tanya materi lain).",
+      system: `Kamu adalah asisten belajar Eureka.AI yang ramah dan sabar. Jawab pertanyaan HANYA berdasarkan isi BAB yang diberikan, dalam bahasa Indonesia yang jelas, terstruktur, dan mudah dipahami. Jika jawaban tidak ada di isi bab, katakan dengan jujur bahwa hal itu tidak dibahas di bab ini, lalu beri petunjuk di mana mungkin bisa ditemukan (bab lain, atau sarankan tanya materi lain).${profileMd ? `\n\nPROFIL SISWA (sesuaikan tingkat kesulitan penjelasan):\n${profileMd}` : ""}`,
       user: `KONTEKS MATERI (catatan "${found.note.title}", bab ${chapterIndex + 1} dari ${chapters.length}):\n\n${contextParts.join(
         "\n\n---\n\n"
       ).slice(0, 26000)}${historyText}\n\nPERTANYAAN SISWA:\n${question}`,

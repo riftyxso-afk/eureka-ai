@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
-import { createJob, updateJob } from "@/lib/jobQueue";
+import { createJob, updateJob, isJobCancelled, JobCancelledError } from "@/lib/jobQueue";
 import { ProgressTracker, phaseToPercent } from "@/lib/progressTracker";
 import {
   processNoteForBackground,
@@ -21,6 +21,7 @@ import {
 } from "@/lib/notesProcessor";
 import { pushNotification } from "@/lib/notifications-store";
 import { recordActivity } from "@/lib/progress-store";
+import { clampChapterCount } from "@/lib/prompts/noteGeneration";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
       studyMode: String(form.get("studyMode") ?? "standar") as NotePrefs["studyMode"],
       gayaPenulisan: String(form.get("gayaPenulisan") ?? "Ramah & Santai"),
       bahasa: String(form.get("bahasa") ?? "Bahasa Indonesia"),
+      chapterCount: clampChapterCount(form.get("chapterCount") ?? undefined),
     };
 
     // Baca file ke Buffer SEKARANG (FormData tidak bisa dibaca lagi nanti).
@@ -132,6 +134,8 @@ export async function POST(req: NextRequest) {
               fileBuffer,
               fileName,
               prefs,
+              jobId: id,
+              userId,
             },
             jobProgress
           );
@@ -164,6 +168,10 @@ export async function POST(req: NextRequest) {
             }
           }
         } catch (e) {
+          if (e instanceof JobCancelledError || isJobCancelled(id)) {
+            tracker.emit("extract", jobProgress ? 100 : 100, "Proses dibatalkan.");
+            return;
+          }
           const msg =
             e instanceof Error
               ? e.message

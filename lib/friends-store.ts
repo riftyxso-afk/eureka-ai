@@ -10,6 +10,7 @@ export type FriendshipStatus = "pending" | "accepted";
 export interface FriendUser {
   id: string;
   name: string;
+  username?: string;
   createdAt: string;
 }
 
@@ -32,6 +33,7 @@ function mapUser(row: any): FriendUser {
   return {
     id: row.id,
     name: row.name ?? "Pengguna",
+    username: row.username ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -90,29 +92,27 @@ async function loadRelationships(
   return map;
 }
 
-/** Cari user berdasarkan nama (case-insensitive), kecuali diri sendiri. */
+/** Cari user berdasarkan nama ATAU @username (case-insensitive). */
 export async function searchUsers(
   selfId: string,
   query: string,
   limit = 20
 ): Promise<{ user: FriendUser; relation: FriendRelation }[]> {
   const client = db();
-  const q = query.trim();
+  const q = query.trim().replace(/^@+/, "").toLowerCase();
 
   let rows: any[] = [];
   if (q === "") {
     const { data } = await client
       .from("users")
-      .select("id, name, created_at")
-      .neq("id", selfId)
+      .select("id, name, username, created_at")
       .limit(limit);
     rows = data ?? [];
   } else {
     const { data } = await client
       .from("users")
-      .select("id, name, created_at")
-      .neq("id", selfId)
-      .ilike("name", `%${q}%`)
+      .select("id, name, username, created_at")
+      .or(`name.ilike.%${q}%,username.ilike.%${q}%`)
       .limit(limit);
     rows = data ?? [];
   }
@@ -120,28 +120,29 @@ export async function searchUsers(
   const relations = await loadRelationships(client, selfId);
   return rows.map((r) => ({
     user: mapUser(r),
-    relation: relations.get(r.id) ?? "none",
+    relation:
+      r.id === selfId ? "self" : ((relations.get(r.id) ?? "none") as FriendRelation),
   }));
 }
 
-/** Kirim permintaan pertemanan ke akun yang sudah terdaftar. */
+/** Kirim permintaan pertemanan ke akun yang sudah terdaftar (cari nama/@username). */
 export async function sendFriendRequest(
   fromId: string,
   toName: string
 ): Promise<{ ok: boolean; relation: FriendRelation; target?: FriendUser }> {
   const client = db();
-  const cleanName = toName.trim().slice(0, 60);
+  const cleanName = toName.trim().slice(0, 60).replace(/^@+/, "");
   if (!cleanName) throw new Error("Nama teman kosong.");
 
   const { data: target } = await client
     .from("users")
-    .select("id, name, created_at")
-    .ilike("name", cleanName)
+    .select("id, name, username, created_at")
+    .or(`name.ilike.${cleanName},username.ilike.${cleanName}`)
     .maybeSingle();
 
   if (!target) {
     throw new Error(
-      `Tidak menemukan pengguna bernama "${cleanName}". Pastikan mereka sudah mendaftar di Eureka.AI.`
+      `Tidak menemukan pengguna "${toName.trim()}". Cek nama/@username-nya — pastikan mereka sudah mendaftar di Eureka.AI.`
     );
   }
   if (target.id === fromId) {

@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { isLoggedIn, syncAuthSession } from "@/lib/auth";
+import { isLoggedIn, needsOnboarding, syncAuthSession } from "@/lib/auth";
 
 /**
  * Guard autentikasi untuk halaman dashboard.
- * Menyinkronkan sesi Supabase lalu mengarahkan ke /login bila belum masuk.
+ * Menyinkronkan sesi Supabase, lalu mengarahkan ke /login bila belum masuk,
+ * atau ke /onboarding bila profil belum lengkap.
  */
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,6 +25,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       if (!isLoggedIn()) {
         router.replace("/login");
+        return;
+      }
+      
+      const needOnboarding = await needsOnboarding().catch(() => false);
+      if (cancelled) return;
+      if (needOnboarding) {
+        router.replace("/onboarding");
         return;
       }
       setReady(true);

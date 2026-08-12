@@ -23,6 +23,9 @@
  * - OPENROUTER_API_KEY      (key openrouter.ai, awalan sk-or-…; fallback saat utama down)
  * - OPENROUTER_BASE_URL     (default https://openrouter.ai/api/v1)
  * - OPENROUTER_MODEL        (default openai/gpt-4o-mini)
+ * - JUANROUTER_API_KEY      (key router.juan.web.id, awalan sk-…; fallback terakhir)
+ * - JUANROUTER_BASE_URL     (default https://router.juan.web.id/v1)
+ * - JUANROUTER_MODEL        (default deepseek-v4-flash)
  */
 export type AiProvider = "aimurah" | "openai" | "openagentic";
 
@@ -55,6 +58,14 @@ export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
 
 export const OPENROUTER_MODEL =
   process.env.OPENROUTER_MODEL ?? "nvidia/nemotron-3-super-120b-a12b:free";
+
+export const JUANROUTER_BASE_URL =
+  process.env.JUANROUTER_BASE_URL ?? "https://router.juan.web.id/v1";
+
+export const JUANROUTER_API_KEY = process.env.JUANROUTER_API_KEY ?? "";
+
+export const JUANROUTER_MODEL =
+  process.env.JUANROUTER_MODEL ?? "deepseek-v4-flash";
 
 interface ProviderConfig {
   baseURL: string;
@@ -113,8 +124,8 @@ export function isOpenAICompatible(): boolean {
 }
 
 /**
- * Rantai provider yang dicoba berurutan: provider utama lalu OpenRouter
- * (fallback, bila OPENROUTER_API_KEY tersedia).
+ * Rantai provider yang dicoba berurutan: provider utama → OpenRouter
+ * → Juan Router (fallback, bila key masing-masing tersedia).
  */
 function getProviderChain(): ProviderConfig[] {
   const chain: ProviderConfig[] = [];
@@ -126,6 +137,14 @@ function getProviderChain(): ProviderConfig[] {
       apiKey: OPENROUTER_API_KEY,
       model: OPENROUTER_MODEL,
       name: "OpenRouter",
+    });
+  }
+  if (JUANROUTER_API_KEY) {
+    chain.push({
+      baseURL: JUANROUTER_BASE_URL,
+      apiKey: JUANROUTER_API_KEY,
+      model: JUANROUTER_MODEL,
+      name: "JuanRouter",
     });
   }
   return chain;
@@ -219,14 +238,14 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
     const res = await fetch(`${provider.baseURL}/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${provider.apiKey.substring(0, 10)}...`,
+        Authorization: `Bearer ${provider.apiKey}`,
         "Content-Type": "application/json",
         ...(provider.name === "OpenRouter"
           ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
           : {}),
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(60_000),
     });
 
     console.log('[AI] Response status:', res.status, res.statusText);
@@ -234,7 +253,10 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
     if (!res.ok) {
       let detail = "";
       try {
-        const err = await res.json();
+        const errText = await res.text();
+        const err = extractJsonObject(errText) as {
+          error?: { message?: string };
+        };
         detail = err?.error?.message ?? "";
         console.error('[AI Error] API error details:', err);
       } catch {
@@ -245,8 +267,20 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
       );
     }
 
-    const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
+    // Sebagian gateway (mis. OpenAgentic) menambahkan sisa SSE seperti
+    // "data: [DONE]" setelah body JSON → parse manual agar tidak gagal.
+    const resText = await res.text();
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(resText) as Record<string, unknown>;
+    } catch {
+      data = extractJsonObject(resText) as Record<string, unknown>;
+    }
+    const firstChoice = Array.isArray(data?.choices)
+      ? (data.choices[0] as Record<string, unknown> | undefined)
+      : undefined;
+    const messageObj = firstChoice?.message as Record<string, unknown> | undefined;
+    const content = messageObj?.content;
     if (typeof content !== "string" || content.trim().length === 0) {
       console.error('[AI Error] Empty response from API');
       throw new Error("AI mengembalikan respons kosong.");

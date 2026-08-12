@@ -47,9 +47,10 @@ export default function SettingsPage() {
             <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
               <Link
                 href="/dashboard"
-                className="p-2 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+                className="p-2.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+                aria-label="Kembali ke dashboard"
               >
-                <ArrowLeft className="w-5 h-5 sm:w-5 sm:h-5" />
+                <ArrowLeft className="w-6 h-6 sm:w-5 sm:h-5" />
               </Link>
               <div className="flex-1">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
@@ -95,13 +96,13 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={() => setSettings({ ...settings, enabled: !settings.enabled })}
-              className={`relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
+              className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
                 settings.enabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
               }`}
             >
               <span
-                className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-                  settings.enabled ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
+                className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                  settings.enabled ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>
@@ -167,13 +168,13 @@ export default function SettingsPage() {
                     triggers: { ...settings.triggers, pomodoro: !settings.triggers.pomodoro },
                   })
                 }
-                className={`relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
+                className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
                   settings.triggers.pomodoro ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-                    settings.triggers.pomodoro ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                    settings.triggers.pomodoro ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -194,13 +195,13 @@ export default function SettingsPage() {
                     triggers: { ...settings.triggers, chapterDone: !settings.triggers.chapterDone },
                   })
                 }
-                className={`relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
+                className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
                   settings.triggers.chapterDone ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-                    settings.triggers.chapterDone ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                    settings.triggers.chapterDone ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -221,13 +222,13 @@ export default function SettingsPage() {
                     triggers: { ...settings.triggers, idle: !settings.triggers.idle },
                   })
                 }
-                className={`relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
+                className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
                   settings.triggers.idle ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-                    settings.triggers.idle ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                    settings.triggers.idle ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -248,13 +249,13 @@ export default function SettingsPage() {
                     triggers: { ...settings.triggers, random: !settings.triggers.random },
                   })
                 }
-                className={`relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
+                className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
                   settings.triggers.random ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-                    settings.triggers.random ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                    settings.triggers.random ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -275,13 +276,13 @@ export default function SettingsPage() {
                     triggers: { ...settings.triggers, quizReminder: !settings.triggers.quizReminder },
                   })
                 }
-                className={`relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
+                className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
                   settings.triggers.quizReminder ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-                    settings.triggers.quizReminder ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                    settings.triggers.quizReminder ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -365,13 +366,13 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={() => setSettings({ ...settings, animations: !settings.animations })}
-              className={`relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
+              className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
                 settings.animations ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
               }`}
             >
               <span
-                className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-                  settings.animations ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
+                className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                  settings.animations ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>

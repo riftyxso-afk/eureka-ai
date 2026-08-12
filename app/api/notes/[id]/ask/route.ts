@@ -4,6 +4,8 @@ import { getNoteWithChunks } from "@/lib/rag/store";
 import { embedTexts } from "@/lib/rag/embed";
 import { searchChunks } from "@/lib/rag/store";
 import { aiChat, hasAiKey } from "@/lib/ai";
+import { db } from "@/lib/supabase/admin";
+import { getProfileMd } from "@/lib/profile";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,6 +25,7 @@ export async function POST(
 
     const body = (await req.json().catch(() => null)) as {
       question?: string;
+      userId?: string;
     } | null;
     const question = String(body?.question ?? "").trim().slice(0, 500);
     if (!question) {
@@ -30,6 +33,27 @@ export async function POST(
         { error: "Pertanyaan tidak boleh kosong." },
         { status: 400 }
       );
+    }
+
+    let profileMd = "";
+    const userId = String(body?.userId ?? "");
+    if (userId) {
+      const { data } = await db()
+        .from("users")
+        .select("name, username, user_number, profile_data, profile_md")
+        .eq("id", userId)
+        .maybeSingle();
+      if (data) {
+        profileMd = getProfileMd(
+          data as {
+            profile_md?: string | null;
+            name?: string | null;
+            username?: string | null;
+            user_number?: number | null;
+            profile_data?: Record<string, unknown> | null;
+          }
+        );
+      }
     }
 
     const found = await getNoteWithChunks(id);
@@ -58,8 +82,7 @@ export async function POST(
       .join("\n\n---\n\n");
 
     const answer = await aiChat({
-      system:
-        "Kamu adalah asisten belajar Eureka.AI yang ramah. Jawab pertanyaan HANYA berdasarkan konteks materi yang diberikan, dalam bahasa Indonesia yang jelas dan terstruktur. Jika jawaban tidak ada di konteks, katakan dengan jujur bahwa hal itu tidak ditemukan di materi, lalu sarankan pertanyaan lain.",
+      system: `Kamu adalah asisten belajar Eureka.AI yang ramah. Jawab pertanyaan HANYA berdasarkan konteks materi yang diberikan, dalam bahasa Indonesia yang jelas dan terstruktur. Jika jawaban tidak ada di konteks, katakan dengan jujur bahwa hal itu tidak ditemukan di materi, lalu sarankan pertanyaan lain.${profileMd ? `\n\nPROFIL SISWA (sesuaikan tingkat kesulitan penjelasan):\n${profileMd}` : ""}`,
       user: `KONTEKS MATERI (dari catatan "${found.note.title}"):\n\n${context.slice(0, 24000)}\n\nPERTANYAAN:\n${question}`,
       maxTokens: 1200,
       temperature: 0.4,

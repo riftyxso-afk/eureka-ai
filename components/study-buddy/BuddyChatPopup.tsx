@@ -122,7 +122,7 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
       initial={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
       animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
-      className="fixed inset-x-4 bottom-20 sm:inset-x-auto sm:bottom-32 sm:right-6 sm:left-auto z-50 w-auto sm:w-96 max-h-[70vh] sm:h-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
+      className="fixed inset-x-4 bottom-28 sm:inset-x-auto sm:bottom-32 sm:right-6 sm:left-auto z-50 w-auto sm:w-96 max-h-[70vh] sm:h-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
     >
       {/* Header - Mobile Responsive */}
       <div 
@@ -149,7 +149,7 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
         <div className="flex gap-0.5 sm:gap-1 flex-shrink-0">
           <button
             onClick={handleClearHistory}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+            className="flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
             title="Clear chat"
             aria-label="Clear chat history"
           >
@@ -157,7 +157,7 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+            className="flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
             aria-label="Close chat"
           >
             <X className="w-4 h-4 text-gray-500" />
@@ -215,7 +215,7 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
           <button
             onClick={handleSend}
             disabled={!inputValue.trim() || isLoading}
-            className="p-2 sm:p-2.5 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex-shrink-0"
+            className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex-shrink-0"
             aria-label="Send message"
           >
             <Send className="w-4 h-4" />

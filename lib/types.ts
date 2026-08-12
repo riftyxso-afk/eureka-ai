@@ -22,10 +22,25 @@ export interface User {
 
 export interface OnboardingData {
   name: string;
+  username: string;
+  education: string;
   grade: string;
+  /** Jawaban tes psikologi: questionId → trait. */
+  psyAnswers: Record<string, string>;
   weakTopic: string;
   learningHabit: string;
   peakHour: string;
+}
+
+export interface OnboardingAnalysis {
+  tagline: string;
+  learningStyle: string;
+  /** Label tipe kepribadian belajar hasil tes psikologi (mis. "Si Analitis Santai"). */
+  psyLabel?: string;
+  /** Ringkasan kepribadian belajar 2–3 kalimat dari AI. */
+  psySummary?: string;
+  recommendations: { icon: string; title: string; desc: string }[];
+  studyTips: string[];
 }
 
 export interface Session {
@@ -68,4 +83,6 @@ export interface Note {
   keyPoints?: string[];
   /** Kumpulan sumber web untuk bagian "Sumber & Referensi". */
   references?: SearchSource[];
+  /** Pemilik catatan (UUID users). */
+  user_id?: string;
 }

@@ -26,6 +26,7 @@ export interface NoteJob {
   noteId?: string;
   noteTitle?: string;
   error?: string;
+  cancelled?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -107,4 +108,29 @@ export function updateJob(
 export function getJob(jobId: string): NoteJob | null {
   cleanup();
   return jobs.get(jobId) ?? null;
+}
+
+export function cancelJob(jobId: string): boolean {
+  const job = jobs.get(jobId);
+  if (!job || job.status !== "running") return false;
+  job.cancelled = true;
+  updateJob(jobId, {
+    status: "error",
+    error: "Dibatalkan oleh pengguna.",
+    message: "Proses dibatalkan.",
+  });
+  return true;
+}
+
+/** Apakah job sudah dibatalkan (dipakai prosesor untuk berhenti di antara fase). */
+export function isJobCancelled(jobId: string): boolean {
+  return jobs.get(jobId)?.cancelled ?? false;
+}
+
+/** Error yang dilempar saat job dibatalkan di tengah proses. */
+export class JobCancelledError extends Error {
+  constructor() {
+    super("Job dibatalkan.");
+    this.name = "JobCancelledError";
+  }
 }

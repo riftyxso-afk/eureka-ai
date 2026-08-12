@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Clock,
@@ -21,6 +21,7 @@ import { CreateNoteModal } from "@/components/dashboard/CreateNoteModal";
 import { BackgroundJobPopup } from "@/components/dashboard/BackgroundJobPopup";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { getUserId, getUserName } from "@/lib/identity";
+import { announceLevelUp } from "@/lib/levelUp";
 import type { Note } from "@/lib/types";
 
 function formatUpdatedAt(iso: string): string {
@@ -64,13 +65,26 @@ export default function DashboardPage() {
 
   const userName = data.name || getUserName();
 
+  const lastLevelRef = useRef<number | null>(null);
+
   const loadProgress = async () => {
     try {
       const userId = getUserId();
       const res = await fetch(`/api/progress?userId=${encodeURIComponent(userId)}`);
       if (!res.ok) return;
       const payload = await res.json();
-      if (payload.stats) setProgress(payload.stats);
+      if (payload.stats) {
+        setProgress(payload.stats);
+        const newLevel = Number(payload.stats.level) || 1;
+        if (lastLevelRef.current === null) {
+          lastLevelRef.current = newLevel;
+        } else if (newLevel > lastLevelRef.current) {
+          lastLevelRef.current = newLevel;
+          announceLevelUp(newLevel);
+        } else {
+          lastLevelRef.current = newLevel;
+        }
+      }
     } catch {
       // biarkan
     }
@@ -91,7 +105,9 @@ export default function DashboardPage() {
   const loadNotes = useMemo(
     () => async () => {
       try {
-        const res = await fetch("/api/notes");
+        const res = await fetch(
+          `/api/notes?userId=${encodeURIComponent(getUserId())}`
+        );
         if (!res.ok) return;
         const payload = await res.json();
         setNotes(payload.notes ?? []);
@@ -208,12 +224,12 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-xs font-bold text-clay-muted sm:text-sm">
-              {progress.xpInLevel} / {progress.xpToNext} XP
+              {progress.xp} / {progress.xp - progress.xpInLevel + progress.xpToNext} XP
             </p>
           </div>
           <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-clay-inputBg shadow-clay-inset">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-clay-primary to-clay-borderLight"
+              className="h-full rounded-full bg-gradient-to-r from-clay-primary to-clay-borderLight transition-all duration-500"
               style={{
                 width: `${Math.min(
                   100,

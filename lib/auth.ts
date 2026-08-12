@@ -234,11 +234,45 @@ export async function syncAuthSession(): Promise<void> {
   }
 }
 
-/** Keluar dari Supabase Auth. */
+/** Keluar dari Supabase Auth. Sesi lokal dibersihkan segera;
+ * signOut Supabase berjalan best-effort tanpa menahan navigasi. */
 export async function logoutUser(): Promise<void> {
   safeRemove(SESSION_KEY);
   clearIdentity();
+  // Hapus sesi Supabase yang tersimpan (sb-<ref>-auth-token) secara sinkron
+  // agar tidak ter-restore oleh onAuthStateChange setelah navigasi.
+  if (typeof window !== "undefined") {
+    try {
+      for (const key of Object.keys(window.localStorage)) {
+        if (key.startsWith("sb-")) window.localStorage.removeItem(key);
+      }
+    } catch {
+      // abaikan
+    }
+  }
   if (typeof window !== "undefined" && isSupabaseConfigured() && supabase) {
-    await supabase.auth.signOut().catch(() => undefined);
+    void supabase.auth.signOut().catch(() => undefined);
+  }
+}
+
+/**
+ * True bila user belum menyelesaikan onboarding (profil belum ada / belum lengkap).
+ * Dipakai untuk mengarahkan user ke /onboarding setelah masuk.
+ */
+export async function needsOnboarding(): Promise<boolean> {
+  const session = getSession();
+  if (!session?.userId) return false;
+  try {
+    const res = await fetch(
+      `/api/profile?userId=${encodeURIComponent(session.userId)}`
+    );
+    // Profil belum ada (404) → wajib onboarding. Kegagalan lain → biarkan masuk
+    // (halaman onboarding akan mengoreksi sendiri lewat cek profilnya).
+    if (res.status === 404) return true;
+    if (!res.ok) return false;
+    const payload = await res.json();
+    return !payload?.user?.onboardingCompleted;
+  } catch {
+    return false;
   }
 }

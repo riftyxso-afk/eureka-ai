@@ -8,7 +8,7 @@ import AvatarClay from "@/components/ui/AvatarClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
-import { isLoggedIn, loginUser } from "@/lib/auth";
+import { isLoggedIn, loginUser, needsOnboarding } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,7 +21,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isLoggedIn()) {
-      router.replace("/dashboard");
+      (async () => {
+        const needOnboarding = await needsOnboarding().catch(() => false);
+        router.replace(needOnboarding ? "/onboarding" : "/dashboard");
+      })();
       return;
     }
     setChecked(true);
@@ -53,7 +56,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace("/dashboard");
+    const needOnboarding = await needsOnboarding().catch(() => false);
+    router.replace(needOnboarding ? "/onboarding" : "/dashboard");
   };
 
   return (
@@ -119,7 +123,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-clay-muted transition-colors hover:text-clay-primary"
+                  className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-clay-muted transition-colors hover:text-clay-primary"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>

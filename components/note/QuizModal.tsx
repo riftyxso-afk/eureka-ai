@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Check, Loader2, RefreshCw, X } from "lucide-react";
 
 interface QuizQuestion {
@@ -75,7 +76,7 @@ export default function QuizModal({
           </button>
         </div>
 
-        {!questions && (
+        {!questions && !generating && (
           <div className="space-y-4">
             <div>
               <label className="mb-1 block text-xs font-bold text-clay-muted">
@@ -116,6 +117,55 @@ export default function QuizModal({
                 {error}
               </p>
             )}
+          </div>
+        )}
+
+        {!questions && generating && (
+          <div className="space-y-3 sm:space-y-4" aria-live="polite">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3 sm:p-4"
+            >
+              <div className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-pulse rounded-full bg-clay-beige" />
+                <span className="h-3.5 w-2/3 animate-pulse rounded-full bg-clay-beige" />
+              </div>
+              <div className="mt-3 space-y-2">
+                {[0, 1, 2, 3].map((i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      delay: 0.15 + i * 0.12,
+                      duration: 0.3,
+                      ease: "easeOut",
+                    }}
+                    className="flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-clay-shadow/40 bg-white px-3"
+                  >
+                    <span className="h-6 w-6 animate-pulse rounded-full bg-clay-beige" />
+                    <span
+                      className={`h-3 animate-pulse rounded-full bg-clay-beige ${
+                        i % 2 === 0 ? "w-1/2" : "w-2/5"
+                      }`}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.3, ease: "easeOut" }}
+              className="flex min-h-[46px] sm:min-h-[48px] items-center justify-center gap-2 rounded-clay bg-clay-beige"
+            >
+              <Loader2 size={16} className="animate-spin text-clay-primary" />
+              <span className="text-sm font-extrabold text-clay-muted">
+                AI sedang menyusun {count} soal kuis...
+              </span>
+            </motion.div>
           </div>
         )}
 

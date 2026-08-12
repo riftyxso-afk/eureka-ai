@@ -12,8 +12,10 @@ import { aiChatJson, extractJsonObject, hasAiKey } from "./ai";
 import type { PhaseProgressFn } from "./progressTracker";
 import {
   CHAPTER_CONTENT_GUIDE,
+  buildChapterCountRule,
   buildModeRules,
   buildPreferencesText,
+  clampChapterCount,
   type NotePreferences,
 } from "./prompts/noteGeneration";
 
@@ -262,6 +264,8 @@ ${buildModeRules(prefs)}
 
 ${buildPreferencesText(prefs)}
 
+${buildChapterCountRule(prefs)}
+
 ${CHAPTER_CONTENT_GUIDE}
 
 "flow" (opsional): array 2-6 langkah singkat yang menggambarkan urutan/proses di chapter itu (kosongkan jika tidak jelas).
@@ -430,7 +434,7 @@ ${text.slice(0, 24000)}
 
 Buat kerangka ringkasan belajar dari video ini:
 - "title": judul ringkasan yang menarik (maksimal 10 kata, bahasa Indonesia)
-- "chapters": 4-8 bab berdasarkan topik-topik utama video.
+- "chapters": bab berdasarkan topik-topik utama video.
   Untuk tiap bab berikan:
   - "title": judul singkat & jelas (maksimal 8 kata, bahasa Indonesia)
   - "topics": 2-4 topik kunci yang dibahas di bab itu (1 baris per topik)
@@ -438,6 +442,8 @@ Buat kerangka ringkasan belajar dari video ini:
 ${buildModeRules(prefs)}
 
 ${buildPreferencesText(prefs)}
+
+${buildChapterCountRule(prefs)}
 
 Output HANYA JSON object, tanpa teks lain:
 {"title": "...", "chapters": [{"title": "...", "topics": ["...", "..."]}, ...]}`;
@@ -478,7 +484,7 @@ Output HANYA JSON object, tanpa teks lain:
           };
         })
         .filter((c) => c.title && c.title.trim().length > 0)
-        .slice(0, MAX_CHAPTERS);
+        .slice(0, clampChapterCount(prefs.chapterCount) ?? MAX_CHAPTERS);
       if (chapters.length === 0) {
         throw new Error("AI tidak menghasilkan kerangka bab.");
       }

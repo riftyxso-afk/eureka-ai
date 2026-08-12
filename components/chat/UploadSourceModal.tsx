@@ -80,14 +80,14 @@ export const UploadSourceModal = ({
             exit={{ opacity: 0, y: 24, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md"
+            className="w-full max-w-md max-h-[85vh] overflow-y-auto"
           >
-            <CardClay className="shadow-clay-lg">
+            <CardClay className="shadow-clay-lg !p-4 sm:!p-8">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-extrabold">Tambah Soal</h2>
+                <h2 className="text-xl sm:text-2xl font-extrabold">Tambah Soal</h2>
                 <button
                   onClick={onClose}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset"
                   aria-label="Tutup popup"
                 >
                   <X size={18} />

@@ -133,7 +133,7 @@ export default function VersionModal({
                   <button
                     onClick={() => handleRestore(v.version)}
                     disabled={restoring === v.version}
-                    className="btn-clay-ghost !min-h-[32px] !px-3 text-xs disabled:opacity-60"
+                    className="btn-clay-ghost !min-h-[44px] !px-3 text-xs disabled:opacity-60"
                   >
                     <RotateCcw size={13} className="mr-1.5" />
                     {restoring === v.version ? "Memulihkan..." : "Pulihkan"}

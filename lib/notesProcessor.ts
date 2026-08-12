@@ -36,12 +36,15 @@ import {
   isWebSearchEnrichmentAvailable,
   buildReferencesMarkdown,
 } from "@/lib/webSearchEnrichment";
+import { clampChapterCount } from "@/lib/prompts/noteGeneration";
+import { isJobCancelled, JobCancelledError } from "@/lib/jobQueue";
 import type { Note, SearchSource } from "@/lib/types";
 
 export interface NotePrefs {
   studyMode: "ringkas" | "standar" | "lengkap";
   gayaPenulisan: string;
   bahasa: string;
+  chapterCount?: number;
 }
 
 export interface NotesProcessorInput {
@@ -50,6 +53,10 @@ export interface NotesProcessorInput {
   fileBuffer?: Buffer;
   fileName?: string;
   prefs: NotePrefs;
+  /** Job background — dipakai untuk cek pembatalan di antara fase. */
+  jobId?: string;
+  /** Pemilik catatan (UUID users) — wajib agar sesuai FK notes.user_id. */
+  userId?: string;
 }
 
 export interface NotesProcessorProgress {
@@ -123,6 +130,10 @@ export async function processNoteForBackground(
 
   const noteId = randomUUID();
 
+  if (input.jobId && isJobCancelled(input.jobId)) {
+    throw new JobCancelledError();
+  }
+
   // FASE 2: Bab-bab catatan (15-50%)
   let chapters: Note["chapters"];
   let summary: string | undefined;
@@ -138,6 +149,9 @@ export async function processNoteForBackground(
       true,
       (fraction: number, label: string) => advance("chapters", fraction, label)
     );
+    if (input.jobId && isJobCancelled(input.jobId)) {
+      throw new JobCancelledError();
+    }
     chapters = processed.chapters;
     summary = processed.summary;
     keyPoints = processed.keyPoints;
@@ -152,6 +166,9 @@ export async function processNoteForBackground(
       prefs,
       (fraction: number, label: string) => advance("chapters", fraction, label)
     );
+    if (input.jobId && isJobCancelled(input.jobId)) {
+      throw new JobCancelledError();
+    }
     chapters = processed.chapters;
     summary = processed.summary;
     keyPoints = processed.keyPoints;
@@ -163,15 +180,27 @@ export async function processNoteForBackground(
       extracted.segments,
       prefs
     );
+    if (input.jobId && isJobCancelled(input.jobId)) {
+      throw new JobCancelledError();
+    }
     advance("chapters", 0.8, "Membuat ringkasan...");
     summary = await generateAiSummary(extracted.text, prefs);
+    if (input.jobId && isJobCancelled(input.jobId)) {
+      throw new JobCancelledError();
+    }
   }
   done("chapters", "Bab-bab selesai ditulis.");
+
+  const requestedChapters = clampChapterCount(prefs.chapterCount);
+  if (requestedChapters && chapters.length > requestedChapters) {
+    chapters = chapters.slice(0, requestedChapters).map((c, i) => ({ ...c, id: i + 1 }));
+  }
 
   const note: Note = {
     id: noteId,
     title: title || "Ringkasan Materi",
     subject: SUBJECT_BY_SOURCE[sourceType] ?? "Materi",
+    user_id: input.userId || undefined,
     sourceUrl: extracted.sourceUrl,
     chunkCount: 0,
     createdAt: new Date().toISOString(),
@@ -215,6 +244,9 @@ export async function processNoteForBackground(
   }
 
   // FASE 3: Validasi & enrichment per-bab via web search (50-80%)
+  if (input.jobId && isJobCancelled(input.jobId)) {
+    throw new JobCancelledError();
+  }
   if (chapters && chapters.length > 0) {
     advance("enrichment", 0.06, "Mencari sumber web untuk validasi...");
     if (isWebSearchEnrichmentAvailable()) {
@@ -254,6 +286,9 @@ export async function processNoteForBackground(
   done("enrichment", "Validasi & enrichment selesai.");
 
   // FASE 4: RAG — chunk, embed, simpan (80-90%)
+  if (input.jobId && isJobCancelled(input.jobId)) {
+    throw new JobCancelledError();
+  }
   advance("rag", 0.1, "Memecah materi menjadi potongan kecil...");
   const fullText = (chapters ?? [])
     .map((c) => c.content)
@@ -293,6 +328,9 @@ export async function processNoteForBackground(
   }
 
   // FASE 5: Kuis & flashcards otomatis sesuai Mode Belajar (90-100%)
+  if (input.jobId && isJobCancelled(input.jobId)) {
+    throw new JobCancelledError();
+  }
   const studyCounts: Record<string, number> = { ringkas: 0, standar: 5, lengkap: 10 };
   const studyCount = studyCounts[prefs.studyMode ?? "standar"] ?? 0;
   if (studyCount > 0) {

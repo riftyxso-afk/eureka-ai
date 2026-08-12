@@ -5,9 +5,13 @@ import { listNotes } from "@/lib/rag/store";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const [subjects, notes] = await Promise.all([getSubjects(), listNotes()]);
+    const userId = String(req.nextUrl.searchParams.get("userId") ?? "").trim();
+    const [subjects, notes] = await Promise.all([
+      getSubjects(),
+      listNotes(userId || undefined),
+    ]);
     // totalNotes dihitung live dari catatan yang subject-nya sama
     const withCount = subjects.map((s) => ({
       ...s,

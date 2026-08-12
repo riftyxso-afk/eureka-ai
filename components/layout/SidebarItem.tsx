@@ -13,7 +13,7 @@ interface SidebarItemProps {
 }
 
 const base =
-  "flex items-center gap-3 rounded-clay-md py-3 px-4 text-[15px] font-bold transition-all duration-75 select-none";
+  "flex items-center gap-3 rounded-clay-md py-2 px-4 text-[14px] font-bold transition-all duration-75 select-none";
 
 export const SidebarItem = ({
   icon: Icon,

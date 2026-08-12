@@ -11,9 +11,12 @@ import {
   Clock,
   Loader2,
   NotebookPen,
+  RefreshCw,
 } from "lucide-react";
 import { NoteFlow } from "@/components/note/NoteFlow";
 import { ChapterAIChat } from "@/components/note/ChapterAIChat";
+import { DreamingOverlay } from "@/components/note/DreamingOverlay";
+import { useRegenerateJob } from "@/lib/useRegenerateJob";
 
 interface Chapter {
   id: number;
@@ -111,35 +114,59 @@ export default function ChapterNotepadPage() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [toast, setToast] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [confirmRegen, setConfirmRegen] = useState(false);
+  const regen = useRegenerateJob();
 
   const notify = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/notes/${params.id}/bab/${params.chapterId}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setNote(data.note);
-          setChapter(data.chapter);
-          setPrev(data.prev);
-          setNext(data.next);
-          setUserNote(data.userNote ?? "");
-        } else {
-          throw new Error("Gagal memuat bab");
-        }
-      } catch {
-        // Biarkan state kosong, UI menampilkan pesan error
-      } finally {
-        setLoading(false);
+  const loadChapter = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/notes/${params.id}/bab/${params.chapterId}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setNote(data.note);
+        setChapter(data.chapter);
+        setPrev(data.prev);
+        setNext(data.next);
+        setUserNote(data.userNote ?? "");
+      } else {
+        throw new Error("Gagal memuat bab");
       }
-    })();
+    } catch {
+      // Biarkan state kosong, UI menampilkan pesan error
+    } finally {
+      setLoading(false);
+    }
   }, [params.id, params.chapterId]);
+
+  useEffect(() => {
+    loadChapter();
+  }, [loadChapter]);
+
+  // Reload bab otomatis saat job regenerate selesai / gagal.
+  useEffect(() => {
+    if (regen.running) return;
+    if (regen.percent >= 100) {
+      loadChapter();
+      notify("Bab berhasil ditulis ulang! ✨");
+      setConfirmRegen(false);
+    } else if (regen.error) {
+      notify(`Gagal menulis ulang: ${regen.error}`);
+      setConfirmRegen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regen.running]);
+
+  const handleRegenerate = async () => {
+    setConfirmRegen(false);
+    notify("AI menulis ulang bab ini...");
+    await regen.start(`/api/notes/${params.id}/bab/${params.chapterId}/regenerate`);
+  };
 
   const saveUserNote = useCallback(
     async (content: string) => {
@@ -182,6 +209,11 @@ export default function ChapterNotepadPage() {
         <div className="card-clay flex items-center justify-center py-16 text-clay-muted">
           <p className="text-base font-extrabold">Memuat bab...</p>
         </div>
+        <DreamingOverlay
+          open
+          title="Membaca bab..."
+          status="AI sedang membuka catatanmu"
+        />
       </div>
     );
   }
@@ -231,6 +263,16 @@ export default function ChapterNotepadPage() {
             {chapter.timestamp}
           </div>
         )}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button
+            onClick={() => setConfirmRegen(true)}
+            disabled={regen.running}
+            className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+          >
+            <RefreshCw size={16} className="mr-2" />
+            <span className="font-extrabold">Tulis Ulang</span>
+          </button>
+        </div>
       </div>
 
       {/* Isi bab */}
@@ -348,6 +390,56 @@ export default function ChapterNotepadPage() {
         {note.subject}
         {note.createdAt ? ` · ${formatDate(note.createdAt)}` : ""}
       </div>
+
+      {/* Konfirmasi tulis ulang bab */}
+      {confirmRegen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setConfirmRegen(false)}
+        >
+          <div
+            className="card-clay w-full max-w-md !p-6 sm:!p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-extrabold text-clay-dark">
+              Tulis ulang bab ini? ✨
+            </h3>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-muted">
+              AI akan menulis ulang bab{" "}
+              <span className="font-extrabold text-clay-dark">
+                “{chapter.title}”
+              </span>{" "}
+              dengan kualitas lebih baik berdasarkan konten yang ada. Konten lama
+              akan diganti setelah selesai.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setConfirmRegen(false)}
+                className="btn-clay-ghost flex-1 !min-h-[46px] !px-4 text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleRegenerate}
+                className="btn-clay-primary flex-1 !min-h-[46px] !px-4 text-sm"
+              >
+                <RefreshCw size={15} className="mr-2" />
+                Tulis Ulang
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay "AI dreaming" saat menulis ulang */}
+      <DreamingOverlay
+        open={regen.running}
+        title="AI sedang menulis ulang bab ini..."
+        status={regen.message}
+        percent={regen.percent}
+        onCancel={() => void regen.stop()}
+        cancelDisabled={regen.stopping}
+      />
     </div>
   );
 }

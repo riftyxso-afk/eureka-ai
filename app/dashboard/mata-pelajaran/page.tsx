@@ -102,10 +102,10 @@ export default function MataPelajaranPage() {
             <p className="text-base font-extrabold">Tambah Mata Pelajaran</p>
             <button
               onClick={() => setAdding(false)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset"
               aria-label="Tutup form"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
           <div className="mt-4 flex items-center gap-2">
@@ -153,10 +153,10 @@ export default function MataPelajaranPage() {
                 </div>
                 <button
                   onClick={() => handleDelete(subject)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset transition-colors hover:text-red-500"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset transition-colors hover:text-red-500"
                   aria-label={`Hapus ${subject.name}`}
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={18} />
                 </button>
               </div>
               <div>

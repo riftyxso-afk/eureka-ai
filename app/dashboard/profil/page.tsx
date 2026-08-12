@@ -35,9 +35,11 @@ export default function ProfilPage() {
   const [form, setForm] = useState({
     name: getUserName(),
     email: "",
+    username: "",
     school: readSchool(),
     grade: "",
   });
+  const [userNumber, setUserNumber] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [stats, setStats] = useState({
     xp: 0,
@@ -54,7 +56,27 @@ export default function ProfilPage() {
       email: prev.email || "akun-lokal@eureka.local",
       grade: data.grade || prev.grade,
     }));
-  }, [data.grade]);
+    // Muat profil asli dari Supabase (email, @username, nomor urut user).
+    (async () => {
+      try {
+        const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`);
+        if (!res.ok) return;
+        const payload = await res.json();
+        const u = payload?.user;
+        if (!u) return;
+        setForm((prev) => ({
+          ...prev,
+          name: u.name || prev.name,
+          email: u.email || prev.email,
+          username: u.username || prev.username,
+          grade: u.profileData?.grade || prev.grade,
+        }));
+        if (u.userNumber != null) setUserNumber(Number(u.userNumber));
+      } catch {
+        // biarkan nilai lokal
+      }
+    })();
+  }, [data.grade, userId]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -65,7 +87,7 @@ export default function ProfilPage() {
     try {
       const [progressRes, notesRes] = await Promise.all([
         fetch(`/api/progress?userId=${encodeURIComponent(userId)}`),
-        fetch("/api/notes"),
+        fetch(`/api/notes?userId=${encodeURIComponent(userId)}`),
       ]);
       if (progressRes.ok) {
         const payload = await progressRes.json();
@@ -100,6 +122,11 @@ export default function ProfilPage() {
       showToast("Nama tidak boleh kosong! ⚠️");
       return;
     }
+    const cleanUsername = form.username.trim().toLowerCase().replace(/^@+/, "");
+    if (cleanUsername && !/^[a-z0-9_]{3,20}$/.test(cleanUsername)) {
+      showToast("Username hanya huruf kecil, angka, dan _ (3–20). ⚠️");
+      return;
+    }
     setUserName(form.name);
     update({ name: form.name.trim(), grade: form.grade });
     try {
@@ -108,17 +135,30 @@ export default function ProfilPage() {
       // abaikan
     }
     try {
-      await fetch("/api/friends", {
-        method: "POST",
+      const res = await fetch("/api/profile", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "register",
           userId,
           name: form.name.trim(),
+          username: cleanUsername,
+          profileData: {
+            school: form.school.trim(),
+            grade: form.grade,
+          },
         }),
       });
+      const payload = await res.json();
+      if (!res.ok) {
+        showToast(payload?.error ?? "Gagal menyimpan profil. ⚠️");
+        return;
+      }
+      if (payload?.user?.userNumber != null) {
+        setUserNumber(Number(payload.user.userNumber));
+      }
     } catch {
-      // abaikan
+      showToast("Gagal menyimpan profil. ⚠️");
+      return;
     }
     showToast("Profil berhasil disimpan! ✅");
   };
@@ -150,6 +190,16 @@ export default function ProfilPage() {
         </div>
         <p className="mt-4 text-2xl font-extrabold text-clay-dark">{form.name}</p>
         <p className="text-sm font-bold text-clay-muted">{form.email}</p>
+        {form.username && (
+          <p className="mt-1 text-sm font-extrabold text-clay-primary">
+            @{form.username}
+            {userNumber != null && (
+              <span className="ml-2 rounded-full bg-clay-primary/10 px-3 py-0.5 text-xs">
+                Pengguna ke-{userNumber}
+              </span>
+            )}
+          </p>
+        )}
         <span className="mt-3 inline-block rounded-clay-full border-2 border-clay-primary bg-clay-primary/10 px-5 py-1.5 text-sm font-extrabold text-clay-primary">
           Level {stats.level} · PELAJAR KONSISTEN
         </span>
@@ -183,6 +233,26 @@ export default function ProfilPage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Nama lengkap"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 flex items-center gap-1.5 text-sm font-extrabold text-clay-dark">
+              <User size={15} className="text-clay-primary" />
+              @USERNAME
+            </label>
+            <InputClay
+              value={form.username}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  username: e.target.value
+                    .toLowerCase()
+                    .replace(/^@+/, "")
+                    .replace(/[^a-z0-9_]/g, ""),
+                })
+              }
+              placeholder="username (dipakai teman untuk mencari kamu)"
             />
           </div>
 

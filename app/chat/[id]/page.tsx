@@ -11,6 +11,7 @@ import TypewriterText from "@/components/ui/TypewriterText";
 import { UploadSourceModal } from "@/components/chat/UploadSourceModal";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { getUserId } from "@/lib/identity";
+import { postProgress } from "@/lib/levelUp";
 import type { Message, ToolCall } from "@/lib/types";
 
 function TypingDots() {
@@ -122,7 +123,7 @@ export default function ChatPage() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: [], topic: data.weakTopic }),
+          body: JSON.stringify({ messages: [], topic: data.weakTopic, userId: getUserId() }),
         });
         if (!res.ok || cancelled) return;
         const json = await res.json();
@@ -186,16 +187,12 @@ export default function ChatPage() {
     setMessages((m) => [...m, { id, role: "assistant", content: "" }]);
     setTypingId(id);
 
-    fetch("/api/progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "activity",
-        userId: getUserId(),
-        xp: 2,
-        label: "Belajar dengan Eureka",
-      }),
-    }).catch(() => {});
+    void postProgress({
+      action: "activity",
+      userId: getUserId(),
+      xp: 2,
+      label: "Belajar dengan Eureka",
+    });
 
     const applyReply = (reply: string) => {
       setMessages((m) =>
@@ -207,7 +204,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history }),
+        body: JSON.stringify({ messages: history, userId: getUserId() }),
       });
       const json = await res.json();
       const reply =
@@ -245,27 +242,27 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col">
-      <header className="flex items-center justify-between border-b-2 border-clay-shadow/30 bg-clay-beige/80 px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-3">
+    <div className="flex h-screen flex-col supports-[height:100dvh]:h-dvh">
+      <header className="flex items-center justify-between gap-3 border-b-2 border-clay-shadow/30 bg-clay-beige/80 px-4 py-3 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/dashboard"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-lg font-extrabold shadow-clay-sm transition-all duration-75 active:translate-y-1"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-lg font-extrabold shadow-clay-sm transition-all duration-75 active:translate-y-1"
             aria-label="Kembali ke dashboard"
           >
             ←
           </Link>
           <AvatarClay name="Eureka" size={44} />
-          <div>
+          <div className="min-w-0">
             <p className="text-lg font-extrabold leading-tight">Eureka.AI</p>
-            <p className="text-xs font-bold text-clay-muted">
+            <p className="truncate text-xs font-bold text-clay-muted">
               {data.learningHabit === "coba_sendiri"
                 ? "Mode: Kamu pegang kendali 🔥"
                 : "Tutor Socratic sabar — nggak ada yang salah ❤️"}
             </p>
           </div>
         </div>
-        <span className="rounded-full bg-clay-inputBg px-4 py-1.5 text-xs font-extrabold text-clay-muted shadow-clay-inset">
+        <span className="shrink-0 rounded-full bg-clay-inputBg px-3 py-1.5 text-xs font-extrabold text-clay-muted shadow-clay-inset sm:px-4">
           {params.id === "demo" ? "Mode demo" : "Tutor AI · langsung"}
         </span>
       </header>
@@ -287,13 +284,14 @@ export default function ChatPage() {
       <footer className="border-t-2 border-clay-shadow/30 bg-clay-beige/80 px-4 pb-4 pt-3 sm:px-6">
         <div className="mx-auto w-full max-w-clay">
           {uploadedName && (
-            <div className="mb-3 flex items-center justify-between rounded-clay-md bg-clay-inputBg px-4 py-2.5 shadow-clay-inset">
-              <span className="text-sm font-bold text-clay-dark">
+            <div className="mb-3 flex items-center gap-2 rounded-clay-md bg-clay-inputBg px-4 py-2.5 shadow-clay-inset">
+              <span className="min-w-0 flex-1 truncate text-sm font-bold text-clay-dark">
                 📷 {uploadedName} — menunggu OCR...
               </span>
               <button
                 onClick={() => setUploadedName(null)}
-                className="text-sm font-extrabold text-clay-muted"
+                aria-label="Batalkan unggahan"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-extrabold text-clay-muted hover:bg-white/70"
               >
                 ✕
               </button>

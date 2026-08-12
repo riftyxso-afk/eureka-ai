@@ -1,17 +1,18 @@
+import { GraduationCap } from "lucide-react";
+
 interface AvatarClayProps {
   name?: string;
   size?: number;
 }
 
-export default function AvatarClay({ name = "Eureka", size = 48 }: AvatarClayProps) {
-  const initial = (name.trim().charAt(0) || "E").toUpperCase();
+export default function AvatarClay({ size = 48 }: AvatarClayProps) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full bg-clay-primary font-extrabold text-white border-2 border-clay-borderLight shadow-clay-sm"
-      style={{ width: size, height: size, fontSize: size * 0.42 }}
+      className="flex shrink-0 items-center justify-center rounded-full bg-clay-primary text-white border-2 border-clay-borderLight shadow-clay-sm"
+      style={{ width: size, height: size }}
       aria-hidden
     >
-      {initial}
+      <GraduationCap size={Math.round(size * 0.52)} strokeWidth={2.4} />
     </div>
   );
 }

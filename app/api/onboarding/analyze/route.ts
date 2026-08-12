@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { aiChatJson, hasAiKey } from "@/lib/ai";
+import type { OnboardingAnalysis } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-export interface OnboardingAnalysis {
-  tagline: string;
-  learningStyle: string;
-  recommendations: { icon: string; title: string; desc: string }[];
-  studyTips: string[];
-}
 
 const FALLBACK: OnboardingAnalysis = {
   tagline: "Tutor Socratic-mu siap bikin kamu paham, bukan cuma hafal!",
   learningStyle:
     "Profil belajarmu sudah tercatat. Saat materi baru masuk, Eureka akan menyesuaikan cara membimbingmu.",
+  psyLabel: "Si Penasaran Adaptif",
+  psySummary:
+    "Kamu belajar paling nyaman saat bebas mengeksplorasi dengan caramu sendiri. Eureka akan menyesuaikan ritmenya denganmu.",
   recommendations: [
     {
       icon: "🧠",
@@ -47,14 +44,21 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => null)) as {
       name?: string;
+      education?: string;
       grade?: string;
+      psyAnswers?: Record<string, string>;
       weakTopic?: string;
       learningHabit?: string;
       peakHour?: string;
     } | null;
 
     const name = String(body?.name ?? "").trim().slice(0, 60);
+    const education = String(body?.education ?? "").trim().slice(0, 40);
     const grade = String(body?.grade ?? "").trim().slice(0, 40);
+    const psyAnswers =
+      body?.psyAnswers && typeof body.psyAnswers === "object"
+        ? body.psyAnswers
+        : {};
     const weakTopic = String(body?.weakTopic ?? "").trim().slice(0, 80);
     const learningHabit = String(body?.learningHabit ?? "").trim().slice(0, 80);
     const peakHour = String(body?.peakHour ?? "").trim().slice(0, 40);
@@ -71,23 +75,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ analysis: FALLBACK });
     }
 
+    // Tingkat pendidikan → konteks materi yang relevan.
+    const eduContext: Record<string, string> = {
+      sd: "Siswa SD (kelas 1-6): materi dasar seperti operasi hitung, pecahan, geometri sederhana; gunakan bahasa sangat sederhana dan contoh sehari-hari",
+      smp: "Siswa SMP (kelas 7-9): aljabar dasar, persamaan linear, statistika sederhana; gunakan bahasa sederhana dengan analogi",
+      sma: "Siswa SMA (kelas 10-12): aljabar lanjut, turunan, integral, trigonometri, statistika; bahasa formal santai, siap menghadapi ujian sekolah/UTBK",
+      mahasiswa: "Mahasiswa: kalkulus, aljabar linear, statistika lanjut, mata kuliah eksakta; pendekatan analitis dan penjelasan yang dalam",
+    };
+    const eduLine = eduContext[education] ?? "Jenjang umum: sesuaikan tingkat kesulitan penjelasan dengan kelas yang disebutkan";
+
+    const psyLines = Object.entries(psyAnswers)
+      .map(([qid, trait]) => `- ${qid}: ${trait}`)
+      .join("\n");
+
     const analysis = await aiChatJson<OnboardingAnalysis>(
       {
         system:
-          "Kamu adalah psikolog belajar & perancang pengalaman edukasi Eureka.AI. Analisis profil siswa lalu susun rekomendasi belajar yang PERSONAL. Jawab HANYA JSON valid tanpa teks lain.",
+          "Kamu adalah psikolog belajar & perancang pengalaman edukasi Eureka.AI. Analisis hasil tes kepribadian belajar siswa lalu susun rekomendasi belajar yang PERSONAL dan SESUAI JENJANG PENDIDIKANNYA. Jawab HANYA JSON valid tanpa teks lain.",
         user: `Analisis profil siswa berikut lalu susun rekomendasi belajar:
 - Nama: ${name || "-"}
-- Kelas: ${grade || "-"}
+- Jenjang pendidikan: ${education || "-"} (${eduLine})
+- Kelas/Semester: ${grade || "-"}
 - Topik matematika yang paling sulit: ${weakTopic || "-"}
 - Kebiasaan saat menemui soal sulit: ${learningHabit || "-"}
 - Waktu paling fokus: ${peakHour || "-"}
 
+Hasil TES KEPSIKOLOGI BELAJAR (question_id: trait yang dipilih):
+${psyLines || "- belum diisi -"}
+
+Berdasarkan jawaban tes tersebut, tentukan "tipe kepribadian belajar"-nya (kamu boleh menamai tipe yang menarik & positif, mis. "Si Analitis Santai", "Penjelajah Visual", dsb) dan jelaskan singkat.
+
+Sesuaikan SEMUA rekomendasi dengan jenjang tersebut: tingkat kesulitan materi, cara menjelaskan, dan target belajar (ulangan harian → UTBK → kuliah).
+
 Output JSON dengan skema:
 {
   "tagline": "kalimat penyambutan 1 kalimat, menyebut nama, bahasa Indonesia santai",
+  "psyLabel": "nama tipe kepribadian belajar yang menarik, maksimal 4 kata",
+  "psySummary": "ringkasan kepribadian belajar 2-3 kalimat berdasarkan jawaban tes, bahasa santai",
   "learningStyle": "analisis singkat 2-3 kalimat tentang gaya belajarnya + saran umum",
-  "recommendations": [{"icon": "emoji", "title": "judul pendek", "desc": "deskripsi 1 kalimat yang relevan dengan profilnya"}],
-  "studyTips": ["3 tips belajar singkat yang personal untuk profil ini"]
+  "recommendations": [{"icon": "emoji", "title": "judul pendek", "desc": "deskripsi 1 kalimat yang relevan dengan profil & jenjangnya"}],
+  "studyTips": ["3 tips belajar singkat yang personal untuk profil dan jenjang ini"]
 }
 Maksimal 4 rekomendasi dan 3 tips.`,
         json: true,
@@ -103,6 +130,14 @@ Maksimal 4 rekomendasi dan 3 tips.`,
             typeof obj.tagline === "string" && obj.tagline.trim()
               ? obj.tagline.trim().slice(0, 200)
               : FALLBACK.tagline,
+          psyLabel:
+            typeof obj.psyLabel === "string" && obj.psyLabel.trim()
+              ? obj.psyLabel.trim().slice(0, 60)
+              : FALLBACK.psyLabel,
+          psySummary:
+            typeof obj.psySummary === "string" && obj.psySummary.trim()
+              ? obj.psySummary.trim().slice(0, 600)
+              : FALLBACK.psySummary,
           learningStyle:
             typeof obj.learningStyle === "string" && obj.learningStyle.trim()
               ? obj.learningStyle.trim().slice(0, 1000)

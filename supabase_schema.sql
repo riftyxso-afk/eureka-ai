@@ -1,5 +1,5 @@
--- ============================================================
--- Eureka.AI — Supabase Database Schema (LENGKAP)
+﻿-- ============================================================
+-- Eureka.AI â€” Supabase Database Schema (LENGKAP)
 -- Jalankan sekali di Supabase Dashboard > SQL Editor
 -- ============================================================
 
@@ -7,16 +7,23 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- 2) PROFILE USER (sinkron otomatis dari auth.users lewat trigger)
+CREATE SEQUENCE IF NOT EXISTS public.users_number_seq START 1;
+
 CREATE TABLE public.users (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT NOT NULL,
     name TEXT,
+    username TEXT UNIQUE,
+    user_number INT UNIQUE,
+    onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
     profile_data JSONB,
+    profile_md TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX users_email_idx ON public.users(email);
+CREATE INDEX users_username_idx ON public.users(username);
 
 -- ============================================================
 -- CATATAN & RAG
@@ -27,6 +34,7 @@ CREATE TABLE public.notes (
     title TEXT NOT NULL,
     summary TEXT NOT NULL,
     subject TEXT,
+    chapters JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -44,17 +52,19 @@ CREATE TABLE public.chunks (
 );
 
 CREATE INDEX chunks_note_id_idx ON public.chunks(note_id);
-CREATE INDEX chunks_embedding_idx ON public.chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 -- Fungsi pencarian vektor
+-- NOTE: kolom hasil dinamai note_uid dan parameter dinamai p_note_id
+-- agar tidak bentrok (error 42P13/42703).
 CREATE OR REPLACE FUNCTION public.match_chunks(
     query_embedding VECTOR(1536),
-    note_id UUID DEFAULT NULL,
+    p_note_id UUID DEFAULT NULL,
     similarity_threshold FLOAT8 DEFAULT 0.78,
-    top_k INT DEFAULT 4
+    top_k INT DEFAULT 4,
+    filter_user_id UUID DEFAULT NULL
 ) RETURNS TABLE (
     id UUID,
-    note_id UUID,
+    note_uid UUID,
     chapter_id INT,
     text TEXT,
     embedding VECTOR,
@@ -71,7 +81,12 @@ BEGIN
         1 - (c.embedding <=> query_embedding) AS similarity
     FROM public.chunks c
     WHERE 1=1
-      AND (match_chunks.note_id IS NULL OR c.note_id = match_chunks.note_id)
+      AND (p_note_id IS NULL OR c.note_id = p_note_id)
+      AND (filter_user_id IS NULL
+           OR EXISTS (
+               SELECT 1 FROM public.notes n
+               WHERE n.id = c.note_id AND n.user_id = filter_user_id
+           ))
       AND 1 - (c.embedding <=> query_embedding) > similarity_threshold
     ORDER BY c.embedding <=> query_embedding
     LIMIT top_k;
@@ -180,12 +195,12 @@ CREATE TABLE public.subjects (
 );
 
 INSERT INTO public.subjects (id, name, icon, color, progress) VALUES
-    ('s-mtk', 'Matematika', '🧮', '#8B5CF6', 75),
-    ('s-fis', 'Fisika', '⚡', '#F59E0B', 60),
-    ('s-kim', 'Kimia', '🧪', '#10B981', 45),
-    ('s-bio', 'Biologi', '🧬', '#3B82F6', 30),
-    ('s-eko', 'Ekonomi', '📊', '#EF4444', 20),
-    ('s-sej', 'Sejarah', '📜', '#8B5CF6', 10)
+    ('s-mtk', 'Matematika', 'ðŸ§®', '#8B5CF6', 75),
+    ('s-fis', 'Fisika', 'âš¡', '#F59E0B', 60),
+    ('s-kim', 'Kimia', 'ðŸ§ª', '#10B981', 45),
+    ('s-bio', 'Biologi', 'ðŸ§¬', '#3B82F6', 30),
+    ('s-eko', 'Ekonomi', 'ðŸ“Š', '#EF4444', 20),
+    ('s-sej', 'Sejarah', 'ðŸ“œ', '#8B5CF6', 10)
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
@@ -368,13 +383,17 @@ CREATE TRIGGER update_whiteboards_timestamp BEFORE UPDATE ON public.whiteboards
     FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
 
 -- ============================================================
--- TRIGGER: user baru dari auth.users → public.users
+-- TRIGGER: user baru dari auth.users â†’ public.users
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.sync_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-    INSERT INTO public.users (id, email, name)
-    VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'name')
+    INSERT INTO public.users (id, email, name, user_number)
+    VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'name',
+            nextval('public.users_number_seq'))
     ON CONFLICT (id) DO UPDATE
     SET email = EXCLUDED.email,
         name = EXCLUDED.name,
@@ -383,10 +402,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW
     EXECUTE FUNCTION sync_user();
+
+-- Trigger pendukung: nomor urut user dijamin terisi untuk data lama.
+CREATE OR REPLACE FUNCTION public.fill_user_number()
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NEW.user_number IS NULL THEN
+        NEW.user_number = nextval('public.users_number_seq');
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS on_users_insert ON public.users;
+CREATE TRIGGER on_users_insert
+    BEFORE INSERT ON public.users
+    FOR EACH ROW
+    EXECUTE FUNCTION fill_user_number();
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -462,61 +502,61 @@ CREATE POLICY "notes update own" ON public.notes FOR UPDATE USING (auth.uid() = 
 CREATE POLICY "notes delete own" ON public.notes FOR DELETE USING (auth.uid() = user_id);
 
 CREATE POLICY "chunks select own" ON public.chunks FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = chunks.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "chunks insert own" ON public.chunks FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = chunks.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "chunks delete own" ON public.chunks FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = chunks.note_id AND n.user_id = auth.uid())
 );
 
 CREATE POLICY "chat select own" ON public.chat_messages FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = chat_messages.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "chat insert own" ON public.chat_messages FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = chat_messages.note_id AND n.user_id = auth.uid())
 );
 
 CREATE POLICY "versions select own" ON public.note_versions FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_versions.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "versions insert own" ON public.note_versions FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_versions.note_id AND n.user_id = auth.uid())
 );
 
 CREATE POLICY "presence select own" ON public.presence FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = presence.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "presence insert own" ON public.presence FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = presence.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "presence update own" ON public.presence FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = presence.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "presence delete own" ON public.presence FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = presence.note_id AND n.user_id = auth.uid())
 );
 
 -- ---------- Highlight & gambar (akses catatan sendiri) ----------
 CREATE POLICY "highlights select own" ON public.highlights FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = highlights.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "highlights insert own" ON public.highlights FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = highlights.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "highlights delete own" ON public.highlights FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = highlights.note_id AND n.user_id = auth.uid())
 );
 
 CREATE POLICY "images select own" ON public.note_images FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_images.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "images insert own" ON public.note_images FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_images.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "images delete own" ON public.note_images FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_images.note_id AND n.user_id = auth.uid())
 );
 
 -- ---------- Notifikasi (hanya punya sendiri) ----------
@@ -526,44 +566,44 @@ CREATE POLICY "notifications update own" ON public.notifications FOR UPDATE USIN
 
 -- ---------- Studi (kuis & flashcards per catatan) ----------
 CREATE POLICY "study select own" ON public.study_content FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = study_content.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "study upsert own" ON public.study_content FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = study_content.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "study update own" ON public.study_content FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = study_content.note_id AND n.user_id = auth.uid())
 );
 
 -- ---------- Papan tulis ----------
 CREATE POLICY "whiteboards select own" ON public.whiteboards FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = whiteboards.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "whiteboards insert own" ON public.whiteboards FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = whiteboards.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "whiteboards update own" ON public.whiteboards FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = whiteboards.note_id AND n.user_id = auth.uid())
 );
 
 CREATE POLICY "strokes select own" ON public.board_strokes FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = board_strokes.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "strokes insert own" ON public.board_strokes FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = board_strokes.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "strokes delete own" ON public.board_strokes FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = board_strokes.note_id AND n.user_id = auth.uid())
 );
 
 CREATE POLICY "chapter_notes select own" ON public.chapter_notes FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = chapter_notes.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "chapter_notes upsert own" ON public.chapter_notes FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = chapter_notes.note_id AND n.user_id = auth.uid())
 );
 CREATE POLICY "chapter_notes update own" ON public.chapter_notes FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = chapter_notes.note_id AND n.user_id = auth.uid())
 );
 
 CREATE TRIGGER update_chapter_notes_timestamp BEFORE UPDATE ON public.chapter_notes
@@ -571,11 +611,11 @@ CREATE TRIGGER update_chapter_notes_timestamp BEFORE UPDATE ON public.chapter_no
 
 -- ---------- Dokumen & pekerjaan ----------
 CREATE POLICY "documents select own" ON public.documents FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    auth.uid() IS NOT NULL
 );
 
 CREATE POLICY "jobs select own" ON public.jobs FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.notes n WHERE n.id = note_id AND n.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM notes n WHERE n.id = jobs.note_id AND n.user_id = auth.uid())
 );
 
 -- ---------- Mata pelajaran (publik) ----------

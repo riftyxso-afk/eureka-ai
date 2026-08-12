@@ -129,7 +129,7 @@ export async function updateChunksEmbeddings(
   for (const emb of embeddings) {
     await db().rpc('match_chunks', {
       query_embedding: emb as number[],
-      note_id: noteId,
+      p_note_id: noteId,
       similarity_threshold: 0,
       top_k: 1,
     });
@@ -143,7 +143,7 @@ export async function searchChunks(
 ) {
   const { data, error } = await db().rpc('match_chunks', {
     query_embedding: embedding as number[],
-    note_id: noteId,
+    p_note_id: noteId,
     similarity_threshold: 0.78,
     top_k: topK,
   });

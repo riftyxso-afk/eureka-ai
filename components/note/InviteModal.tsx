@@ -215,7 +215,7 @@ export default function InviteModal({
           </div>
           <Link
             href={`/dashboard/note/${noteId}/papan`}
-            className="btn-clay-primary flex w-full items-center justify-center !min-h-[42px] text-sm"
+            className="btn-clay-primary flex w-full items-center justify-center !min-h-[44px] text-sm"
           >
             <PenTool size={16} className="mr-2" />
             Buka Papan Tulis
@@ -231,7 +231,7 @@ export default function InviteModal({
                 notify("Gagal menyalin link.");
               }
             }}
-            className="btn-clay-ghost mt-2 flex w-full items-center justify-center !min-h-[36px] text-xs"
+            className="btn-clay-ghost mt-2 flex w-full items-center justify-center !min-h-[44px] text-xs"
           >
             <Copy size={14} className="mr-1.5" />
             Salin link papan tulis

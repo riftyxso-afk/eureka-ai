@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { JobWatcherProvider } from "@/context/JobWatcherContext";
+import LevelUpOverlay from "@/components/dashboard/LevelUpOverlay";
 
 export const metadata: Metadata = {
   title: "Eureka.AI — Bukan ngasih jawaban, tapi ngasih Eureka!",
@@ -18,7 +19,10 @@ export default function RootLayout({
     <html lang="id">
       <body className="antialiased">
         <JobWatcherProvider>
-          <OnboardingProvider>{children}</OnboardingProvider>
+          <OnboardingProvider>
+            {children}
+            <LevelUpOverlay />
+          </OnboardingProvider>
         </JobWatcherProvider>
       </body>
     </html>

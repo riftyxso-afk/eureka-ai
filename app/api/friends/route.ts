@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
       users: results.map(({ user, relation }) => ({
         id: user.id,
         name: user.name,
+        username: user.username ?? null,
         relation,
       })),
     });

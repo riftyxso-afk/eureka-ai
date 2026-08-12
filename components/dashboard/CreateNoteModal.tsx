@@ -12,6 +12,7 @@ import {
   Loader2,
   Music,
   PartyPopper,
+  Square,
   SquarePlay,
   Upload,
   Video,
@@ -34,6 +35,7 @@ interface SourceOption {
   icon: LucideIcon;
   accept?: string;
   placeholder?: string;
+  comingSoon?: boolean;
 }
 
 const SOURCES: SourceOption[] = [
@@ -64,6 +66,7 @@ const SOURCES: SourceOption[] = [
     desc: "MP3, WAV, M4A",
     icon: Music,
     accept: "audio/*",
+    comingSoon: true,
   },
   {
     id: "video",
@@ -71,6 +74,7 @@ const SOURCES: SourceOption[] = [
     desc: "MP4, MOV",
     icon: Video,
     accept: "video/*",
+    comingSoon: true,
   },
 ];
 
@@ -139,7 +143,7 @@ export const CreateNoteModal = ({
   onClose,
   onCreate,
 }: CreateNoteModalProps) => {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedSource, setSelectedSource] = useState("dokumen");
   const [file, setFile] = useState<File | null>(null);
   const [link, setLink] = useState("");
@@ -149,6 +153,7 @@ export const CreateNoteModal = ({
   );
   const [gayaPenulisan, setGayaPenulisan] = useState("Ramah & Santai");
   const [bahasa, setBahasa] = useState("Bahasa Indonesia");
+  const [chapterCount, setChapterCount] = useState(4);
   const [processing, setProcessing] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
   const [progressMessage, setProgressMessage] = useState("");
@@ -158,20 +163,28 @@ export const CreateNoteModal = ({
   const [newSubjectName, setNewSubjectName] = useState("");
   const [subjectError, setSubjectError] = useState<string | null>(null);
   const [createdNote, setCreatedNote] = useState<Note | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [stoppingJob, setStoppingJob] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const doneHandledRef = useRef(false);
   const router = useRouter();
+  const jobIdRef = useRef<string | null>(null);
 
   const loadSubjects = useCallback(async () => {
     try {
       const res = await fetch("/api/subjects");
-      if (res.ok) {
-        const data = await res.json();
-        setSubjects(data.subjects ?? []);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json?.subjects) {
+        setSubjects(Array.isArray(json.subjects) ? json.subjects : []);
+      } else {
+        console.warn("[CreateNoteModal] API return:", json);
+        setSubjects([]);
       }
-    } catch {
-      // biarkan kosong
+    } catch (e) {
+      console.error("[CreateNoteModal] loadSubjects fail:", e);
+      setSubjects([]);
     }
   }, []);
 
@@ -179,28 +192,35 @@ export const CreateNoteModal = ({
     if (open && step === 2) loadSubjects();
   }, [open, step, loadSubjects]);
 
-  const addNewSubject = async () => {
-    const name = newSubjectName.trim();
-    if (!name) {
-      setSubjectError("Nama mata pelajaran kosong.");
-      return;
-    }
-    try {
-      const res = await fetch("/api/subjects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          color: SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length],
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal menambah pelajaran.");
-      setSubjects((prev) => [...prev, data.subject]);
-      setMataPelajaran(data.subject.name);
-      setAddingSubject(false);
-      setNewSubjectName("");
-      setSubjectError(null);
+   const addNewSubject = async () => {
+     const name = newSubjectName.trim();
+     if (!name) {
+       setSubjectError("Nama mata pelajaran tidak boleh kosong.");
+       return;
+     }
+     try {
+       const res = await fetch("/api/subjects", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           name,
+           color: SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length],
+         }),
+       });
+       if (!res.ok) {
+         const text = await res.text();
+         const msg = text.includes('"sudah ada') 
+           ? `Mata pelajaran "${name}" sudah ada di daftar.`
+           : `Gagal menambah mata pelajaran: ${text.substring(0, 200)}`;
+         throw new Error(msg);
+       }
+       const data = await res.json();
+       if (!data.subject) throw new Error("Respons API tidak valid.");
+       setSubjects((prev) => [...prev, data.subject]);
+       setMataPelajaran(data.subject.name);
+       setAddingSubject(false);
+       setNewSubjectName("");
+       setSubjectError(null);
     } catch (e) {
       setSubjectError(e instanceof Error ? e.message : "Terjadi kesalahan.");
     }
@@ -227,12 +247,15 @@ export const CreateNoteModal = ({
     setStudyMode("standar");
     setGayaPenulisan("Ramah & Santai");
     setBahasa("Bahasa Indonesia");
+    setChapterCount(4);
     setError(null);
     setProgressPercent(0);
     setProgressMessage("");
     setAddingSubject(false);
     setNewSubjectName("");
     setSubjectError(null);
+    setActiveJobId(null);
+    setStoppingJob(false);
   };
 
   const close = () => {
@@ -259,6 +282,21 @@ export const CreateNoteModal = ({
     };
   }, []);
 
+  const stopProcessing = async () => {
+    if (!jobIdRef.current) return;
+    setStoppingJob(true);
+    try {
+      await fetch(`/api/notes/jobs/${encodeURIComponent(jobIdRef.current)}`, {
+        method: "POST",
+      });
+      setProcessing(false);
+      setProgressMessage("Proses dibatalkan.");
+      close();
+    } catch {
+      setStoppingJob(false);
+    }
+  };
+
   const openCreatedNote = () => {
     if (!createdNote) return;
     const note = createdNote;
@@ -270,10 +308,15 @@ export const CreateNoteModal = ({
   };
 
   const pickSource = (id: string) => {
+    const src = SOURCES.find((s) => s.id === id);
+    if (src?.comingSoon) {
+      setError("Sumber ini belum tersedia. Segera hadir! ✨");
+      return;
+    }
+    setError(null);
     setSelectedSource(id);
     setFile(null);
     setLink("");
-    setError(null);
     setStep(2);
   };
 
@@ -285,6 +328,16 @@ export const CreateNoteModal = ({
     if (doneHandledRef.current) return;
     try {
       const jres = await fetch(`/api/notes/jobs/${encodeURIComponent(jobId)}`);
+      // Job hilang (server restart / kedaluwarsa) → hentikan proses dengan pesan jelas.
+      if (jres.status === 404) {
+        doneHandledRef.current = true;
+        removeActiveJobId(jobId);
+        setError(
+          "Proses terhenti karena server sempat restart. Silakan coba buat catatan lagi."
+        );
+        setProcessing(false);
+        return;
+      }
       const jdata = await jres.json();
       const job = jdata?.job;
       if (!job) return;
@@ -326,6 +379,7 @@ export const CreateNoteModal = ({
     form.append("studyMode", studyMode);
     form.append("gayaPenulisan", gayaPenulisan);
     form.append("bahasa", bahasa);
+    form.append("chapterCount", String(chapterCount));
     form.append("userId", getUserId());
     if (isLinkSource) form.append("url", link.trim());
     else if (file) form.append("file", file);
@@ -372,6 +426,8 @@ export const CreateNoteModal = ({
       // 202: job berjalan di latar belakang.
       if (data.jobId) {
         jobId = String(data.jobId);
+        jobIdRef.current = jobId;
+        setActiveJobId(jobId);
         addActiveJobId(jobId);
         setProgressMessage(
           "Materi sedang dirangkum di latar belakang — kamu boleh lanjut menjelajah"
@@ -420,7 +476,7 @@ export const CreateNoteModal = ({
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-lg max-h-[95vh] overflow-y-auto"
           >
-            <CardClay className="shadow-clay-lg">
+            <CardClay className="shadow-clay-lg !p-4 sm:!p-8">
               {createdNote ? (
                 <div className="flex flex-col items-center px-4 py-8 sm:px-6 sm:py-12 text-center">
                   <motion.div
@@ -435,7 +491,7 @@ export const CreateNoteModal = ({
                     Catatan berhasil dibuat! 🎉
                   </h2>
                   <p className="mt-2 line-clamp-2 max-w-md text-sm sm:text-base font-semibold text-clay-muted px-4">
-                    "{createdNote.title}" sudah masuk ke dashboard kamu dan siap
+                    &quot;{createdNote.title}&quot; sudah masuk ke dashboard kamu dan siap
                     dipelajari.
                   </p>
                   <div className="mt-6 sm:mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row px-4">
@@ -496,6 +552,14 @@ export const CreateNoteModal = ({
                   >
                     Tutup & lanjutkan di latar belakang →
                   </button>
+                  <button
+                    onClick={stopProcessing}
+                    disabled={!activeJobId || stoppingJob}
+                    className="mt-2 flex items-center justify-center gap-2 rounded-clay-md border-2 border-red-200 bg-red-50 py-3 px-4 text-xs sm:text-sm font-extrabold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 min-h-[44px]"
+                  >
+                    <Square size={11} className="fill-current" />
+                    {stoppingJob ? "Menghentikan..." : "Berhenti proses"}
+                  </button>
                 </div>
               ) : step === 1 ? (
                 <>
@@ -508,7 +572,7 @@ export const CreateNoteModal = ({
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                       <span className="rounded-clay-full bg-clay-inputBg px-2 sm:px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
-                        Langkah 1/2
+                        Langkah 1/3
                       </span>
                       <button
                         onClick={close}
@@ -525,8 +589,15 @@ export const CreateNoteModal = ({
                       <button
                         key={s.id}
                         onClick={() => pickSource(s.id)}
-                        className="card-clay flex flex-col items-start gap-2 border-clay-shadow/40 p-4 sm:p-5 text-left transition-all duration-75 hover:-translate-y-0.5 hover:border-clay-primary active:translate-y-1 min-h-[88px]"
+                        className={`relative card-clay flex flex-col items-start gap-2 border-clay-shadow/40 p-4 sm:p-5 text-left transition-all duration-75 hover:-translate-y-0.5 hover:border-clay-primary active:translate-y-1 min-h-[88px] ${
+                          s.comingSoon ? "opacity-70" : ""
+                        }`}
                       >
+                        {s.comingSoon && (
+                          <span className="absolute right-3 top-3 rounded-clay-full bg-amber-200 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-800 shadow-clay-inset">
+                            Soon
+                          </span>
+                        )}
                         <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
                           <s.icon size={20} className="text-clay-primary" />
                         </div>
@@ -538,7 +609,7 @@ export const CreateNoteModal = ({
                     ))}
                   </div>
                 </>
-              ) : (
+              ) : step === 2 ? (
                 <>
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -549,7 +620,7 @@ export const CreateNoteModal = ({
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                       <span className="rounded-clay-full bg-clay-inputBg px-2 sm:px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
-                        Langkah 2/2
+                        Langkah 2/3
                       </span>
                       <button
                         onClick={close}
@@ -721,7 +792,9 @@ export const CreateNoteModal = ({
                           placeholder={current.placeholder}
                           value={link}
                           onChange={(e) => setLink(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && canSubmit) setStep(3);
+                          }}
                         />
                       ) : (
                         <>
@@ -778,7 +851,79 @@ export const CreateNoteModal = ({
                     >
                       Kembali
                     </ButtonClay>
-                    <ButtonClay onClick={handleSubmit} disabled={!canSubmit} className="w-full sm:w-auto">
+                    <ButtonClay
+                      onClick={() => {
+                        setError(null);
+                        setStep(3);
+                      }}
+                      disabled={!canSubmit}
+                      className="w-full sm:w-auto"
+                    >
+                      Lanjut
+                    </ButtonClay>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-extrabold">Jumlah Bab</h2>
+                      <p className="mt-1 sm:mt-2 text-sm sm:text-base font-semibold text-clay-muted">
+                        Pilih berapa bab yang ingin dibuat dari materi kamu
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                      <span className="rounded-clay-full bg-clay-inputBg px-2 sm:px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
+                        Langkah 3/3
+                      </span>
+                      <button
+                        onClick={close}
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset min-h-[44px] min-w-[44px]"
+                        aria-label="Tutup modal"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 sm:mt-6">
+                    <div className="card-clay flex flex-wrap items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6">
+                      {[1, 2, 3, 4, 5, 6].map((n) => {
+                        const active = chapterCount === n;
+                        return (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setChapterCount(n)}
+                            className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-clay-md border-2 text-lg sm:text-xl font-extrabold transition-all duration-75 min-h-[44px] min-w-[44px] ${
+                              active
+                                ? "border-clay-primary bg-clay-primary text-white shadow-clay-btn -translate-y-0.5"
+                                : "border-clay-shadow/40 bg-clay-inputBg text-clay-dark shadow-clay-inset hover:border-clay-primary"
+                            }`}
+                            aria-pressed={active}
+                          >
+                            {n}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-3 text-center text-xs sm:text-sm font-semibold text-clay-muted">
+                      Catatan: maksimal 6 bab. Bab akan dibagi otomatis dari materi kamu.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 sm:mt-8 flex flex-col gap-3 border-t-2 border-clay-shadow/20 pt-4 sm:pt-5 sm:flex-row sm:justify-end">
+                    <ButtonClay
+                      variant="secondary"
+                      onClick={() => {
+                        setStep(2);
+                        setError(null);
+                      }}
+                      className="w-full sm:w-auto"
+                    >
+                      Kembali
+                    </ButtonClay>
+                    <ButtonClay onClick={handleSubmit} className="w-full sm:w-auto">
                       <CheckCircle2 size={18} className="mr-2" />
                       Buat Catatan
                     </ButtonClay>

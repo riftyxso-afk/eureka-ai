@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SidebarItem } from "./SidebarItem";
+import { logoutUser } from "@/lib/auth";
 
 interface MenuItem {
   id: string;
@@ -69,10 +70,15 @@ export const Sidebar = () => {
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   };
 
-  const handleLogout = () => {
-    if (window.confirm("Yakin ingin keluar dari Eureka.AI?")) {
-      showToast("Sampai jumpa lagi! 👋");
+  const handleLogout = async () => {
+    if (!window.confirm("Yakin ingin keluar dari Eureka.AI?")) return;
+    try {
+      await logoutUser();
+    } catch {
+      // tetap lanjut ke /login; cache sesi sudah dibersihkan di logoutUser
     }
+    // Navigasi penuh agar semua state klien (sesi cache, React) bersih total.
+    window.location.href = "/login";
   };
 
   const brand = (
@@ -85,7 +91,7 @@ export const Sidebar = () => {
 
   const navBody = (onNavigate?: () => void) => (
     <>
-      <nav className="flex flex-1 flex-col gap-1.5">
+      <nav className="flex flex-col gap-1">
         {menuItems.map((item) => (
           <SidebarItem
             key={item.id}
@@ -98,7 +104,7 @@ export const Sidebar = () => {
         ))}
       </nav>
 
-      <div className="mt-3 border-t-2 border-clay-shadow/30 pt-3">
+      <div className="mt-1 border-t-2 border-clay-shadow/30 pt-1">
         <SidebarItem
           icon={Crown}
           label="Tingkatkan Pro"
@@ -108,12 +114,12 @@ export const Sidebar = () => {
         />
       </div>
 
-      <div className="mt-3 flex flex-col gap-1.5 border-t-2 border-clay-shadow/30 pt-3">
+      <div className="mt-1 flex flex-col gap-1 border-t-2 border-clay-shadow/30 pt-1">
         <button
           onClick={() => showToast("Fitur segera hadir! 🚧")}
-          className="flex items-center gap-3 rounded-clay-md px-4 py-3 text-left text-[15px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4]"
+          className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4]"
         >
-          <Pin size={16} />
+          <Pin size={15} />
           Sematkan
         </button>
         <button
@@ -125,16 +131,16 @@ export const Sidebar = () => {
                 : "Mode gelap diaktifkan 🌙"
             );
           }}
-          className="flex items-center gap-3 rounded-clay-md px-4 py-3 text-left text-[15px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4]"
+          className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4]"
         >
-          {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+          {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
           {isDarkMode ? "Mode Terang" : "Mode Gelap"}
         </button>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 rounded-clay-md px-4 py-3 text-left text-[15px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-red-500 hover:shadow-[0_4px_0_#D1C4B4]"
+          className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-red-500 hover:shadow-[0_4px_0_#D1C4B4]"
         >
-          <LogOut size={16} />
+          <LogOut size={15} />
           Keluar
         </button>
       </div>
@@ -151,10 +157,12 @@ export const Sidebar = () => {
         <Menu size={22} />
       </button>
 
-      <aside className="sticky top-0 hidden h-screen w-[240px] shrink-0 flex-col gap-6 rounded-clay bg-white p-4 py-6 shadow-clay-sm lg:flex">
-        {brand}
-        {navBody()}
-      </aside>
+      <div className="sticky top-0 hidden h-screen w-[220px] shrink-0 items-center lg:flex">
+        <aside className="flex max-h-full w-full -translate-y-10 flex-col gap-2 overflow-y-auto rounded-clay bg-white p-3 shadow-clay-sm">
+          {brand}
+          {navBody()}
+        </aside>
+      </div>
 
       <AnimatePresence>
         {isOpen && (
@@ -171,9 +179,9 @@ export const Sidebar = () => {
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: "tween", duration: 0.25 }}
-              className="fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col gap-6 rounded-r-clay bg-white p-4 py-6 shadow-clay-sm lg:hidden"
+              className="fixed left-0 top-0 z-50 flex h-fit max-h-screen w-[280px] flex-col gap-2 overflow-y-auto rounded-r-clay bg-white p-3 shadow-clay-sm lg:hidden"
             >
-              <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight pb-4">
+              <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight pb-2">
                 <Link href="/dashboard" onClick={() => setIsOpen(false)}>
                   <span className="text-2xl font-extrabold text-clay-primary">
                     Eureka<span className="text-clay-dark">.AI</span>

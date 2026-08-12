@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -19,6 +19,7 @@ import {
   PenTool,
   Pencil,
   Phone,
+  RefreshCw,
   Share2,
   Sparkles,
   Trash2,
@@ -35,6 +36,8 @@ import HighlightToolbar from "@/components/note/HighlightToolbar";
 import { NoteTOC } from "@/components/note/NoteTOC";
 import { NoteContent } from "@/components/note/NoteContent";
 import { NoteAIChat } from "@/components/note/NoteAIChat";
+import { DreamingOverlay } from "@/components/note/DreamingOverlay";
+import { useRegenerateJob } from "@/lib/useRegenerateJob";
 import type { HighlightEntry } from "@/lib/highlights-store";
 import type { NoteImage } from "@/lib/note-images-store";
 import { getUserId, getUserName } from "@/lib/identity";
@@ -185,6 +188,9 @@ export default function NoteDetailPage() {
   const searchParams = useSearchParams();
   const [userName] = useState(() => getUserName());
   const userId = getUserId();
+  const [confirmRegen, setConfirmRegen] = useState(false);
+  const [regenNote, setRegenNote] = useState(false);
+  const regen = useRegenerateJob();
 
   const notify = useCallback((msg: string) => {
     setToast(msg);
@@ -228,6 +234,29 @@ export default function NoteDetailPage() {
     loadNote();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  // Reload catatan otomatis saat job regenerate selesai / gagal.
+  useEffect(() => {
+    if (regen.running) return;
+    if (regenNote && regen.percent >= 100) {
+      loadNote();
+      setRegenNote(false);
+      setConfirmRegen(false);
+      notify("Catatan berhasil ditulis ulang! ✨");
+    } else if (regenNote && regen.error) {
+      setRegenNote(false);
+      setConfirmRegen(false);
+      notify(`Gagal menulis ulang: ${regen.error}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regen.running, regenNote]);
+
+  const handleRegenerateAll = async () => {
+    setConfirmRegen(false);
+    setRegenNote(true);
+    notify("AI menulis ulang seluruh catatan...");
+    await regen.start(`/api/notes/${params.id}/regenerate`);
+  };
 
   // Stabilo + ilustrasi (sinkron kolaboratif, polling ringan)
   useEffect(() => {
@@ -385,6 +414,11 @@ export default function NoteDetailPage() {
         <div className="card-clay flex items-center justify-center py-16 text-clay-muted">
           <p className="text-base font-extrabold">Memuat catatan...</p>
         </div>
+        <DreamingOverlay
+          open
+          title="Membaca catatanmu..."
+          status="AI sedang menyiapkan halaman"
+        />
       </div>
     );
   }
@@ -412,25 +446,7 @@ export default function NoteDetailPage() {
   }
 
   const data = note;
-  const chapters = useMemo(() => data.chapters, [data.chapters]);
-
-  // Intersection Observer → deteksi bab yang sedang dibaca
-  useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-    chapters.forEach((chapter) => {
-      const el = sectionRefs.current[chapter.id];
-      if (!el) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) setActiveChapterId(chapter.id);
-        },
-        { rootMargin: "-15% 0px -65% 0px" }
-      );
-      observer.observe(el);
-      observers.push(observer);
-    });
-    return () => observers.forEach((o) => o.disconnect());
-  }, [chapters]);
+  const chapters = data.chapters;
 
   const scrollToChapter = (id: number) => {
     setActiveChapterId(id);
@@ -483,8 +499,8 @@ export default function NoteDetailPage() {
   return (
     <div className="mx-auto w-full max-w-clay space-y-6 px-4 py-6 sm:px-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
           <Link
             href="/dashboard"
             aria-label="Kembali ke dashboard"
@@ -492,11 +508,11 @@ export default function NoteDetailPage() {
           >
             <ArrowLeft size={20} />
           </Link>
-          <h1 className="line-clamp-2 text-xl font-extrabold text-clay-dark sm:text-2xl md:text-3xl">
+          <h1 className="min-w-0 break-words text-xl font-extrabold leading-snug text-clay-dark sm:text-2xl md:text-3xl">
             {data.title}
           </h1>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={toggleBookmark}
             aria-label="Bookmark"
@@ -527,6 +543,14 @@ export default function NoteDetailPage() {
           >
             <History size={16} className="mr-2" />
             Versi
+          </button>
+          <button
+            onClick={() => setConfirmRegen(true)}
+            disabled={regen.running}
+            className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+          >
+            <RefreshCw size={16} className="mr-2" />
+            Tulis Ulang
           </button>
           <Link
             href={`/dashboard/note/${data.id}/papan`}
@@ -633,7 +657,7 @@ export default function NoteDetailPage() {
           )}
 
           {/* Tombol Aksi */}
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             {ACTION_BUTTONS.map((item) => (
               <button
                 key={item.label}
@@ -645,12 +669,24 @@ export default function NoteDetailPage() {
               </button>
             ))}
             <button
+              onClick={generateAiHighlights}
+              className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+            >
+              <Sparkles size={16} className="mr-2 text-clay-primary" />
+              <span className="font-extrabold">Stabilo AI</span>
+            </button>
+            <button
               onClick={() => setShowAddImage(true)}
               className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
             >
               <ImagePlus size={16} className="mr-2" />
               <span className="font-extrabold">Gambar</span>
             </button>
+            {highlights.length > 0 && (
+              <span className="text-xs font-bold text-clay-muted">
+                {highlights.length} bagian distabilo
+              </span>
+            )}
           </div>
 
           {/* Stabilo (highlighter) */}
@@ -659,20 +695,6 @@ export default function NoteDetailPage() {
             notify={notify}
             onSaved={refreshHighlights}
           />
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              onClick={generateAiHighlights}
-              className="btn-clay-ghost !min-h-[40px] !px-4 text-sm"
-            >
-              <Sparkles size={15} className="mr-2 text-clay-primary" />
-              <span className="font-extrabold">Stabilo AI</span>
-            </button>
-            {highlights.length > 0 && (
-              <span className="text-xs font-bold text-clay-muted">
-                {highlights.length} bagian distabilo
-              </span>
-            )}
-          </div>
 
           {/* Bab */}
           <div className="mt-6 space-y-6">
@@ -807,6 +829,57 @@ export default function NoteDetailPage() {
           }}
         />
       )}
+
+      {/* Konfirmasi tulis ulang seluruh catatan */}
+      {confirmRegen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setConfirmRegen(false)}
+        >
+          <div
+            className="card-clay w-full max-w-md !p-6 sm:!p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-extrabold text-clay-dark">
+              Tulis ulang seluruh catatan? ✨
+            </h3>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-muted">
+              AI akan menulis ulang semua bab dari{" "}
+              <span className="font-extrabold text-clay-dark">
+                “{data.title}”
+              </span>{" "}
+              ({chapters.length} bab) berdasarkan konten yang ada. Proses ini
+              bisa memakan waktu beberapa menit — kamu bisa menunggu di halaman
+              ini atau membiarkannya jalan.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setConfirmRegen(false)}
+                className="btn-clay-ghost flex-1 !min-h-[46px] !px-4 text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleRegenerateAll}
+                className="btn-clay-primary flex-1 !min-h-[46px] !px-4 text-sm"
+              >
+                <RefreshCw size={15} className="mr-2" />
+                Tulis Ulang
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay "AI dreaming" saat menulis ulang */}
+      <DreamingOverlay
+        open={regen.running}
+        title="AI sedang menulis ulang catatanmu..."
+        status={regen.message}
+        percent={regen.percent}
+        onCancel={() => void regen.stop()}
+        cancelDisabled={regen.stopping}
+      />
 
       {/* Toast */}
       {toast && (

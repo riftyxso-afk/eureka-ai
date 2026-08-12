@@ -5,8 +5,36 @@
 import { db } from "./supabase/admin";
 import { listFriends } from "./friends-store";
 
-export const XP_TO_NEXT_LEVEL = 100;
 export const LEVEL_TITLE = "PELAJAR KONSISTEN";
+
+/**
+ * XP yang dibutuhkan per level (kumulatif):
+ * Level 1: 0–100, Level 2: 100–300, Level 3: 300–600, dst.
+ * Setiap level butuh 100 XP lebih banyak dari level sebelumnya.
+ */
+export function xpRequiredForLevel(level: number): number {
+  return 100 * Math.max(1, level);
+}
+
+export function xpThresholdForLevel(level: number): number {
+  let total = 0;
+  for (let l = 1; l < level; l++) total += xpRequiredForLevel(l);
+  return total;
+}
+
+export function levelInfoForXp(xp: number): {
+  level: number;
+  xpInLevel: number;
+  xpToNext: number;
+} {
+  let level = 1;
+  while (xp >= xpThresholdForLevel(level + 1)) level++;
+  return {
+    level,
+    xpInLevel: xp - xpThresholdForLevel(level),
+    xpToNext: xpRequiredForLevel(level),
+  };
+}
 
 export interface ProgressCard {
   id: string;
@@ -94,7 +122,7 @@ export async function recordActivity(
   userId: string,
   xpGain: number,
   label?: string
-): Promise<UserProgress> {
+): Promise<{ progress: UserProgress; levelUp: boolean }> {
   const client = db();
 
   const { data: row } = await client
@@ -110,9 +138,10 @@ export async function recordActivity(
     ? prevDays
     : [...prevDays, key].sort();
 
+  const nextXp = prevXp + Math.max(0, xpGain);
   await client.from("progress").upsert({
     user_id: userId,
-    xp: prevXp + Math.max(0, xpGain),
+    xp: nextXp,
     active_days: nextDays,
   });
 
@@ -124,7 +153,10 @@ export async function recordActivity(
     });
   }
 
-  return loadUserProgress(userId);
+  return {
+    progress: await loadUserProgress(userId),
+    levelUp: xpGain > 0 && levelInfoForXp(nextXp).level > levelInfoForXp(prevXp).level,
+  };
 }
 
 /** Simpan kartu hafalan baru; jatuh tempo besok (jadwal SRS 24 jam). */
@@ -251,11 +283,12 @@ export async function getStats(userId: string): Promise<ProgressStats> {
     if (rank === 0) rank = null;
   }
 
+  const info = levelInfoForXp(p.xp);
   return {
     xp: p.xp,
-    level: Math.floor(p.xp / XP_TO_NEXT_LEVEL) + 1,
-    xpInLevel: p.xp % XP_TO_NEXT_LEVEL,
-    xpToNext: XP_TO_NEXT_LEVEL,
+    level: info.level,
+    xpInLevel: info.xpInLevel,
+    xpToNext: info.xpToNext,
     levelTitle: LEVEL_TITLE,
     streak: calcStreak(p.activeDays),
     longestStreak: calcLongestStreak(p.activeDays),

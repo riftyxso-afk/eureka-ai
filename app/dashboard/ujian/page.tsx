@@ -201,14 +201,14 @@ export default function UjianPage() {
           </div>
         ) : (
           filtered.map((exam) => (
-            <div key={exam.id} className="card-clay flex items-center justify-between gap-4 !p-5">
+            <div key={exam.id} className="card-clay flex flex-col gap-3 !p-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="truncate text-lg font-extrabold">{exam.title}</p>
+                <p className="break-words text-lg font-extrabold">{exam.title}</p>
                 <p className="mt-1 text-sm font-bold text-clay-muted">
                   {exam.subject}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-col items-end gap-2">
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:flex-col sm:items-end">
                 <span className="flex items-center gap-1.5 text-sm font-bold text-clay-muted">
                   <CalendarDays size={15} />
                   {formatDate(exam.date)}
@@ -221,9 +221,9 @@ export default function UjianPage() {
                     <button
                       onClick={() => handleDelete(exam)}
                       aria-label="Hapus ujian"
-                      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-clay-shadow/30 bg-white/90 text-clay-muted transition-colors hover:border-red-300 hover:text-red-500"
+                      className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-clay-shadow/30 bg-white/90 text-clay-muted transition-colors hover:border-red-300 hover:text-red-500"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={16} />
                     </button>
                   </span>
                 ) : (

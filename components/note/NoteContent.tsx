@@ -177,7 +177,7 @@ export const NoteContent = forwardRef<HTMLDivElement, NoteContentProps>(
           </div>
           <button
             onClick={() => onOpenNotepad(chapter)}
-            className="btn-clay-ghost !min-h-[36px] !px-3 !py-1.5 text-xs"
+            className="btn-clay-ghost !min-h-[44px] !px-3 !py-1.5 text-xs"
           >
             <NotebookPen size={14} className="mr-1.5" />
             Buka catatan

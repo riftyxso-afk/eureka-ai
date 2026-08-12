@@ -47,6 +47,7 @@ function colorIndex(name: string): number {
 }
 
 const RELATION_LABEL: Record<string, string> = {
+  self: "Kamu",
   friend: "Teman",
   incoming: "Menunggu respons kamu",
   outgoing: "Menunggu diterima",
@@ -186,7 +187,7 @@ export default function FriendsPage() {
     actions: React.ReactNode,
     busy = false
   ) => (
-    <li className="flex items-center gap-3 rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3">
+    <li className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3">
       <span
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${AVATAR_COLORS[colorIndex(name)]}`}
       >
@@ -201,7 +202,9 @@ export default function FriendsPage() {
       {busy ? (
         <Loader2 size={18} className="animate-spin text-clay-primary" />
       ) : (
-        actions
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {actions}
+        </div>
       )}
     </li>
   );
@@ -244,10 +247,14 @@ export default function FriendsPage() {
                 {renderRow(
                   r.name,
                   RELATION_LABEL[r.relation] ?? "",
-                  r.relation === "none" || r.relation === "incoming" ? (
+                  r.relation === "self" ? (
+                    <span className="rounded-full bg-clay-beige px-3 py-1 text-xs font-extrabold text-clay-muted">
+                      Kamu
+                    </span>
+                  ) : r.relation === "none" || r.relation === "incoming" ? (
                     <button
                       onClick={() => addFriend(r.name)}
-                      className="btn-clay-primary !min-h-[36px] !px-3 text-xs"
+                      className="btn-clay-primary !min-h-[44px] !px-3 text-xs"
                     >
                       <UserPlus size={14} className="mr-1" />
                       {r.relation === "incoming" ? "Terima" : "Tambah"}
@@ -265,19 +272,13 @@ export default function FriendsPage() {
         )}
 
         {!searching && query.trim().length > 0 && results.length === 0 && (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4">
+          <div className="mt-3 rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4">
             <p className="text-sm font-semibold text-clay-muted">
-              Tidak ditemukan. Kirim undangan langsung ke nama:
-              <b className="ml-1 text-clay-dark">“{query.trim()}”</b>
+              Tidak ada pengguna bernama{" "}
+              <b className="text-clay-dark">“{query.trim()}”</b> yang terdaftar.
+              Pastikan temanmu sudah membuat akun Eureka.AI, lalu cari dengan
+              nama atau @username-nya.
             </p>
-            <button
-              onClick={() => addFriend(query.trim())}
-              disabled={busyId === `add-${query.trim()}`}
-              className="btn-clay-primary shrink-0 !min-h-[38px] !px-3 text-xs disabled:opacity-60"
-            >
-              <UserPlus size={14} className="mr-1" />
-              Kirim Undangan
-            </button>
           </div>
         )}
       </div>
@@ -296,14 +297,14 @@ export default function FriendsPage() {
                 <>
                   <button
                     onClick={() => respondRequest("accept", r.id, r.name)}
-                    className="btn-clay-primary !min-h-[36px] !px-3 text-xs"
+                    className="btn-clay-primary !min-h-[44px] !px-3 text-xs"
                   >
                     <Check size={14} className="mr-1" />
                     Terima
                   </button>
                   <button
                     onClick={() => respondRequest("decline", r.id, r.name)}
-                    className="btn-clay-ghost !min-h-[36px] !px-3 text-xs"
+                    className="btn-clay-ghost !min-h-[44px] !px-3 text-xs"
                   >
                     <X size={14} className="mr-1" />
                     Tolak
@@ -352,7 +353,7 @@ export default function FriendsPage() {
                 <button
                   onClick={() => removeFriend(f.id, f.name)}
                   aria-label={`Hapus ${f.name}`}
-                  className="btn-clay-ghost !min-h-[34px] !px-2.5"
+                  className="btn-clay-ghost !min-h-[44px] !px-3"
                 >
                   <Trash2 size={15} className="text-clay-muted" />
                 </button>,
@@ -364,8 +365,8 @@ export default function FriendsPage() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2">
-          <div className="card-clay whitespace-nowrap px-5 py-3 text-sm font-extrabold text-clay-dark shadow-clay">
+        <div className="fixed bottom-6 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
+          <div className="card-clay whitespace-normal break-words px-5 py-3 text-center text-sm font-extrabold text-clay-dark shadow-clay">
             {toast}
           </div>
         </div>

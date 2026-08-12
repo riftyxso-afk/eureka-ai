@@ -12,8 +12,10 @@ import type { PhaseProgressFn } from "./progressTracker";
 import {
   CHAPTER_CONTENT_GUIDE,
   IMAGE_PLACEMENT_RULES,
+  buildChapterCountRule,
   buildImageGuide,
   buildPreferencesText,
+  clampChapterCount,
   type NotePreferences,
 } from "./prompts/noteGeneration";
 import { promises as fs } from "fs";
@@ -46,22 +48,25 @@ function extractJsonArray(raw: string): unknown {
 
 export type WebPreferences = NotePreferences;
 
-function outlinePrompt(text: string): string {
+function outlinePrompt(text: string, prefs: WebPreferences): string {
   return `Berikut adalah isi sebuah halaman web yang akan dijadikan catatan belajar:
 
 ${text.slice(0, 22000)}
 
-Buat kerangka (outline) 4-8 bab berdasarkan topik-topik utama halaman tersebut.
+Buat kerangka (outline) bab berdasarkan topik-topik utama halaman tersebut.
 Untuk tiap bab berikan:
 - "title": judul singkat & jelas (maksimal 8 kata)
 - "topics": 2-4 topik kunci yang harus dibahas di bab itu (1 baris per topik)
+
+${buildChapterCountRule(prefs)}
 
 Output HANYA JSON array, tanpa teks lain:
 [{"title": "Judul Bab 1", "topics": ["topik 1", "topik 2"]}, ...]`;
 }
 
 async function generateOutline(
-  text: string
+  text: string,
+  prefs: WebPreferences
 ): Promise<{ title: string; topics: string[] }[]> {
   const raw = await aiChatJson<
     { title: string; topics: string[] }[]
@@ -69,7 +74,7 @@ async function generateOutline(
     {
       system:
         "Kamu adalah perencana catatan belajar. Selalu jawab dengan JSON array yang valid, tanpa markdown atau teks lain.",
-      user: outlinePrompt(text),
+      user: outlinePrompt(text, prefs),
       json: true,
       maxTokens: 4000,
       temperature: 0.3,
@@ -229,9 +234,13 @@ export async function processWebPageToChapters(
   }
 
   onProgress?.(0.08, "Membuat kerangka bab dari halaman web...");
-  const outline = await generateOutline(clean);
+  let outline = await generateOutline(clean, prefs);
   if (outline.length === 0) {
     throw new Error("AI tidak menghasilkan kerangka bab.");
+  }
+  const requestedChapters = clampChapterCount(prefs.chapterCount);
+  if (requestedChapters && outline.length > requestedChapters) {
+    outline = outline.slice(0, requestedChapters);
   }
 
   const chapters: NoteChapter[] = [];

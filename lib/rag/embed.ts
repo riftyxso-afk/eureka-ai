@@ -1,15 +1,16 @@
 /**
  * Embedding text → vektor.
- * - Jika API key provider terpilih tersedia (AIMurah/OpenAI/OpenAgentic):
- *   coba API text-embedding-3-small (1536 dim).
- * - Jika gagal / tidak ada key: pakai model lokal
- *   @xenova/transformers multilingual-e5-small (384 dim).
- * - Di serverless environment (Vercel), local model disabled.
+ * Priority:
+ * 1. SumoPod AI (text-embedding-3-small, 1536 dim) jika key tersedia
+ * 2. OpenAI-compatible gateway (bge-m3, bge-large) 
+ * 3. Local model @xenova/transformers multilingual-e5-small (384 dim) - non-serverless only
  */
 import { getAiApiConfig, isOpenAICompatible } from "@/lib/ai";
 
 const LOCAL_MODEL = "Xenova/multilingual-e5-small";
 const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const SUMOPOD_URL = "https://ai.sumopod.com/v1";
+const SUMOPOD_MODEL = "text-embedding-3-small"; // 1536 dimensions
 
 interface EmbedResult {
   data: Float32Array;
@@ -45,6 +46,27 @@ export async function embedTexts(
   if (!texts.length) return [];
   const prefixed = texts.map((t) => `${prefix}: ${t}`);
 
+  // Priority 1: SumoPod AI (1536 dim, matches VECTOR(1536))
+  const sumoKey = process.env.SUMOPOD_API_KEY;
+  if (sumoKey && sumoKey.startsWith("sk-")) {
+    try {
+      const { OpenAI } = await import("openai");
+      const client = new OpenAI({ baseURL: SUMOPOD_URL, apiKey: sumoKey });
+      const res = await client.embeddings.create({
+        model: SUMOPOD_MODEL,
+        input: prefixed,
+      });
+      return res.data
+        .sort((a, b) => a.index - b.index)
+        .map((d) => d.embedding);
+    } catch (e) {
+      console.error("[embed] SumoPod embedding failed:", e);
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      console.warn(`[embed] Falling back to next provider. Reason: ${msg}`);
+    }
+  }
+
+  // Priority 2: OpenAI-compatible gateway
   if (isOpenAICompatible()) {
     try {
       const cfg = getAiApiConfig();
@@ -52,7 +74,7 @@ export async function embedTexts(
       const { OpenAI } = await import("openai");
       const client = new OpenAI({ baseURL: cfg.baseURL, apiKey: cfg.apiKey });
       const res = await client.embeddings.create({
-        model: "text-embedding-3-small",
+        model: "bge-m3", // Model universal yang supported oleh banyak gateway
         input: prefixed,
       });
       return res.data
@@ -60,13 +82,14 @@ export async function embedTexts(
         .map((d) => d.embedding);
     } catch (e) {
       console.error("[embed] API embedding failed:", e);
+      const msg = e instanceof Error ? e.message : "Unknown error";
       
       // In serverless, we can't fallback to local model
       if (isServerless) {
-        throw new Error("Embedding API failed and local model not available in serverless environment");
+        throw new Error(`Embedding API failed and local model not available in serverless environment (${msg})`);
       }
       
-      console.warn("[embed] Falling back to local model");
+      console.warn(`[embed] Falling back to local model. Reason: ${msg}`);
     }
   }
 

@@ -117,10 +117,10 @@ export default function StudyBuddyWidget({ triggerMessage }: StudyBuddyWidgetPro
           <div className="absolute -top-2 -left-2 flex gap-1">
             <button
               onClick={() => setIsMinimized(!isMinimized)}
-              className="p-1.5 sm:p-1 bg-white dark:bg-gray-800 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 touch-manipulation"
+              className="flex h-9 w-9 sm:h-7 sm:w-7 items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 touch-manipulation"
               aria-label="Minimize"
             >
-              <Minimize2 className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+              <Minimize2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
             </button>
           </div>
         </div>

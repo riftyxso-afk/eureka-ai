@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { aiChat, hasAiKey } from "@/lib/ai";
+import { db } from "@/lib/supabase/admin";
+import { getProfileMd } from "@/lib/profile";
 
 export const runtime = "nodejs";
 
@@ -21,6 +23,7 @@ export async function POST(req: NextRequest) {
     const body = (await req.json().catch(() => null)) as {
       messages?: ChatTurn[];
       topic?: string;
+      userId?: string;
     } | null;
 
     const turns: ChatTurn[] = Array.isArray(body?.messages)
@@ -34,6 +37,28 @@ export async function POST(req: NextRequest) {
       : [];
     const topic = String(body?.topic ?? "").slice(0, 200);
     const history = turns.slice(-16);
+
+    // Profil user dari DB → AI paham jenjang, topik sulit, dan gaya belajar user.
+    let profileMd = "";
+    const userId = String(body?.userId ?? "");
+    if (userId) {
+      const { data } = await db()
+        .from("users")
+        .select("name, username, user_number, profile_data, profile_md")
+        .eq("id", userId)
+        .maybeSingle();
+      if (data) {
+        profileMd = getProfileMd(
+          data as {
+            profile_md?: string | null;
+            name?: string | null;
+            username?: string | null;
+            user_number?: number | null;
+            profile_data?: Record<string, unknown> | null;
+          }
+        );
+      }
+    }
 
     // Fallback offline bila API key AI belum diatur.
     if (!hasAiKey()) {
@@ -56,7 +81,9 @@ export async function POST(req: NextRequest) {
     }
 
     const raw = await aiChat({
-      system: SYSTEM_PROMPT,
+      system: profileMd
+        ? `${SYSTEM_PROMPT}\n\nPROFIL SISWA (sesuaikan tingkat kesulitan, bahasa, dan contoh dengan profil ini):\n${profileMd}`
+        : SYSTEM_PROMPT,
       user: userPrompt,
       maxTokens: 512,
       temperature: 0.8,

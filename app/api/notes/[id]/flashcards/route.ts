@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getNoteWithChunks } from "@/lib/rag/store";
-import { generateFlashcards, getFlashcards } from "@/lib/studyTools";
+import { generateFlashcards } from "@/lib/studyTools";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -12,11 +12,6 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    // Flashcards otomatis (mode Standar/Lengkap) sudah dibuat saat catatan dibuat.
-    const saved = await getFlashcards(id);
-    if (saved.length > 0) {
-      return NextResponse.json({ cards: saved, cached: true });
-    }
 
     const found = await getNoteWithChunks(id);
     if (!found) {
