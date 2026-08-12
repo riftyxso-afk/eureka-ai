@@ -1,0 +1,83 @@
+# Eureka.AI — Backend API (Render Blueprint)
+#
+# Cara pakai:
+#   1. Push file ini ke GitHub (repo root eureka-ai/)
+#   2. Di render.com: New → Blueprint → pilih repo eureka-ai
+#      Render otomatis membaca render.yaml dan membuat service "eureka-api".
+#   3. Isi nilai secret di dashboard (Render "Environment") untuk semua
+#      envVars dengan `sync: false` — salin dari .env.local lokal.
+#
+# Setelah deploy: curl https://eureka-api.onrender.com/api/health
+# Lalu set NEXT_PUBLIC_API_URL=https://eureka-api.onrender.com di Vercel.
+
+services:
+  - type: web
+    name: eureka-api
+    runtime: docker
+    repo: https://github.com/riftyxso-afk/eureka-ai
+    branch: master
+    rootDir: .
+    dockerfilePath: backend/Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # ── Supabase ──────────────────────────────────────────────
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      # ── AI Provider aktif (mis. "openagentic" / "openrouter") ─
+      - key: AI_PROVIDER
+        sync: false
+
+      # ── OpenAgentic ───────────────────────────────────────────
+      - key: OPENAGENTIC_API_KEY
+        sync: false
+      - key: OPENAGENTIC_BASE_URL
+        sync: false
+      - key: OPENAGENTIC_MODEL
+        sync: false
+
+      # ── OpenRouter ────────────────────────────────────────────
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_BASE_URL
+        sync: false
+      - key: OPENROUTER_MODEL
+        sync: false
+
+      # ── AI generic ────────────────────────────────────────────
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_BASE_URL
+        sync: false
+      - key: AI_MODEL
+        sync: false
+
+      # ── JuanRouter ────────────────────────────────────────────
+      - key: JUANROUTER_API_KEY
+        sync: false
+      - key: JUANROUTER_BASE_URL
+        sync: false
+      - key: JUANROUTER_MODEL
+        sync: false
+
+      # ── Eksternal ─────────────────────────────────────────────
+      - key: FIRECRAWL_API_KEY
+        sync: false
+      - key: SUMOPOD_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+
+      # ── CORS: URL frontend Vercel (koma untuk lebih dari satu) ─
+      # Contoh: https://eureka-ai.vercel.app
+      - key: CORS_ORIGIN
+        sync: false
