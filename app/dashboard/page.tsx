@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import {
@@ -21,6 +22,8 @@ import { NotificationBell } from "@/components/dashboard/NotificationBell";
 import { NoteItem } from "@/components/dashboard/NoteItem";
 import { CreateNoteModal } from "@/components/dashboard/CreateNoteModal";
 import { BackgroundJobPopup } from "@/components/dashboard/BackgroundJobPopup";
+import { DashboardPreparing } from "@/components/dashboard/DashboardPreparing";
+import { Reveal } from "@/components/ui/Reveal";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { getUserId, getUserName } from "@/lib/identity";
 import { announceLevelUp } from "@/lib/levelUp";
@@ -52,6 +55,17 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"semua" | "terbaru">("semua");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Menunda render dashboard: setelah onboarding selesai tampilkan dulu
+  // layar "Menyiapkan dashboardmu..." sebelum konten muncul.
+  // Flag dibaca sekali di initializer (aman dari StrictMode double-effect).
+  const [prepareOn] = useState(() => {
+    try {
+      return sessionStorage.getItem("eureka_dashboard_prepare") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [ready, setReady] = useState(!prepareOn);
   const [progress, setProgress] = useState({
     xp: 0,
     level: 1,
@@ -66,6 +80,17 @@ export default function DashboardPage() {
   });
 
   const userName = data.name || getUserName();
+
+  // Layar "Menyiapkan dashboardmu..." (flag di-set oleh halaman onboarding).
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("eureka_dashboard_prepare");
+    } catch {
+      // abaikan
+    }
+    const t = setTimeout(() => setReady(true), prepareOn ? 1700 : 120);
+    return () => clearTimeout(t);
+  }, [prepareOn]);
 
   // Banner info versi pengembangan — bisa ditutup, diingat di localStorage.
   const [bannerHidden, setBannerHidden] = useState<boolean>(() => {
@@ -189,8 +214,11 @@ export default function DashboardPage() {
 
   return (
     <div className="pb-24">
+      <AnimatePresence>{!ready && <DashboardPreparing />}</AnimatePresence>
+      {ready && (
       <main className="mx-auto w-full max-w-clay px-4 sm:px-6">
         {!bannerHidden && (
+          <Reveal delay={0}>
           <div className="mb-4 flex items-center gap-2 rounded-clay-md border-2 border-amber-300 bg-amber-50 px-3 py-2 shadow-clay-sm">
             <span className="text-sm" aria-hidden="true">
               ⚠️
@@ -206,8 +234,10 @@ export default function DashboardPage() {
               <X size={14} />
             </button>
           </div>
+          </Reveal>
         )}
 
+        <Reveal delay={0.05}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">
@@ -226,7 +256,9 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+        </Reveal>
 
+        <Reveal delay={0.12}>
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             icon={FileText}
@@ -245,7 +277,9 @@ export default function DashboardPage() {
             value={progress.rank === null ? "—" : progress.rank}
           />
         </div>
+        </Reveal>
 
+        <Reveal delay={0.19}>
         <CardClay className="mt-4 !p-4 sm:!p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
@@ -277,7 +311,9 @@ export default function DashboardPage() {
             />
           </div>
         </CardClay>
+        </Reveal>
 
+        <Reveal delay={0.26}>
         <section className="mt-8">
           <h2 className="text-lg font-extrabold sm:text-xl">Catatan Kamu</h2>
 
@@ -352,16 +388,23 @@ export default function DashboardPage() {
             )}
           </div>
         </section>
+        </Reveal>
       </main>
+      )}
 
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-6 right-4 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-clay-primary text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:bottom-6 sm:right-6 sm:h-16 sm:w-16"
-        aria-label="Buat catatan baru"
+      <Reveal
+        delay={0.3}
+        className="fixed bottom-6 right-4 z-10 sm:bottom-6 sm:right-6"
       >
-        <Plus size={24} className="sm:hidden" />
-        <Plus size={28} className="hidden sm:block" />
-      </button>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-clay-primary text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:h-16 sm:w-16"
+          aria-label="Buat catatan baru"
+        >
+          <Plus size={24} className="sm:hidden" />
+          <Plus size={28} className="hidden sm:block" />
+        </button>
+      </Reveal>
 
       <CreateNoteModal
         open={isModalOpen}

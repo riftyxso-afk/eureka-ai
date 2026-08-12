@@ -355,6 +355,12 @@ export default function OnboardingPage() {
       setSaveError("Gagal menyimpan profil. Coba lagi.");
       return;
     }
+    // Tandai supaya halaman dashboard menampilkan layar "Menyiapkan dashboardmu...".
+    try {
+      sessionStorage.setItem("eureka_dashboard_prepare", "1");
+    } catch {
+      // abaikan
+    }
     router.replace("/dashboard");
   };
 
