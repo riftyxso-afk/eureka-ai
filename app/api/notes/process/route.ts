@@ -27,6 +27,7 @@ import {
   type NotePrefs,
 } from "@/lib/notesProcessor";
 import { pushNotification } from "@/lib/notifications-store";
+import { sendPushToUser } from "@/lib/push-send";
 import { recordActivity } from "@/lib/progress-store";
 import { clampChapterCount } from "@/lib/prompts/noteGeneration";
 
@@ -168,6 +169,17 @@ export async function POST(req: NextRequest) {
               });
             } catch (e) {
               console.warn("[api/notes/process] Notifikasi dilewati:", e);
+            }
+            // Web Push ke HP (butuh VAPID keys + subscription aktif di browser).
+            try {
+              await sendPushToUser(userId, {
+                title: "Catatan selesai dibuat! 🎉",
+                body: `“${note.title}” sudah siap dipelajari.`,
+                url: `/dashboard/note/${note.id}`,
+                tag: `note-ready-${note.id}`,
+              });
+            } catch (e) {
+              console.warn("[api/notes/process] Web push dilewati:", e);
             }
             try {
               await recordActivity(userId, 30, "Catatan baru selesai dibuat");

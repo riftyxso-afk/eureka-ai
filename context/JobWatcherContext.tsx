@@ -23,6 +23,8 @@ import { apiFetch } from "@/lib/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
 import { BellRing, CheckCircle2, X, XCircle } from "lucide-react";
 import { playCompletionSound } from "@/lib/notifySound";
+import { getUserId } from "@/lib/identity";
+import { ensurePushSetup } from "@/lib/push";
 
 export const ACTIVE_JOBS_KEY = "eureka_active_jobs";
 const POLL_MS = 4000;
@@ -74,7 +76,7 @@ export function notifyBrowserNoteReady(noteId: string, noteTitle: string): void 
     const n = new Notification("Catatan selesai dibuat! 🎉", {
       body: `“${noteTitle}” sudah siap dipelajari.`,
       tag: `note-ready-${noteId}`,
-      icon: "/icon.png",
+      icon: "/logo.png",
     });
     n.onclick = () => {
       window.focus();
@@ -143,6 +145,18 @@ export function JobWatcherProvider({
     },
     []
   );
+
+  // Daftarkan perangkat untuk Web Push bila izin notifikasi sudah diberikan
+  // (menutup celah: user yang kembali ke aplikasi tanpa submit catatan baru).
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      typeof Notification !== "undefined" &&
+      Notification.permission === "granted"
+    ) {
+      void ensurePushSetup(getUserId());
+    }
+  }, []);
 
   // Klik "Lihat" pada toast / notifikasi browser → buka catatan
   useEffect(() => {

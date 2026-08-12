@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { JobWatcherProvider } from "@/context/JobWatcherContext";
@@ -15,9 +15,17 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: BRAND_TITLE,
   description: BRAND_DESC,
+  // PWA: manifest + meta Apple agar bisa "Add to Home Screen" (wajib untuk
+  // notifikasi web di iOS) — ikon pakai /logo.png yang sudah tersedia.
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icon.png",
-    apple: "/apple-icon.png",
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Eureka.AI",
   },
   openGraph: {
     type: "website",
@@ -40,6 +48,10 @@ export const metadata: Metadata = {
     description: BRAND_DESC,
     images: ["/banner.png"],
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#7C3AED",
 };
 
 export default function RootLayout({

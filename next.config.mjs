@@ -5,6 +5,7 @@ const nextConfig = {
     "@xenova/transformers",
     "officeparser",
     "file-type",
+    "web-push",
   ],
 };
 

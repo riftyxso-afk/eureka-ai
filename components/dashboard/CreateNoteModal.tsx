@@ -27,6 +27,7 @@ import type { Note } from "@/lib/types";
 import type { Subject } from "@/lib/subjects";
 import { getUserId } from "@/lib/identity";
 import { playCompletionSound } from "@/lib/notifySound";
+import { ensurePushSetup } from "@/lib/push";
 import { addActiveJobId, removeActiveJobId } from "@/context/JobWatcherContext";
 
 interface SourceOption {
@@ -524,12 +525,19 @@ export const CreateNoteModal = ({
         // Race: SSE bisa melaporkan 100% sebelum jobId diterima di atas.
         // Cek status job sekali langsung setelah dapat jobId.
         void completeFromJob(jobId);
-        // Minta izin notifikasi browser (sekali) agar selesai tetap terasa.
-        if (
-          typeof Notification !== "undefined" &&
-          Notification.permission === "default"
-        ) {
-          Notification.requestPermission().catch(() => {});
+        // Minta izin notifikasi browser (sekali). Kalau granted, daftarkan
+        // perangkat untuk Web Push agar muncul notifikasi sistem di HP.
+        if (typeof Notification !== "undefined") {
+          const uid = getUserId();
+          if (Notification.permission === "default") {
+            Notification.requestPermission()
+              .then((perm) => {
+                if (perm === "granted") void ensurePushSetup(uid);
+              })
+              .catch(() => {});
+          } else if (Notification.permission === "granted") {
+            void ensurePushSetup(uid);
+          }
         }
         return; // SSE tetap terbuka; job dituntaskan via completeFromJob/watcher.
       }

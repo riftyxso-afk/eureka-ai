@@ -13,8 +13,10 @@ type AnyModule = Record<string, any>;
 
 function mount(app: Hono, path: string, mod: AnyModule | Promise<AnyModule>) {
   if (mod instanceof Promise) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mod.then((m) => mountNextRoutes(app as any, path, m));
   } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mountNextRoutes(app as any, path, mod);
   }
 }
@@ -57,8 +59,10 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
 
   // ─── Notifications ─────────────────────────────────────
   const notifications = await import("@/app/api/notifications/route");
+  const notificationsPushSubscribe = await import("@/app/api/notifications/push-subscribe/route");
   mount(app, "/api/notifications", notifications);
-  count++;
+  mount(app, "/api/notifications/push-subscribe", notificationsPushSubscribe);
+  count += 2;
 
   // ─── Onboarding ────────────────────────────────────────
   const onboardingAnalyze = await import("@/app/api/onboarding/analyze/route");
