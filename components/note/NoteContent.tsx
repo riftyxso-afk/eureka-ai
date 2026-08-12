@@ -61,44 +61,50 @@ export const NoteContent = forwardRef<HTMLDivElement, NoteContentProps>(
         id={`chapter-${chapter.id}`}
         className="scroll-mt-28 rounded-clay bg-white p-5 shadow-clay-sm sm:p-6"
       >
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b-2 border-clay-shadow/20 pb-4">
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={!collapsed}
-            aria-label={collapsed ? `Buka bab ${chapter.id}` : `Ciutkan bab ${chapter.id}`}
-            className="group flex min-w-0 flex-1 items-center gap-3 text-left"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-clay-full bg-clay-primary/10 text-sm font-extrabold text-clay-primary">
-              {chapter.id}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="break-words text-lg font-extrabold text-clay-dark sm:text-xl">
-                {chapter.title}
+        <div className="mb-4 border-b-2 border-clay-shadow/20 pb-4">
+          {/* Mobile: judul paling atas (nomor bab di samping kiri), lalu tombol aksi di bawahnya. */}
+          {/* Desktop: tetap sejajar dalam satu baris. */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? `Buka bab ${chapter.id}` : `Ciutkan bab ${chapter.id}`}
+              className="group flex w-full items-start gap-3 text-left sm:w-auto sm:flex-1"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-clay-full bg-clay-primary/10 text-sm font-extrabold text-clay-primary">
+                {chapter.id}
               </span>
-              {chapter.timestamp && (
-                <span className="text-xs font-bold text-clay-muted">
-                  🕐 {chapter.timestamp}
+              <span className="min-w-0 flex-1">
+                <span className="block break-words text-lg font-extrabold leading-snug text-clay-dark sm:text-xl">
+                  {chapter.title}
                 </span>
-              )}
-            </span>
-            {toggleable && (
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-clay-full bg-clay-beige text-clay-muted transition-colors group-hover:bg-clay-primary/15 group-hover:text-clay-primary">
-                {collapsed ? (
-                  <ChevronRight size={18} />
-                ) : (
-                  <ChevronDown size={18} />
+                {chapter.timestamp && (
+                  <span className="mt-0.5 block text-xs font-bold text-clay-muted">
+                    🕐 {chapter.timestamp}
+                  </span>
                 )}
               </span>
-            )}
-          </button>
-          <button
-            onClick={() => onOpenNotepad(chapter)}
-            className="btn-clay-ghost !min-h-[44px] !px-3 !py-1.5 text-xs"
-          >
-            <NotebookPen size={14} className="mr-1.5" />
-            Buka catatan
-          </button>
+              {toggleable && (
+                <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-clay-full bg-clay-beige text-clay-muted transition-colors group-hover:bg-clay-primary/15 group-hover:text-clay-primary">
+                  {collapsed ? (
+                    <ChevronRight size={18} />
+                  ) : (
+                    <ChevronDown size={18} />
+                  )}
+                </span>
+              )}
+            </button>
+            <div className="flex sm:shrink-0">
+              <button
+                onClick={() => onOpenNotepad(chapter)}
+                className="btn-clay-ghost !min-h-[44px] !px-3 !py-1.5 text-xs"
+              >
+                <NotebookPen size={14} className="mr-1.5" />
+                Buka catatan
+              </button>
+            </div>
+          </div>
         </div>
 
         {collapsed ? (
