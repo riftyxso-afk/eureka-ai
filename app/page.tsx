@@ -17,7 +17,7 @@ import {
   Upload,
   Users,
 } from "lucide-react";
-import AvatarClay from "@/components/ui/AvatarClay";
+
 import { isLoggedIn } from "@/lib/auth";
 
 const FEATURES = [
@@ -91,7 +91,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-40 border-b-2 border-clay-shadow/30 bg-clay-beige/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-3">
-            <AvatarClay name="Eureka" size={40} />
+            <img src="/logo.png" alt="Logo Eureka.AI" className="h-10 w-10 object-contain" />
             <span className="text-xl font-extrabold text-clay-dark">
               Eureka<span className="text-clay-primary">.AI</span>
             </span>
@@ -437,7 +437,7 @@ export default function LandingPage() {
       <footer className="border-t-2 border-clay-shadow/30 py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 sm:flex-row sm:px-6">
           <div className="flex items-center gap-3">
-            <AvatarClay name="Eureka" size={32} />
+            <img src="/logo.png" alt="Logo Eureka.AI" className="h-8 w-8 object-contain" />
             <span className="text-lg font-extrabold text-clay-dark">
               Eureka<span className="text-clay-primary">.AI</span>
             </span>

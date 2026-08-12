@@ -74,7 +74,7 @@ export function notifyBrowserNoteReady(noteId: string, noteTitle: string): void 
     const n = new Notification("Catatan selesai dibuat! 🎉", {
       body: `“${noteTitle}” sudah siap dipelajari.`,
       tag: `note-ready-${noteId}`,
-      icon: "/favicon.ico",
+      icon: "/icon.png",
     });
     n.onclick = () => {
       window.focus();

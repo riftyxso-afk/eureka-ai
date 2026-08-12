@@ -89,12 +89,18 @@ export const Sidebar = () => {
     window.location.href = "/login";
   };
 
-  const brand = (
-    <Link href="/dashboard" className="block border-b-[3px] border-clay-borderLight pb-4">
-      <span className="text-2xl font-extrabold text-clay-primary">
-        Eureka<span className="text-clay-dark">.AI</span>
-      </span>
-    </Link>
+  const brand = (      <Link href="/dashboard" className="block border-b-[3px] border-clay-borderLight pb-4">
+        <span className="flex items-center gap-2">
+          <img
+            src="/logo.png"
+            alt="Logo Eureka.AI"
+            className="h-9 w-9 object-contain"
+          />
+          <span className="text-2xl font-extrabold text-clay-primary">
+            Eureka<span className="text-clay-dark">.AI</span>
+          </span>
+        </span>
+      </Link>
   );
 
   const navBody = (onNavigate?: () => void) => (
@@ -191,8 +197,15 @@ export const Sidebar = () => {
             >
               <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight pb-2">
                 <Link href="/dashboard" onClick={() => setIsOpen(false)}>
-                  <span className="text-2xl font-extrabold text-clay-primary">
-                    Eureka<span className="text-clay-dark">.AI</span>
+                  <span className="flex items-center gap-2">
+                    <img
+                      src="/logo.png"
+                      alt="Logo Eureka.AI"
+                      className="h-8 w-8 object-contain"
+                    />
+                    <span className="text-2xl font-extrabold text-clay-primary">
+                      Eureka<span className="text-clay-dark">.AI</span>
+                    </span>
                   </span>
                 </Link>
                 <button

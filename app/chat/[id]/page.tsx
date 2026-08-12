@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import AvatarClay from "@/components/ui/AvatarClay";
+
 import InputClay from "@/components/ui/InputClay";
 import ToolCallBadge from "@/components/ui/ToolCallBadge";
 import TypewriterText from "@/components/ui/TypewriterText";
@@ -62,7 +62,7 @@ function MessageRow({ msg, isTypingId, onTypeDone }: MessageRowProps) {
       animate={{ opacity: 1, y: 0 }}
       className="flex items-start gap-3"
     >
-      <AvatarClay name="Eureka" size={36} />
+      <img src="/logo.png" alt="Logo Eureka.AI" className="h-9 w-9 object-contain" />
       <div className="flex max-w-[85%] flex-col gap-2">
         {msg.toolCalls && msg.toolCalls.length > 0 && (
           <motion.div
@@ -253,7 +253,7 @@ export default function ChatPage() {
           >
             ←
           </Link>
-          <AvatarClay name="Eureka" size={44} />
+          <img src="/logo.png" alt="Logo Eureka.AI" className="h-11 w-11 object-contain" />
           <div className="min-w-0">
             <p className="text-lg font-extrabold leading-tight">Eureka.AI</p>
             <p className="truncate text-xs font-bold text-clay-muted">

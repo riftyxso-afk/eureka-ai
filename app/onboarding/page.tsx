@@ -9,7 +9,7 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
 import ProgressBarClay from "@/components/ui/ProgressBarClay";
-import AvatarClay from "@/components/ui/AvatarClay";
+
 import { useOnboarding } from "@/context/OnboardingContext";
 import {
   ONBOARDING_STEPS,
@@ -365,7 +365,7 @@ export default function OnboardingPage() {
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-[560px]">
         <div className="mb-8 flex items-center justify-center gap-3">
-          <AvatarClay name="Eureka" size={44} />
+          <img src="/logo.png" alt="Logo Eureka.AI" className="h-11 w-11 object-contain" />
           <span className="text-2xl font-extrabold text-clay-dark">
             Eureka<span className="text-clay-primary">.AI</span>
           </span>
