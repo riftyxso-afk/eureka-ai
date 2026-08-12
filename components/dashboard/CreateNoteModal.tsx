@@ -8,8 +8,10 @@ import {
   BookOpen,
   CheckCircle2,
   ChevronDown,
+  FileQuestion,
   FileText,
   Globe,
+  Languages,
   Loader2,
   Music,
   PartyPopper,
@@ -49,6 +51,13 @@ const SOURCES: SourceOption[] = [
     desc: "PDF, DOCX, PPT",
     icon: FileText,
     accept: ".pdf,.docx,.pptx,.txt",
+  },
+  {
+    id: "soal",
+    label: "Soal/Tugas",
+    desc: "Tempel soal dari guru/dosen → dijawab AI",
+    icon: FileQuestion,
+    placeholder: "Tempel soal/tugas lengkap di sini...",
   },
   {
     id: "youtube",
@@ -109,7 +118,12 @@ const GENERATION_MODES = [
   },
 ] as const;
 
-const WRITING_STYLES = ["Ramah & Santai", "Formal & Akademis", "Santai & Gaul"];
+const WRITING_STYLES = [
+  "Ramah & Santai",
+  "Formal & Akademis",
+  "Santai & Gaul",
+  "Alami & Manusiawi",
+];
 const LANGUAGES = ["Bahasa Indonesia", "English", "Campuran"];
 
 const SUBJECT_COLORS = [
@@ -142,6 +156,14 @@ const PROCESS_STEPS_WEB = [
   "🌐 Membaca halaman web...",
   "🖼️ Mengumpulkan gambar halaman...",
   "✍️ Menulis bab satu per satu dengan AI...",
+  "🧲 Mengubah menjadi vektor (embedding)...",
+  "📦 Menyimpan ke knowledge base...",
+];
+
+const PROCESS_STEPS_SOAL = [
+  "📋 Membaca soal/tugas...",
+  "✍️ Menjawab setiap soal dengan AI...",
+  "✂️ Memecah jawaban menjadi potongan kecil...",
   "🧲 Mengubah menjadi vektor (embedding)...",
   "📦 Menyimpan ke knowledge base...",
 ];
@@ -187,6 +209,8 @@ export const CreateNoteModal = ({
   const [selectedSource, setSelectedSource] = useState("dokumen");
   const [file, setFile] = useState<File | null>(null);
   const [link, setLink] = useState("");
+  const [soalText, setSoalText] = useState("");
+  const [translateToIndo, setTranslateToIndo] = useState(false);
   const [mataPelajaran, setMataPelajaran] = useState("");
   const [studyMode, setStudyMode] = useState<"ringkas" | "standar" | "lengkap">(
     "standar"
@@ -276,21 +300,30 @@ export const CreateNoteModal = ({
 
   const current = SOURCES.find((s) => s.id === selectedSource)!;
   const isLinkSource = selectedSource === "youtube" || selectedSource === "web";
+  const isSoalSource = selectedSource === "soal";
   const processSteps =
-    selectedSource === "youtube"
-      ? PROCESS_STEPS_YOUTUBE
-      : selectedSource === "web"
-        ? PROCESS_STEPS_WEB
-        : PROCESS_STEPS;
+    selectedSource === "soal"
+      ? PROCESS_STEPS_SOAL
+      : selectedSource === "youtube"
+        ? PROCESS_STEPS_YOUTUBE
+        : selectedSource === "web"
+          ? PROCESS_STEPS_WEB
+          : PROCESS_STEPS;
   const canSubmit =
     !processing &&
     Boolean(mataPelajaran) &&
-    (isLinkSource ? link.trim().length > 5 : Boolean(file));
+    (isLinkSource
+      ? link.trim().length > 5
+      : isSoalSource
+        ? soalText.trim().length >= 10
+        : Boolean(file));
 
   const reset = () => {
     setStep(1);
     setFile(null);
     setLink("");
+    setSoalText("");
+    setTranslateToIndo(false);
     setMataPelajaran("");
     setStudyMode("standar");
     setGenerationMode("lengkap");
@@ -381,6 +414,8 @@ export const CreateNoteModal = ({
     setSelectedSource(id);
     setFile(null);
     setLink("");
+    setSoalText("");
+    setTranslateToIndo(false);
     setStep(2);
   };
 
@@ -455,6 +490,11 @@ export const CreateNoteModal = ({
     form.append("bahasa", bahasa);
     form.append("chapterCount", String(chapterCount));
     form.append("userId", getUserId());
+    if (isSoalSource) {
+      form.append("soalText", soalText.trim());
+      form.append("assignment", "1");
+    }
+    if (translateToIndo) form.append("translate", "1");
     if (isLinkSource) form.append("url", link.trim());
     else if (file) form.append("file", file);
 
@@ -867,6 +907,52 @@ export const CreateNoteModal = ({
                       )}
                     </div>
 
+                    {/* Terjemahkan (web/youtube/dokumen) */}
+                    {!isSoalSource && (
+                      <div>
+                        <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
+                          TERJEMAHKAN KE BAHASA INDONESIA
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setTranslateToIndo((v) => !v)}
+                          aria-pressed={translateToIndo}
+                          className={`flex w-full items-center gap-3 rounded-clay-md border-3 p-3 sm:p-4 text-left transition-all duration-75 min-h-[56px] ${
+                            translateToIndo
+                              ? "border-clay-borderLight bg-clay-primary/10 shadow-clay-sm"
+                              : "border-clay-shadow/50 bg-white shadow-clay-sm hover:-translate-y-0.5"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                              translateToIndo
+                                ? "bg-clay-primary text-white"
+                                : "bg-clay-beige text-clay-muted shadow-clay-inset"
+                            }`}
+                          >
+                            <Languages size={18} />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-extrabold text-clay-dark">
+                              {translateToIndo ? "Aktif — diterjemahkan ke Indonesia" : "Matikan terjemahan"}
+                            </span>
+                            <span className="block text-xs font-bold text-clay-muted">
+                              Cocok untuk artikel/link berbahasa asing (Inggris, dll).
+                            </span>
+                          </span>
+                          <span
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 ${
+                              translateToIndo
+                                ? "border-clay-primary bg-clay-primary text-white"
+                                : "border-clay-shadow/40 bg-white text-transparent"
+                            }`}
+                          >
+                            <CheckCircle2 size={14} />
+                          </span>
+                        </button>
+                      </div>
+                    )}
+
                     {/* Mode Belajar */}
                     <div>
                       <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
@@ -954,7 +1040,15 @@ export const CreateNoteModal = ({
                       <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
                         SUMBER MATERI ({current.label})
                       </label>
-                      {isLinkSource ? (
+                      {isSoalSource ? (
+                        <textarea
+                          value={soalText}
+                          onChange={(e) => setSoalText(e.target.value)}
+                          placeholder={current.placeholder}
+                          rows={8}
+                          className="w-full resize-y rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-3 py-3 text-sm sm:px-5 sm:py-4 sm:text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[120px]"
+                        />
+                      ) : isLinkSource ? (
                         <InputClay
                           placeholder={current.placeholder}
                           value={link}

@@ -19,6 +19,7 @@
     "next": "16.3.0",
     "officeparser": "^7.5.1",
     "openai": "^7.4.0",
+    "pdfkit": "^0.19.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "resend": "^6.19.0",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",

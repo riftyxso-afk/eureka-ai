@@ -57,6 +57,11 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/leaderboard", leaderboard);
   count++;
 
+  // ─── Missions (bimbingan AI) ───────────────────────────
+  const missionsGuide = await import("@/app/api/missions/guide/route");
+  mount(app, "/api/missions/guide", missionsGuide);
+  count++;
+
   // ─── Notifications ─────────────────────────────────────
   const notifications = await import("@/app/api/notifications/route");
   const notificationsPushSubscribe = await import("@/app/api/notifications/push-subscribe/route");
@@ -110,6 +115,8 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   count += 4;
 
   // ─── Notes (Per-note sub-routes) ───────────────────────
+  const notesPdf = await import("@/app/api/notes/[id]/pdf/route");
+  const notesPdfStream = await import("@/app/api/notes/[id]/pdf/stream/route");
   const notesAsk = await import("@/app/api/notes/[id]/ask/route");
   const notesBoard = await import("@/app/api/notes/[id]/board/route");
   const notesChat = await import("@/app/api/notes/[id]/chat/route");
@@ -123,6 +130,8 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const notesRegenerate = await import("@/app/api/notes/[id]/regenerate/route");
   const notesVersions = await import("@/app/api/notes/[id]/versions/route");
 
+  mount(app, "/api/notes/:id/pdf", notesPdf);
+  mount(app, "/api/notes/:id/pdf/stream", notesPdfStream);
   mount(app, "/api/notes/:id/ask", notesAsk);
   mount(app, "/api/notes/:id/board", notesBoard);
   mount(app, "/api/notes/:id/chat", notesChat);
@@ -135,7 +144,7 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/notes/:id/quiz", notesQuiz);
   mount(app, "/api/notes/:id/regenerate", notesRegenerate);
   mount(app, "/api/notes/:id/versions", notesVersions);
-  count += 12;
+  count += 13;
 
   // ─── Notes (Chapter sub-routes) ────────────────────────
   const notesBab = await import("@/app/api/notes/[id]/bab/[chapterId]/route");

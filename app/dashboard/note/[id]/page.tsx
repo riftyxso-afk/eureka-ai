@@ -27,6 +27,7 @@ import {
   Users,
 } from "lucide-react";
 import ChatPanel from "@/components/note/ChatPanel";
+import { PdfWorkflowModal } from "@/components/note/PdfWorkflowModal";
 import InviteModal from "@/components/note/InviteModal";
 import VersionModal from "@/components/note/VersionModal";
 import EditNoteModal from "@/components/note/EditNoteModal";
@@ -178,6 +179,7 @@ export default function NoteDetailPage() {
   const [showQuiz, setShowQuiz] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showAddImage, setShowAddImage] = useState(false);
+  const [showPdfWorkflow, setShowPdfWorkflow] = useState(false);
   const [highlights, setHighlights] = useState<HighlightEntry[]>([]);
   const [images, setImages] = useState<NoteImage[]>([]);
   const [toast, setToast] = useState<string | null>(null);
@@ -513,23 +515,9 @@ export default function NoteDetailPage() {
       return;
     }
     if (label === "Dokumen") {
-      const blob = new Blob(
-        [
-          `${data.title}\n\n${data.summary}\n\n${data.chapters
-            .map(
-              (c) =>
-                `${c.id}. ${c.title}${c.timestamp ? ` (${c.timestamp})` : ""}\n${c.content}`
-            )
-            .join("\n\n")}`,
-        ],
-        { type: "text/plain" }
-      );
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${data.title.slice(0, 40)}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // F9: PDF dengan ALUR KERJA realtime — modal SSE (Python/reportlab,
+      // fallback pdfkit) lalu unduh otomatis saat selesai.
+      setShowPdfWorkflow(true);
       return;
     }
     alert(`Fitur ${label} segera hadir!`);
@@ -859,6 +847,14 @@ export default function NoteDetailPage() {
           noteId={data.id}
           notify={notify}
           onClose={() => setShowQuiz(false)}
+        />
+      )}
+      {showPdfWorkflow && (
+        <PdfWorkflowModal
+          noteId={data.id}
+          noteTitle={data.title}
+          notify={notify}
+          onClose={() => setShowPdfWorkflow(false)}
         />
       )}
       {showFlashcards && (

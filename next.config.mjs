@@ -6,6 +6,7 @@ const nextConfig = {
     "officeparser",
     "file-type",
     "web-push",
+    "pdfkit",
   ],
 };
 

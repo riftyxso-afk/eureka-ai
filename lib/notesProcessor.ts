@@ -13,6 +13,7 @@ import { embedTexts } from "@/lib/rag/embed";
 import { saveNoteWithChunks, type StoredChunk } from "@/lib/rag/store";
 import {
   generateAiSummary,
+  processLongDocumentToChapters,
   processSubtitleToChapters,
   processYouTubeSubtitle,
 } from "@/lib/processSubtitle";
@@ -47,6 +48,10 @@ export interface NotePrefs {
   chapterCount?: number;
   /** Mode pembuatan: "cepat" = ringkas & kilat (lewati fase berat), "lengkap" = pipeline penuh. */
   generationMode?: "cepat" | "lengkap";
+  /** Mode Soal/Tugas: teks sumber adalah soal yang harus dijawab tuntas. */
+  assignment?: boolean;
+  /** Terjemahkan materi sumber ke bahasa target. */
+  translate?: boolean;
 }
 
 /** Batas bab pada mode CEPAT — dijamin selesai cepat. */
@@ -72,6 +77,8 @@ function resolvePrefs(prefs: NotePrefs): NotePrefs {
 export interface NotesProcessorInput {
   sourceType: string;
   url: string;
+  /** Teks soal yang ditempel user (sourceType "soal"). */
+  soalText?: string;
   fileBuffer?: Buffer;
   fileName?: string;
   prefs: NotePrefs;
@@ -98,6 +105,7 @@ const SUBJECT_BY_SOURCE: Record<string, string> = {
   audio: "Audio",
   video: "Video",
   web: "Web",
+  soal: "Soal/Tugas",
 };
 
 /**
@@ -123,7 +131,18 @@ export async function processNoteForBackground(
   let webImages: WebImage[] = [];
 
   report("extract", 2, "Menyiapkan materi...");
-  if (sourceType === "youtube") {
+  if (sourceType === "soal") {
+    report("extract", 8, "Membaca soal dari teks yang ditempel...");
+    const soal = (input.soalText ?? "").trim();
+    if (soal.length < 10) {
+      throw new Error("Soal terlalu pendek. Tempel soal/tugas dengan lengkap.");
+    }
+    extracted = {
+      text: soal,
+      title: "Soal/Tugas",
+    };
+    report("extract", 13, "Soal siap dijawab AI.");
+  } else if (sourceType === "youtube") {
     report("extract", 6, "Mengambil subtitle video dari YouTube...");
     extracted = await scrapeYoutubeTranscript(input.url);
     report("extract", 13, "Subtitle berhasil diambil.");
@@ -197,6 +216,25 @@ export async function processNoteForBackground(
     summary = processed.summary;
     keyPoints = processed.keyPoints;
     title = processed.title || (extracted.title ?? "");
+  } else if (
+    sourceType === "dokumen" &&
+    !prefs.assignment &&
+    extracted.text.length > 40000
+  ) {
+    // F8: buku/modul tebal → rangkum bertahap per bagian.
+    advance("chapters", 0.1, "Buku panjang terdeteksi — merangkum per bagian...");
+    const processed = await processLongDocumentToChapters(
+      extracted.text,
+      prefs,
+      (fraction: number, label: string) => advance("chapters", fraction, label)
+    );
+    if (input.jobId && (await isJobCancelled(input.jobId))) {
+      throw new JobCancelledError();
+    }
+    chapters = processed.chapters;
+    summary = processed.summary;
+    keyPoints = processed.keyPoints;
+    if (processed.title) title = processed.title;
   } else {
     advance("chapters", 0.3, "Membagi materi menjadi bab-bab...");
     chapters = await processSubtitleToChapters(

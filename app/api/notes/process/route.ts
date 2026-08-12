@@ -40,6 +40,7 @@ const SUBJECT_BY_SOURCE: Record<string, string> = {
   audio: "Audio",
   video: "Video",
   web: "Web",
+  soal: "Soal/Tugas",
 };
 
 export async function POST(req: NextRequest) {
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
     const form = await req.formData();
     const sourceType = String(form.get("sourceType") ?? "");
     const url = String(form.get("url") ?? "").trim();
+    const soalText = String(form.get("soalText") ?? "").trim().slice(0, 60000);
     const file = form.get("file");
     const userId = String(form.get("userId") ?? "").trim().slice(0, 80);
 
@@ -69,6 +71,12 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    if (sourceType === "soal" && soalText.length < 10) {
+      return NextResponse.json(
+        { error: "Tempel soal/tugasnya dulu (minimal 10 karakter)." },
+        { status: 400 }
+      );
+    }
 
     const prefs: NotePrefs = {
       studyMode: String(form.get("studyMode") ?? "standar") as NotePrefs["studyMode"],
@@ -76,6 +84,8 @@ export async function POST(req: NextRequest) {
       bahasa: String(form.get("bahasa") ?? "Bahasa Indonesia"),
       chapterCount: clampChapterCount(form.get("chapterCount") ?? undefined),
       generationMode: String(form.get("generationMode") ?? "lengkap") as NotePrefs["generationMode"],
+      assignment: form.get("assignment") === "1" || form.get("assignment") === "true",
+      translate: form.get("translate") === "1" || form.get("translate") === "true",
     };
 
     // Baca file ke Buffer SEKARANG (FormData tidak bisa dibaca lagi nanti).
@@ -101,7 +111,9 @@ export async function POST(req: NextRequest) {
       }
       fileBuffer = buffer;
       fileName = upload.name;
-    } else if (!isLinkSource) {
+    } else if (!isLinkSource && sourceType !== "soal") {
+      // Sumber "soal" membawa teks tempelan (soalText), bukan file —
+      // sudah divalidasi di atas, jadi tidak wajib upload file.
       return NextResponse.json(
         { error: "Unggah file dulu." },
         { status: 400 }
@@ -140,6 +152,7 @@ export async function POST(req: NextRequest) {
             {
               sourceType,
               url,
+              soalText,
               fileBuffer,
               fileName,
               prefs,

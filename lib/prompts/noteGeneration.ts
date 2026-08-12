@@ -61,6 +61,10 @@ export interface NotePreferences {
   chapterCount?: number;
   /** Mode pembuatan: "cepat" = ringkas & kilat, "lengkap" = detail & tervalidasi. */
   generationMode?: "cepat" | "lengkap";
+  /** Mode soal/tugas: teks berisi pertanyaan yang harus dijawab tuntas. */
+  assignment?: boolean;
+  /** Terjemahkan materi sumber ke bahasa target (biasanya Indonesia). */
+  translate?: boolean;
 }
 
 export const MAX_CHAPTERS_ALLOWED = 6;
@@ -97,6 +101,11 @@ export function buildPreferencesText(prefs: NotePreferences): string {
       STUDY_MODE_RULES[prefs.studyMode ?? "standar"] ?? STUDY_MODE_RULES.standar
     }`,
   ];
+  if (prefs.translate) {
+    parts.push(
+      `- TERJEMAHKAN: seluruh konten sumber WAJIB diterjemahkan ke "${prefs.bahasa || "Bahasa Indonesia"}" secara akurat — jangan menyalin kalimat asing.`
+    );
+  }
   return parts.join("\n");
 }
 
@@ -121,6 +130,9 @@ ${CHAPTER_CONTENT_GUIDE}
  * (bukan 4 kuadran Diátaxis penuh) agar tidak ada instruksi yang bertentangan.
  */
 export function buildChapterContentGuide(prefs: NotePreferences): string {
+  if (prefs.assignment) {
+    return `Struktur konten bab (mode SOAL/TUGAS): "## Jawaban" (uraian tuntas 1-3 paragraf), "## Penjelasan" (alasan benar / langkah pengerjaan bernomor), "## Poin Kunci" (3-5 bullet "- ..."). Tanpa kuadran Diátaxis.`;
+  }
   if (prefs.generationMode === "cepat") {
     return `Struktur konten bab (mode CEPAT): "## Ringkasan" (3-4 kalimat padat), "## Poin Penting" (4-5 bullet "- ..." singkat), "## Kesimpulan" (1 kalimat). Tanpa sub-judul lain yang berlebihan, tanpa tabel besar.`;
   }
@@ -136,8 +148,36 @@ export const GENERATION_MODE_RULES: Record<string, string> = {
 - Tetap akurat: hanya tulis fakta yang ada di sumber (no hallucination).`,
 };
 
+/**
+ * Gaya penulisan "Alami & Manusiawi" — membuat hasil AI terdengar lebih
+ * seperti tulisan manusia: variasi panjang kalimat, bahasa sehari-hari,
+ * dan menghindari frasa klise yang umum pada teks AI.
+ */
+export const HUMAN_STYLE_RULES = `GAYA PENULISAN "ALAMI & MANUSIAWI" — WAJIB diikuti:
+- Variasikan panjang kalimat: selang-seling kalimat pendek dan panjang, jangan semuanya seragam.
+- Gunakan bahasa sehari-hari yang wajar ("jadi", "intinya", "nanti kita lihat") sesekali, tapi tetap rapi.
+- Hindari frasa klise AI seperti "dalam dunia yang semakin berkembang", "perlu diingat bahwa", "dengan demikian", "kesimpulannya, dapat dikatakan".
+- Jangan memakai kata sambung yang sama berulang-ulang (jika/maka/sehingga di tiap kalimat).
+- Tulis seperti mahasiswa/siswa yang paham materi lalu menjelaskannya dengan kata sendiri — bukan esai formal kaku.
+- Tidak perlu menyebut "Sebagai AI" atau "Sebagai asisten".`;
+
+/**
+ * Mode SOAL/TUGAS — teks sumber berisi pertanyaan yang harus dijawab tuntas
+ * dan akurat, bukan sekadar dirangkum.
+ */
+export const ASSIGNMENT_MODE_RULES = `MODE SOAL/TUGAS — teks sumber adalah soal dari guru/dosen. Tugasmu:
+- Jawab SETIAP pertanyaan yang ada dengan lengkap, benar, dan terstruktur.
+- Pecah jawaban menjadi bab: satu bab per soal utama (atau per topik jika soalnya esai panjang).
+- Tiap bab: "## Jawaban" (uraian tuntas, 1-3 paragraf), "## Penjelasan" (kenapa jawaban itu benar / langkah pengerjaan), "## Poin Kunci" (3-5 bullet).
+- Untuk soal hitungan: tuliskan rumus, langkah pengerjaan bernomor, dan hasil akhir.
+- Untuk soal esai: jawab dengan argumen lengkap + contoh konkret bila relevan.
+- JANGAN membuang soal — pastikan semua terjawab. No hallucination.`;
+
 /** Aturan mode siap pakai dalam prompt. */
 export function buildModeRules(prefs: NotePreferences): string {
+  if (prefs.assignment) {
+    return ASSIGNMENT_MODE_RULES;
+  }
   if (prefs.generationMode === "cepat") {
     return GENERATION_MODE_RULES.cepat;
   }
@@ -145,4 +185,12 @@ export function buildModeRules(prefs: NotePreferences): string {
     MODE_CHAPTER_RULES[prefs.studyMode ?? "standar"] ??
     MODE_CHAPTER_RULES.standar
   );
+}
+
+/** Aturan gaya penulisan tambahan (dipanggil oleh pemanggil prompt). */
+export function buildHumanizeRules(prefs: NotePreferences): string {
+  if (prefs.gayaPenulisan === "Alami & Manusiawi") {
+    return HUMAN_STYLE_RULES;
+  }
+  return "";
 }

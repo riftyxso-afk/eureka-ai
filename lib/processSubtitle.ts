@@ -13,6 +13,7 @@ import type { PhaseProgressFn } from "./progressTracker";
 import {
   buildChapterContentGuide,
   buildChapterCountRule,
+  buildHumanizeRules,
   buildModeRules,
   buildPreferencesText,
   clampChapterCount,
@@ -264,6 +265,8 @@ ${buildModeRules(prefs)}
 
 ${buildPreferencesText(prefs)}
 
+${buildHumanizeRules(prefs)}
+
 ${buildChapterCountRule(prefs)}
 
 ${buildChapterContentGuide(prefs)}
@@ -394,8 +397,11 @@ export async function generateAiSummary(
 ${clean.slice(0, 20000)}
 
 Buat ringkasan yang rapi (2-4 kalimat) yang mencakup poin penting seluruh materi.
-- Bahasa: ${prefs.bahasa || "Bahasa Indonesia"}
-- Gaya penulisan: ${prefs.gayaPenulisan || "Ramah & Santai"}
+
+${buildPreferencesText(prefs)}
+
+${buildHumanizeRules(prefs)}
+
 Output JSON: {"summary": "..."}`,
           json: true,
           maxTokens: 800,
@@ -422,6 +428,82 @@ export interface ProcessedContent {
 }
 
 /**
+ * F8 — Rangkum BUKU/MODUL tebal.
+ *
+ * Buku panjang tidak bisa dikirim utuh ke AI (batas konteks). Strategi:
+ * 1. Pecah teks menjadi beberapa bagian (~16rb karakter per bagian).
+ * 2. Tiap bagian dirangkum menjadi 1-2 bab ringkas oleh AI (atau manual bila
+ *    AI sibuk), sehingga tidak ada isi buku yang hilang.
+ * 3. Gabung semua bab + ringkasan eksekutif + poin penting.
+ */
+export async function processLongDocumentToChapters(
+  text: string,
+  prefs: NotePreferences = {},
+  onProgress?: PhaseProgressFn
+): Promise<ProcessedContent> {
+  const clean = text.trim();
+  if (clean.length === 0) {
+    return { title: "Rangkuman Buku", summary: "", chapters: [], keyPoints: [] };
+  }
+
+  const PART_SIZE = 16000;
+  const MAX_PARTS = 6;
+  const parts: string[] = [];
+  for (let i = 0; i < clean.length && parts.length < MAX_PARTS; i += PART_SIZE) {
+    parts.push(clean.slice(i, i + PART_SIZE));
+  }
+
+  // Pref per bagian: ringkas & cepat, maksimal 2 bab per bagian.
+  const partPrefs: NotePreferences = {
+    ...prefs,
+    studyMode: "ringkas",
+    generationMode: "cepat",
+    chapterCount: 2,
+  };
+
+  const chapters: NoteChapter[] = [];
+  const multiPart = parts.length > 1;
+
+  for (let p = 0; p < parts.length; p++) {
+    onProgress?.(
+      0.08 + (p / parts.length) * 0.78,
+      `Merangkum bagian ${p + 1}/${parts.length} buku...`
+    );
+    const partChapters = await processSubtitleToChapters(
+      parts[p],
+      undefined,
+      partPrefs,
+      true
+    );
+    for (const c of partChapters) {
+      chapters.push({
+        ...c,
+        id: chapters.length + 1,
+        title: multiPart ? `Bagian ${p + 1}: ${c.title}` : c.title,
+      });
+    }
+  }
+
+  onProgress?.(0.9, "Membuat ringkasan buku...");
+  const allContent = chapters.map((c) => c.content).join("\n\n");
+  const summary = await generateAiSummary(allContent, prefs, 300);
+
+  const keyPoints = chapters
+    .map((c) => {
+      const first = splitIntoSentences(c.content)[0];
+      return first ? `${c.title}: ${first}` : c.title;
+    })
+    .slice(0, 8);
+
+  return {
+    title: multiPart ? `Rangkuman Buku (${parts.length} bagian)` : "Rangkuman Buku",
+    summary: summary || allContent.slice(0, 300),
+    chapters,
+    keyPoints,
+  };
+}
+
+/**
  * Langkah 1: judul + daftar bab dari subtitle (output kecil → cepat selesai).
  * Dipisah dari penulisan bab agar tiap panggilan AI berukuran kecil dan
  * tidak melewati batas waktu — panggilan raksasa (semua bab sekaligus)
@@ -445,6 +527,8 @@ Buat kerangka ringkasan belajar dari video ini:
 ${buildModeRules(prefs)}
 
 ${buildPreferencesText(prefs)}
+
+${buildHumanizeRules(prefs)}
 
 ${buildChapterCountRule(prefs)}
 
@@ -527,6 +611,8 @@ ${buildModeRules(prefs)}
 
 ${buildPreferencesText(prefs)}
 
+${buildHumanizeRules(prefs)}
+
 ${buildChapterContentGuide(prefs)}
 
 ${
@@ -603,6 +689,8 @@ ${allContent.slice(0, 20000)}
 
 - Bahasa: ${prefs.bahasa || "Bahasa Indonesia"}
 - Gaya penulisan: ${prefs.gayaPenulisan || "Ramah & Santai"}
+
+${buildHumanizeRules(prefs)}
 
 Output JSON: {"summary": "...", "keyPoints": ["...", "..."]}`,
       json: true,

@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import {
   BookOpen,
+  Camera,
   Flame,
   GraduationCap,
   LogOut,
   Mail,
   School,
+  Trash2,
   TrendingUp,
   User,
 } from "lucide-react";
@@ -18,6 +20,7 @@ import InputClay from "@/components/ui/InputClay";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { getUserId, getUserName, setUserName } from "@/lib/identity";
 import { logoutUser } from "@/lib/auth";
+import { fileToAvatarDataUrl, getAvatar, setAvatar } from "@/lib/avatar";
 
 const SCHOOL_KEY = "eureka_school";
 
@@ -42,6 +45,8 @@ export default function ProfilPage() {
   });
   const [userNumber, setUserNumber] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [avatar, setAvatarState] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [stats, setStats] = useState({
     xp: 0,
     level: 1,
@@ -73,6 +78,15 @@ export default function ProfilPage() {
           grade: u.profileData?.grade || prev.grade,
         }));
         if (u.userNumber != null) setUserNumber(Number(u.userNumber));
+        // Foto profil: prioritas dari server (profile_data.avatarUrl),
+        // fallback ke cache lokal.
+        const serverAvatar =
+          typeof u.profileData?.avatarUrl === "string" &&
+          u.profileData.avatarUrl.startsWith("data:image/")
+            ? u.profileData.avatarUrl
+            : null;
+        setAvatarState(serverAvatar ?? getAvatar());
+        if (serverAvatar) setAvatar(serverAvatar);
       } catch {
         // biarkan nilai lokal
       }
@@ -146,6 +160,7 @@ export default function ProfilPage() {
           profileData: {
             school: form.school.trim(),
             grade: form.grade,
+            ...(avatar ? { avatarUrl: avatar } : {}),
           },
         }),
       });
@@ -162,6 +177,30 @@ export default function ProfilPage() {
       return;
     }
     showToast("Profil berhasil disimpan! ✅");
+  };
+
+  const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      showToast("Foto maksimal 4 MB. ⚠️");
+      return;
+    }
+    try {
+      const dataUrl = await fileToAvatarDataUrl(file);
+      setAvatar(dataUrl);
+      setAvatarState(dataUrl);
+      showToast("Foto profil diubah! ✅ Simpan untuk mengunci.");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Gagal memuat foto. ⚠️");
+    }
+  };
+
+  const removeAvatar = () => {
+    setAvatar(null);
+    setAvatarState(null);
+    showToast("Foto profil dihapus.");
   };
 
   const handleLogout = async () => {
@@ -186,9 +225,42 @@ export default function ProfilPage() {
 
       {/* Avatar + info ringkas */}
       <div className="card-clay mt-6 flex flex-col items-center py-8 text-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-clay-primary/20 text-5xl shadow-clay-sm">
-          🧑‍🎓
+        <div className="relative">
+          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-clay-primary/20 text-5xl shadow-clay-sm">
+            {avatar ? (
+              <img
+                src={avatar}
+                alt="Foto profil"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span>🧑‍🎓</span>
+            )}
+          </div>
+          <button
+            onClick={() => avatarInputRef.current?.click()}
+            aria-label="Ubah foto profil"
+            title="Ubah foto profil"
+            className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-clay-primary text-white shadow-clay-btn transition-all duration-75 active:translate-y-0.5"
+          >
+            <Camera size={15} />
+          </button>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarFile}
+          />
         </div>
+        {avatar && (
+          <button
+            onClick={removeAvatar}
+            className="mt-2 flex items-center gap-1 text-xs font-extrabold text-red-500 underline-offset-2 hover:underline"
+          >
+            <Trash2 size={12} /> Hapus foto profil
+          </button>
+        )}
         <p className="mt-4 text-2xl font-extrabold text-clay-dark">{form.name}</p>
         <p className="text-sm font-bold text-clay-muted">{form.email}</p>
         {form.username && (

@@ -9,6 +9,7 @@ import {
   FileQuestion,
   FileText,
   Flame,
+  Origami,
   Plus,
   Search,
   Trophy,
@@ -311,6 +312,53 @@ export default function DashboardPage() {
             />
           </div>
         </CardClay>
+        </Reveal>
+
+        {/* Kartu Rencana Belajar — kertas origami */}
+        <Reveal delay={0.23}>
+        <Link href="/dashboard/rencana" className="mt-4 block">
+          <div
+            className="relative overflow-hidden rounded-clay-lg p-4 shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 hover:shadow-clay sm:p-5"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(255,251,235,0.92), rgba(254,243,199,0.8) 45%, rgba(253,230,138,0.55))",
+            }}
+          >
+            {/* Garis lipatan */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-60"
+              style={{
+                background:
+                  "repeating-linear-gradient(115deg, transparent 0 22px, rgba(180,140,60,0.08) 22px 23px, transparent 23px 46px, rgba(180,140,60,0.05) 46px 47px)",
+              }}
+            />
+            {/* Lipatan sudut */}
+            <div
+              className="pointer-events-none absolute right-0 top-0 h-12 w-12"
+              style={{
+                background:
+                  "linear-gradient(225deg, rgba(255,255,255,0.9), rgba(253,230,138,0.35))",
+                clipPath: "polygon(100% 0, 100% 100%, 0 0)",
+              }}
+            />
+            <div className="relative flex items-center gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-clay-lg bg-amber-500/15 text-amber-700 sm:h-14 sm:w-14">
+                <Origami size={24} className="sm:size-[26px]" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-extrabold text-amber-950 sm:text-lg">
+                  Rencana Belajar
+                </p>
+                <p className="mt-0.5 text-xs font-bold text-amber-800/70 sm:text-sm">
+                  Susun rencana mingguanmu — lipat demi lipat menuju target
+                </p>
+              </div>
+              <span className="hidden shrink-0 rounded-clay-full border-3 border-amber-700/20 bg-white/70 px-3 py-1.5 text-xs font-extrabold text-amber-800 sm:block">
+                Buka →
+              </span>
+            </div>
+          </div>
+        </Link>
         </Reveal>
 
         <Reveal delay={0.26}>

@@ -13,6 +13,7 @@ import {
   IMAGE_PLACEMENT_RULES,
   buildChapterContentGuide,
   buildChapterCountRule,
+  buildHumanizeRules,
   buildImageGuide,
   buildModeRules,
   buildPreferencesText,
@@ -58,6 +59,10 @@ Buat kerangka (outline) bab berdasarkan topik-topik utama halaman tersebut.
 Untuk tiap bab berikan:
 - "title": judul singkat & jelas (maksimal 8 kata)
 - "topics": 2-4 topik kunci yang harus dibahas di bab itu (1 baris per topik)
+
+${buildPreferencesText(prefs)}
+
+${buildHumanizeRules(prefs)}
 
 ${buildChapterCountRule(prefs)}
 
@@ -137,6 +142,8 @@ Preferensi catatan:
 ${buildPreferencesText(prefs)}
 
 ${buildModeRules(prefs)}
+
+${buildHumanizeRules(prefs)}
 
 ${buildChapterContentGuide(prefs)}
 
@@ -274,6 +281,10 @@ export async function processWebPageToChapters(
       user: `Buat ringkasan eksekutif 2-4 kalimat (bahasa ${prefs.bahasa ?? "Indonesia"}) dan 4-6 poin penting dari catatan berikut:
 
 ${allContent.slice(0, 20000)}
+
+${buildHumanizeRules(prefs)}
+
+${buildPreferencesText(prefs)}
 
 Output JSON: {"summary": "...", "keyPoints": ["...", "..."]}`,
       json: true,

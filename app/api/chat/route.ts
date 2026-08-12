@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { aiChat, hasAiKey } from "@/lib/ai";
 import { db } from "@/lib/supabase/admin";
 import { getProfileMd } from "@/lib/profile";
+import { embedTexts } from "@/lib/rag/embed";
+import { searchChunks } from "@/lib/rag/store";
 
 export const runtime = "nodejs";
 
@@ -24,6 +26,8 @@ export async function POST(req: NextRequest) {
       messages?: ChatTurn[];
       topic?: string;
       userId?: string;
+      /** F6: sertakan konteks catatan user (RAG lintas catatan) sebagai sumber jawaban. */
+      askNotes?: boolean;
     } | null;
 
     const turns: ChatTurn[] = Array.isArray(body?.messages)
@@ -36,6 +40,7 @@ export async function POST(req: NextRequest) {
         )
       : [];
     const topic = String(body?.topic ?? "").slice(0, 200);
+    const askNotes = body?.askNotes === true;
     const history = turns.slice(-16);
 
     // Profil user dari DB → AI paham jenjang, topik sulit, dan gaya belajar user.
@@ -80,12 +85,41 @@ export async function POST(req: NextRequest) {
       userPrompt = `Lanjutkan percakapan ini:\n\n${transcript}\n\nSekarang giliranmu membimbing siswa.`;
     }
 
+    // F6: "Tanya Catatanmu" — cari bagian materi yang relevan dari SEMUA
+    // catatan milik user, lalu jadikan konteks jawaban (RAG lintas catatan).
+    let notesContext = "";
+    const lastQuestion = turns[turns.length - 1]?.content ?? "";
+    if (askNotes && userId && lastQuestion.trim().length > 3) {
+      try {
+        const [embedding] = await embedTexts([lastQuestion], "query");
+        const results = await searchChunks(embedding, 5, undefined, userId);
+        if (results.length > 0) {
+          notesContext = results
+            .map(
+              (r, i) =>
+                `[Potongan materi ${i + 1}]\n${r.text.slice(0, 900)}`
+            )
+            .join("\n\n---\n\n");
+        }
+      } catch (e) {
+        console.warn("[api/chat] RAG catatan dilewati:", e);
+      }
+    }
+
+    let system = profileMd
+      ? `${SYSTEM_PROMPT}\n\nPROFIL SISWA (sesuaikan tingkat kesulitan, bahasa, dan contoh dengan profil ini):\n${profileMd}`
+      : SYSTEM_PROMPT;
+    if (notesContext) {
+      system += `\n\nMODE "TANYA CATATAN": jawab pertanyaan siswa BERDASARKAN materi catatannya berikut. Jangan menambah di luar materi; bila tidak ada di materi, katakan jujur lalu bimbing siswa.\n\nMATERI CATATAN USER:\n${notesContext.slice(
+        0,
+        20000
+      )}`;
+    }
+
     const raw = await aiChat({
-      system: profileMd
-        ? `${SYSTEM_PROMPT}\n\nPROFIL SISWA (sesuaikan tingkat kesulitan, bahasa, dan contoh dengan profil ini):\n${profileMd}`
-        : SYSTEM_PROMPT,
+      system,
       user: userPrompt,
-      maxTokens: 512,
+      maxTokens: 700,
       temperature: 0.8,
     });
     const reply = raw.trim();

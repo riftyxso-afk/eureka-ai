@@ -6,13 +6,16 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen,
+  CalendarDays,
   ClipboardCheck,
   Crown,
+  Flag,
   Flame,
   LayoutDashboard,
   LogOut,
   Menu,
   Moon,
+  Origami,
   Pin,
   Settings,
   Sun,
@@ -24,6 +27,8 @@ import {
 } from "lucide-react";
 import { SidebarItem } from "./SidebarItem";
 import { logoutUser } from "@/lib/auth";
+import { getAvatar } from "@/lib/avatar";
+import { getUserName } from "@/lib/identity";
 
 interface MenuItem {
   id: string;
@@ -34,6 +39,9 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { id: "jadwal", label: "Jadwal", icon: CalendarDays, href: "/dashboard/jadwal" },
+  { id: "rencana", label: "Rencana", icon: Origami, href: "/dashboard/rencana" },
+  { id: "misi", label: "Misi", icon: Flag, href: "/dashboard/misi" },
   { id: "ujian", label: "Ujian", icon: ClipboardCheck, href: "/dashboard/ujian" },
   {
     id: "mata-pelajaran",
@@ -59,6 +67,21 @@ export const Sidebar = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [avatar, setAvatarState] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return window.localStorage.getItem("eureka_avatar");
+    } catch {
+      return null;
+    }
+  });
+
+  // Segarkan foto profil setelah kembali dari halaman profil (storage event).
+  useEffect(() => {
+    const sync = () => setAvatarState(getAvatar());
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
 
   useEffect(() => {
     setIsOpen(false);
@@ -105,6 +128,23 @@ export const Sidebar = () => {
 
   const navBody = (onNavigate?: () => void) => (
     <>
+      <div className="mb-1 flex items-center gap-2 rounded-clay-md bg-clay-beige/70 px-3 py-2 shadow-clay-inset">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-clay-primary/20 text-sm shadow-clay-sm">
+          {avatar ? (
+            <img src={avatar} alt="Foto profil" className="h-full w-full object-cover" />
+          ) : (
+            <span>{getUserName().charAt(0).toUpperCase()}</span>
+          )}
+        </span>
+        <Link
+          href="/dashboard/profil"
+          className="min-w-0 flex-1 truncate text-xs font-extrabold text-clay-dark hover:text-clay-primary"
+          onClick={onNavigate}
+        >
+          {getUserName().split(" ")[0]}
+        </Link>
+      </div>
+
       <nav className="flex flex-col gap-1">
         {menuItems.map((item) => (
           <SidebarItem
