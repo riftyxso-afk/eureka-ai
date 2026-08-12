@@ -88,16 +88,21 @@ function buildOtpEmailHtml(code: string, email: string): string {
             <!-- Ilustrasi -->
             <tr>
               <td align="center" style="padding:22px 40px 0;">
-                <img src="https://s6.imgcdn.dev/YXbD48.png" alt="Ilustrasi Eureka.AI" width="460" style="display:block;width:100%;max-width:460px;height:auto;border:0;border-radius:14px;" />
+                <img src="https://www.eureka-ai.web.id/email/hero.webp" alt="Ilustrasi Eureka.AI" width="460" style="display:block;width:100%;max-width:460px;height:auto;border:0;border-radius:14px;" />
               </td>
             </tr>
 
-            <!-- OTP digit boxes -->
+            <!-- OTP digit boxes (tautan ke halaman verifikasi + teks bisa disalin) -->
             <tr>
               <td align="center" style="padding:24px 40px 6px;">
-                <table class="codebox" role="presentation" cellpadding="0" cellspacing="6" style="background-color:#fffbf3;border:1px solid #f0e0c2;border-radius:16px;padding:14px;">
-                  <tr>${digitBoxes}</tr>
-                </table>
+                <a href="https://www.eureka-ai.web.id/login" style="text-decoration:none;">
+                  <table class="codebox" role="presentation" cellpadding="0" cellspacing="6" style="background-color:#fffbf3;border:1px solid #f0e0c2;border-radius:16px;padding:14px;">
+                    <tr>${digitBoxes}</tr>
+                  </table>
+                </a>
+                <p class="subtext" style="margin:10px 0 0;font-family:${FONT};font-size:11.5px;color:#a8a29e;">
+                  Ketuk kode untuk membuka halaman verifikasi, atau tekan lama untuk menyalin.
+                </p>
               </td>
             </tr>
 
