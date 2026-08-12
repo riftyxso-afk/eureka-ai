@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,16 +15,19 @@ import {
 import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
-import { getUserId } from "@/lib/identity";
+import GoogleIcon from "@/components/ui/GoogleIcon";
 import {
   isLoggedIn,
   needsOnboarding,
+  registerFriendsIdentity,
   requestOtpLogin,
+  signInWithGoogle,
   verifyOtpLogin,
 } from "@/lib/auth";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<"form" | "otp">("form");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -34,8 +36,15 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [checked, setChecked] = useState(false);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Pesan error dari halaman callback Google (?error=...).
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err) setError(err);
+  }, [searchParams]);
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -120,19 +129,7 @@ export default function RegisterPage() {
     }
 
     // Sinkronkan identitas ke backend teman/kolaborasi.
-    try {
-      await apiFetch("/api/friends", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "register",
-          userId: getUserId(),
-          name: result.user!.name,
-        }),
-      });
-    } catch {
-      // abaikan
-    }
+    await registerFriendsIdentity(result.user!.name);
 
     router.replace("/onboarding");
   };
@@ -141,6 +138,22 @@ export default function RegisterPage() {
     setStep("form");
     setOtpCode("");
     setError(null);
+  };
+
+  const handleGoogle = async () => {
+    if (googleBusy) return;
+    setError(null);
+    setGoogleBusy(true);
+    try {
+      await signInWithGoogle();
+      // Browser sedang dialihkan ke Google; jika kembali, reset state.
+      setGoogleBusy(false);
+    } catch (e) {
+      setGoogleBusy(false);
+      setError(
+        e instanceof Error ? e.message : "Gagal membuka daftar dengan Google."
+      );
+    }
   };
 
   return (
@@ -164,7 +177,31 @@ export default function RegisterPage() {
           </p>
 
           {step === "form" ? (
-            <form onSubmit={handleSendOtp} className="mt-8 space-y-5">
+            <>
+              {/* Daftar dengan Google */}
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={googleBusy}
+                className="mt-8 flex w-full items-center justify-center gap-2.5 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-4 py-3.5 text-sm font-extrabold text-clay-dark transition-all duration-75 hover:-translate-y-0.5 hover:shadow-clay-sm active:translate-y-0.5 disabled:opacity-60"
+              >
+                {googleBusy ? (
+                  <Loader2 size={18} className="animate-spin text-clay-muted" />
+                ) : (
+                  <GoogleIcon size={18} />
+                )}
+                Daftar dengan Google
+              </button>
+
+              <div className="mt-5 flex items-center gap-3">
+                <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
+                <span className="text-xs font-extrabold uppercase tracking-wider text-clay-muted">
+                  atau
+                </span>
+                <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
+              </div>
+
+              <form onSubmit={handleSendOtp} className="mt-5 space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-extrabold text-clay-dark">
                   NAMA LENGKAP
@@ -229,7 +266,8 @@ export default function RegisterPage() {
                   </>
                 )}
               </ButtonClay>
-            </form>
+              </form>
+            </>
           ) : (
             <form onSubmit={handleVerify} className="mt-6 space-y-5">
               <button

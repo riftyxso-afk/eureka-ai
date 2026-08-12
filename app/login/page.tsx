@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Eye,
   EyeOff,
@@ -17,11 +17,13 @@ import {
 import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
+import GoogleIcon from "@/components/ui/GoogleIcon";
 import {
   isLoggedIn,
   loginUser,
   needsOnboarding,
   requestOtpLogin,
+  signInWithGoogle,
   verifyOtpLogin,
 } from "@/lib/auth";
 
@@ -29,6 +31,7 @@ type LoginMode = "password" | "otp";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<LoginMode>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,8 +42,16 @@ export default function LoginPage() {
   const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [checked, setChecked] = useState(false);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Pesan error dari halaman callback Google (?error=...) — useSearchParams
+  // sudah men-decode nilai URL, jadi langsung dipakai apa adanya.
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err) setError(err);
+  }, [searchParams]);
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -84,6 +95,22 @@ export default function LoginPage() {
   const goAfterLogin = async () => {
     const needOnboarding = await needsOnboarding().catch(() => false);
     router.replace(needOnboarding ? "/onboarding" : "/dashboard");
+  };
+
+  const handleGoogle = async () => {
+    if (googleBusy) return;
+    setError(null);
+    setGoogleBusy(true);
+    try {
+      await signInWithGoogle();
+      // Browser sedang dialihkan ke Google; jika kembali, reset state.
+      setGoogleBusy(false);
+    } catch (e) {
+      setGoogleBusy(false);
+      setError(
+        e instanceof Error ? e.message : "Gagal membuka login Google."
+      );
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -175,6 +202,29 @@ export default function LoginPage() {
           <p className="mt-2 text-center text-base font-semibold text-clay-muted">
             Masuk dan lanjutkan momen Eureka-mu
           </p>
+
+          {/* Login dengan Google */}
+          <button
+            type="button"
+            onClick={handleGoogle}
+            disabled={googleBusy}
+            className="mt-6 flex w-full items-center justify-center gap-2.5 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-4 py-3.5 text-sm font-extrabold text-clay-dark transition-all duration-75 hover:-translate-y-0.5 hover:shadow-clay-sm active:translate-y-0.5 disabled:opacity-60"
+          >
+            {googleBusy ? (
+              <Loader2 size={18} className="animate-spin text-clay-muted" />
+            ) : (
+              <GoogleIcon size={18} />
+            )}
+            Masuk dengan Google
+          </button>
+
+          <div className="mt-5 flex items-center gap-3">
+            <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
+            <span className="text-xs font-extrabold uppercase tracking-wider text-clay-muted">
+              atau
+            </span>
+            <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
+          </div>
 
           {/* Pilih metode login */}
           <div className="mt-6 flex gap-2 rounded-clay-full border-3 border-clay-shadow/40 bg-clay-inputBg p-1 shadow-clay-inset">

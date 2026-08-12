@@ -109,6 +109,59 @@ https://eureka-ai-flax.vercel.app
 
 ---
 
+## 🔐 GOOGLE LOGIN (OAuth) — SETUP SEKALI SAJA
+
+Login/daftar dengan Google memakai provider OAuth bawaan Supabase
+(`supabase.auth.signInWithOAuth({ provider: "google" })`). Tanpa env var baru di frontend.
+
+### Step 1: Buat OAuth Client di Google Cloud Console
+```bash
+1. Buka https://console.cloud.google.com → buat/pilih project
+2. Menu: APIs & Services → OAuth consent screen
+   - Pilih External (atau Internal bila akun Workspace) → isi nama aplikasi, email, logo opsional → Save
+3. Menu: APIs & Services → Credentials → Create Credentials → OAuth client ID
+   - Application type: Web application
+   - Authorized redirect URIs → Add URI:
+       https://<SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback
+     (ganti <SUPABASE_PROJECT_REF> dengan ref project Supabase-mu, mis. abcdefghijklmnopqrst)
+   - Klik Create → salin Client ID & Client Secret
+```
+
+### Step 2: Aktifkan Provider Google di Supabase Dashboard
+```bash
+1. Supabase Dashboard → Authentication → Providers → Google
+2. Klik tombol Enable
+3. Paste Client ID & Client Secret dari Google Cloud Console
+4. Klik Save
+```
+
+### Step 3: Izinkan Redirect URL aplikasi
+```bash
+Supabase Dashboard → Authentication → URL Configuration:
+- Site URL: https://www.eureka-ai.web.id
+- Additional Redirect URLs → tambahkan:
+    https://www.eureka-ai.web.id/auth/callback
+    http://localhost:3000/auth/callback   # untuk dev
+- Save
+```
+
+### Cara kerja di aplikasi
+```text
+Klik "Masuk/Daftar dengan Google"
+  → supabase.auth.signInWithOAuth({ provider: 'google', redirectTo: <site>/auth/callback })
+  → Google meminta izin akun
+  → kembali ke /auth/callback (token otomatis dideteksi supabase-js)
+  → sesi di-cache ke localStorage, identitas didaftarkan ke backend teman
+  → redirect ke /onboarding (user baru) atau /dashboard (user lama)
+```
+
+> ⚠️ Catatan: bila email Google sudah pernah didaftarkan dengan kata sandi (belum di-*link* ke
+> Google), Supabase akan menolak login Google dengan pesan akun sudah terdaftar. Solusi: masuk
+> sekali dengan kata sandi lewat /login, lalu dari halaman profil hubungkan akun Google
+> (fitur *link identity* — akan tersedia di update berikutnya).
+
+---
+
 ## 📊 DATABASE SCHEMA OVERVIEW
 
 ```sql

@@ -7,7 +7,7 @@
  */
 import { supabase, isSupabaseConfigured } from "./supabase/client";
 import { apiFetch } from "@/lib/apiClient";
-import { setUserName, setUserId, clearIdentity } from "./identity";
+import { getUserId, setUserName, setUserId, clearIdentity } from "./identity";
 
 const SESSION_KEY = "eureka_session";
 
@@ -321,6 +321,91 @@ export async function verifyOtpLogin(
       createdAt: createdAt || data.user.created_at,
     },
   };
+}
+
+/**
+ * Mulai login/daftar dengan Google (Supabase Auth OAuth).
+ * Browser dialihkan ke Google, lalu kembali ke /auth/callback.
+ * Provider Google harus diaktifkan di Supabase Dashboard (lihat SUPABASE_SETUP_GUIDE.md).
+ */
+export async function signInWithGoogle(): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) {
+    throw new Error(
+      "Supabase belum dikonfigurasi. Isi kunci asli di .env.local lalu jalankan supabase_schema.sql."
+    );
+  }
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+      // Selalu tampilkan pemilih akun Google supaya user bisa ganti akun.
+      queryParams: { prompt: "select_account" },
+    },
+  });
+  if (error) {
+    throw new Error(error.message || "Gagal membuka login Google.");
+  }
+}
+
+/**
+ * Selesaikan login Google setelah redirect balik ke halaman callback.
+ * Membaca sesi (token di URL sudah dideteksi otomatis oleh supabase-js),
+ * menyimpan ke cache lokal, lalu mengembalikan info user.
+ */
+export async function finishGoogleOAuth(): Promise<AuthResult> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return { ok: false, error: "Supabase belum dikonfigurasi." };
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    return { ok: false, error: error.message || "Gagal membuka sesi Google." };
+  }
+
+  const session = data.session;
+  if (!session?.user) {
+    return { ok: false, error: "Sesi Google tidak ditemukan. Coba lagi." };
+  }
+
+  const email = String(session.user.email ?? "").trim().toLowerCase();
+  const metaName = String(
+    session.user.user_metadata?.name ?? session.user.user_metadata?.full_name ?? ""
+  )
+    .trim()
+    .slice(0, 60);
+  const name = metaName || email.split("@")[0] || "Pengguna";
+
+  cacheSession(session.user.id, name, email);
+
+  return {
+    ok: true,
+    user: {
+      name,
+      email,
+      password: "",
+      createdAt: session.user.created_at ?? "",
+    },
+  };
+}
+
+/**
+ * Daftarkan identitas user ke backend teman/kolaborasi.
+ * Best-effort — kegagalan diabaikan (identitas tidak wajib).
+ */
+export async function registerFriendsIdentity(name: string): Promise<void> {
+  try {
+    await apiFetch("/api/friends", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "register",
+        userId: getUserId(),
+        name: name.slice(0, 60),
+      }),
+    });
+  } catch {
+    // identitas teman tidak wajib
+  }
 }
 
 /**
