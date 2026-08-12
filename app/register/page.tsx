@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,7 +27,6 @@ import {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [step, setStep] = useState<"form" | "otp">("form");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -41,10 +40,12 @@ export default function RegisterPage() {
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Pesan error dari halaman callback Google (?error=...).
+  // Dibaca dari window.location (bukan useSearchParams) supaya halaman
+  // tetap bisa di-prerender statis tanpa memerlukan Suspense boundary.
   useEffect(() => {
-    const err = searchParams.get("error");
+    const err = new URLSearchParams(window.location.search).get("error");
     if (err) setError(err);
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     if (isLoggedIn()) {

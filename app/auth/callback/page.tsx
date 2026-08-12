@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import {
   finishGoogleOAuth,
@@ -15,7 +15,6 @@ const SESSION_TIMEOUT_MS = 20000;
 /** Halaman balikan (redirect) setelah login/daftar dengan Google. */
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const started = useRef(false);
 
   useEffect(() => {
@@ -46,7 +45,8 @@ export default function AuthCallbackPage() {
 
     const run = async () => {
       // Google / Supabase menandai kegagalan lewat ?error=...
-      if (searchParams.get("error")) {
+      // (dibaca dari window.location agar halaman bisa di-prerender statis)
+      if (new URLSearchParams(window.location.search).get("error")) {
         redirect(
           `/login?error=${encodeURIComponent(
             "Login Google dibatalkan atau gagal. Silakan coba lagi."
@@ -90,7 +90,7 @@ export default function AuthCallbackPage() {
     return () => {
       subscription?.unsubscribe();
     };
-  }, [router, searchParams]);
+  }, [router]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-clay-beige px-4">

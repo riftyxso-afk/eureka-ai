@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   Eye,
   EyeOff,
@@ -31,7 +31,6 @@ type LoginMode = "password" | "otp";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [mode, setMode] = useState<LoginMode>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,12 +45,13 @@ export default function LoginPage() {
   const [checked, setChecked] = useState(false);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Pesan error dari halaman callback Google (?error=...) — useSearchParams
-  // sudah men-decode nilai URL, jadi langsung dipakai apa adanya.
+  // Pesan error dari halaman callback Google (?error=...).
+  // Dibaca dari window.location (bukan useSearchParams) supaya halaman
+  // tetap bisa di-prerender statis tanpa memerlukan Suspense boundary.
   useEffect(() => {
-    const err = searchParams.get("error");
+    const err = new URLSearchParams(window.location.search).get("error");
     if (err) setError(err);
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     if (isLoggedIn()) {
