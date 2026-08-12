@@ -85,6 +85,13 @@ function buildOtpEmailHtml(code: string, email: string): string {
               </td>
             </tr>
 
+            <!-- Ilustrasi -->
+            <tr>
+              <td align="center" style="padding:22px 40px 0;">
+                <img src="https://s6.imgcdn.dev/YXbD48.png" alt="Ilustrasi Eureka.AI" width="460" style="display:block;width:100%;max-width:460px;height:auto;border:0;border-radius:14px;" />
+              </td>
+            </tr>
+
             <!-- OTP digit boxes -->
             <tr>
               <td align="center" style="padding:24px 40px 6px;">
