@@ -28,6 +28,10 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# aset sumber besar (versi teroptimasi ada di app/ & public/)
+/logo.png
+/banner link.png
+
 # vercel
 .vercel
 

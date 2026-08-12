@@ -16,6 +16,8 @@ import {
 import { NoteFlow } from "@/components/note/NoteFlow";
 import { ChapterAIChat } from "@/components/note/ChapterAIChat";
 import { DreamingOverlay } from "@/components/note/DreamingOverlay";
+import { ParsedContent } from "@/components/note/ParsedContent";
+import { parseNoteContent } from "@/lib/parseNoteContent";
 import { useRegenerateJob } from "@/lib/useRegenerateJob";
 
 interface Chapter {
@@ -34,64 +36,6 @@ interface NoteInfo {
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
-
-interface ParagraphBlock {
-  type: "text" | "list";
-  lines: string[];
-}
-
-/** Ubah teks bab menjadi paragraf rapi + deteksi bullet list. */
-function toParagraphs(content: string): ParagraphBlock[] {
-  const rawLines = content
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-
-  if (rawLines.length <= 1) {
-    const sentences = content
-      .split(/(?<=[.!?])\s+|\n+/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-    const paragraphs: ParagraphBlock[] = [];
-    let buffer: string[] = [];
-    for (const s of sentences) {
-      buffer.push(s);
-      if (buffer.length >= 3) {
-        paragraphs.push({ type: "text", lines: [buffer.join(" ")] });
-        buffer = [];
-      }
-    }
-    if (buffer.length > 0) {
-      paragraphs.push({ type: "text", lines: [buffer.join(" ")] });
-    }
-    return paragraphs;
-  }
-
-  const blocks: ParagraphBlock[] = [];
-  let buffer: string[] = [];
-  let isList = false;
-
-  const flush = () => {
-    if (buffer.length === 0) return;
-    blocks.push({ type: isList ? "list" : "text", lines: [...buffer] });
-    buffer = [];
-  };
-
-  for (const line of rawLines) {
-    const listMatch = line.match(/^([-•*]|\d+[.)])\s+(.*)$/);
-    const isLineList = listMatch !== null;
-    if (isLineList !== isList && buffer.length > 0) flush();
-    if (isLineList && listMatch) {
-      buffer.push(listMatch[2]);
-      isList = true;
-    } else {
-      buffer.push(line);
-      isList = false;
-    }
-  }
-  flush();
-  return blocks;
-}
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -234,7 +178,7 @@ export default function ChapterNotepadPage() {
     );
   }
 
-  const blocks = toParagraphs(chapter.content);
+  const items = parseNoteContent(chapter.content);
 
   return (
     <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
@@ -252,7 +196,13 @@ export default function ChapterNotepadPage() {
             <div className="text-xs font-bold uppercase tracking-wide text-clay-muted">
               Bab {chapter.id} · {note.title}
             </div>
-            <h1 className="mt-1 line-clamp-2 text-lg font-extrabold text-clay-dark sm:text-xl">
+            <h1
+              className={`mt-1 break-words font-extrabold text-clay-dark ${
+                chapter.title.length > 90
+                  ? "text-base leading-snug sm:text-lg"
+                  : "text-lg sm:text-xl"
+              }`}
+            >
               {chapter.title}
             </h1>
           </div>
@@ -277,20 +227,7 @@ export default function ChapterNotepadPage() {
 
       {/* Isi bab */}
       <div className="card-clay p-6 sm:p-8">
-        <div className="space-y-4 text-[15px] font-medium leading-relaxed text-clay-dark sm:text-base">
-          {blocks.map((block, i) =>
-            block.type === "list" ? (
-              <ul key={i} className="list-disc space-y-1.5 pl-5">
-                {block.lines.map((line, j) => (
-                  <li key={j}>{line}</li>
-                ))}
-              </ul>
-            ) : (
-              <p key={i}>{block.lines[0]}</p>
-            )
-          )}
-        </div>
-
+        <ParsedContent items={items} />
         <NoteFlow flow={chapter.flow ?? []} />
       </div>
 
@@ -358,7 +295,7 @@ export default function ChapterNotepadPage() {
               <span className="block text-[11px] font-bold uppercase tracking-wide text-clay-muted">
                 Bab {prev.id}
               </span>
-              <span className="block truncate text-sm font-extrabold text-clay-dark">
+              <span className="block break-words text-sm font-extrabold leading-snug text-clay-dark">
                 {prev.title}
               </span>
             </span>
@@ -375,7 +312,7 @@ export default function ChapterNotepadPage() {
               <span className="block text-[11px] font-bold uppercase tracking-wide text-clay-muted">
                 Bab {next.id}
               </span>
-              <span className="block truncate text-sm font-extrabold text-clay-dark">
+              <span className="block break-words text-sm font-extrabold leading-snug text-clay-dark">
                 {next.title}
               </span>
             </span>

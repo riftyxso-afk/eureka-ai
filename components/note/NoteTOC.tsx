@@ -45,7 +45,7 @@ export const NoteTOC = ({
               <span className="mr-2 text-xs font-extrabold text-clay-muted">
                 {chapter.id}.
               </span>
-              <span className="line-clamp-2">{chapter.title}</span>
+              <span className="break-words">{chapter.title}</span>
             </button>
           ))}
         </nav>
@@ -57,7 +57,7 @@ export const NoteTOC = ({
           <button
             key={chapter.id}
             onClick={() => onChapterClick(chapter.id)}
-            className={`shrink-0 rounded-clay-full px-4 py-2 text-xs font-extrabold transition-all duration-75 ${
+            className={`max-w-full break-words rounded-clay-full px-4 py-2 text-xs font-extrabold transition-all duration-75 ${
               activeChapterId === chapter.id
                 ? "bg-clay-primary text-white shadow-clay-sm"
                 : "bg-white text-clay-dark shadow-clay-sm hover:bg-clay-beige"

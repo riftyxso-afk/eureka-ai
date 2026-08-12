@@ -183,6 +183,7 @@ export default function NoteDetailPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [presence, setPresence] = useState<PresenceEntry[]>([]);
   const [activeChapterId, setActiveChapterId] = useState<number | null>(null);
+  const [collapsedMap, setCollapsedMap] = useState<Record<number, boolean>>({});
   const [bookmarked, setBookmarked] = useState(false);
   const sectionRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const router = useRouter();
@@ -211,6 +212,21 @@ export default function NoteDetailPage() {
             content: c.text,
           })
         );
+        const chaptersData: Chapter[] =
+          rawChapters.length > 0 ? rawChapters : fallbackChapters;
+        // Catatan panjang: bab tampil terlipat (collapsed) secara default.
+        const totalChars = chaptersData.reduce(
+          (acc: number, c: { content?: string }) =>
+            acc + (c.content?.length ?? 0),
+          0
+        );
+        const longNote = totalChars > 3000 || chaptersData.length >= 5;
+        setCollapsedMap(
+          chaptersData.reduce<Record<number, boolean>>((acc, c) => {
+            acc[c.id] = longNote;
+            return acc;
+          }, {})
+        );
         setNote({
           id: data.note.id,
           title: data.note.title,
@@ -218,7 +234,7 @@ export default function NoteDetailPage() {
             data.note.summary ||
             data.chunks?.[0]?.text.slice(0, 220) ||
             "Tidak ada ringkasan.",
-          chapters: rawChapters.length > 0 ? rawChapters : fallbackChapters,
+          chapters: chaptersData,
           createdAt: data.note.createdAt,
           subject: data.note.subject,
           keyPoints: data.note.keyPoints ?? [],
@@ -451,10 +467,32 @@ export default function NoteDetailPage() {
 
   const scrollToChapter = (id: number) => {
     setActiveChapterId(id);
-    sectionRefs.current[id]?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    const scroll = () =>
+      sectionRefs.current[id]?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    if (collapsedMap[id]) {
+      // Bab terlipat: buka dulu, lalu scroll setelah konten tampil.
+      setCollapsedMap((prev) => ({ ...prev, [id]: false }));
+      setTimeout(scroll, 60);
+    } else {
+      scroll();
+    }
+  };
+
+  const toggleChapter = (id: number) => {
+    setCollapsedMap((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleAllChapters = () => {
+    const anyCollapsed = chapters.some((c) => collapsedMap[c.id]);
+    setCollapsedMap(
+      chapters.reduce<Record<number, boolean>>((acc, c) => {
+        acc[c.id] = !anyCollapsed;
+        return acc;
+      }, {})
+    );
   };
 
   const openNotepad = (chapter: Chapter) => {
@@ -700,32 +738,48 @@ export default function NoteDetailPage() {
           {/* Bab */}
           <div className="mt-6 space-y-6">
             {chapters.length > 0 ? (
-              chapters.map((chapter) => {
-                const chapterImages = images.filter(
-                  (i) => i.chapterId === chapter.id
-                );
-                return (
-                  <section key={chapter.id} id={`chapter-${chapter.id}`}>
-                    <NoteContent
-                      chapter={chapter}
-                      onOpenNotepad={openNotepad}
-                      highlights={highlights.filter(
-                        (h) => h.chapterId === chapter.id
-                      )}
-                      ref={(el) => {
-                        sectionRefs.current[chapter.id] = el;
-                      }}
-                    />
-                    {chapterImages.map((image) => (
-                      <ImageFigure
-                        key={image.id}
-                        image={image}
-                        onDelete={() => deleteImage(image)}
+              <>
+                <div className="flex items-center justify-end">
+                  <button
+                    onClick={toggleAllChapters}
+                    className="btn-clay-ghost !min-h-[40px] !px-3 text-xs"
+                  >
+                    {chapters.some((c) => collapsedMap[c.id])
+                      ? "Perluas semua bab"
+                      : "Ciutkan semua bab"}
+                  </button>
+                </div>
+                {chapters.map((chapter) => {
+                  const chapterImages = images.filter(
+                    (i) => i.chapterId === chapter.id
+                  );
+                  const collapsed = !!collapsedMap[chapter.id];
+                  return (
+                    <section key={chapter.id} id={`chapter-${chapter.id}`}>
+                      <NoteContent
+                        chapter={chapter}
+                        onOpenNotepad={openNotepad}
+                        highlights={highlights.filter(
+                          (h) => h.chapterId === chapter.id
+                        )}
+                        collapsed={collapsed}
+                        onToggle={() => toggleChapter(chapter.id)}
+                        ref={(el) => {
+                          sectionRefs.current[chapter.id] = el;
+                        }}
                       />
-                    ))}
-                  </section>
-                );
-              })
+                      {!collapsed &&
+                        chapterImages.map((image) => (
+                          <ImageFigure
+                            key={image.id}
+                            image={image}
+                            onDelete={() => deleteImage(image)}
+                          />
+                        ))}
+                    </section>
+                  );
+                })}
+              </>
             ) : (
               <div className="card-clay p-6 text-sm font-semibold text-clay-muted">
                 Catatan ini belum memiliki bab.
