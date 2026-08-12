@@ -6,7 +6,11 @@ import { db } from "@/lib/supabase/admin";
 const CODE_TTL_SECONDS = 5 * 60;
 const MIN_INTERVAL_SECONDS = 60;
 const MAX_ATTEMPTS = 5;
-const FROM_ADDRESS = "Eureka.AI <onboarding@resend.dev>";
+// "onboarding@resend.dev" hanya bisa kirim ke email akun sendiri (mode testing).
+// Setelah domain diverifikasi di https://resend.com/domains, set RESEND_FROM_EMAIL
+// mis. "Eureka.AI <noreply@domainmu.com>"
+const FROM_ADDRESS =
+  process.env.RESEND_FROM_EMAIL ?? "Eureka.AI <onboarding@resend.dev>";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
