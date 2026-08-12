@@ -39,12 +39,30 @@ const app = new Hono();
 // ─── CORS ──────────────────────────────────────────────────
 const corsOrigins = (process.env.CORS_ORIGIN ?? "*")
   .split(",")
-  .map((s) => s.trim())
+  .map((s) => s.trim().replace(/\/+$/, ""))
   .filter(Boolean);
+const corsAllowAll = corsOrigins.includes("*");
+
+/**
+ * Resolver origin CORS:
+ * - non-browser (tanpa Origin, mis. curl/server-to-server) → izinkan
+ * - localhost (dev) → selalu izinkan
+ * - CORS_ORIGIN kosong / "*" → izinkan SEMUA origin (direfleksikan)
+ * - CORS_ORIGIN berisi daftar → hanya origin yang terdaftar
+ */
+const resolveCorsOrigin: (origin: string) => string | null = (origin) => {
+  if (!origin) return "*";
+  if (corsAllowAll) return origin;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    return origin;
+  }
+  return corsOrigins.includes(origin.replace(/\/+$/, "")) ? origin : null;
+};
+
 app.use(
   "*",
   cors({
-    origin: corsOrigins.includes("*") ? "*" : corsOrigins,
+    origin: resolveCorsOrigin,
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: [
       "Content-Type",
@@ -57,10 +75,10 @@ app.use(
   })
 );
 console.log(
-  `[backend] CORS origin: ${
-    corsOrigins.includes("*")
-      ? "* (semua origin diizinkan — set CORS_ORIGIN di .env.local untuk membatasi)"
-      : corsOrigins.join(", ")
+  `[backend] CORS: ${
+    corsAllowAll
+      ? "semua origin diizinkan (CORS_ORIGIN kosong atau *)"
+      : `whitelist: ${corsOrigins.join(", ")} (+localhost untuk dev)`
   }`
 );
 
