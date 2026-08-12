@@ -126,7 +126,7 @@ export const NotificationBell = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-3 w-[320px] max-w-[calc(100vw-2rem)] rounded-clay border-3 border-clay-borderLight bg-white shadow-clay-lg">
+        <div className="fixed inset-x-3 top-3 z-50 flex max-h-[calc(100dvh-1.5rem)] flex-col overflow-hidden rounded-clay border-3 border-clay-borderLight bg-white shadow-clay-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[320px] sm:max-h-none sm:max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between border-b-2 border-clay-shadow/30 px-4 py-3">
             <p className="text-sm font-extrabold text-clay-dark">
               Notifikasi {unread > 0 && `· ${unread} baru`}
@@ -141,7 +141,7 @@ export const NotificationBell = () => {
             </button>
           </div>
 
-          <div className="max-h-[340px] overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto sm:max-h-[340px]">
             {items.length === 0 ? (
               <div className="flex flex-col items-center px-4 py-10 text-center">
                 <Bell size={24} className="text-clay-muted" />
