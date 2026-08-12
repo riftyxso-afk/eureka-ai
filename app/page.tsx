@@ -23,33 +23,33 @@ import { isLoggedIn } from "@/lib/auth";
 const FEATURES = [
   {
     icon: Brain,
-    title: "Socratic AI Tutor",
-    desc: "Eureka nggak ngasih jawaban instan — dia bimbing lewat pertanyaan bertahap sampai kamu dapet momen 'Eureka!' sendiri.",
+    title: "AI Tutor Socratic",
+    desc: "Eureka tidak memberi jawaban instan — ia membimbingmu melalui pertanyaan bertahap hingga kamu menemukan momen 'Eureka!' sendiri.",
   },
   {
     icon: FileText,
     title: "Catatan Otomatis",
-    desc: "Tempel link YouTube, halaman web, atau upload PDF — AI ubah jadi catatan belajar terstruktur per bab.",
+    desc: "Tempel link YouTube, halaman web, atau unggah PDF — AI mengubahnya menjadi catatan belajar terstruktur per bab.",
   },
   {
     icon: MessageCircleQuestion,
     title: "Tanya Apa Saja per Bab",
-    desc: "Kesulitan satu topik? Tanya AI langsung di bab itu, jawabannya fokus ke materi yang sedang kamu pelajari.",
+    desc: "Kesulitan dengan satu topik? Tanyakan langsung pada AI di bab tersebut — jawabannya terfokus pada materi yang sedang kamu pelajari.",
   },
   {
     icon: Users,
-    title: "Belajar Bareng Teman",
-    desc: "Kolaborasi real-time di catatan yang sama: chat, kehadiran editor, stabilo bareng, sampai papan tulis.",
+    title: "Belajar Bersama Teman",
+    desc: "Kolaborasi real-time pada catatan yang sama: obrolan, kehadiran editor, stabilo bersama, hingga papan tulis.",
   },
   {
     icon: Sparkles,
-    title: "Kuis & Flashcards Otomatis",
-    desc: "Setiap catatan langsung dapat kuis dan kartu hafalan dari AI — latihan tanpa bikin soal sendiri.",
+    title: "Kuis & Kartu Hafalan Otomatis",
+    desc: "Setiap catatan langsung dilengkapi kuis dan kartu hafalan dari AI — berlatih tanpa perlu menyusun soal sendiri.",
   },
   {
     icon: Flame,
     title: "Streak & XP",
-    desc: "Belajar rutin bikin streak tetap nyala. Naik level, kumpulin XP, dan lihat posisimu di leaderboard.",
+    desc: "Belajar rutin menjaga streak tetap menyala. Naik level, kumpulkan XP, dan pantau posisimu di papan peringkat.",
   },
 ];
 
@@ -57,17 +57,17 @@ const STEPS = [
   {
     icon: Upload,
     title: "Masukkan Materi",
-    desc: "Tempel link YouTube/web atau unggah PDF/DOCX — apa saja sumber belajarmu.",
+    desc: "Tempel link YouTube atau halaman web, atau unggah PDF/DOCX — apa pun sumber belajarmu.",
   },
   {
     icon: Sparkles,
-    title: "AI Bikin Catatan",
-    desc: "Materi diubah jadi bab-bab rapi, ringkasan, poin penting, kuis, dan flashcards.",
+    title: "AI Membuat Catatan",
+    desc: "Materi diubah menjadi bab-bab rapi, lengkap dengan ringkasan, poin penting, kuis, dan kartu hafalan.",
   },
   {
     icon: Brain,
-    title: "Belajar sampai Eureka!",
-    desc: "Tanya AI per bab, kerjain kuis, dan ulangi kartu hafalan sampai paham banget.",
+    title: "Belajar Hingga Eureka!",
+    desc: "Tanyakan pada AI per bab, kerjakan kuis, dan ulangi kartu hafalan hingga benar-benar paham.",
   },
 ];
 
@@ -128,7 +128,7 @@ export default function LandingPage() {
                   href="/register"
                   className="btn-clay-primary !min-h-[44px] !px-3 !py-2 text-sm sm:!px-5"
                 >
-                  Trial
+                  Coba Gratis
                 </Link>
               </>
             )}
@@ -147,13 +147,13 @@ export default function LandingPage() {
                 <Sparkles size={14} /> AI Tutor untuk Semua Pelajar
               </span>
               <h1 className="mt-6 text-4xl font-extrabold leading-[1.15] text-clay-dark sm:text-5xl lg:text-6xl">
-                Bukan ngasih jawaban, tapi ngasih{" "}
+                Bukan sekadar jawaban, tapi momen{" "}
                 <span className="text-clay-primary">Eureka!</span> 🎉
               </h1>
               <p className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-clay-muted">
-                Eureka.AI adalah tutor pribadi dengan metode Socratic. Dia
-                bimbing kamu menemukan jawabannya sendiri — lewat pertanyaan
-                bertahap, catatan otomatis, dan latihan yang personal.
+                Eureka.AI adalah tutor pribadi dengan metode Socratic. Ia
+                membimbingmu menemukan jawabannya sendiri — melalui pertanyaan
+                bertahap, catatan otomatis, dan latihan yang dipersonalisasi.
               </p>
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 {loggedIn ? (
@@ -163,7 +163,7 @@ export default function LandingPage() {
                 ) : (
                   <>
                     <Link href="/register" className="btn-clay-primary">
-                      Mulai Trial <ArrowRight size={18} className="ml-2" />
+                      Mulai Gratis <ArrowRight size={18} className="ml-2" />
                     </Link>
                     <Link href="/login" className="btn-clay-secondary">
                       Saya sudah punya akun
@@ -206,7 +206,7 @@ export default function LandingPage() {
               </div>
               <div className="card-clay absolute -bottom-8 -left-4 rotate-[-8deg] !p-5 shadow-clay">
                 <p className="text-sm font-extrabold text-clay-dark">
-                  💬 Eureka: “Kalau kamu lari 5 km dalam 30 menit, berapa
+                  💬 Eureka: “Jika kamu lari 5 km dalam 30 menit, berapa
                   kecepatan rata-ratamu?”
                 </p>
                 <p className="mt-2 text-xs font-bold text-clay-muted">
@@ -245,7 +245,7 @@ export default function LandingPage() {
             ))}
           </div>
           <p className="mt-6 text-center text-sm font-semibold text-clay-muted">
-            Multi-model AI — otomatis memilih model terbaik untuk setiap tugas
+            Sistem multi-model AI — otomatis memilih model terbaik untuk setiap tugas
           </p>
         </div>
       </section>
@@ -255,10 +255,10 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="text-center">
             <p className="text-sm font-extrabold uppercase tracking-widest text-clay-secondary">
-              Kenapa Eureka.AI?
+              Keunggulan Eureka.AI
             </p>
             <h2 className="mt-3 text-3xl font-extrabold text-clay-dark sm:text-4xl">
-              Belajar yang bikin paham, bukan cuma hafal
+              Belajar yang membuatmu paham, bukan sekadar hafal
             </h2>
           </div>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -290,7 +290,7 @@ export default function LandingPage() {
               Cara Kerja
             </p>
             <h2 className="mt-3 text-3xl font-extrabold text-clay-dark sm:text-4xl">
-              Dari materi mentah ke paham, dalam 3 langkah
+              Dari materi mentah hingga benar-benar paham, dalam 3 langkah
             </h2>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -320,7 +320,7 @@ export default function LandingPage() {
               <Trophy size={24} className="text-clay-secondary" />
               <p className="mt-3 text-3xl font-extrabold text-clay-dark">60%+</p>
               <p className="text-sm font-bold text-clay-muted">
-                peningkatan pemahaman konsep dalam 2 minggu*
+                rata-rata peningkatan pemahaman konsep dalam 2 minggu*
               </p>
             </div>
             <div className="card-clay flex flex-col items-center !p-6 text-center">
@@ -334,12 +334,12 @@ export default function LandingPage() {
               <BookOpen size={24} className="text-clay-secondary" />
               <p className="mt-3 text-3xl font-extrabold text-clay-dark">100%</p>
               <p className="text-sm font-bold text-clay-muted">
-                catatan dibuat AI — tinggal belajar, nggak perlu nyatet manual
+                catatan dibuat oleh AI — tinggal belajar, tanpa perlu mencatat manual
               </p>
             </div>
           </div>
           <p className="mt-4 text-center text-xs font-semibold text-clay-muted">
-            *angka ilustrasi dari uji internal
+            *angka ilustrasi dari pengujian internal
           </p>
         </div>
       </section>
@@ -366,11 +366,11 @@ export default function LandingPage() {
               <ul className="mt-6 flex-1 space-y-3 text-sm font-semibold text-clay-muted">
                 <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Chat AI Socratic (dengan batas harian)</li>
                 <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> 3 catatan otomatis dari materi</li>
-                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Kuis & flashcards dasar</li>
-                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Streak, XP & leaderboard</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Kuis & kartu hafalan dasar</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Streak, XP & papan peringkat</li>
               </ul>
               <Link href="/register" className="btn-clay-ghost mt-8 !min-h-[52px] !px-5 text-sm">
-                Mulai Trial
+                Mulai Gratis
               </Link>
             </div>
             <div className="card-clay relative flex flex-col border-3 border-clay-primary !p-8 shadow-clay-lg">
@@ -385,14 +385,14 @@ export default function LandingPage() {
                 <span className="text-lg font-bold text-clay-muted">/bulan</span>
               </p>
               <ul className="mt-6 flex-1 space-y-3 text-sm font-semibold text-clay-muted">
-                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Semua fitur Gratis</li>
+                <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Semua fitur paket Gratis</li>
                 <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Chat AI tanpa batas</li>
                 <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Catatan otomatis tanpa batas</li>
                 <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Kolaborasi real-time dengan teman</li>
                 <li className="flex items-center gap-2"><Check size={16} className="shrink-0 text-clay-success" /> Akses fitur baru lebih dulu</li>
               </ul>
               <Link href="/register" className="btn-clay-primary mt-8 flex !min-h-[52px] items-center justify-center !px-5 text-sm">
-                <Crown size={16} className="mr-2" /> Langganan Pro
+                <Crown size={16} className="mr-2" /> Berlangganan Pro
               </Link>
             </div>
           </div>
@@ -410,8 +410,8 @@ export default function LandingPage() {
               Siap mengalami momen Eureka pertamamu?
             </h2>
             <p className="mt-3 max-w-xl text-base font-semibold text-clay-muted">
-              Mulai trial sekarang, tempel materi pertamamu, dan biarkan AI
-              membimbingmu sampai paham — bukan sekadar hafal.
+              Mulai gratis sekarang, tempel materi pertamamu, dan biarkan AI
+              membimbingmu hingga benar-benar paham — bukan sekadar menghafal.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               {loggedIn ? (
@@ -421,7 +421,7 @@ export default function LandingPage() {
               ) : (
                 <>
                   <Link href="/register" className="btn-clay-primary">
-                    Mulai Trial <ArrowRight size={18} className="ml-2" />
+                    Mulai Gratis <ArrowRight size={18} className="ml-2" />
                   </Link>
                   <Link href="/login" className="btn-clay-secondary">
                     Masuk
@@ -448,7 +448,7 @@ export default function LandingPage() {
             <a href="#harga" className="transition-colors hover:text-clay-primary">Harga</a>
           </div>
           <p className="text-xs font-bold text-clay-muted">
-            © {new Date().getFullYear()} Eureka.AI — Bukan ngasih jawaban, tapi ngasih Eureka!
+            © {new Date().getFullYear()} Eureka.AI — Bukan sekadar memberi jawaban, tapi membimbingmu menemukan Eureka!
           </p>
         </div>
       </footer>

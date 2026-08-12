@@ -7,9 +7,9 @@ import KemerdekaanPopup from "@/components/KemerdekaanPopup";
 
 const SITE_URL = "https://www.eureka-ai.web.id";
 
-const BRAND_TITLE = "Eureka.AI — Bukan ngasih jawaban, tapi ngasih Eureka!";
+const BRAND_TITLE = "Eureka.AI — Bukan sekadar jawaban, tapi momen Eureka!";
 const BRAND_DESC =
-  "AI Tutor Socratic untuk semua pelajar Indonesia. Bukan ngasih jawaban, tapi ngasih Eureka!";
+  "AI Tutor Socratic untuk semua pelajar Indonesia. Bukan sekadar memberi jawaban, tapi membimbingmu menemukan momen Eureka!";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
         url: "/banner.png",
         width: 1200,
         height: 800,
-        alt: "Eureka.AI — Bukan ngasih jawaban, tapi ngasih Eureka!",
+        alt: "Eureka.AI — Bukan sekadar jawaban, tapi momen Eureka!",
       },
     ],
   },
