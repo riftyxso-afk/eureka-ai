@@ -213,6 +213,116 @@ export async function loginUser(input: {
 }
 
 /**
+ * Kirim kode OTP ke email via Resend (server-side di /api/auth/otp).
+ * `name` opsional — dipakai saat akun baru dibuat.
+ */
+export async function requestOtpLogin(
+  email: string,
+  name?: string
+): Promise<AuthResult> {
+  const clean = email.trim().toLowerCase();
+
+  if (!isEmailValid(clean)) {
+    return { ok: false, error: "Format email tidak valid." };
+  }
+
+  try {
+    const res = await fetch("/api/auth/otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "request", email: clean, name: name ?? "" }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.ok) {
+      return { ok: false, error: json?.error ?? "Gagal mengirim kode. Coba lagi." };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Tidak dapat terhubung ke server. Coba lagi." };
+  }
+}
+
+/**
+ * Verifikasi kode OTP yang dikirim via Resend.
+ * Server memastikan akun Supabase Auth ada & terkonfirmasi (tanpa email konfirmasi),
+ * lalu mengembalikan token magic-link yang ditukar di sini menjadi sesi aktif.
+ */
+export async function verifyOtpLogin(
+  email: string,
+  code: string,
+  name?: string
+): Promise<AuthResult> {
+  const clean = email.trim().toLowerCase();
+
+  if (!isSupabaseConfigured()) {
+    return {
+      ok: false,
+      error:
+        "Supabase belum dikonfigurasi. Isi kunci asli di .env.local lalu jalankan supabase_schema.sql.",
+    };
+  }
+
+  let tokenHash = "";
+  let displayName = "";
+  let createdAt = "";
+  try {
+    const res = await fetch("/api/auth/otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "verify",
+        email: clean,
+        code: code.trim(),
+        name: name ?? "",
+      }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.ok) {
+      return { ok: false, error: json?.error ?? "Gagal memverifikasi kode. Coba lagi." };
+    }
+    tokenHash = String(json.tokenHash ?? "");
+    displayName = String(json.user?.name ?? "").slice(0, 60);
+    createdAt = String(json.user?.createdAt ?? "");
+  } catch {
+    return { ok: false, error: "Tidak dapat terhubung ke server. Coba lagi." };
+  }
+
+  if (!tokenHash) {
+    return { ok: false, error: "Gagal memverifikasi kode. Coba lagi." };
+  }
+
+  const { data, error } = await supabase!.auth.verifyOtp({
+    type: "email",
+    token_hash: tokenHash,
+  });
+
+  if (error || !data.user) {
+    return {
+      ok: false,
+      error: error?.message || "Gagal membuka sesi. Coba lagi.",
+    };
+  }
+
+  const userName =
+    String(data.user.user_metadata?.name ?? "").trim().slice(0, 60) ||
+    displayName ||
+    clean.split("@")[0] ||
+    "Pengguna";
+
+  cacheSession(data.user.id, userName, clean);
+
+  return {
+    ok: true,
+    user: {
+      name: userName,
+      email: clean,
+      password: "",
+      createdAt: createdAt || data.user.created_at,
+    },
+  };
+}
+
+/**
  * Sinkronkan cache sesi dengan Supabase Auth (mis. setelah refresh halaman).
  * Panggil sekali dari guard dashboard.
  */

@@ -1,23 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, LogIn, Mail, Lock } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  KeyRound,
+  Loader2,
+  LogIn,
+  Mail,
+  Lock,
+  ArrowLeft,
+} from "lucide-react";
 import AvatarClay from "@/components/ui/AvatarClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
-import { isLoggedIn, loginUser, needsOnboarding } from "@/lib/auth";
+import {
+  isLoggedIn,
+  loginUser,
+  needsOnboarding,
+  requestOtpLogin,
+  verifyOtpLogin,
+} from "@/lib/auth";
+
+type LoginMode = "password" | "otp";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<LoginMode>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [checked, setChecked] = useState(false);
+  const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -30,6 +53,12 @@ export default function LoginPage() {
     setChecked(true);
   }, [router]);
 
+  useEffect(() => {
+    return () => {
+      if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+    };
+  }, []);
+
   if (!checked) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-clay-beige">
@@ -37,6 +66,25 @@ export default function LoginPage() {
       </div>
     );
   }
+
+  const startCooldown = () => {
+    setCooldown(60);
+    if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+    cooldownTimer.current = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1 && cooldownTimer.current) {
+          clearInterval(cooldownTimer.current);
+          cooldownTimer.current = null;
+        }
+        return c <= 1 ? 0 : c - 1;
+      });
+    }, 1000);
+  };
+
+  const goAfterLogin = async () => {
+    const needOnboarding = await needsOnboarding().catch(() => false);
+    router.replace(needOnboarding ? "/onboarding" : "/dashboard");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +104,58 @@ export default function LoginPage() {
       return;
     }
 
-    const needOnboarding = await needsOnboarding().catch(() => false);
-    router.replace(needOnboarding ? "/onboarding" : "/dashboard");
+    await goAfterLogin();
+  };
+
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpSending || cooldown > 0) return;
+    setError(null);
+
+    if (!email.trim()) {
+      setError("Masukkan email dulu ya.");
+      return;
+    }
+
+    setOtpSending(true);
+    const result = await requestOtpLogin(email);
+    setOtpSending(false);
+    if (!result.ok) {
+      setError(result.error ?? "Gagal mengirim kode. Coba lagi.");
+      return;
+    }
+
+    setOtpSent(true);
+    setOtpCode("");
+    startCooldown();
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    setError(null);
+
+    if (otpCode.trim().length !== 6) {
+      setError("Masukkan kode 6 digit dari email.");
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await verifyOtpLogin(email, otpCode);
+    if (!result.ok) {
+      setError(result.error ?? "Gagal verifikasi. Coba lagi.");
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
+    await goAfterLogin();
+  };
+
+  const backToEmail = () => {
+    setOtpSent(false);
+    setOtpCode("");
+    setError(null);
   };
 
   return (
@@ -71,82 +169,229 @@ export default function LoginPage() {
         </Link>
 
         <CardClay className="!p-8 sm:!p-10">
-          <h1 className="text-center text-3xl font-extrabold text-clay-dark">
+          <h1 className="text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
             Selamat Datang Kembali! 👋
           </h1>
           <p className="mt-2 text-center text-base font-semibold text-clay-muted">
             Masuk dan lanjutkan momen Eureka-mu
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            <div>
-              <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                EMAIL
-              </label>
-              <div className="relative">
-                <Mail
-                  size={18}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
-                />
-                <InputClay
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="kamu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="!pl-11"
-                  required
-                />
+          {/* Pilih metode login */}
+          <div className="mt-6 flex gap-2 rounded-clay-full border-3 border-clay-shadow/40 bg-clay-inputBg p-1 shadow-clay-inset">
+            {(
+              [
+                { id: "password", label: "Kata Sandi" },
+                { id: "otp", label: "Kode OTP" },
+              ] as { id: LoginMode; label: string }[]
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setMode(tab.id);
+                  setError(null);
+                }}
+                className={`min-h-[44px] flex-1 rounded-clay-full border-2 text-sm font-extrabold transition-all duration-75 ${
+                  mode === tab.id
+                    ? "border-clay-primary bg-clay-primary text-white shadow-clay-sm"
+                    : "border-transparent text-clay-muted hover:text-clay-dark"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {mode === "password" ? (
+            <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+              <div>
+                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                  EMAIL
+                </label>
+                <div className="relative">
+                  <Mail
+                    size={18}
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
+                  />
+                  <InputClay
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="kamu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="!pl-11"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                KATA SANDI
-              </label>
-              <div className="relative">
-                <Lock
-                  size={18}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
-                />
-                <InputClay
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="!pl-11 !pr-12"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                  className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-clay-muted transition-colors hover:text-clay-primary"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+              <div>
+                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                  KATA SANDI
+                </label>
+                <div className="relative">
+                  <Lock
+                    size={18}
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
+                  />
+                  <InputClay
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="!pl-11 !pr-12"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                    className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-clay-muted transition-colors hover:text-clay-primary"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {error && (
-              <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
-                {error}
-              </p>
-            )}
-
-            <ButtonClay type="submit" fullWidth disabled={submitting} className="!min-h-[56px]">
-              {submitting ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                <>
-                  <LogIn size={18} className="mr-2" />
-                  Masuk
-                </>
+              {error && (
+                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                  {error}
+                </p>
               )}
-            </ButtonClay>
-          </form>
+
+              <ButtonClay type="submit" fullWidth disabled={submitting} className="!min-h-[56px]">
+                {submitting ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <>
+                    <LogIn size={18} className="mr-2" />
+                    Masuk
+                  </>
+                )}
+              </ButtonClay>
+            </form>
+          ) : !otpSent ? (
+            <form onSubmit={handleSendOtp} className="mt-6 space-y-5">
+              <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
+                Masukkan email — kami kirim kode 6 digit yang berlaku beberapa
+                menit. Tidak perlu kata sandi! 🔑
+              </p>
+              <div>
+                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                  EMAIL
+                </label>
+                <div className="relative">
+                  <Mail
+                    size={18}
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
+                  />
+                  <InputClay
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="kamu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="!pl-11"
+                    required
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                  {error}
+                </p>
+              )}
+
+              <ButtonClay
+                type="submit"
+                fullWidth
+                disabled={otpSending}
+                className="!min-h-[56px]"
+              >
+                {otpSending ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <>
+                    <KeyRound size={18} className="mr-2" />
+                    Kirim Kode
+                  </>
+                )}
+              </ButtonClay>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="mt-6 space-y-5">
+              <button
+                type="button"
+                onClick={backToEmail}
+                className="flex items-center gap-1 text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary"
+              >
+                <ArrowLeft size={13} />
+                Ganti email
+              </button>
+              <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
+                Kode 6 digit terkirim ke{" "}
+                <b className="text-clay-dark">{email.trim().toLowerCase()}</b>.
+                Periksa kotak masuk (atau spam) email kamu.
+              </p>
+              <div>
+                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                  KODE OTP
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  autoFocus
+                  placeholder="••••••"
+                  value={otpCode}
+                  onChange={(e) =>
+                    setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  className="input-clay text-center !text-2xl !font-extrabold tracking-[0.4em]"
+                />
+              </div>
+
+              {error && (
+                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                  {error}
+                </p>
+              )}
+
+              <ButtonClay
+                type="submit"
+                fullWidth
+                disabled={submitting || otpCode.length !== 6}
+                className="!min-h-[56px]"
+              >
+                {submitting ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <>
+                    <LogIn size={18} className="mr-2" />
+                    Masuk
+                  </>
+                )}
+              </ButtonClay>
+
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                disabled={otpSending || cooldown > 0}
+                className="w-full text-center text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary disabled:opacity-50"
+              >
+                {otpSending
+                  ? "Mengirim ulang..."
+                  : cooldown > 0
+                    ? `Kirim ulang dalam ${cooldown}s`
+                    : "Kirim ulang kode"}
+              </button>
+            </form>
+          )}
 
           <p className="mt-6 text-center text-sm font-bold text-clay-muted">
             Belum punya akun?{" "}
