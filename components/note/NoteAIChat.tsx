@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { Loader2, Send, Sparkles } from "lucide-react";
 
 interface Message {
@@ -13,7 +14,7 @@ interface NoteAIChatProps {
   notify: (msg: string) => void;
 }
 
-/** "Tanya AI tentang catatannya" — RAG Q&A satu pertanyaan → jawaban. */
+/** "Tanya AI tentang catatannya" â€” RAG Q&A satu pertanyaan â†’ jawaban. */
 export const NoteAIChat = ({ noteId, notify }: NoteAIChatProps) => {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -32,7 +33,7 @@ export const NoteAIChat = ({ noteId, notify }: NoteAIChatProps) => {
     setMessages((m) => [...m, { role: "user", content: q }]);
     setLoading(true);
     try {
-      const res = await fetch(`/api/notes/${noteId}/ask`, {
+      const res = await apiFetch(`/api/notes/${noteId}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q }),

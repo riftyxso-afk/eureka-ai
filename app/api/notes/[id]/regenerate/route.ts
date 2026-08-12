@@ -5,9 +5,10 @@
  * menyinkronkan chapters + chunks RAG. Job background → 202 { jobId },
  * status: GET /api/notes/jobs/[jobId].
  */
-import { NextRequest, NextResponse, after } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
+import { runAfter } from "@/lib/after";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { regenerateAllChapters } from "@/lib/regenerate";
 import { createJob, executeJob, updateJob } from "@/lib/jobQueue";
@@ -81,7 +82,7 @@ export async function POST(
     });
 
     // Jalankan setelah respons (serverless-safe), bukan setImmediate.
-    after(() => {
+    runAfter(() => {
       void executeJob(jobId);
     });
 

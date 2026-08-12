@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -199,7 +200,7 @@ export default function NoteDetailPage() {
 
   const loadNote = async () => {
     try {
-      const res = await fetch(`/api/notes/${params.id}`);
+      const res = await apiFetch(`/api/notes/${params.id}`);
       if (res.ok) {
         const data = await res.json();
         const rawChapters = data.chapters ?? [];
@@ -242,7 +243,7 @@ export default function NoteDetailPage() {
       loadNote();
       setRegenNote(false);
       setConfirmRegen(false);
-      notify("Catatan berhasil ditulis ulang! ✨");
+      notify("Catatan berhasil ditulis ulang! âœ¨");
     } else if (regenNote && regen.error) {
       setRegenNote(false);
       setConfirmRegen(false);
@@ -264,8 +265,8 @@ export default function NoteDetailPage() {
     const loadExtras = async () => {
       try {
         const [hlRes, imgRes] = await Promise.all([
-          fetch(`/api/notes/${params.id}/highlights`),
-          fetch(`/api/notes/${params.id}/images`),
+          apiFetch(`/api/notes/${params.id}/highlights`),
+          apiFetch(`/api/notes/${params.id}/images`),
         ]);
         if (hlRes.ok) {
           const hl = await hlRes.json();
@@ -289,7 +290,7 @@ export default function NoteDetailPage() {
 
   const deleteImage = async (image: NoteImage) => {
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/notes/${params.id}/images?id=${image.id}`,
         { method: "DELETE" }
       );
@@ -303,7 +304,7 @@ export default function NoteDetailPage() {
   };
 
   const refreshHighlights = () => {
-    fetch(`/api/notes/${params.id}/highlights`)
+    apiFetch(`/api/notes/${params.id}/highlights`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d) setHighlights(d.highlights ?? []);
@@ -312,16 +313,16 @@ export default function NoteDetailPage() {
   };
 
   const generateAiHighlights = async () => {
-    notify("AI sedang menstabilo catatanmu... ✨");
+    notify("AI sedang menstabilo catatanmu... âœ¨");
     try {
-      const res = await fetch(`/api/notes/${params.id}/highlights/generate`, {
+      const res = await apiFetch(`/api/notes/${params.id}/highlights/generate`, {
         method: "POST",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Gagal membuat stabilo AI.");
       notify(
         data.count > 0
-          ? `Stabilo AI diterapkan (${data.count} bagian)! ✨`
+          ? `Stabilo AI diterapkan (${data.count} bagian)! âœ¨`
           : "Tidak ada bagian baru yang layak distabilo."
       );
       refreshHighlights();
@@ -354,7 +355,7 @@ export default function NoteDetailPage() {
     } catch {
       // abaikan
     }
-    notify(next ? "Disimpan ke bookmark! 🔖" : "Bookmark dihapus");
+    notify(next ? "Disimpan ke bookmark! ðŸ”–" : "Bookmark dihapus");
   };
 
   // Bergabung via link undangan (?invite=TOKEN)
@@ -363,13 +364,13 @@ export default function NoteDetailPage() {
     if (!token) return;
     (async () => {
       try {
-        const res = await fetch(`/api/notes/${params.id}/collab`, {
+        const res = await apiFetch(`/api/notes/${params.id}/collab`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "join", token }),
         });
         if (res.ok) {
-          notify("Kamu bergabung sebagai kolaborator! 🎉");
+          notify("Kamu bergabung sebagai kolaborator! ðŸŽ‰");
           router.replace(`/dashboard/note/${params.id}`);
         }
       } catch {
@@ -381,7 +382,7 @@ export default function NoteDetailPage() {
   // Kehadiran real-time (heartbeat + polling)
   useEffect(() => {
     const heartbeat = () => {
-      fetch(`/api/notes/${params.id}/presence`, {
+      apiFetch(`/api/notes/${params.id}/presence`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, name: getUserName(), role: "editor" }),
@@ -389,7 +390,7 @@ export default function NoteDetailPage() {
     };
     const poll = async () => {
       try {
-        const res = await fetch(`/api/notes/${params.id}/presence`);
+        const res = await apiFetch(`/api/notes/${params.id}/presence`);
         if (res.ok) {
           const data = await res.json();
           setPresence(Object.values(data.presence ?? {}));
@@ -561,7 +562,7 @@ export default function NoteDetailPage() {
           </Link>
           <button
             onClick={() =>
-              notify("Panggilan suara & video call segera hadir! 🚧")
+              notify("Panggilan suara & video call segera hadir! ðŸš§")
             }
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
@@ -819,8 +820,8 @@ export default function NoteDetailPage() {
           chapters={chapters}
           onClose={() => setShowAddImage(false)}
           onAdded={() => {
-            notify("Gambar ditambahkan! 🖼️");
-            fetch(`/api/notes/${params.id}/images`)
+            notify("Gambar ditambahkan! ðŸ–¼ï¸");
+            apiFetch(`/api/notes/${params.id}/images`)
               .then((r) => (r.ok ? r.json() : null))
               .then((d) => {
                 if (d) setImages(d.images ?? []);
@@ -841,15 +842,15 @@ export default function NoteDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-extrabold text-clay-dark">
-              Tulis ulang seluruh catatan? ✨
+              Tulis ulang seluruh catatan? âœ¨
             </h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-muted">
               AI akan menulis ulang semua bab dari{" "}
               <span className="font-extrabold text-clay-dark">
-                “{data.title}”
+                â€œ{data.title}â€
               </span>{" "}
               ({chapters.length} bab) berdasarkan konten yang ada. Proses ini
-              bisa memakan waktu beberapa menit — kamu bisa menunggu di halaman
+              bisa memakan waktu beberapa menit â€” kamu bisa menunggu di halaman
               ini atau membiarkannya jalan.
             </p>
             <div className="mt-6 flex gap-3">

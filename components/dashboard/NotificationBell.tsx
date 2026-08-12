@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 import {
   AtSign,
@@ -57,7 +58,7 @@ export const NotificationBell = () => {
   const load = async () => {
     try {
       const userId = getUserId();
-      const res = await fetch(`/api/notifications?userId=${encodeURIComponent(userId)}`);
+      const res = await apiFetch(`/api/notifications?userId=${encodeURIComponent(userId)}`);
       if (!res.ok) return;
       const data = await res.json();
       setItems(data.notifications ?? []);
@@ -87,7 +88,7 @@ export const NotificationBell = () => {
   const markAllRead = async () => {
     try {
       const userId = getUserId();
-      await fetch("/api/notifications", {
+      await apiFetch("/api/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "mark_read", userId }),
@@ -128,7 +129,7 @@ export const NotificationBell = () => {
         <div className="absolute right-0 z-50 mt-3 w-[320px] max-w-[calc(100vw-2rem)] rounded-clay border-3 border-clay-borderLight bg-white shadow-clay-lg">
           <div className="flex items-center justify-between border-b-2 border-clay-shadow/30 px-4 py-3">
             <p className="text-sm font-extrabold text-clay-dark">
-              Notifikasi {unread > 0 && `· ${unread} baru`}
+              Notifikasi {unread > 0 && `Â· ${unread} baru`}
             </p>
             <button
               onClick={markAllRead}

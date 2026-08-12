@@ -8,6 +8,7 @@
  *   disembunyikan (X) & ditampilkan lagi (pil) selama job masih jalan.
  */
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronUp, FileText, Loader2, Square, X } from "lucide-react";
 import { useJobWatcher } from "@/context/JobWatcherContext";
@@ -29,7 +30,7 @@ export const BackgroundJobPopup = () => {
   const stopJob = async (jobId: string) => {
     setStoppingIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
     try {
-      await fetch(`/api/notes/jobs/${encodeURIComponent(jobId)}`, {
+      await apiFetch(`/api/notes/jobs/${encodeURIComponent(jobId)}`, {
         method: "POST",
       });
     } catch {
@@ -112,7 +113,7 @@ export const BackgroundJobPopup = () => {
                 onClick={() => setExpanded(false)}
                 className="w-full rounded-clay-md py-3 text-xs font-extrabold text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-dark sm:py-1.5"
               >
-                Lipat & sembunyikan ↓
+                Lipat & sembunyikan â†“
               </button>
             </div>
           </div>
@@ -128,7 +129,7 @@ export const BackgroundJobPopup = () => {
                 Dirangkum di latar belakang
               </span>
               <span className="block truncate text-[11px] font-bold text-clay-muted sm:max-w-[180px]">
-                {topJob.message} · {topPercent}%
+                {topJob.message} Â· {topPercent}%
               </span>
             </span>
             <ChevronUp size={15} className="shrink-0 text-clay-muted" />

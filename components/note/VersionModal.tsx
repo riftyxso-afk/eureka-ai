@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { History, RotateCcw, X } from "lucide-react";
 
 interface NoteVersion {
@@ -40,7 +41,7 @@ export default function VersionModal({
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/api/notes/${noteId}/versions`);
+        const res = await apiFetch(`/api/notes/${noteId}/versions`);
         if (res.ok) {
           const data = await res.json();
           setVersions(data.versions ?? []);
@@ -54,20 +55,20 @@ export default function VersionModal({
   const handleRestore = async (version: number) => {
     setRestoring(version);
     try {
-      const res = await fetch(`/api/notes/${noteId}/versions`, {
+      const res = await apiFetch(`/api/notes/${noteId}/versions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "restore", version }),
       });
       if (res.ok) {
-        notify(`Catatan dipulihkan ke versi ${version} ✅`);
+        notify(`Catatan dipulihkan ke versi ${version} âœ…`);
         onRestored();
       } else {
         const err = await res.json().catch(() => ({}));
-        notify(err.error ?? "Gagal memulihkan ⚠️");
+        notify(err.error ?? "Gagal memulihkan âš ï¸");
       }
     } catch {
-      notify("Gagal memulihkan ⚠️");
+      notify("Gagal memulihkan âš ï¸");
     } finally {
       setRestoring(null);
     }

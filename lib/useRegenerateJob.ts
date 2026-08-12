@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * Hook pemantau job regenerate (bab/catatan) — pola sama seperti polling
- * job pembuatan catatan: POST → 202 { jobId } → poll GET /api/notes/jobs/[id]
+ * Hook pemantau job regenerate (bab/catatan) â€” pola sama seperti polling
+ * job pembuatan catatan: POST â†’ 202 { jobId } â†’ poll GET /api/notes/jobs/[id]
  * sampai done/error. Bisa dihentikan lewat POST cancel.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { apiFetch } from "@/lib/apiClient";
 interface RegenerateState {
   running: boolean;
   percent: number;
@@ -45,7 +46,7 @@ export function useRegenerateJob() {
       setStopping(false);
 
       try {
-        const res = await fetch(url, {
+        const res = await apiFetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: body ? JSON.stringify(body) : undefined,
@@ -71,7 +72,7 @@ export function useRegenerateJob() {
           const id = jobIdRef.current;
           if (!id) return;
           try {
-            const jres = await fetch(`/api/notes/jobs/${encodeURIComponent(id)}`);
+            const jres = await apiFetch(`/api/notes/jobs/${encodeURIComponent(id)}`);
             if (jres.status === 404) {
               stopPolling();
               setState({
@@ -148,7 +149,7 @@ export function useRegenerateJob() {
     if (!id) return;
     setStopping(true);
     try {
-      await fetch(`/api/notes/jobs/${encodeURIComponent(id)}`, {
+      await apiFetch(`/api/notes/jobs/${encodeURIComponent(id)}`, {
         method: "POST",
       });
     } catch {

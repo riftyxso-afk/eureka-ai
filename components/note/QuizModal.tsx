@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { motion } from "framer-motion";
 import { Check, Loader2, RefreshCw, X } from "lucide-react";
 
@@ -34,7 +35,7 @@ export default function QuizModal({
     setSubmitted(false);
     setAnswers({});
     try {
-      const res = await fetch(`/api/notes/${noteId}/quiz`, {
+      const res = await apiFetch(`/api/notes/${noteId}/quiz`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count: c }),
@@ -109,7 +110,7 @@ export default function QuizModal({
                   Membuat soal...
                 </>
               ) : (
-                "✨ Buat Kuis dari Catatan"
+                "âœ¨ Buat Kuis dari Catatan"
               )}
             </button>
             {error && (
@@ -174,7 +175,7 @@ export default function QuizModal({
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-clay-dark">
                 {submitted
-                  ? `Skor: ${score}/${questions.length} 🎯`
+                  ? `Skor: ${score}/${questions.length} ðŸŽ¯`
                   : `${questions.length} soal`}
               </div>
               <button
@@ -239,7 +240,7 @@ export default function QuizModal({
                   </div>
                   {submitted && q.explanation && (
                     <p className="mt-2 rounded-xl bg-clay-beige px-3 py-2 text-xs font-medium text-clay-dark leading-relaxed">
-                      💡 {q.explanation}
+                      ðŸ’¡ {q.explanation}
                     </p>
                   )}
                 </div>
@@ -250,7 +251,7 @@ export default function QuizModal({
               <button
                 onClick={() => {
                   if (Object.keys(answers).length < questions.length) {
-                    notify("Jawab semua soal dulu ya! ⚠️");
+                    notify("Jawab semua soal dulu ya! âš ï¸");
                     return;
                   }
                   setSubmitted(true);

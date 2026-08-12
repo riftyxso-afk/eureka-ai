@@ -9,9 +9,10 @@
  * - Status job untuk polling: GET /api/notes/jobs/[jobId]
  * - Notifikasi selesai: lonceng (pushNotification) + toast/notifikasi browser.
  */
-import { NextRequest, NextResponse, after } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
+import { runAfter } from "@/lib/after";
 import {
   createJob,
   executeJob,
@@ -197,7 +198,7 @@ export async function POST(req: NextRequest) {
 
     // Eksekusi setelah respons HTTP (Vercel & self-hosted) — bukan setImmediate
     // yang mati saat fungsi dibekukan di serverless.
-    after(() => {
+    runAfter(() => {
       void executeJob(jobId);
     });
 

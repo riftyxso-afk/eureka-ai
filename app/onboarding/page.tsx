@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { AtSign, CheckCircle2, Loader2, PartyPopper, XCircle } from "lucide-react";
@@ -53,22 +54,22 @@ const DEFAULT_ANALYSIS: ProfileAnalysis = {
     "Kamu belajar paling nyaman saat bebas mengeksplorasi dengan caramu sendiri. Eureka akan menyesuaikan ritmenya denganmu.",
   recommendations: [
     {
-      icon: "🧠",
+      icon: "ðŸ§ ",
       title: "Socratic AI",
       desc: "Bertanya balik, BUKAN kasih jawaban instan.",
     },
     {
-      icon: "📋",
+      icon: "ðŸ“‹",
       title: "Agentic Planner",
       desc: "AI bikin rencana belajar 3 hari ke depan khusus buat kamu.",
     },
     {
-      icon: "🎯",
+      icon: "ðŸŽ¯",
       title: "Fokus di Kelemahanmu",
       desc: "Kami catat topik yang kamu pusingin untuk dipelajari pertama.",
     },
     {
-      icon: "👁️",
+      icon: "ðŸ‘ï¸",
       title: "Reasoning Trace",
       desc: "Lihat alur pikir AI step-by-step di balik layar.",
     },
@@ -138,7 +139,7 @@ export default function OnboardingPage() {
     setUsernameStatus("checking");
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `/api/profile?userId=${encodeURIComponent(
             getUserId()
           )}&checkUsername=${encodeURIComponent(cleanUsername)}`
@@ -152,12 +153,12 @@ export default function OnboardingPage() {
     return () => clearTimeout(t);
   }, [cleanUsername]);
 
-  // Sudah pernah onboarding → langsung ke dashboard.
+  // Sudah pernah onboarding â†’ langsung ke dashboard.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/profile?userId=${encodeURIComponent(getUserId())}`);
+        const res = await apiFetch(`/api/profile?userId=${encodeURIComponent(getUserId())}`);
         const payload = await res.json();
         if (!cancelled && payload?.user?.onboardingCompleted) {
           router.replace("/dashboard");
@@ -174,7 +175,7 @@ export default function OnboardingPage() {
    const saveProfile = useCallback(
      async (nextAnalysis: ProfileAnalysis | null) => {
        try {
-         const res = await fetch("/api/profile", {
+         const res = await apiFetch("/api/profile", {
            method: "PUT",
            headers: { "Content-Type": "application/json" },
            body: JSON.stringify({
@@ -218,7 +219,7 @@ export default function OnboardingPage() {
     // Beri waktu minimal untuk animasi loading (loadingIdx maju tiap 1.4s).
     const minWait = new Promise((r) => setTimeout(r, 4800));
     const [res] = await Promise.all([
-      fetch("/api/onboarding/analyze", {
+      apiFetch("/api/onboarding/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -288,11 +289,11 @@ export default function OnboardingPage() {
     ) {
       playedNotifRef.current = true;
       try {
-        new Notification("Selamat datang di Eureka.AI! 🎉", {
+        new Notification("Selamat datang di Eureka.AI! ðŸŽ‰", {
           body: `Kamu pengguna ke-${userNumber} yang bergabung.`,
         });
       } catch {
-        // abaikan — notifikasi opsional
+        // abaikan â€” notifikasi opsional
       }
     }
   }, [phase, userNumber]);
@@ -324,7 +325,7 @@ export default function OnboardingPage() {
       // storage unavailable
     }
     try {
-      const res = await fetch("/api/profile", {
+      const res = await apiFetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -459,7 +460,7 @@ export default function OnboardingPage() {
                       {usernameStatus === "invalid" && (
                         <p className="flex items-center gap-2 text-sm font-bold text-clay-secondary">
                           <XCircle size={14} />
-                          Hanya huruf kecil, angka, dan _ (3–20 karakter).
+                          Hanya huruf kecil, angka, dan _ (3â€“20 karakter).
                         </p>
                       )}
                     </div>
@@ -467,7 +468,7 @@ export default function OnboardingPage() {
                 ) : current.key === "psyTest" && psyQuestion ? (
                   <div className="mt-6 flex flex-col gap-4">
                     <p className="text-xs font-extrabold uppercase tracking-widest text-clay-primary">
-                      Tes Kepribadian Belajar · Soal {(current.psyIndex ?? 0) + 1}/{PSY_QUESTIONS.length}
+                      Tes Kepribadian Belajar Â· Soal {(current.psyIndex ?? 0) + 1}/{PSY_QUESTIONS.length}
                     </p>
                     {psyQuestion.options.map((opt) => {
                       const selected = psyAnswers[psyQuestion.id] === opt.trait;
@@ -499,7 +500,7 @@ export default function OnboardingPage() {
                             }`}
                           >
                             {selected && (
-                              <span className="text-xs text-white">✓</span>
+                              <span className="text-xs text-white">âœ“</span>
                             )}
                           </span>
                           {opt.label}
@@ -539,7 +540,7 @@ export default function OnboardingPage() {
                             }`}
                           >
                             {selected && (
-                              <span className="text-xs text-white">✓</span>
+                              <span className="text-xs text-white">âœ“</span>
                             )}
                           </span>
                           {opt.label}
@@ -557,7 +558,7 @@ export default function OnboardingPage() {
                     onClick={() => setStep((s) => s - 1)}
                     className="shrink-0"
                   >
-                    ⬅ Kembali
+                    â¬… Kembali
                   </ButtonClay>
                 ) : (
                   <div className="hidden sm:block" />
@@ -568,7 +569,7 @@ export default function OnboardingPage() {
                   fullWidth={step === 0}
                   className={step > 0 ? "flex-1" : ""}
                 >
-                  Lanjut ➜
+                  Lanjut âžœ
                 </ButtonClay>
               </div>
             </motion.div>
@@ -587,7 +588,7 @@ export default function OnboardingPage() {
                   <div className="relative h-20 w-20">
                     <div className="absolute inset-0 animate-ping rounded-full bg-clay-primary/30" />
                     <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-clay-primary text-3xl shadow-clay-btn">
-                      🤖
+                      ðŸ¤–
                     </div>
                   </div>
                   <AnimatePresence mode="wait">
@@ -631,12 +632,12 @@ export default function OnboardingPage() {
                   >
                     <PartyPopper size={22} className="shrink-0 text-clay-success" />
                     <p className="text-sm font-extrabold text-clay-dark">
-                      Kamu pengguna ke-{userNumber} di Eureka.AI! Selamat bergabung 🎊
+                      Kamu pengguna ke-{userNumber} di Eureka.AI! Selamat bergabung ðŸŽŠ
                     </p>
                   </motion.div>
                 )}
                 <div className="text-center">
-                  <div className="text-6xl">🎉</div>
+                  <div className="text-6xl">ðŸŽ‰</div>
                   <h1 className="mt-4 text-3xl font-extrabold sm:text-4xl">
                     Profil Selesai, {data.name.split(" ")[0]}!
                   </h1>
@@ -655,14 +656,14 @@ export default function OnboardingPage() {
 
                 {saveError && (
                   <div className="mt-6 rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
-                    ⚠️ {saveError}
+                    âš ï¸ {saveError}
                   </div>
                 )}
 
                 {/* Tipe kepribadian belajar dari tes psikologi */}
                 <div className="mt-6 rounded-clay-md border-2 border-clay-secondary/40 bg-clay-secondary/5 p-5 text-center shadow-clay-sm">
                   <p className="text-xs font-extrabold uppercase tracking-widest text-clay-muted">
-                    🧠 Tipe Kepribadian Belajarmu
+                    ðŸ§  Tipe Kepribadian Belajarmu
                   </p>
                   <h2 className="mt-2 text-2xl font-extrabold text-clay-secondary">
                     {analysis?.psyLabel || DEFAULT_ANALYSIS.psyLabel}
@@ -675,7 +676,7 @@ export default function OnboardingPage() {
                 {/* Analisis pribadi dari AI */}
                 <div className="mt-6 rounded-clay-md border-2 border-clay-primary/30 bg-clay-primary/5 p-5 shadow-clay-sm">
                   <p className="text-xs font-extrabold uppercase tracking-widest text-clay-primary">
-                    📊 Hasil Analisis AI
+                    ðŸ“Š Hasil Analisis AI
                   </p>
                   <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-dark">
                     {analysis?.learningStyle || DEFAULT_ANALYSIS.learningStyle}
@@ -703,7 +704,7 @@ export default function OnboardingPage() {
                   0 && (
                   <div className="mt-6 rounded-clay-md bg-clay-inputBg p-5 shadow-clay-inset">
                     <p className="text-xs font-extrabold uppercase tracking-widest text-clay-muted">
-                      💡 Tips Belajarmu
+                      ðŸ’¡ Tips Belajarmu
                     </p>
                     <ul className="mt-2 space-y-2">
                       {(analysis?.studyTips ?? DEFAULT_ANALYSIS.studyTips).map(
@@ -712,7 +713,7 @@ export default function OnboardingPage() {
                             key={i}
                             className="flex items-start gap-2 text-sm font-semibold text-clay-dark"
                           >
-                            <span className="text-clay-primary">•</span>
+                            <span className="text-clay-primary">â€¢</span>
                             <span>{tip}</span>
                           </li>
                         )
@@ -738,7 +739,7 @@ export default function OnboardingPage() {
 
                 <div className="mt-6 flex flex-col gap-4">
                   <ButtonClay fullWidth onClick={() => choosePlan("pro")}>
-                    👑 Mulai Pro Sekarang
+                    ðŸ‘‘ Mulai Pro Sekarang
                   </ButtonClay>
                   <ButtonClay
                     fullWidth

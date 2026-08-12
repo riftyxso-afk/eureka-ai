@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import {
   BookOpen,
   Flame,
@@ -59,7 +60,7 @@ export default function ProfilPage() {
     // Muat profil asli dari Supabase (email, @username, nomor urut user).
     (async () => {
       try {
-        const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`);
+        const res = await apiFetch(`/api/profile?userId=${encodeURIComponent(userId)}`);
         if (!res.ok) return;
         const payload = await res.json();
         const u = payload?.user;
@@ -86,8 +87,8 @@ export default function ProfilPage() {
   const loadStats = useCallback(async () => {
     try {
       const [progressRes, notesRes] = await Promise.all([
-        fetch(`/api/progress?userId=${encodeURIComponent(userId)}`),
-        fetch(`/api/notes?userId=${encodeURIComponent(userId)}`),
+        apiFetch(`/api/progress?userId=${encodeURIComponent(userId)}`),
+        apiFetch(`/api/notes?userId=${encodeURIComponent(userId)}`),
       ]);
       if (progressRes.ok) {
         const payload = await progressRes.json();
@@ -119,12 +120,12 @@ export default function ProfilPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      showToast("Nama tidak boleh kosong! ⚠️");
+      showToast("Nama tidak boleh kosong! âš ï¸");
       return;
     }
     const cleanUsername = form.username.trim().toLowerCase().replace(/^@+/, "");
     if (cleanUsername && !/^[a-z0-9_]{3,20}$/.test(cleanUsername)) {
-      showToast("Username hanya huruf kecil, angka, dan _ (3–20). ⚠️");
+      showToast("Username hanya huruf kecil, angka, dan _ (3â€“20). âš ï¸");
       return;
     }
     setUserName(form.name);
@@ -135,7 +136,7 @@ export default function ProfilPage() {
       // abaikan
     }
     try {
-      const res = await fetch("/api/profile", {
+      const res = await apiFetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -150,17 +151,17 @@ export default function ProfilPage() {
       });
       const payload = await res.json();
       if (!res.ok) {
-        showToast(payload?.error ?? "Gagal menyimpan profil. ⚠️");
+        showToast(payload?.error ?? "Gagal menyimpan profil. âš ï¸");
         return;
       }
       if (payload?.user?.userNumber != null) {
         setUserNumber(Number(payload.user.userNumber));
       }
     } catch {
-      showToast("Gagal menyimpan profil. ⚠️");
+      showToast("Gagal menyimpan profil. âš ï¸");
       return;
     }
-    showToast("Profil berhasil disimpan! ✅");
+    showToast("Profil berhasil disimpan! âœ…");
   };
 
   const handleLogout = async () => {
@@ -186,7 +187,7 @@ export default function ProfilPage() {
       {/* Avatar + info ringkas */}
       <div className="card-clay mt-6 flex flex-col items-center py-8 text-center">
         <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-clay-primary/20 text-5xl shadow-clay-sm">
-          🧑‍🎓
+          ðŸ§‘â€ðŸŽ“
         </div>
         <p className="mt-4 text-2xl font-extrabold text-clay-dark">{form.name}</p>
         <p className="text-sm font-bold text-clay-muted">{form.email}</p>
@@ -201,7 +202,7 @@ export default function ProfilPage() {
           </p>
         )}
         <span className="mt-3 inline-block rounded-clay-full border-2 border-clay-primary bg-clay-primary/10 px-5 py-1.5 text-sm font-extrabold text-clay-primary">
-          Level {stats.level} · PELAJAR KONSISTEN
+          Level {stats.level} Â· PELAJAR KONSISTEN
         </span>
       </div>
 
@@ -299,7 +300,7 @@ export default function ProfilPage() {
                 ))}
               </select>
               <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-clay-muted">
-                ▾
+                â–¾
               </span>
             </div>
           </div>

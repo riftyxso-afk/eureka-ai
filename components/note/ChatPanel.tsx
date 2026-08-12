@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { CornerUpLeft, MessageCircle, Send, X } from "lucide-react";
 import { getUserId, getUserName } from "@/lib/identity";
 import { postProgress } from "@/lib/levelUp";
@@ -83,7 +84,7 @@ export default function ChatPanel({
   useEffect(() => {
     const userId = getUserId();
     const userName = getUserName();
-    fetch(`/api/friends?userId=${userId}&name=${encodeURIComponent(userName)}`)
+    apiFetch(`/api/friends?userId=${userId}&name=${encodeURIComponent(userName)}`)
       .then((r) => r.json())
       .then((data) => {
         setFriends(
@@ -120,7 +121,7 @@ export default function ChatPanel({
       const q = initial
         ? ""
         : `?after=${encodeURIComponent(lastTs.current)}`;
-      const res = await fetch(`/api/notes/${noteId}/chat${q}`);
+      const res = await apiFetch(`/api/notes/${noteId}/chat${q}`);
       if (!res.ok) return;
       const data = await res.json();
       const newMessages: ChatMessage[] = data.messages ?? [];
@@ -188,7 +189,7 @@ export default function ChatPanel({
     if (!content || sending) return;
     setSending(true);
     try {
-      const res = await fetch(`/api/notes/${noteId}/chat`, {
+      const res = await apiFetch(`/api/notes/${noteId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -222,14 +223,14 @@ export default function ChatPanel({
     for (const friend of friends) {
       const pattern = new RegExp(`@${friend.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i");
       if (!pattern.test(content)) continue;
-      fetch("/api/notifications", {
+      apiFetch("/api/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "push",
           userId: friend.id,
           type: "mention",
-          title: "Kamu disebut dalam diskusi 💬",
+          title: "Kamu disebut dalam diskusi ðŸ’¬",
           message: `${userName} menyebutmu di catatan: "${content.slice(0, 60)}"`,
           link: `/dashboard/note/${noteId}`,
         }),
@@ -272,7 +273,7 @@ export default function ChatPanel({
       >
         {messages.length === 0 ? (
           <p className="rounded-xl sm:rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4 sm:p-5 text-center text-xs sm:text-sm font-semibold text-clay-muted">
-            Belum ada diskusi. Mulai chat untuk belajar bareng! 💬
+            Belum ada diskusi. Mulai chat untuk belajar bareng! ðŸ’¬
           </p>
         ) : (
           messages.map((m) => {
@@ -291,7 +292,7 @@ export default function ChatPanel({
                 <div className={`max-w-[80%] sm:max-w-[75%] min-w-0 ${mine ? "text-right" : ""}`}>
                   {m.isAI && (
                     <span className="mb-0.5 inline-block rounded-full bg-violet-100 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold text-violet-700">
-                      ✨ AI
+                      âœ¨ AI
                     </span>
                   )}
                   <div className="mb-0.5 flex items-baseline gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold text-clay-muted">

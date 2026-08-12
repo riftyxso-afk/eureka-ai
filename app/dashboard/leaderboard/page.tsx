@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Crown, Medal, Trophy, Users } from "lucide-react";
 import { getUserId, getUserName } from "@/lib/identity";
+import { apiFetch } from "@/lib/apiClient";
 
 interface LeaderboardEntry {
   id: string;
@@ -35,7 +36,7 @@ export default function LeaderboardPage() {
     try {
       const userId = getUserId();
       const userName = getUserName();
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/leaderboard?userId=${encodeURIComponent(userId)}&name=${encodeURIComponent(userName)}`
       );
       if (!res.ok) return;

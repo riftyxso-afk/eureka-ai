@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import {
   Clock,
@@ -70,7 +71,7 @@ export default function DashboardPage() {
   const loadProgress = async () => {
     try {
       const userId = getUserId();
-      const res = await fetch(`/api/progress?userId=${encodeURIComponent(userId)}`);
+      const res = await apiFetch(`/api/progress?userId=${encodeURIComponent(userId)}`);
       if (!res.ok) return;
       const payload = await res.json();
       if (payload.stats) {
@@ -93,7 +94,7 @@ export default function DashboardPage() {
   useEffect(() => {
     loadProgress();
     const userId = getUserId();
-    fetch("/api/progress", {
+    apiFetch("/api/progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "activity", userId, xp: 0 }),
@@ -105,7 +106,7 @@ export default function DashboardPage() {
   const loadNotes = useMemo(
     () => async () => {
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `/api/notes?userId=${encodeURIComponent(getUserId())}`
         );
         if (!res.ok) return;
@@ -124,7 +125,7 @@ export default function DashboardPage() {
     loadNotes();
   }, [loadNotes]);
 
-  // Catatan baru selesai dirangkum di latar belakang → muat ulang daftar.
+  // Catatan baru selesai dirangkum di latar belakang â†’ muat ulang daftar.
   useEffect(() => {
     const refresh = () => {
       void loadNotes();
@@ -173,7 +174,7 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">
-              {getGreeting()}, {userName.split(" ")[0]}! 👋
+              {getGreeting()}, {userName.split(" ")[0]}! ðŸ‘‹
             </h1>
             <p className="mt-1 text-sm font-semibold text-clay-muted sm:text-base">
               Siap belajar hari ini?
@@ -183,7 +184,7 @@ export default function DashboardPage() {
             <NotificationBell />
             <Link href="/chat/belajar">
               <ButtonClay className="min-h-[44px] px-5 py-2 text-sm">
-                🚀 Mulai Belajar
+                ðŸš€ Mulai Belajar
               </ButtonClay>
             </Link>
           </div>
@@ -204,7 +205,7 @@ export default function DashboardPage() {
           <StatsCard
             icon={Trophy}
             label="Peringkat"
-            value={progress.rank === null ? "—" : progress.rank}
+            value={progress.rank === null ? "â€”" : progress.rank}
           />
         </div>
 
@@ -212,14 +213,14 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-lg sm:h-12 sm:w-12 sm:text-xl">
-                🏅
+                ðŸ…
               </span>
               <div>
                 <p className="text-base font-extrabold leading-tight sm:text-lg">
                   Level {progress.level}
                 </p>
                 <p className="text-xs font-bold text-clay-muted">
-                  {progress.levelTitle} · {progress.streak} hari
+                  {progress.levelTitle} Â· {progress.streak} hari
                 </p>
               </div>
             </div>

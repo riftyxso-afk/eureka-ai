@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import type { ImageAlignment, ImageSize } from "@/lib/note-images-store";
 
@@ -43,7 +44,7 @@ export default function AddImageModal({
       form.append("alignment", alignment);
       form.append("size", size);
       form.append("chapterId", chapterId || "");
-      const res = await fetch(`/api/notes/${noteId}/images`, {
+      const res = await apiFetch(`/api/notes/${noteId}/images`, {
         method: "POST",
         body: form,
       });
@@ -90,7 +91,7 @@ export default function AddImageModal({
             }`}
           >
             <ImagePlus size={26} />
-            {file ? file.name : "Pilih gambar (PNG, JPG, WEBP — maks 5 MB)"}
+            {file ? file.name : "Pilih gambar (PNG, JPG, WEBP â€” maks 5 MB)"}
           </button>
           <input
             ref={inputRef}
@@ -125,7 +126,7 @@ export default function AddImageModal({
                 onChange={(e) => setChapterId(e.target.value)}
                 className="w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-4 py-3 sm:py-2.5 text-sm font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[44px]"
               >
-                <option value="">— Bagian Ilustrasi (akhir) —</option>
+                <option value="">â€” Bagian Ilustrasi (akhir) â€”</option>
                 {chapters.map((c) => (
                   <option key={c.id} value={c.id}>
                     Bab {c.id}: {c.title.slice(0, 40)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import {
   Check,
   Loader2,
@@ -75,8 +76,8 @@ export default function FriendsPage() {
   const loadAll = useCallback(async () => {
     try {
       const [friendsRes, reqRes] = await Promise.all([
-        fetch(`/api/friends?userId=${userId}&name=${encodeURIComponent(userName)}`),
-        fetch(`/api/friends/requests?userId=${userId}`),
+        apiFetch(`/api/friends?userId=${userId}&name=${encodeURIComponent(userName)}`),
+        apiFetch(`/api/friends/requests?userId=${userId}`),
       ]);
       if (friendsRes.ok) {
         const data = await friendsRes.json();
@@ -104,7 +105,7 @@ export default function FriendsPage() {
     }
     setSearching(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/friends?userId=${userId}&name=${encodeURIComponent(userName)}&q=${encodeURIComponent(q)}`
       );
       if (res.ok) {
@@ -121,7 +122,7 @@ export default function FriendsPage() {
   const addFriend = async (targetName: string) => {
     setBusyId(`add-${targetName}`);
     try {
-      const res = await fetch("/api/friends", {
+      const res = await apiFetch("/api/friends", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -134,9 +135,9 @@ export default function FriendsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Gagal menambah teman.");
       if (data.relation === "friend") {
-        notify(`${targetName} sekarang temanmu! 🎉`);
+        notify(`${targetName} sekarang temanmu! ðŸŽ‰`);
       } else {
-        notify(`Permintaan pertemanan dikirim ke ${targetName} ✉️`);
+        notify(`Permintaan pertemanan dikirim ke ${targetName} âœ‰ï¸`);
       }
       setQuery("");
       setResults([]);
@@ -151,13 +152,13 @@ export default function FriendsPage() {
   const respondRequest = async (action: "accept" | "decline", fromId: string, name: string) => {
     setBusyId(`${action}-${fromId}`);
     try {
-      await fetch("/api/friends/requests", {
+      await apiFetch("/api/friends/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, userId, fromId, name: userName }),
       });
       notify(
-        action === "accept" ? `${name} diterima sebagai teman! 🎉` : `Permintaan ${name} ditolak.`
+        action === "accept" ? `${name} diterima sebagai teman! ðŸŽ‰` : `Permintaan ${name} ditolak.`
       );
       await loadAll();
     } catch {
@@ -171,7 +172,7 @@ export default function FriendsPage() {
     if (!window.confirm(`Hapus ${name} dari daftar teman?`)) return;
     setBusyId(`del-${friendId}`);
     try {
-      await fetch(`/api/friends/${friendId}?userId=${userId}`, { method: "DELETE" });
+      await apiFetch(`/api/friends/${friendId}?userId=${userId}`, { method: "DELETE" });
       notify(`${name} dihapus dari daftar teman.`);
       await loadAll();
     } catch {
@@ -261,7 +262,7 @@ export default function FriendsPage() {
                     </button>
                   ) : (
                     <span className="rounded-full bg-clay-beige px-3 py-1 text-xs font-extrabold text-clay-muted">
-                      ✓ {RELATION_LABEL[r.relation]}
+                      âœ“ {RELATION_LABEL[r.relation]}
                     </span>
                   ),
                   busyId === `add-${r.name}`
@@ -275,7 +276,7 @@ export default function FriendsPage() {
           <div className="mt-3 rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4">
             <p className="text-sm font-semibold text-clay-muted">
               Tidak ada pengguna bernama{" "}
-              <b className="text-clay-dark">“{query.trim()}”</b> yang terdaftar.
+              <b className="text-clay-dark">â€œ{query.trim()}â€</b> yang terdaftar.
               Pastikan temanmu sudah membuat akun Eureka.AI, lalu cari dengan
               nama atau @username-nya.
             </p>
@@ -327,7 +328,7 @@ export default function FriendsPage() {
             {outgoing.map((r) =>
               renderRow(r.name, "Permintaan menunggu respons", (
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-700">
-                  ⏳ Menunggu
+                  â³ Menunggu
                 </span>
               ))
             )}
@@ -342,7 +343,7 @@ export default function FriendsPage() {
         </h2>
         {friends.length === 0 ? (
           <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
-            Belum ada teman. Cari dan undang temanmu di atas! 👋
+            Belum ada teman. Cari dan undang temanmu di atas! ðŸ‘‹
           </p>
         ) : (
           <ul className="space-y-2">

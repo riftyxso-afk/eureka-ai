@@ -1,11 +1,12 @@
 /**
- * Auth — Supabase Auth (email & password).
+ * Auth â€” Supabase Auth (email & password).
  *
  * Fungsi yang membaca sesi (isLoggedIn/getSession/getCurrentUser) bersifat
  * sinkron dari cache localStorage agar komponen UI tidak perlu refactor.
  * Sesi di-refresh oleh syncAuthSession() (dipanggil di guard dashboard).
  */
 import { supabase, isSupabaseConfigured } from "./supabase/client";
+import { apiFetch } from "@/lib/apiClient";
 import { setUserName, setUserId, clearIdentity } from "./identity";
 
 const SESSION_KEY = "eureka_session";
@@ -39,7 +40,7 @@ function safeSet(key: string, value: unknown) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // storage penuh / tidak tersedia — abaikan
+    // storage penuh / tidak tersedia â€” abaikan
   }
 }
 
@@ -152,12 +153,12 @@ export async function registerUser(input: {
   };
 
   if (data.session) {
-    // Verifikasi email nonaktif → langsung login.
+    // Verifikasi email nonaktif â†’ langsung login.
     cacheSession(authUser.id, name, email);
     return { ok: true, user };
   }
 
-  // Verifikasi email aktif → beri tahu user untuk cek email.
+  // Verifikasi email aktif â†’ beri tahu user untuk cek email.
   return { ok: true, user, needsConfirmation: true };
 }
 
@@ -214,7 +215,7 @@ export async function loginUser(input: {
 
 /**
  * Kirim kode OTP ke email via Resend (server-side di /api/auth/otp).
- * `name` opsional — dipakai saat akun baru dibuat.
+ * `name` opsional â€” dipakai saat akun baru dibuat.
  */
 export async function requestOtpLogin(
   email: string,
@@ -227,7 +228,7 @@ export async function requestOtpLogin(
   }
 
   try {
-    const res = await fetch("/api/auth/otp", {
+    const res = await apiFetch("/api/auth/otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "request", email: clean, name: name ?? "" }),
@@ -266,7 +267,7 @@ export async function verifyOtpLogin(
   let displayName = "";
   let createdAt = "";
   try {
-    const res = await fetch("/api/auth/otp", {
+    const res = await apiFetch("/api/auth/otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -373,10 +374,10 @@ export async function needsOnboarding(): Promise<boolean> {
   const session = getSession();
   if (!session?.userId) return false;
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/profile?userId=${encodeURIComponent(session.userId)}`
     );
-    // Profil belum ada (404) → wajib onboarding. Kegagalan lain → biarkan masuk
+    // Profil belum ada (404) â†’ wajib onboarding. Kegagalan lain â†’ biarkan masuk
     // (halaman onboarding akan mengoreksi sendiri lewat cek profilnya).
     if (res.status === 404) return true;
     if (!res.ok) return false;

@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/apiClient";
 export const LEVEL_UP_EVENT = "eureka-level-up";
 
 export function announceLevelUp(level: number): void {
@@ -11,7 +12,7 @@ export async function postProgress(
   body: Record<string, unknown>
 ): Promise<Record<string, unknown> | null> {
   try {
-    const res = await fetch("/api/progress", {
+    const res = await apiFetch("/api/progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

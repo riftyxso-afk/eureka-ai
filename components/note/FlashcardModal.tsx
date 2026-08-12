@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Loader2, RotateCw, X } from "lucide-react";
 import { getUserId } from "@/lib/identity";
@@ -33,7 +34,7 @@ export default function FlashcardModal({
     setIndex(0);
     setFlipped(false);
     try {
-      const res = await fetch(`/api/notes/${noteId}/flashcards`, {
+      const res = await apiFetch(`/api/notes/${noteId}/flashcards`, {
         method: "POST",
       });
       const data = await res.json();
@@ -88,7 +89,7 @@ export default function FlashcardModal({
         {!cards && !generating && (
           <div className="space-y-3 sm:space-y-4">
             <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
-              Ubah materi catatan menjadi kartu hafalan untuk belajar cepat! 🃏
+              Ubah materi catatan menjadi kartu hafalan untuk belajar cepat! ðŸƒ
             </p>
             <button
               onClick={generate}
@@ -101,7 +102,7 @@ export default function FlashcardModal({
                   Membuat kartu...
                 </>
               ) : (
-                "✨ Buat Flashcards"
+                "âœ¨ Buat Flashcards"
               )}
             </button>
             {error && (
@@ -149,7 +150,7 @@ export default function FlashcardModal({
               Kartu {index + 1} dari {cards!.length}
             </div>
 
-            {/* Kartu 3D — klik untuk balik */}
+            {/* Kartu 3D â€” klik untuk balik */}
             <div className="[perspective:1400px]">
               <motion.div
                 onClick={() => setFlipped((f) => !f)}
@@ -205,7 +206,7 @@ export default function FlashcardModal({
                 onClick={() => {
                   if (index === cards!.length - 1) {
                     setIndex(0);
-                    notify("Selesai! Ulangi dari awal 🔁");
+                    notify("Selesai! Ulangi dari awal ðŸ”");
                     void postProgress({
                       action: "cards_review_all",
                       userId: getUserId(),

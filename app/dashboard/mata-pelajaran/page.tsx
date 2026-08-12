@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import { BookOpen, Plus, Trash2, X } from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
@@ -23,7 +24,7 @@ export default function MataPelajaranPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/subjects");
+      const res = await apiFetch("/api/subjects");
       if (res.ok) {
         const data = await res.json();
         setSubjects(data.subjects ?? []);
@@ -46,7 +47,7 @@ export default function MataPelajaranPage() {
       return;
     }
     try {
-      const res = await fetch("/api/subjects", {
+      const res = await apiFetch("/api/subjects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,7 +69,7 @@ export default function MataPelajaranPage() {
   const handleDelete = async (subject: SubjectWithCount) => {
     if (!window.confirm(`Hapus mata pelajaran "${subject.name}"?`)) return;
     try {
-      await fetch(`/api/subjects/${subject.id}`, { method: "DELETE" });
+      await apiFetch(`/api/subjects/${subject.id}`, { method: "DELETE" });
       setSubjects((prev) => prev.filter((s) => s.id !== subject.id));
     } catch {
       setError("Gagal menghapus.");
@@ -134,7 +135,7 @@ export default function MataPelajaranPage() {
           </div>
           <h3 className="mt-6 text-xl font-extrabold">Belum ada mata pelajaran</h3>
           <p className="mt-2 max-w-sm text-base font-semibold text-clay-muted">
-            Tambahkan mata pelajaran pertamamu — otomatis muncul di menu Buat Catatan.
+            Tambahkan mata pelajaran pertamamu â€” otomatis muncul di menu Buat Catatan.
           </p>
         </div>
       ) : (

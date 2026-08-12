@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { CalendarDays, ClipboardCheck, Plus, Trash2 } from "lucide-react";
 import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
@@ -41,7 +42,7 @@ export default function UjianPage() {
   const loadExams = useCallback(async () => {
     try {
       const userId = getUserId();
-      const res = await fetch(`/api/exams?userId=${encodeURIComponent(userId)}`);
+      const res = await apiFetch(`/api/exams?userId=${encodeURIComponent(userId)}`);
       if (!res.ok) return;
       const payload = await res.json();
       if (Array.isArray(payload.exams)) setExams(payload.exams);
@@ -60,12 +61,12 @@ export default function UjianPage() {
 
   const handleAdd = async () => {
     if (!form.title.trim() || !form.date) {
-      notify("Isi nama ujian dan tanggalnya! ⚠️");
+      notify("Isi nama ujian dan tanggalnya! âš ï¸");
       return;
     }
     try {
       const userId = getUserId();
-      const res = await fetch("/api/exams", {
+      const res = await apiFetch("/api/exams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -80,7 +81,7 @@ export default function UjianPage() {
       if (!res.ok) throw new Error(payload.error ?? "Gagal menambah ujian.");
       setForm({ subject: "", title: "", date: "" });
       setShowForm(false);
-      notify("Ujian ditambahkan! ✅");
+      notify("Ujian ditambahkan! âœ…");
       loadExams();
     } catch (e) {
       notify(e instanceof Error ? e.message : "Gagal menambah ujian.");
@@ -91,7 +92,7 @@ export default function UjianPage() {
     if (!window.confirm(`Hapus ujian "${exam.title}"?`)) return;
     try {
       const userId = getUserId();
-      const res = await fetch("/api/exams", {
+      const res = await apiFetch("/api/exams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -195,7 +196,7 @@ export default function UjianPage() {
             </h3>
             <p className="mt-2 max-w-sm text-base font-semibold text-clay-muted">
               {tab === "upcoming"
-                ? "Santai dulu — tambah ujianmu agar jadwalnya terpantau."
+                ? "Santai dulu â€” tambah ujianmu agar jadwalnya terpantau."
                 : "Selesaikan ujian dan hasilnya akan tampil di sini."}
             </p>
           </div>

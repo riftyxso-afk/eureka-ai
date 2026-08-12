@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { Pencil, X } from "lucide-react";
 
 export default function EditNoteModal({
@@ -26,13 +27,13 @@ export default function EditNoteModal({
 
   const handleSave = async () => {
     if (!title.trim()) {
-      notify("Judul tidak boleh kosong! ⚠️");
+      notify("Judul tidak boleh kosong! âš ï¸");
       return;
     }
     setSaving(true);
     try {
       // Simpan versi lama (sebelum edit) agar bisa direstore
-      await fetch(`/api/notes/${noteId}/versions`, {
+      await apiFetch(`/api/notes/${noteId}/versions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -44,12 +45,12 @@ export default function EditNoteModal({
 
       // Update catatan + simpan versi baru
       const [patchRes, versionRes] = await Promise.all([
-        fetch(`/api/notes/${noteId}`, {
+        apiFetch(`/api/notes/${noteId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title: title.trim(), summary: summary.trim() }),
         }),
-        fetch(`/api/notes/${noteId}/versions`, {
+        apiFetch(`/api/notes/${noteId}/versions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -61,14 +62,14 @@ export default function EditNoteModal({
       ]);
 
       if (patchRes.ok && versionRes.ok) {
-        notify("Catatan berhasil diperbarui ✅");
+        notify("Catatan berhasil diperbarui âœ…");
         onSaved();
         onClose();
       } else {
-        notify("Gagal menyimpan perubahan ⚠️");
+        notify("Gagal menyimpan perubahan âš ï¸");
       }
     } catch {
-      notify("Gagal menyimpan perubahan ⚠️");
+      notify("Gagal menyimpan perubahan âš ï¸");
     } finally {
       setSaving(false);
     }

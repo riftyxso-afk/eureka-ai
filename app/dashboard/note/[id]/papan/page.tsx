@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -94,7 +95,7 @@ export default function WhiteboardPage() {
 
   // Ambil judul catatan
   useEffect(() => {
-    fetch(`/api/notes/${params.id}`)
+    apiFetch(`/api/notes/${params.id}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.note?.title) setNoteTitle(data.note.title);
@@ -131,7 +132,7 @@ export default function WhiteboardPage() {
   useEffect(() => {
     const fetchBoard = async () => {
       try {
-        const res = await fetch(`/api/notes/${params.id}/board`);
+        const res = await apiFetch(`/api/notes/${params.id}/board`);
         if (!res.ok) return;
         const data = await res.json();
         if (data.clearedAt > clearedAtRef.current) {
@@ -160,7 +161,7 @@ export default function WhiteboardPage() {
   // Kehadiran (heartbeat + polling)
   useEffect(() => {
     const heartbeat = () => {
-      fetch(`/api/notes/${params.id}/presence`, {
+      apiFetch(`/api/notes/${params.id}/presence`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, name: userName, role: "viewer" }),
@@ -168,7 +169,7 @@ export default function WhiteboardPage() {
     };
     const poll = async () => {
       try {
-        const res = await fetch(`/api/notes/${params.id}/presence`);
+        const res = await apiFetch(`/api/notes/${params.id}/presence`);
         if (res.ok) {
           const data = await res.json();
           setPresence(Object.values(data.presence ?? {}));
@@ -247,7 +248,7 @@ export default function WhiteboardPage() {
     setStrokes((prev) => [...prev, local]);
 
     try {
-      const res = await fetch(`/api/notes/${params.id}/board`, {
+      const res = await apiFetch(`/api/notes/${params.id}/board`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -276,14 +277,14 @@ export default function WhiteboardPage() {
   const handleClear = async () => {
     if (!window.confirm("Bersihkan semua goresan di papan tulis?")) return;
     try {
-      await fetch(`/api/notes/${params.id}/board`, {
+      await apiFetch(`/api/notes/${params.id}/board`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "clear" }),
       });
       clearedAtRef.current = Date.now();
       setStrokes([]);
-      notify("Papan dibersihkan 🧹");
+      notify("Papan dibersihkan ðŸ§¹");
     } catch {
       notify("Gagal membersihkan papan.");
     }
@@ -294,7 +295,7 @@ export default function WhiteboardPage() {
       await navigator.clipboard.writeText(
         `${window.location.origin}/dashboard/note/${params.id}/papan`
       );
-      notify("Link papan tulis disalin! 🔗");
+      notify("Link papan tulis disalin! ðŸ”—");
     } catch {
       notify("Gagal menyalin link.");
     }
@@ -303,8 +304,8 @@ export default function WhiteboardPage() {
   const handleCall = (type: "vc" | "audio") => {
     notify(
       type === "vc"
-        ? "Video call segera hadir! 🚧"
-        : "Panggilan suara segera hadir! 🚧"
+        ? "Video call segera hadir! ðŸš§"
+        : "Panggilan suara segera hadir! ðŸš§"
     );
   };
 
@@ -441,7 +442,7 @@ export default function WhiteboardPage() {
           />
         </div>
         <p className="px-2 py-2 text-center text-xs font-semibold text-clay-muted">
-          Gambar bersama temanmu secara realtime — setiap goresan langsung
+          Gambar bersama temanmu secara realtime â€” setiap goresan langsung
           tersinkron otomatis
         </p>
       </div>

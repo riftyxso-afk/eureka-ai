@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Send, Sparkles } from "lucide-react";
+import { apiFetch } from "@/lib/apiClient";
 
 interface Message {
   role: "user" | "assistant";
@@ -15,7 +16,7 @@ interface ChapterAIChatProps {
   notify: (msg: string) => void;
 }
 
-/** "Tanya apa saja tentang bab ini" — AI menjawab hanya dari isi bab. */
+/** "Tanya apa saja tentang bab ini" â€” AI menjawab hanya dari isi bab. */
 export const ChapterAIChat = ({
   noteId,
   chapterId,
@@ -45,7 +46,7 @@ export const ChapterAIChat = ({
     setMessages(history);
     setLoading(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/notes/${noteId}/bab/${chapterId}/ask`,
         {
           method: "POST",

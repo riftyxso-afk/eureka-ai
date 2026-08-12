@@ -4,10 +4,10 @@
  * Pemantau job pembuatan catatan yang berjalan di latar belakang.
  *
  * Setiap submit di CreateNoteModal menyimpan jobId ke localStorage
- * (eureka_active_jobs). Provider ini — dipasang di root layout — memantau
+ * (eureka_active_jobs). Provider ini â€” dipasang di root layout â€” memantau
  * job-job itu dari SEMUA halaman; saat selesai:
  *  1. toast clay in-app,
- *  2. notifikasi browser (bila diizinkan; klik → buka catatan),
+ *  2. notifikasi browser (bila diizinkan; klik â†’ buka catatan),
  *  3. event window "note-ready" agar dashboard refresh daftar catatan.
  */
 import {
@@ -19,6 +19,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
 import { BellRing, CheckCircle2, X, XCircle } from "lucide-react";
 import { playCompletionSound } from "@/lib/notifySound";
@@ -70,8 +71,8 @@ export function notifyBrowserNoteReady(noteId: string, noteTitle: string): void 
     return;
   }
   try {
-    const n = new Notification("Catatan selesai dibuat! 🎉", {
-      body: `“${noteTitle}” sudah siap dipelajari.`,
+    const n = new Notification("Catatan selesai dibuat! ðŸŽ‰", {
+      body: `â€œ${noteTitle}â€ sudah siap dipelajari.`,
       tag: `note-ready-${noteId}`,
       icon: "/favicon.ico",
     });
@@ -83,7 +84,7 @@ export function notifyBrowserNoteReady(noteId: string, noteTitle: string): void 
       n.close();
     };
   } catch {
-    // abaikan — notifikasi opsional
+    // abaikan â€” notifikasi opsional
   }
 }
 
@@ -143,7 +144,7 @@ export function JobWatcherProvider({
     []
   );
 
-  // Klik "Lihat" pada toast / notifikasi browser → buka catatan
+  // Klik "Lihat" pada toast / notifikasi browser â†’ buka catatan
   useEffect(() => {
     const open = (e: Event) => {
       const detail = (e as CustomEvent<{ noteId?: string }>).detail;
@@ -165,12 +166,12 @@ export function JobWatcherProvider({
       inFlight = true;
       try {
         const results = await Promise.allSettled(
-          ids.map((id) => fetch(`/api/notes/jobs/${encodeURIComponent(id)}`))
+          ids.map((id) => apiFetch(`/api/notes/jobs/${encodeURIComponent(id)}`))
         );
         for (let i = 0; i < results.length; i++) {
           const res = results[i];
           if (res.status === "rejected" || !res.value.ok) {
-            // Job tidak dikenal (server restart / sudah kedaluwarsa) →
+            // Job tidak dikenal (server restart / sudah kedaluwarsa) â†’
             // berhenti memantau dan bersihkan, agar tidak nge-poll 404 terus.
             if (res.status === "fulfilled" && res.value.status === 404) {
               const lost = ids[i];
@@ -206,8 +207,8 @@ export function JobWatcherProvider({
             const noteTitle = job.noteTitle ?? "Catatan kamu";
             playCompletionSound();
             showToast({
-              title: "Catatan selesai dibuat! 🎉",
-              message: `“${noteTitle}” sudah siap dipelajari.`,
+              title: "Catatan selesai dibuat! ðŸŽ‰",
+              message: `â€œ${noteTitle}â€ sudah siap dipelajari.`,
               variant: "success",
               link: noteId ? `/dashboard/note/${noteId}` : undefined,
               linkLabel: "Lihat",
@@ -235,7 +236,7 @@ export function JobWatcherProvider({
               });
             }
           } else {
-            // Masih berjalan → simpan status realtime untuk popup progres
+            // Masih berjalan â†’ simpan status realtime untuk popup progres
             setRunningJobs((prev) => {
               const rest = prev.filter((j) => j.id !== job.id);
               return [
@@ -251,7 +252,7 @@ export function JobWatcherProvider({
           }
         }
       } catch {
-        // jaringan/parsing gagal — coba lagi di siklus berikutnya
+        // jaringan/parsing gagal â€” coba lagi di siklus berikutnya
       } finally {
         inFlight = false;
       }

@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import { Copy, Link2, PenTool, Plus, Trash2, X } from "lucide-react";
 
@@ -46,7 +47,7 @@ export default function InviteModal({
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/notes/${noteId}/collab`);
+      const res = await apiFetch(`/api/notes/${noteId}/collab`);
       if (res.ok) {
         const data = await res.json();
         setCollaborators(data.collaborators ?? []);
@@ -68,7 +69,7 @@ export default function InviteModal({
     }
     setSending(true);
     try {
-      const res = await fetch(`/api/notes/${noteId}/collab`, {
+      const res = await apiFetch(`/api/notes/${noteId}/collab`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "invite", name: name.trim(), role }),
@@ -104,7 +105,7 @@ export default function InviteModal({
 
   const handleRemove = async (id: string) => {
     try {
-      await fetch(`/api/notes/${noteId}/collab`, {
+      await apiFetch(`/api/notes/${noteId}/collab`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "remove", collaboratorId: id }),

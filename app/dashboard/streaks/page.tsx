@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import {
   Award,
   BookOpen,
@@ -24,11 +25,11 @@ interface ActivityEntry {
 }
 
 const MILESTONE_DEFS: { day: number; label: string }[] = [
-  { day: 3, label: "🔥 Mulai Konsisten" },
-  { day: 7, label: "⭐ Pekan Pertama" },
-  { day: 14, label: "🎯 Dua Pekan" },
-  { day: 30, label: "🏆 Sebulan Penuh" },
-  { day: 100, label: "👑 Legenda" },
+  { day: 3, label: "ðŸ”¥ Mulai Konsisten" },
+  { day: 7, label: "â­ Pekan Pertama" },
+  { day: 14, label: "ðŸŽ¯ Dua Pekan" },
+  { day: 30, label: "ðŸ† Sebulan Penuh" },
+  { day: 100, label: "ðŸ‘‘ Legenda" },
 ];
 
 function formatDate(iso: string): string {
@@ -55,8 +56,8 @@ export default function StreaksPage() {
     try {
       const userId = getUserId();
       const [progressRes, notesRes] = await Promise.all([
-        fetch(`/api/progress?userId=${encodeURIComponent(userId)}`),
-        fetch(`/api/notes?userId=${encodeURIComponent(userId)}`),
+        apiFetch(`/api/progress?userId=${encodeURIComponent(userId)}`),
+        apiFetch(`/api/notes?userId=${encodeURIComponent(userId)}`),
       ]);
       if (progressRes.ok) {
         const payload = await progressRes.json();
@@ -175,7 +176,7 @@ export default function StreaksPage() {
       <div className="card-clay mt-4 !p-2">
         {stats.recentActivity.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm font-semibold text-clay-muted">
-            Belum ada aktivitas. Mulai belajar untuk mengumpulkan XP! 🚀
+            Belum ada aktivitas. Mulai belajar untuk mengumpulkan XP! ðŸš€
           </p>
         ) : (
           stats.recentActivity.map((a, i) => (

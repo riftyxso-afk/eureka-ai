@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { Eraser, Highlighter } from "lucide-react";
 import { getUserId } from "@/lib/identity";
 import type { HighlightColor } from "@/lib/highlights-store";
@@ -92,7 +93,7 @@ export default function HighlightToolbar({
         // abaikan (seleksi melintasi elemen kompleks)
       }
     }
-    fetch(`/api/notes/${noteId}/highlights`, {
+    apiFetch(`/api/notes/${noteId}/highlights`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -104,7 +105,7 @@ export default function HighlightToolbar({
     })
       .then((res) => (res.ok ? onSaved?.() : undefined))
       .catch(() => {});
-    notify?.(`Diberi stabilo ${COLORS.find((c) => c.key === color)?.label}. ✨`);
+    notify?.(`Diberi stabilo ${COLORS.find((c) => c.key === color)?.label}. âœ¨`);
     clear();
   };
 
@@ -121,7 +122,7 @@ export default function HighlightToolbar({
       }
     }
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/notes/${noteId}/highlights?chapterId=${state.chapterId}`
       );
       const data = await res.json();
@@ -130,7 +131,7 @@ export default function HighlightToolbar({
           h.text.toLowerCase() === state.text.toLowerCase()
       );
       if (match) {
-        await fetch(`/api/notes/${noteId}/highlights?id=${match.id}`, {
+        await apiFetch(`/api/notes/${noteId}/highlights?id=${match.id}`, {
           method: "DELETE",
         });
       }
