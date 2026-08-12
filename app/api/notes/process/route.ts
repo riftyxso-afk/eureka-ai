@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
       gayaPenulisan: String(form.get("gayaPenulisan") ?? "Ramah & Santai"),
       bahasa: String(form.get("bahasa") ?? "Bahasa Indonesia"),
       chapterCount: clampChapterCount(form.get("chapterCount") ?? undefined),
+      generationMode: String(form.get("generationMode") ?? "lengkap") as NotePrefs["generationMode"],
     };
 
     // Baca file ke Buffer SEKARANG (FormData tidak bisa dibaca lagi nanti).

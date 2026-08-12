@@ -11,7 +11,7 @@ import type { TranscriptSegment } from "./rag/extract";
 import { aiChatJson, extractJsonObject, hasAiKey } from "./ai";
 import type { PhaseProgressFn } from "./progressTracker";
 import {
-  CHAPTER_CONTENT_GUIDE,
+  buildChapterContentGuide,
   buildChapterCountRule,
   buildModeRules,
   buildPreferencesText,
@@ -266,7 +266,7 @@ ${buildPreferencesText(prefs)}
 
 ${buildChapterCountRule(prefs)}
 
-${CHAPTER_CONTENT_GUIDE}
+${buildChapterContentGuide(prefs)}
 
 "flow" (opsional): array 2-6 langkah singkat yang menggambarkan urutan/proses di chapter itu (kosongkan jika tidak jelas).
 Jika ada timestamp sertakan sebagai properti timestamp.
@@ -524,7 +524,7 @@ ${buildModeRules(prefs)}
 
 ${buildPreferencesText(prefs)}
 
-${CHAPTER_CONTENT_GUIDE}
+${buildChapterContentGuide(prefs)}
 
 ${
   timestampHints

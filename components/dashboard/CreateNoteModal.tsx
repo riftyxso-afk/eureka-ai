@@ -85,6 +85,27 @@ const STUDY_MODES = [
   { value: "lengkap", label: "Lengkap", desc: "Detail & mendalam" },
 ] as const;
 
+const GENERATION_MODES = [
+  {
+    value: "cepat",
+    icon: "⚡",
+    title: "Cepat & Ringkas",
+    desc: "Catatan inti langsung jadi dalam hitungan menit — ringkas, padat, dan cepat selesai.",
+    badge: "Kilat",
+    time: "± 1-2 menit",
+    features: ["Tanpa validasi sumber web", "Tanpa gambar & stabilo", "Tanpa kuis & flashcards", "Maksimal 3 bab ringkas"],
+  },
+  {
+    value: "lengkap",
+    icon: "🎓",
+    title: "Lengkap & Mendalam",
+    desc: "Pipeline penuh: struktur buku teks, validasi sumber web, gambar, kuis & flashcards otomatis.",
+    badge: "Disarankan",
+    time: "± 3-6 menit",
+    features: ["Struktur buku teks (Diátaxis)", "Validasi & enrichment web", "Gambar, stabilo, referensi", "Kuis & flashcards otomatis"],
+  },
+] as const;
+
 const WRITING_STYLES = ["Ramah & Santai", "Formal & Akademis", "Santai & Gaul"];
 const LANGUAGES = ["Bahasa Indonesia", "English", "Campuran"];
 
@@ -144,13 +165,16 @@ export const CreateNoteModal = ({
   onClose,
   onCreate,
 }: CreateNoteModalProps) => {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedSource, setSelectedSource] = useState("dokumen");
   const [file, setFile] = useState<File | null>(null);
   const [link, setLink] = useState("");
   const [mataPelajaran, setMataPelajaran] = useState("");
   const [studyMode, setStudyMode] = useState<"ringkas" | "standar" | "lengkap">(
     "standar"
+  );
+  const [generationMode, setGenerationMode] = useState<"cepat" | "lengkap">(
+    "lengkap"
   );
   const [gayaPenulisan, setGayaPenulisan] = useState("Ramah & Santai");
   const [bahasa, setBahasa] = useState("Bahasa Indonesia");
@@ -248,6 +272,7 @@ export const CreateNoteModal = ({
     setLink("");
     setMataPelajaran("");
     setStudyMode("standar");
+    setGenerationMode("lengkap");
     setGayaPenulisan("Ramah & Santai");
     setBahasa("Bahasa Indonesia");
     setChapterCount(4);
@@ -400,6 +425,7 @@ export const CreateNoteModal = ({
     form.append("sourceType", selectedSource);
     form.append("mataPelajaran", mataPelajaran);
     form.append("studyMode", studyMode);
+    form.append("generationMode", generationMode);
     form.append("gayaPenulisan", gayaPenulisan);
     form.append("bahasa", bahasa);
     form.append("chapterCount", String(chapterCount));
@@ -635,7 +661,7 @@ export const CreateNoteModal = ({
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                       <span className="rounded-clay-full bg-clay-inputBg px-2 sm:px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
-                        Langkah 1/3
+                        Langkah 1/4
                       </span>
                       <button
                         onClick={close}
@@ -683,7 +709,7 @@ export const CreateNoteModal = ({
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                       <span className="rounded-clay-full bg-clay-inputBg px-2 sm:px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
-                        Langkah 2/3
+                        Langkah 2/4
                       </span>
                       <button
                         onClick={close}
@@ -926,7 +952,7 @@ export const CreateNoteModal = ({
                     </ButtonClay>
                   </div>
                 </>
-              ) : (
+              ) : step === 3 ? (
                 <>
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -937,7 +963,7 @@ export const CreateNoteModal = ({
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                       <span className="rounded-clay-full bg-clay-inputBg px-2 sm:px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
-                        Langkah 3/3
+                        Langkah 3/4
                       </span>
                       <button
                         onClick={close}
@@ -980,6 +1006,121 @@ export const CreateNoteModal = ({
                       variant="secondary"
                       onClick={() => {
                         setStep(2);
+                        setError(null);
+                      }}
+                      className="w-full sm:w-auto"
+                    >
+                      Kembali
+                    </ButtonClay>
+                    <ButtonClay
+                      onClick={() => {
+                        setError(null);
+                        setStep(4);
+                      }}
+                      className="w-full sm:w-auto"
+                    >
+                      Lanjut
+                    </ButtonClay>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-extrabold">Mode Pembuatan</h2>
+                      <p className="mt-1 sm:mt-2 text-sm sm:text-base font-semibold text-clay-muted">
+                        Pilih seberapa cepat &amp; detail hasil catatannya
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                      <span className="rounded-clay-full bg-clay-inputBg px-2 sm:px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
+                        Langkah 4/4
+                      </span>
+                      <button
+                        onClick={close}
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset min-h-[44px] min-w-[44px]"
+                        aria-label="Tutup modal"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+                    {GENERATION_MODES.map((mode) => {
+                      const active = generationMode === mode.value;
+                      return (
+                        <button
+                          key={mode.value}
+                          type="button"
+                          onClick={() => setGenerationMode(mode.value)}
+                          aria-pressed={active}
+                          className={`relative card-clay w-full p-4 sm:p-5 text-left transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 ${
+                            active
+                              ? "border-clay-primary shadow-clay-btn"
+                              : "border-clay-shadow/40"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            <span className="text-2xl sm:text-3xl leading-none">{mode.icon}</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-base sm:text-lg font-extrabold">
+                                  {mode.title}
+                                </span>
+                                <span
+                                  className={`rounded-clay-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide shadow-clay-inset ${
+                                    mode.value === "lengkap"
+                                      ? "bg-clay-primary/15 text-clay-primary"
+                                      : "bg-amber-200 text-amber-800"
+                                  }`}
+                                >
+                                  {mode.badge}
+                                </span>
+                                <span className="text-xs font-bold text-clay-muted">
+                                  {mode.time}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs sm:text-sm font-semibold text-clay-muted">
+                                {mode.desc}
+                              </p>
+                              <div className="mt-3 flex flex-wrap gap-1.5 sm:gap-2">
+                                {mode.features.map((f) => (
+                                  <span
+                                    key={f}
+                                    className="rounded-clay-full border-2 border-clay-shadow/30 bg-clay-beige px-2.5 py-1 text-[10px] sm:text-[11px] font-bold text-clay-dark"
+                                  >
+                                    {f}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <span
+                              className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 ${
+                                active
+                                  ? "border-clay-primary bg-clay-primary text-white"
+                                  : "border-clay-shadow/40 bg-white text-transparent"
+                              }`}
+                            >
+                              <CheckCircle2 size={14} />
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="mt-3 text-center text-xs sm:text-sm font-semibold text-clay-muted">
+                    {generationMode === "cepat"
+                      ? "Mode Cepat membatasi jumlah bab maksimal 3 &amp; tanpa kuis/flashcards — paling pas untuk materi singkat atau saat buru-buru."
+                      : "Mode Lengkap melewati semua fase validasi &amp; enrichment — hasil paling maksimal, butuh waktu lebih lama."}
+                  </p>
+
+                  <div className="mt-6 sm:mt-8 flex flex-col gap-3 border-t-2 border-clay-shadow/20 pt-4 sm:pt-5 sm:flex-row sm:justify-end">
+                    <ButtonClay
+                      variant="secondary"
+                      onClick={() => {
+                        setStep(3);
                         setError(null);
                       }}
                       className="w-full sm:w-auto"

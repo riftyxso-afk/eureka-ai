@@ -10,10 +10,11 @@ import type { WebImage } from "./firecrawl";
 import type { ProcessedContent } from "./processSubtitle";
 import type { PhaseProgressFn } from "./progressTracker";
 import {
-  CHAPTER_CONTENT_GUIDE,
   IMAGE_PLACEMENT_RULES,
+  buildChapterContentGuide,
   buildChapterCountRule,
   buildImageGuide,
+  buildModeRules,
   buildPreferencesText,
   clampChapterCount,
   type NotePreferences,
@@ -116,6 +117,11 @@ function chapterPrompt(
           .join("\n")
       : "(bab pertama)";
 
+  const isFast = prefs.generationMode === "cepat";
+  const imageSection = isFast
+    ? "(mode CEPAT: tanpa gambar — tulis teks saja, JANGAN memakai URL gambar)"
+    : `Gambar yang TERSEDIA dari halaman ini (hanya ini yang boleh dipakai):\n${buildImageGuide(images)}\n\n${IMAGE_PLACEMENT_RULES}`;
+
   return `Buat SATU bab dari catatan belajar tentang halaman web berikut.
 
 Judul bab: "${outline.title}"
@@ -125,15 +131,14 @@ ${outline.topics.map((t) => `- ${t}`).join("\n")}
 Sumber halaman web (seluruh isinya):
 ${text.slice(0, 22000)}
 
-Gambar yang TERSEDIA dari halaman ini (hanya ini yang boleh dipakai):
-${buildImageGuide(images)}
-
-${IMAGE_PLACEMENT_RULES}
+${imageSection}
 
 Preferensi catatan:
 ${buildPreferencesText(prefs)}
 
-${CHAPTER_CONTENT_GUIDE}
+${buildModeRules(prefs)}
+
+${buildChapterContentGuide(prefs)}
 
 Isi bab HARUS lengkap & tuntas sesuai topik-topik di atas — jangan meninggalkan topik yang belum dibahas.
 Bab yang sudah dibuat sebelumnya (jangan diulang):

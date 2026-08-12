@@ -59,6 +59,8 @@ export interface NotePreferences {
   bahasa?: string;
   /** Jumlah bab yang diminta user (1-6). */
   chapterCount?: number;
+  /** Mode pembuatan: "cepat" = ringkas & kilat, "lengkap" = detail & tervalidasi. */
+  generationMode?: "cepat" | "lengkap";
 }
 
 export const MAX_CHAPTERS_ALLOWED = 6;
@@ -114,8 +116,31 @@ ${CHAPTER_CONTENT_GUIDE}
   - "## 📖 Glosarium" — 5-10 istilah penting dengan format "- istilah: definisi singkat"`,
 };
 
+/**
+ * Panduan struktur konten bab: mode CEPAT memakai struktur ringkas
+ * (bukan 4 kuadran Diátaxis penuh) agar tidak ada instruksi yang bertentangan.
+ */
+export function buildChapterContentGuide(prefs: NotePreferences): string {
+  if (prefs.generationMode === "cepat") {
+    return `Struktur konten bab (mode CEPAT): "## Ringkasan" (3-4 kalimat padat), "## Poin Penting" (4-5 bullet "- ..." singkat), "## Kesimpulan" (1 kalimat). Tanpa sub-judul lain yang berlebihan, tanpa tabel besar.`;
+  }
+  return CHAPTER_CONTENT_GUIDE;
+}
+
+/** Aturan mode CEPAT: hasil singkat, padat, dan cepat selesai. */
+export const GENERATION_MODE_RULES: Record<string, string> = {
+  cepat: `Mode CEPAT (kilat & ringkas): seluruh catatan maksimal 400 kata.
+- Cukup 1-3 bab — langsung ke inti, tanpa bab yang berlebihan.
+- Tiap bab: "## Ringkasan" (3-4 kalimat padat), "## Poin Penting" (4-5 bullet "- ..." singkat), "## Kesimpulan" (1 kalimat).
+- Tanpa tabel besar, tanpa mind map, tanpa glosarium — fokus ke kecepatan selesai.
+- Tetap akurat: hanya tulis fakta yang ada di sumber (no hallucination).`,
+};
+
 /** Aturan mode siap pakai dalam prompt. */
 export function buildModeRules(prefs: NotePreferences): string {
+  if (prefs.generationMode === "cepat") {
+    return GENERATION_MODE_RULES.cepat;
+  }
   return (
     MODE_CHAPTER_RULES[prefs.studyMode ?? "standar"] ??
     MODE_CHAPTER_RULES.standar

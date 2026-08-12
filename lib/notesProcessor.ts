@@ -45,6 +45,28 @@ export interface NotePrefs {
   gayaPenulisan: string;
   bahasa: string;
   chapterCount?: number;
+  /** Mode pembuatan: "cepat" = ringkas & kilat (lewati fase berat), "lengkap" = pipeline penuh. */
+  generationMode?: "cepat" | "lengkap";
+}
+
+/** Batas bab pada mode CEPAT — dijamin selesai cepat. */
+const FAST_MAX_CHAPTERS = 3;
+
+/**
+ * Preferensi efektif untuk prompt AI: mode CEPAT memaksa ringkas dan
+ * membatasi jumlah bab agar generate benar-benar cepat.
+ */
+function resolvePrefs(prefs: NotePrefs): NotePrefs {
+  if (prefs.generationMode !== "cepat") return prefs;
+  const capped =
+    prefs.chapterCount != null
+      ? Math.min(FAST_MAX_CHAPTERS, Math.max(1, Math.floor(prefs.chapterCount)))
+      : FAST_MAX_CHAPTERS;
+  return {
+    ...prefs,
+    generationMode: "cepat",
+    chapterCount: capped,
+  };
 }
 
 export interface NotesProcessorInput {
@@ -87,7 +109,9 @@ export async function processNoteForBackground(
   progress: NotesProcessorProgress
 ): Promise<NotesProcessorResult> {
   const { report, advance, done } = progress;
-  const { sourceType, prefs } = input;
+  const { sourceType } = input;
+  const isFast = input.prefs.generationMode === "cepat";
+  const prefs = resolvePrefs(input.prefs);
 
   // FASE 1: Ekstraksi (0-15%)
   let extracted: {
@@ -212,7 +236,7 @@ export async function processNoteForBackground(
 
   // Unduh gambar yang dipilih AI dari halaman web → simpan ke local agar
   // tampil stabil di catatan. Gagal tidak menggagalkan proses.
-  if (sourceType === "web") {
+  if (sourceType === "web" && !isFast) {
     try {
       note.chapters = await downloadWebImages(note.id, note.chapters ?? []);
       chapters = note.chapters;
@@ -224,7 +248,7 @@ export async function processNoteForBackground(
   // Enrich pasca-rangkum (selain sumber web yang gambarnya dari halaman itu sendiri):
   // cari materi terkait via Firecrawl → validasi, tambah poin penting, dan sisipkan
   // gambar yang relevan ke bab — semuanya otomatis. Gagal tidak menggagalkan proses.
-  if (sourceType !== "web") {
+  if (sourceType !== "web" && !isFast) {
     try {
       advance("enrichment", 0.03, "Mencari materi pendukung...");
       const enriched = await enrichNoteWithFirecrawl(note);
@@ -248,42 +272,61 @@ export async function processNoteForBackground(
     throw new JobCancelledError();
   }
   if (chapters && chapters.length > 0) {
-    advance("enrichment", 0.06, "Mencari sumber web untuk validasi...");
-    if (isWebSearchEnrichmentAvailable()) {
-      const enriched = await enrichChaptersWithWebSearch(
-        title,
-        chapters,
-        (doneCount: number, total: number, label: string) =>
-          advance(
-            "enrichment",
-            0.1 + (doneCount / Math.max(total, 1)) * 0.72,
-            label
+    if (isFast) {
+      // Mode CEPAT: lewati validasi web & referensi agar selesai secepatnya.
+      advance("enrichment", 0.4, "Mode cepat — menyingkat langkah validasi...");
+      // Bersihkan marker gambar yang mungkin tersisa (mode cepat tanpa gambar).
+      chapters = chapters.map((c) => ({
+        ...c,
+        content: c.content
+          .replace(
+            /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g,
+            (_m, alt: string) => `*${alt || "ilustrasi"}*`
           )
-      );
-      chapters = enriched.chapters;
-      references = enriched.references;
-      console.info(
-        `[notesProcessor] Web search: ${enriched.totalSearches} sumber dipakai untuk validasi`
-      );
+          .trim(),
+      }));
+      note.chapters = chapters;
+      done("enrichment", "Validasi dilewati (mode cepat).");
     } else {
-      console.info("[notesProcessor] Web search enrichment dilewati (butuh FIRECRAWL_API_KEY + API key AI).");
-    }
+      advance("enrichment", 0.06, "Mencari sumber web untuk validasi...");
+      if (isWebSearchEnrichmentAvailable()) {
+        const enriched = await enrichChaptersWithWebSearch(
+          title,
+          chapters,
+          (doneCount: number, total: number, label: string) =>
+            advance(
+              "enrichment",
+              0.1 + (doneCount / Math.max(total, 1)) * 0.72,
+              label
+            )
+        );
+        chapters = enriched.chapters;
+        references = enriched.references;
+        console.info(
+          `[notesProcessor] Web search: ${enriched.totalSearches} sumber dipakai untuk validasi`
+        );
+      } else {
+        console.info("[notesProcessor] Web search enrichment dilewati (butuh FIRECRAWL_API_KEY + API key AI).");
+      }
 
-    // Sertakan bagian "Sumber & Referensi" di akhir catatan.
-    if (references.length > 0) {
-      advance("enrichment", 0.92, "Menyusun bagian Sumber & Referensi...");
-      chapters = [
-        ...chapters,
-        {
-          id: chapters.length + 1,
-          title: "Sumber & Referensi",
-          content: buildReferencesMarkdown(references),
-        },
-      ];
+      // Sertakan bagian "Sumber & Referensi" di akhir catatan.
+      if (references.length > 0) {
+        advance("enrichment", 0.92, "Menyusun bagian Sumber & Referensi...");
+        chapters = [
+          ...chapters,
+          {
+            id: chapters.length + 1,
+            title: "Sumber & Referensi",
+            content: buildReferencesMarkdown(references),
+          },
+        ];
+      }
+      done("enrichment", "Validasi & enrichment selesai.");
     }
+  } else {
+    done("enrichment", "Tidak ada bab untuk divalidasi.");
   }
   note.chapters = chapters;
-  done("enrichment", "Validasi & enrichment selesai.");
 
   // FASE 4: RAG — chunk, embed, simpan (80-90%)
   if (input.jobId && (await isJobCancelled(input.jobId))) {
@@ -315,16 +358,18 @@ export async function processNoteForBackground(
   done("rag", "Knowledge base siap.");
 
   // Stabilo otomatis dari AI (default) — gagal tidak menggagalkan proses.
-  try {
-    const highlightCount = await generateHighlightsForChapters(
-      note.id,
-      note.chapters ?? []
-    );
-    console.info(
-      `[notesProcessor] Stabilo AI: ${highlightCount} highlight untuk ${note.id}`
-    );
-  } catch (e) {
-    console.warn("[notesProcessor] Stabilo AI dilewati:", e);
+  if (!isFast) {
+    try {
+      const highlightCount = await generateHighlightsForChapters(
+        note.id,
+        note.chapters ?? []
+      );
+      console.info(
+        `[notesProcessor] Stabilo AI: ${highlightCount} highlight untuk ${note.id}`
+      );
+    } catch (e) {
+      console.warn("[notesProcessor] Stabilo AI dilewati:", e);
+    }
   }
 
   // FASE 5: Kuis & flashcards otomatis sesuai Mode Belajar (90-100%)
@@ -332,7 +377,8 @@ export async function processNoteForBackground(
     throw new JobCancelledError();
   }
   const studyCounts: Record<string, number> = { ringkas: 0, standar: 5, lengkap: 10 };
-  const studyCount = studyCounts[prefs.studyMode ?? "standar"] ?? 0;
+  // Mode CEPAT: tanpa kuis & flashcards — prioritas kecepatan selesai.
+  const studyCount = isFast ? 0 : (studyCounts[prefs.studyMode ?? "standar"] ?? 0);
   if (studyCount > 0) {
     advance("study_tools", 0.2, "Membuat kuis...");
     try {
