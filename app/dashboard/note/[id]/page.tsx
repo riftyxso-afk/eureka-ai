@@ -512,12 +512,12 @@ export default function NoteDetailPage() {
             {data.title}
           </h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
           <button
             onClick={toggleBookmark}
             aria-label="Bookmark"
             title="Bookmark"
-            className={`btn-clay-ghost !min-h-[44px] !px-3 ${
+            className={`btn-clay-ghost shrink-0 !min-h-[44px] !px-3 ${
               bookmarked ? "!border-clay-secondary/60 !bg-clay-secondary/15" : ""
             }`}
           >
@@ -532,14 +532,14 @@ export default function NoteDetailPage() {
           </button>
           <button
             onClick={() => setShowEdit(true)}
-            className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+            className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <Pencil size={16} className="mr-2" />
             Ubah
           </button>
           <button
             onClick={() => setShowVersions(true)}
-            className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+            className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <History size={16} className="mr-2" />
             Versi
@@ -547,14 +547,14 @@ export default function NoteDetailPage() {
           <button
             onClick={() => setConfirmRegen(true)}
             disabled={regen.running}
-            className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+            className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <RefreshCw size={16} className="mr-2" />
             Tulis Ulang
           </button>
           <Link
             href={`/dashboard/note/${data.id}/papan`}
-            className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+            className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <PenTool size={16} className="mr-2" />
             Papan
@@ -563,14 +563,14 @@ export default function NoteDetailPage() {
             onClick={() =>
               notify("Panggilan suara & video call segera hadir! 🚧")
             }
-            className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+            className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <Phone size={16} className="mr-2" />
             Panggilan
           </button>
           <button
             onClick={() => setShowInvite(true)}
-            className="btn-clay-primary !min-h-[44px] !px-4 text-sm"
+            className="btn-clay-primary shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <Share2 size={16} className="mr-2" />
             Bagikan
@@ -657,12 +657,12 @@ export default function NoteDetailPage() {
           )}
 
           {/* Tombol Aksi */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="-mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
             {ACTION_BUTTONS.map((item) => (
               <button
                 key={item.label}
                 onClick={() => handleAction(item.label)}
-                className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+                className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
               >
                 <item.icon size={16} className="mr-2" />
                 <span className="font-extrabold">{item.label}</span>
@@ -670,20 +670,20 @@ export default function NoteDetailPage() {
             ))}
             <button
               onClick={generateAiHighlights}
-              className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+              className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
             >
               <Sparkles size={16} className="mr-2 text-clay-primary" />
               <span className="font-extrabold">Stabilo AI</span>
             </button>
             <button
               onClick={() => setShowAddImage(true)}
-              className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+              className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
             >
               <ImagePlus size={16} className="mr-2" />
               <span className="font-extrabold">Gambar</span>
             </button>
             {highlights.length > 0 && (
-              <span className="text-xs font-bold text-clay-muted">
+              <span className="shrink-0 text-xs font-bold text-clay-muted">
                 {highlights.length} bagian distabilo
               </span>
             )}

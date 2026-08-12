@@ -6,9 +6,24 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    overflow-x: clip;
+  }
+
   body {
     @apply bg-clay-beige text-clay-dark font-sans antialiased;
     min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Kunci scroll body saat drawer/modal terbuka (anti geser-geser) */
+  .scroll-lock {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
   }
 }
 

@@ -64,6 +64,14 @@ export const Sidebar = () => {
     setIsOpen(false);
   }, [pathname]);
 
+  // Kunci scroll body saat drawer mobile terbuka (anti geser-geser).
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add("scroll-lock");
+      return () => document.body.classList.remove("scroll-lock");
+    }
+  }, [isOpen]);
+
   const showToast = (msg: string) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -179,7 +187,7 @@ export const Sidebar = () => {
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: "tween", duration: 0.25 }}
-              className="fixed left-0 top-0 z-50 flex h-fit max-h-screen w-[280px] flex-col gap-2 overflow-y-auto rounded-r-clay bg-white p-3 shadow-clay-sm lg:hidden"
+              className="fixed left-0 top-0 z-50 flex h-dvh w-full max-w-[100vw] flex-col gap-2 overflow-y-auto overscroll-contain bg-white p-3 shadow-clay-sm lg:hidden before:absolute before:inset-0 before:pointer-events-none before:bg-gradient-to-b before:from-clay-primary/5 before:to-transparent"
             >
               <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight pb-2">
                 <Link href="/dashboard" onClick={() => setIsOpen(false)}>
