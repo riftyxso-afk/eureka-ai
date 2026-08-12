@@ -18,6 +18,7 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
 import GoogleIcon from "@/components/ui/GoogleIcon";
+import { PageLoader } from "@/components/ui/PageLoader";
 import {
   isLoggedIn,
   loginUser,
@@ -71,11 +72,7 @@ export default function LoginPage() {
   }, []);
 
   if (!checked) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-clay-beige">
-        <Loader2 size={32} className="animate-spin text-clay-primary" />
-      </div>
-    );
+    return <PageLoader title="Menyiapkan halaman masuk..." />;
   }
 
   const startCooldown = () => {

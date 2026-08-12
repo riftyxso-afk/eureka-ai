@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { isLoggedIn, needsOnboarding, syncAuthSession } from "@/lib/auth";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 /**
  * Guard autentikasi untuk halaman dashboard.
@@ -42,11 +42,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-clay-beige">
-        <Loader2 size={32} className="animate-spin text-clay-primary" />
-      </div>
-    );
+    return <PageLoader title="Memeriksa sesi kamu..." />;
   }
 
   return <>{children}</>;
