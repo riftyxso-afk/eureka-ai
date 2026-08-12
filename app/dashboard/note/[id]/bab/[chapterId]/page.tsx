@@ -192,19 +192,19 @@ export default function ChapterNotepadPage() {
           >
             <ArrowLeft size={20} />
           </Link>
-          <div className="min-w-0">
-            <div className="text-xs font-bold uppercase tracking-wide text-clay-muted">
-              Bab {chapter.id} · {note.title}
-            </div>
+          <div className="flex min-w-0 flex-col gap-1 sm:gap-0">
             <h1
-              className={`mt-1 break-words font-extrabold text-clay-dark ${
+              className={`order-1 break-words font-extrabold text-clay-dark sm:order-2 sm:mt-1 ${
                 chapter.title.length > 90
-                  ? "text-base leading-snug sm:text-lg"
-                  : "text-lg sm:text-xl"
+                  ? "text-lg leading-snug sm:text-lg"
+                  : "text-xl leading-snug sm:text-xl"
               }`}
             >
               {chapter.title}
             </h1>
+            <div className="order-2 text-xs font-bold uppercase tracking-wide text-clay-muted sm:order-1">
+              Bab {chapter.id} · {note.title}
+            </div>
           </div>
         </div>
         {chapter.timestamp && (
