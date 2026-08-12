@@ -44,18 +44,14 @@ async function toResponse(result: unknown): Promise<Response> {
   
   if (isResponseLike) {
     const resp = result as Response;
-    try {
-      const body = await resp.text();
-      return new Response(body, {
-        status: resp.status,
-        headers: resp.headers,
-      });
-    } catch {
-      return new Response(JSON.stringify({ error: "Failed to read response" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    // PENTING: teruskan body apa adanya (streaming pass-through), JANGAN
+    // `await resp.text()` — itu mem-buffer seluruh stream sehingga SSE
+    // (EventSource progress) tidak pernah terkirim realtime dan request
+    // menggantung sampai stream ditutup (bisa 9 menit).
+    return new Response(resp.body, {
+      status: resp.status,
+      headers: resp.headers,
+    });
   }
   // Plain object — wrap in JSON response
   return NextResponse.json(result as object, { status: 200 });

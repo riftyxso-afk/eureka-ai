@@ -168,6 +168,8 @@ export const CreateNoteModal = ({
   const [stoppingJob, setStoppingJob] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progressPercentRef = useRef(0);
   const doneHandledRef = useRef(false);
   const router = useRouter();
   const jobIdRef = useRef<string | null>(null);
@@ -251,12 +253,21 @@ export const CreateNoteModal = ({
     setChapterCount(4);
     setError(null);
     setProgressPercent(0);
+    progressPercentRef.current = 0;
     setProgressMessage("");
     setAddingSubject(false);
     setNewSubjectName("");
     setSubjectError(null);
     setActiveJobId(null);
     setStoppingJob(false);
+  };
+
+  // Hentikan polling fallback (dipanggil saat close/selesai/gagal).
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
   };
 
   const close = () => {
@@ -272,6 +283,7 @@ export const CreateNoteModal = ({
     }
     eventSourceRef.current?.close();
     eventSourceRef.current = null;
+    stopPolling();
     onClose();
   };
 
@@ -280,6 +292,10 @@ export const CreateNoteModal = ({
     return () => {
       eventSourceRef.current?.close();
       eventSourceRef.current = null;
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
     };
   }, []);
 
@@ -333,6 +349,7 @@ export const CreateNoteModal = ({
       if (jres.status === 404) {
         doneHandledRef.current = true;
         removeActiveJobId(jobId);
+        stopPolling();
         setError(
           "Proses terhenti karena server sempat restart. Silakan coba buat catatan lagi."
         );
@@ -345,6 +362,7 @@ export const CreateNoteModal = ({
       if (job.status === "error") {
         doneHandledRef.current = true;
         removeActiveJobId(jobId);
+        stopPolling();
         setError(job.error || "Gagal memproses materi. Coba lagi.");
         setProcessing(false);
         return;
@@ -355,7 +373,9 @@ export const CreateNoteModal = ({
       const ndata = await nres.json();
       if (nres.ok && ndata.note) {
         removeActiveJobId(jobId);
+        stopPolling();
         playCompletionSound();
+        progressPercentRef.current = 100;
         setProgressPercent(100);
         setProgressMessage("Selesai!");
         setCreatedNote(ndata.note as Note);
@@ -368,9 +388,11 @@ export const CreateNoteModal = ({
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
+    stopPolling();
     setProcessing(true);
     setError(null);
     setProgressPercent(0);
+    progressPercentRef.current = 0;
     setProgressMessage(processSteps[0]);
     doneHandledRef.current = false;
 
@@ -406,6 +428,10 @@ export const CreateNoteModal = ({
           message: string;
         };
         setProgressPercent(progress.percent);
+        progressPercentRef.current = Math.max(
+          progressPercentRef.current,
+          progress.percent
+        );
         setProgressMessage(progress.message);
         if (progress.percent >= 100 && jobId) {
           void completeFromJob(jobId);
@@ -430,6 +456,42 @@ export const CreateNoteModal = ({
         jobIdRef.current = jobId;
         setActiveJobId(jobId);
         addActiveJobId(jobId);
+
+        // Jaring pengaman: polling status job tiap 5 detik — progress bar tetap
+        // bergerak walau SSE gagal/terblokir (mis. proxy mem-buffer stream).
+        pollRef.current = setInterval(async () => {
+          const current = jobIdRef.current;
+          if (!current) return;
+          try {
+            const jres = await apiFetch(
+              `/api/notes/jobs/${encodeURIComponent(current)}`
+            );
+            if (jres.status === 404) {
+              // Job hilang (server restart) — tampilkan pesan jelas.
+              void completeFromJob(current);
+              return;
+            }
+            if (!jres.ok) return;
+            const jdata = await jres.json();
+            const job = jdata?.job;
+            if (!job) return;
+            if (
+              typeof job.percent === "number" &&
+              job.percent > progressPercentRef.current
+            ) {
+              progressPercentRef.current = job.percent;
+              setProgressPercent(job.percent);
+              if (typeof job.message === "string" && job.message) {
+                setProgressMessage(job.message);
+              }
+            }
+            if (job.status === "done" || job.status === "error") {
+              void completeFromJob(current);
+            }
+          } catch {
+            // abaikan — SSE / watcher tetap memantau
+          }
+        }, 5000);
         setProgressMessage(
           "Materi sedang dirangkum di latar belakang — kamu boleh lanjut menjelajah"
         );
