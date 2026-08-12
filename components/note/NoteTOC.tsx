@@ -52,7 +52,7 @@ export const NoteTOC = ({
       </aside>
 
       {/* Chip bar (mobile) */}
-      <div className="flex gap-2 overflow-x-auto pb-2 lg:hidden">
+      <div className="flex flex-wrap gap-2 pb-2 lg:hidden">
         {chapters.map((chapter) => (
           <button
             key={chapter.id}

@@ -513,7 +513,7 @@ export default function NoteDetailPage() {
             {data.title}
           </h1>
         </div>
-        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+        <div className="-mx-4 flex flex-wrap items-center gap-2 px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-0">
           <button
             onClick={toggleBookmark}
             aria-label="Bookmark"
@@ -658,7 +658,7 @@ export default function NoteDetailPage() {
           )}
 
           {/* Tombol Aksi */}
-          <div className="-mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+          <div className="-mx-4 mt-4 flex flex-wrap items-center gap-2 px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-0">
             {ACTION_BUTTONS.map((item) => (
               <button
                 key={item.label}

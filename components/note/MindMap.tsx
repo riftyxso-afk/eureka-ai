@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { MoveHorizontal } from "lucide-react";
 import mermaid from "mermaid";
 
 interface MindMapProps {
@@ -14,6 +15,7 @@ interface MindMapProps {
  */
 export function MindMap({ content }: MindMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [canScroll, setCanScroll] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -47,6 +49,11 @@ export function MindMap({ content }: MindMapProps) {
         const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
         const { svg } = await mermaid.render(id, content);
         containerRef.current.innerHTML = svg;
+        // Indikator "geser" bila mindmap lebih lebar dari wadahnya (mobile).
+        requestAnimationFrame(() => {
+          const el = containerRef.current;
+          if (el) setCanScroll(el.scrollWidth > el.clientWidth + 2);
+        });
       } catch (error) {
         console.error("Error rendering mindmap:", error);
         containerRef.current.innerHTML = `
@@ -62,11 +69,17 @@ export function MindMap({ content }: MindMapProps) {
   }, [content]);
 
   return (
-    <div className="my-6 overflow-x-auto rounded-clay-md border-2 border-clay-shadow/20 bg-white p-6 shadow-clay-sm">
+    <div className="relative my-6 overflow-x-auto rounded-clay-md border-2 border-clay-shadow/20 bg-white p-6 shadow-clay-sm">
       <div
         ref={containerRef}
         className="inline-block min-w-full [&>svg]:block [&>svg]:mx-auto [&>svg]:max-w-none [&>svg]:h-auto"
       />
+      {canScroll && (
+        <span className="pointer-events-none absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-clay-full bg-clay-primary/90 px-2.5 py-1 text-[10px] font-extrabold text-white shadow-clay-sm">
+          <MoveHorizontal size={11} />
+          geser
+        </span>
+      )}
     </div>
   );
 }

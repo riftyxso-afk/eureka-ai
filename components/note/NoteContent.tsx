@@ -101,7 +101,7 @@ function renderParsed(items: ParsedContent[], highlights: HighlightEntry[]) {
                 src={item.content.url}
                 alt={item.content.alt || "Ilustrasi materi"}
                 loading="lazy"
-                className="max-h-[380px] w-full max-w-[560px] rounded-clay-md border-2 border-clay-shadow/20 object-cover shadow-clay-sm"
+                className="max-h-[380px] w-full max-w-[560px] rounded-clay-md border-2 border-clay-shadow/20 object-contain shadow-clay-sm"
               />
             </div>
             {item.content.alt && (
