@@ -15,6 +15,11 @@
  */
 import { isFirecrawlConfigured, scrapeWebUrl, firecrawlSearch } from "./firecrawl";
 import type { WebImage } from "./firecrawl";
+import {
+  buildIllustrationPrompt,
+  generateAiIllustration,
+  isCloudflareImagesConfigured,
+} from "./cloudflareImages";
 
 export interface PdfImage {
   url: string;
@@ -285,4 +290,62 @@ export function assignImagesToChapters(
 
   onProgress?.(100, "Gambar siap.");
   return out.slice(0, chapters.length);
+}
+
+/** Maks gambar AI yang digenerate per dokumen (hemat kuota neurons). */
+const MAX_AI_IMAGES_PER_DOC = 6;
+
+/**
+ * Generate ilustrasi AI (Cloudflare FLUX) untuk bab yang BELUM punya gambar.
+ * Dipanggil setelah assignImagesToChapters — mengisi bab kosong dengan gambar
+ * yang selalu tampil (base64, tanpa unduhan eksternal).
+ *
+ * Aman: bila provider belum dikonfigurasi / gagal → kembalikan peta yang ada
+ * (tidak menggagalkan PDF). Maks MAX_AI_IMAGES_PER_DOC per dokumen.
+ */
+export async function generateAiImagesForChapters(
+  chapters: { title: string }[],
+  existing: ChapterImageMap[],
+  note?: { title?: string; subject?: string },
+  onProgress?: PdfImagesProgressFn
+): Promise<ChapterImageMap[]> {
+  if (!isCloudflareImagesConfigured() || !chapters.length) return existing;
+
+  const out = [...existing];
+  const haveIndex = new Set(existing.map((c) => c.chapterIndex));
+  let generated = 0;
+
+  for (let idx = 0; idx < chapters.length; idx++) {
+    if (haveIndex.has(idx)) continue;
+    if (generated >= MAX_AI_IMAGES_PER_DOC) break;
+
+    const prompt = buildIllustrationPrompt({
+      chapterTitle: chapters[idx].title,
+      noteTitle: note?.title,
+      subject: note?.subject,
+    });
+    onProgress?.(
+      55,
+      `Menggambar ilustrasi AI untuk bab: ${(chapters[idx].title || "").slice(
+        0,
+        40
+      )}...`
+    );
+    const dataUrl = await generateAiIllustration(prompt);
+    if (dataUrl) {
+      out.push({
+        chapterIndex: idx,
+        url: dataUrl,
+        alt: chapters[idx].title || "Ilustrasi",
+      });
+      haveIndex.add(idx);
+      generated++;
+      onProgress?.(60, `Ilustrasi AI untuk "${chapters[idx].title}" siap.`);
+    }
+  }
+
+  if (generated > 0) {
+    onProgress?.(63, `${generated} bab diberi ilustrasi AI.`);
+  }
+  return out;
 }

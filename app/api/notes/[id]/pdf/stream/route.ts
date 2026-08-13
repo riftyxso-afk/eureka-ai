@@ -28,6 +28,7 @@ import { enrichNoteForPdf } from "@/lib/pdfEnrich";
 import {
   collectImagesForPdf,
   assignImagesToChapters,
+  generateAiImagesForChapters,
   type ChapterImageMap,
 } from "@/lib/pdfImages";
 import { recordActivity } from "@/lib/progress-store";
@@ -197,6 +198,14 @@ export async function GET(
                 (pct, msg) => emitProgress(controller, 36 + pct * 0.03, msg)
               );
             }
+            // Bab yang belum dapat gambar → generate ilustrasi AI (Cloudflare
+            // FLUX) supaya setiap bab punya gambar yang selalu tampil.
+            chapterImages = await generateAiImagesForChapters(
+              enriched.chapters,
+              chapterImages,
+              { title: note?.title, subject: note?.subject },
+              (pct, msg) => emitProgress(controller, 36 + pct * 0.04, msg)
+            );
             emitProgress(
               controller,
               39,

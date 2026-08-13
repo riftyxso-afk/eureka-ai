@@ -92,6 +92,18 @@ const IMAGE_TIMEOUT_MS = 15000;
 
 /** Unduh gambar → Buffer, validasi content-type image/* & ukuran. */
 async function fetchImageBuffer(url: string): Promise<Buffer | null> {
+  // Data URL base64 (hasil generate AI) → dekode langsung, tanpa jaringan.
+  if (url.startsWith("data:image/")) {
+    try {
+      const m = url.match(/^data:image\/[^;]+;base64,(.+)$/);
+      if (!m) return null;
+      const buf = Buffer.from(m[1], "base64");
+      if (!buf.length || buf.length > MAX_IMAGE_BYTES) return null;
+      return buf;
+    } catch {
+      return null;
+    }
+  }
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),

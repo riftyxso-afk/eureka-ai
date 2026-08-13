@@ -14,7 +14,9 @@ import { PENDING_PROMPT_KEY } from "@/lib/assistant/pendingPrompt";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { useAssistantChat } from "@/lib/assistant/useAssistantChat";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
+import { detectImageIntent } from "@/lib/assistant/imageIntent";
 import { NoteProgressOverlay } from "@/components/note/NoteProgressOverlay";
+import { ImageGenerationOverlay } from "@/components/note/ImageGenerationOverlay";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import Composer from "@/components/asisten/Composer";
@@ -102,6 +104,7 @@ export default function HomePage() {
   const [notePrompt, setNotePrompt] = useState<string | null>(null);
   const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
   const [notePrefs, setNotePrefs] = useState<NoteCreatePrefs | null>(null);
+  const [imagePrompt, setImagePrompt] = useState<string | null>(null);
   const launchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const chat = useAssistantChat({
@@ -159,6 +162,12 @@ export default function HomePage() {
       speedMode?: "fast" | "normal" | "deep";
     }) => {
       if (launching) return;
+
+      // Permintaan "buat gambar" → generate gambar AI (sesuai deskripsi/topik).
+      if (detectImageIntent(input.question).isImageRequest) {
+        setImagePrompt(input.question);
+        return;
+      }
 
       // Permintaan "buat catatan" → tanya preferensi dulu (wizard F&Q),
       // lalu generate catatan + overlay loading.
@@ -349,6 +358,13 @@ export default function HomePage() {
           setNotePrompt(null);
           setNotePrefs(null);
         }}
+      />
+
+      {/* Overlay generate gambar AI (saat user minta "buat gambar") */}
+      <ImageGenerationOverlay
+        open={!!imagePrompt}
+        prompt={imagePrompt ?? ""}
+        onClose={() => setImagePrompt(null)}
       />
 
 

@@ -10,7 +10,9 @@ import {
   type PendingPrompt,
 } from "@/lib/assistant/pendingPrompt";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
+import { detectImageIntent } from "@/lib/assistant/imageIntent";
 import { NoteProgressOverlay } from "@/components/note/NoteProgressOverlay";
+import { ImageGenerationOverlay } from "@/components/note/ImageGenerationOverlay";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import MessageBubble from "@/components/asisten/MessageBubble";
@@ -74,6 +76,7 @@ export default function ChatPage() {
   const [notePrompt, setNotePrompt] = useState<string | null>(null);
   const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
   const [notePrefs, setNotePrefs] = useState<NoteCreatePrefs | null>(null);
+  const [imagePrompt, setImagePrompt] = useState<string | null>(null);
 
   // Header auto-hide saat scroll ke bawah (mobile) — tampil lagi saat ke atas.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -248,6 +251,11 @@ export default function ChatPage() {
             setWizardPrompt(null);
           }}
           onSend={(input) => {
+            // "buat gambar" → generate gambar AI sesuai topik percakapan.
+            if (detectImageIntent(input.question).isImageRequest) {
+              setImagePrompt(input.question);
+              return;
+            }
             if (detectNoteIntent(input.question).isNoteRequest) {
               setWizardPrompt(input.question);
               return;
@@ -267,6 +275,17 @@ export default function ChatPage() {
           setNotePrompt(null);
           setNotePrefs(null);
         }}
+      />
+
+      {/* Overlay generate gambar AI — pakai konteks percakapan agar sesuai topik */}
+      <ImageGenerationOverlay
+        open={!!imagePrompt}
+        prompt={imagePrompt ?? ""}
+        history={chat.renderedMessages
+          .filter((m) => m.role === "user" || m.role === "assistant")
+          .map((m) => ({ role: m.role, content: m.content }))
+          .slice(-10)}
+        onClose={() => setImagePrompt(null)}
       />
 
 

@@ -12,6 +12,16 @@ interface MessageBubbleProps {
   onRetry?: () => void;
 }
 
+/** Format waktu selesai menjawab, mis. "14:32 WIB". */
+function formatDoneTime(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm} WIB`;
+}
+
 function ThinkingDots() {
   return (
     <span className="inline-flex items-center gap-1.5 py-1">
@@ -101,6 +111,13 @@ export default function MessageBubble({
 
         {!isStreaming && message.sources.length > 0 && (
           <SourceChips sources={message.sources} />
+        )}
+
+        {/* Waktu selesai menjawab — hanya saat jawaban sudah lengkap */}
+        {!isStreaming && !empty && (
+          <span className="self-start pl-1 text-[10px] font-bold text-clay-muted/70">
+            Selesai {formatDoneTime(message.createdAt)}
+          </span>
         )}
 
         {!isStreaming && empty && onRetry && (

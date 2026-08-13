@@ -261,6 +261,8 @@ Required in both `.env.local` and Vercel Dashboard:
 | `FIRECRAWL_API_KEY` | Web scraping key | **YES!** |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key (public) | No |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key (server only) | **YES!** |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID — untuk gambar AI PDF (opsional) | No |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token (izin Workers AI:Run) — gambar AI PDF | No |
 
 ---
 

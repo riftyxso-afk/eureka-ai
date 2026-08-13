@@ -27,6 +27,7 @@ Dipakai route /api/notes/:id/pdf/stream (Node spawn python3 script ini).
 
 import base64
 import io
+import base64
 import json
 import os
 import re
@@ -174,7 +175,23 @@ IMAGE_TIMEOUT = 20
 
 
 def download_image(url: str):
-    """Unduh gambar, validasi content-type image/* & ukuran. None bila gagal."""
+    """
+    Unduh gambar, validasi content-type image/* & ukuran. None bila gagal.
+    Mendukung data URL base64 (mis. hasil generate AI: data:image/png;base64,...)
+    — didekode langsung tanpa unduhan jaringan.
+    """
+    # Data URL base64 → dekode langsung.
+    if url.startswith("data:image/"):
+        try:
+            header, _, b64 = url.partition(",")
+            if not b64 or ";base64" not in header:
+                return None
+            data = base64.b64decode(b64)
+            if len(data) > MAX_IMAGE_BYTES:
+                return None
+            return data if data else None
+        except Exception:
+            return None
     try:
         req = urllib.request.Request(
             url,
