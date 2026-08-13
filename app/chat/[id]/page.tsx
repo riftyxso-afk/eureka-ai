@@ -204,6 +204,9 @@ export default function ChatPage() {
                   (chat.streaming.webResults.length > 0 ||
                     chat.streaming.webStage !== null) &&
                   idx === chat.renderedMessages.length - 1;
+                // Pesan user sebelumnya → untuk hitung lama AI menjawab.
+                const prevMsg =
+                  idx > 0 ? chat.renderedMessages[idx - 1] : null;
                 return (
                   <div key={m.id} className="space-y-4">
                     {showPipeline && (
@@ -213,7 +216,7 @@ export default function ChatPage() {
                         completed={!chat.sending && !chat.hasError}
                       />
                     )}
-                    <MessageBubble message={m} />
+                    <MessageBubble message={m} prevMessage={prevMsg} />
                   </div>
                 );
               })}

@@ -24,10 +24,13 @@ export interface ImageIntent {
 const VERB_RE =
   /(?:buat|buatkan|bikin|buatin|buatlah|generate|gambarkan|gambarin|gambar-kan|gambar-in|membuat|membuatkan)/i;
 
-// 3 pola: (1) kata kerja … kata gambar; (2) "gambarin <topik>" langsung;
-// (3) "gambar tentang/mengenai <topik>".
+// 3 pola:
+//  (1) kata kerja … kata gambar:  "buatkan gambar sel hewan", "generate ilustrasi X"
+//  (2) shorthand GAMBAR saja:     "gambarin kucing", "gambarkan gunung"
+//      (bukan "buatkan" — itu kata kerja umum: "buatkan contoh soal" ≠ gambar)
+//  (3) "gambar tentang/mengenai <topik>"
 const IMAGE_REQUEST_RE =
-  /\b(?:buat|buatkan|bikin|buatin|buatlah|generate|gambarkan|gambarin|gambar-kan|gambar-in|membuat|membuatkan)\b[\s\S]{0,40}\b(?:gambar|ilustrasi|ilustrasikan|poster|logo|visual)\b|\b(?:gambarin|gambarkan|gambar-kan|gambar-in|buatkan|bikinin|buatin)\b\s+(?!tentang|mengenai)\S|\b(?:gambar|ilustrasi)\s+(?:tentang|mengenai)\b/i;
+  /\b(?:buat|buatkan|bikin|buatin|buatlah|generate|gambarkan|gambarin|gambar-kan|gambar-in|membuat|membuatkan)\b[\s\S]{0,40}\b(?:gambar|ilustrasi|ilustrasikan|poster|logo|visual)\b|\b(?:gambarin|gambarkan|gambar-kan|gambar-in)\b\s+(?!tentang|mengenai)\S|\b(?:gambar|ilustrasi)\s+(?:tentang|mengenai)\b/i;
 
 /** Bersihkan kata perintah → sisa teks jadi deskripsi gambar. */
 function extractDescription(prompt: string): string {

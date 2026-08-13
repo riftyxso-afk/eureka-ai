@@ -10,16 +10,34 @@ interface MessageBubbleProps {
   message: AssistantChatMessage;
   isStreaming?: boolean;
   onRetry?: () => void;
+  /** Pesan user sebelumnya — dipakai hitung lama AI menjawab. */
+  prevMessage?: AssistantChatMessage | null;
 }
 
-/** Format waktu selesai menjawab, mis. "14:32 WIB". */
-function formatDoneTime(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm} WIB`;
+/** Format durasi: "12 detik" / "1 mnt 20 dtk" / "3 mnt". */
+function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "";
+  const totalSec = Math.round(ms / 1000);
+  if (totalSec < 60) return `${totalSec} detik`;
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  if (sec === 0) return `${min} mnt`;
+  return `${min} mnt ${sec} dtk`;
+}
+
+/**
+ * Lama AI mengerjakan jawaban: selisih createdAt pesan asisten dengan
+ * pesan user sebelumnya (pertanyaan yang memicunya).
+ */
+function answerDurationMs(
+  message: AssistantChatMessage,
+  prevMessage?: AssistantChatMessage | null
+): number | null {
+  if (!prevMessage) return null;
+  const end = Date.parse(message.createdAt);
+  const start = Date.parse(prevMessage.createdAt);
+  if (!Number.isFinite(end) || !Number.isFinite(start)) return null;
+  return end - start;
 }
 
 function ThinkingDots() {
@@ -45,9 +63,13 @@ export default function MessageBubble({
   message,
   isStreaming = false,
   onRetry,
+  prevMessage,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const empty = !message.content.trim();
+  const duration = isUser
+    ? null
+    : answerDurationMs(message, prevMessage);
 
   if (isUser) {
     return (
@@ -113,10 +135,10 @@ export default function MessageBubble({
           <SourceChips sources={message.sources} />
         )}
 
-        {/* Waktu selesai menjawab — hanya saat jawaban sudah lengkap */}
-        {!isStreaming && !empty && (
+        {/* Lama AI menjawab — hanya saat jawaban sudah lengkap */}
+        {!isStreaming && !empty && duration !== null && duration >= 0 && (
           <span className="self-start pl-1 text-[10px] font-bold text-clay-muted/70">
-            Selesai {formatDoneTime(message.createdAt)}
+            ⚡ AI menjawab dalam {formatDuration(duration)}
           </span>
         )}
 
