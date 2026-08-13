@@ -259,6 +259,37 @@ Required in both `.env.local` and Vercel Dashboard:
 | `OPENAGENTIC_API_KEY` | AI provider key | **YES!** |
 | `OPENROUTER_API_KEY` | Fallback AI key | **YES!** |
 | `FIRECRAWL_API_KEY` | Web scraping key | **YES!** |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key (public) | No |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key (server only) | **YES!** |
+
+---
+
+## 🛡️ CAPTCHA — Cloudflare Turnstile (login/register)
+
+Opsional tapi disarankan. Tanpa key, verifikasi dilewati (mode dev).
+
+1. Daftar/gratis di https://dash.cloudflare.com/sign-up → **Turnstile**
+2. Tambahkan situs → salin **Site Key** & **Secret Key**
+3. Isi di `.env.local` dan Vercel Dashboard:
+   ```
+   NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAA...
+   TURNSTILE_SECRET_KEY=0x4AAAA...
+   ```
+4. Redeploy. Widget muncul di halaman login & register; token diverifikasi
+   server-side di `/api/auth/otp` (kirim & verifikasi kode OTP) dan
+   `/api/auth/verify-captcha` (login kata sandi).
+
+## ⚙️ Proteksi overload & rate limit (anti-borong token AI)
+
+- **Kapasitas generate serentak (lintas server)**: global maksimal 5 proses
+  generate (catatan + PDF) di semua server; per-user maksimal 1 proses aktif.
+  Penghitungan lewat tabel `jobs` Supabase (status `processing` segar) —
+  tidak perlu migrasi baru.
+- **Rate limit per user per jam**: 3× generate catatan, 5× regenerate
+  catatan/bab, 5× dokumen PDF, 40× pesan chat (in-memory sliding window;
+  paling kuat di backend VPS satu proses).
+- Saat kapasitas penuh: respons 429 / event error dengan pesan
+  "Server sedang sibuk. Coba lagi dalam beberapa menit ya 🙏".
 
 ---
 

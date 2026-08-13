@@ -12,7 +12,9 @@ import { randomUUID } from "crypto";
 import { runAfter } from "@/lib/after";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { regenerateChapter } from "@/lib/regenerate";
-import { createJob, executeJob, updateJob } from "@/lib/jobQueue";
+import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { canStartGeneration, createJob, executeJob, updateJob } from "@/lib/jobQueue";
+import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -45,7 +47,37 @@ export async function POST(
     }
 
     const instruction = String(body?.instruction ?? "").trim().slice(0, 500);
-    const userId = "anonymous";
+
+    // Keamanan: userId diambil dari token sesi (apiFetch melampirkan Bearer).
+    const userId =
+      (await getUserIdFromAuth(req.headers.get("authorization"))) || "anonymous";
+
+    // Rate limit per user (proteksi token AI): maks 5 regenerate/jam.
+    ensureRateLimitPrune();
+    const rl = checkRateLimit(`regenerate-bab:${userId}`, 5, 60 * 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        {
+          error:
+            "Kamu sudah menulis ulang bab terlalu sering dalam 1 jam. Tunggu sebentar ya 🙏",
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+        }
+      );
+    }
+
+    // Kapasitas generate serentak (lintas server): global 5 / per-user 1.
+    const cap = await canStartGeneration(userId);
+    if (!cap.ok) {
+      const busy =
+        cap.reason === "global"
+          ? "Server sedang sibuk. Coba lagi dalam beberapa menit ya 🙏"
+          : "Kamu masih punya catatan yang sedang diproses. Tunggu sampai selesai ya 🙏";
+      return NextResponse.json({ error: busy }, { status: 429 });
+    }
+
     const noteId = found.note.id;
 
     const jobId = createJob({

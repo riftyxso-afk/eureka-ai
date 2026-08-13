@@ -30,8 +30,10 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
 
   // ─── Auth ──────────────────────────────────────────────
   const otp = await import("@/app/api/auth/otp/route");
+  const verifyCaptcha = await import("@/app/api/auth/verify-captcha/route");
   mount(app, "/api/auth/otp", otp);
-  count++;
+  mount(app, "/api/auth/verify-captcha", verifyCaptcha);
+  count += 2;
 
   // ─── Chat ──────────────────────────────────────────────
   const chat = await import("@/app/api/chat/route");

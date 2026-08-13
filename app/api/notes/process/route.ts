@@ -13,13 +13,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
 import { runAfter } from "@/lib/after";
+import { authorizeAssistantUser } from "@/lib/assistant/auth";
 import {
+  canStartGeneration,
   createJob,
   executeJob,
   updateJob,
   isJobCancelled,
   JobCancelledError,
 } from "@/lib/jobQueue";
+import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { ProgressTracker, phaseToPercent } from "@/lib/progressTracker";
 import {
   processNoteForBackground,
@@ -76,6 +79,44 @@ export async function POST(req: NextRequest) {
         { error: "Tempel soal/tugasnya dulu (minimal 10 karakter)." },
         { status: 400 }
       );
+    }
+
+    // ── Keamanan: userId wajib cocok dengan token sesi (apiFetch melampirkan Bearer). ──
+    const auth = await authorizeAssistantUser(
+      req.headers.get("authorization"),
+      userId
+    );
+    if (!auth.userId) {
+      return NextResponse.json(
+        { error: auth.error ?? "Autentikasi diperlukan." },
+        { status: auth.status ?? 401 }
+      );
+    }
+
+    // ── Rate limit per user (proteksi token AI): maks 3 generate/jam. ──
+    ensureRateLimitPrune();
+    const rl = checkRateLimit(`note-process:${userId}`, 3, 60 * 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        {
+          error:
+            "Kamu sudah membuat 3 catatan dalam 1 jam. Tunggu sebentar lalu coba lagi ya 🙏",
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+        }
+      );
+    }
+
+    // ── Kapasitas generate serentak (lintas server): global 5 / per-user 1. ──
+    const cap = await canStartGeneration(userId);
+    if (!cap.ok) {
+      const busy =
+        cap.reason === "global"
+          ? "Server sedang sibuk. Coba lagi dalam beberapa menit ya 🙏"
+          : "Kamu masih punya catatan yang sedang diproses. Tunggu sampai selesai ya 🙏";
+      return NextResponse.json({ error: busy }, { status: 429 });
     }
 
     const prefs: NotePrefs = {

@@ -31,6 +31,8 @@ import {
   type ChapterImageMap,
 } from "@/lib/pdfImages";
 import { recordActivity } from "@/lib/progress-store";
+import { acquirePdfSlot, releasePdfSlot } from "@/lib/jobQueue";
+import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -131,11 +133,44 @@ export async function GET(
     .slice(0, 40) || "rangkuman";
   const filename = `${title}.pdf`;
 
+  // Slot generate (dibebaskan di finally/cancel) — ikut hitung kapasitas
+  // serentak global & per-user (proteksi overload, sama seperti generate catatan).
+  let slotId: string | null = null;
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       // Ditandai true hanya bila PDF benar-benar berhasil dibuat (untuk XP).
       let success = false;
       try {
+        // ── Proteksi overload: rate limit per user + kapasitas serentak. ──
+        ensureRateLimitPrune();
+        const rl = checkRateLimit(`pdf:${userId}`, 5, 60 * 60 * 1000);
+        if (!rl.ok) {
+          controller.enqueue(
+            encoder.encode(
+              `event: error\ndata: ${JSON.stringify({
+                error:
+                  "Kamu sudah membuat 5 dokumen dalam 1 jam. Tunggu sebentar lalu coba lagi ya 🙏",
+              })}\n\n`
+            )
+          );
+          controller.close();
+          return;
+        }
+        slotId = await acquirePdfSlot(userId);
+        if (!slotId) {
+          controller.enqueue(
+            encoder.encode(
+              `event: error\ndata: ${JSON.stringify({
+                error:
+                  "Server sedang sibuk. Coba lagi dalam beberapa menit ya 🙏",
+              })}\n\n`
+            )
+          );
+          controller.close();
+          return;
+        }
+
         // ── Tahap 1: menyusun struktur ──
         emitProgress(controller, 3, "Membaca catatan...");
         emitProgress(controller, 6, "Menyusun struktur dokumen (sampul, pengantar, BAB)...");
@@ -306,6 +341,11 @@ export async function GET(
         controller.close();
         // Jangan catat XP bila gagal (success sudah false di sini).
       } finally {
+        // Lepas slot generate (ikut hitung kapasitas global/per-user).
+        if (slotId) {
+          void releasePdfSlot(slotId, success).catch(() => {});
+          slotId = null;
+        }
         // Catat aktivitas (XP kecil) hanya bila PDF berhasil dibuat.
         if (success && userId) {
           void recordActivity(userId, 5, "Mengunduh dokumen PDF catatan").catch(() => {});
@@ -313,7 +353,11 @@ export async function GET(
       }
     },
     cancel() {
-      // klien menutup stream
+      // klien menutup stream di tengah jalan → bebas slot agar tidak macet.
+      if (slotId) {
+        void releasePdfSlot(slotId, false).catch(() => {});
+        slotId = null;
+      }
     },
   });
 

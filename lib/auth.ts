@@ -162,15 +162,23 @@ export async function registerUser(input: {
   return { ok: true, user, needsConfirmation: true };
 }
 
-/** Masuk via Supabase Auth. */
+/** Masuk via Supabase Auth (dengan verifikasi CAPTCHA dulu). */
 export async function loginUser(input: {
   email: string;
   password: string;
+  /** Token Cloudflare Turnstile — wajib saat captcha aktif. */
+  captchaToken?: string;
 }): Promise<AuthResult> {
   const email = input.email.trim().toLowerCase();
 
   if (!isEmailValid(email)) {
     return { ok: false, error: "Format email tidak valid." };
+  }
+
+  // Verifikasi CAPTCHA server-side dulu (Turnstile).
+  const captcha = await verifyCaptchaClient(input.captchaToken ?? "");
+  if (!captcha.ok) {
+    return { ok: false, error: captcha.error };
   }
   if (!isSupabaseConfigured()) {
     return {
@@ -219,7 +227,9 @@ export async function loginUser(input: {
  */
 export async function requestOtpLogin(
   email: string,
-  name?: string
+  name?: string,
+  /** Token Cloudflare Turnstile — wajib saat captcha aktif. */
+  captchaToken?: string
 ): Promise<AuthResult> {
   const clean = email.trim().toLowerCase();
 
@@ -231,7 +241,12 @@ export async function requestOtpLogin(
     const res = await apiFetch("/api/auth/otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "request", email: clean, name: name ?? "" }),
+      body: JSON.stringify({
+        action: "request",
+        email: clean,
+        name: name ?? "",
+        captchaToken: captchaToken ?? "",
+      }),
     });
     const json = await res.json().catch(() => null);
     if (!res.ok || !json?.ok) {
@@ -251,7 +266,9 @@ export async function requestOtpLogin(
 export async function verifyOtpLogin(
   email: string,
   code: string,
-  name?: string
+  name?: string,
+  /** Token Cloudflare Turnstile — wajib saat captcha aktif. */
+  captchaToken?: string
 ): Promise<AuthResult> {
   const clean = email.trim().toLowerCase();
 
@@ -275,6 +292,7 @@ export async function verifyOtpLogin(
         email: clean,
         code: code.trim(),
         name: name ?? "",
+        captchaToken: captchaToken ?? "",
       }),
     });
     const json = await res.json().catch(() => null);
@@ -405,6 +423,24 @@ export async function registerFriendsIdentity(name: string): Promise<void> {
     });
   } catch {
     // identitas teman tidak wajib
+  }
+}
+
+/** Verifikasi CAPTCHA Turnstile via server (best-effort). */
+async function verifyCaptchaClient(
+  captchaToken: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await apiFetch("/api/auth/verify-captcha", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ captchaToken }),
+    });
+    const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+    if (res.ok && json?.ok) return { ok: true };
+    return { ok: false, error: json?.error ?? "Verifikasi keamanan gagal. Coba lagi." };
+  } catch {
+    return { ok: false, error: "Tidak dapat terhubung ke server. Coba lagi." };
   }
 }
 

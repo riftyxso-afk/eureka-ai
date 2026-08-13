@@ -49,6 +49,18 @@ const MAX_JOBS = 200;
 /** Job yang basi (tidak ada update) dianggap mati, agar klien tidak menunggu selamanya. */
 const STALE_RUNNING_MS = 10 * 60 * 1000;
 
+// ─── Proteksi overload (anti-borong token AI) ───────────────────────────────
+//
+// Batas kapasitas generate SERENTAK, berlaku LINTAS SERVER (Vercel + VPS):
+//   - Global : maksimal MAX_GLOBAL_ACTIVE proses generate berjalan di semua server.
+//   - Per-user: maksimal 1 proses generate aktif per user.
+// Penghitungan lewat tabel `jobs` Supabase (status 'processing' yang masih
+// segar), karena job createNote & slot PDF sama-sama ditulis ke tabel itu.
+// Bila Supabase tidak terkonfigurasi → fallback ke hitungan lokal saja.
+const SLOT_WINDOW_MS = 5 * 60 * 1000;
+const MAX_GLOBAL_ACTIVE = 5;
+const MAX_PER_USER_ACTIVE = 1;
+
 const jobs = new Map<string, NoteJob>();
 const runners = new Map<string, (jobId: string) => Promise<void>>();
 
@@ -83,6 +95,8 @@ async function persist(job: NoteJob): Promise<void> {
             noteTitle: job.noteTitle ?? null,
             error: job.error ?? null,
             cancelled: job.cancelled ?? false,
+            // Dipakai untuk hitung slot aktif per-user lintas server.
+            userId: job.userId ?? null,
           },
           updated_at: nowIso(),
         },
@@ -234,3 +248,128 @@ export class JobCancelledError extends Error {
     this.name = "JobCancelledError";
   }
 }
+
+// ─── Kapasitas generate (overload protection) ────────────────────────────────
+
+/**
+ * Hitung jumlah proses generate yang sedang aktif (lintas server bila
+ * Supabase tersedia; fallback ke hitungan lokal bila tidak).
+ * @param userId bila diisi, hanya menghitung punya user itu.
+ */
+export async function countActiveGenerationSlots(
+  userId?: string
+): Promise<number> {
+  // 1) Hitungan lokal (proses ini): job note yang masih running + slot PDF lokal.
+  let local = 0;
+  for (const job of jobs.values()) {
+    if (job.status !== "running") continue;
+    if (userId && job.userId !== userId) continue;
+    local++;
+  }
+  const slotCutoff = Date.now() - SLOT_WINDOW_MS;
+  for (const [slotId, slot] of pdfSlotsLocal) {
+    if (slot.createdAt < slotCutoff) {
+      pdfSlotsLocal.delete(slotId); // slot basi → lepas otomatis
+      continue;
+    }
+    if (userId && slot.userId !== userId) continue;
+    local++;
+  }
+
+  // 2) Hitungan database (lintas server): status 'processing' yang masih segar.
+  let dbCount = 0;
+  try {
+    const since = new Date(Date.now() - SLOT_WINDOW_MS).toISOString();
+    let q = db()
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "processing")
+      .gte("updated_at", since);
+    if (userId) q = q.filter("result->>userId", "eq", userId);
+    const { count, error } = await q;
+    if (!error && typeof count === "number") dbCount = count;
+  } catch {
+    // Supabase tidak tersedia — pakai hitungan lokal saja.
+  }
+
+  // Pakai nilai maksimum: lokal menutupi jeda persist DB, DB menutupi
+  // proses di server lain. Konservatif = lebih aman (tidak over-commit).
+  return Math.max(local, dbCount);
+}
+
+/**
+ * Cek apakah user boleh memulai generate baru.
+ * - Global: maksimal MAX_GLOBAL_ACTIVE proses serentak di semua server.
+ * - Per-user: maksimal MAX_PER_USER_ACTIVE proses aktif.
+ */
+export async function canStartGeneration(userId: string): Promise<{
+  ok: boolean;
+  reason?: "global" | "user";
+  activeGlobal?: number;
+}> {
+  const activeGlobal = await countActiveGenerationSlots();
+  if (activeGlobal >= MAX_GLOBAL_ACTIVE) {
+    return { ok: false, reason: "global", activeGlobal };
+  }
+  if (userId) {
+    const activeUser = await countActiveGenerationSlots(userId);
+    if (activeUser >= MAX_PER_USER_ACTIVE) {
+      return { ok: false, reason: "user", activeGlobal };
+    }
+  }
+  return { ok: true, activeGlobal };
+}
+
+/**
+ * Ambil slot generate untuk alur yang BUKAN job note (mis. stream PDF),
+ * agar ikut dihitung dalam batas global & per-user. Menulis baris
+ * status='processing' di tabel jobs; kosongkan lewat releasePdfSlot.
+ * @returns id slot, atau null bila kapasitas penuh.
+ */
+export async function acquirePdfSlot(userId: string): Promise<string | null> {
+  const can = await canStartGeneration(userId);
+  if (!can.ok) return null;
+  const id = randomUUID();
+  const now = nowIso();
+  try {
+    await db().from("jobs").insert({
+      id,
+      progress: 0,
+      status: "processing",
+      message: "Menyusun dokumen...",
+      result: { kind: "pdf", userId: userId || null },
+      created_at: now,
+      updated_at: now,
+    });
+  } catch {
+    // Tanpa Supabase: izinkan (dev), slot hanya dicatat lokal.
+    pdfSlotsLocal.set(id, { userId, createdAt: Date.now() });
+  }
+  return id;
+}
+
+/** Lepas slot PDF setelah selesai/gagal/dibatalkan. */
+export async function releasePdfSlot(
+  slotId: string,
+  ok: boolean
+): Promise<void> {
+  if (!slotId) return;
+  pdfSlotsLocal.delete(slotId);
+  try {
+    await db()
+      .from("jobs")
+      .update({
+        status: ok ? "completed" : "failed",
+        updated_at: nowIso(),
+      })
+      .eq("id", slotId);
+  } catch {
+    // abaikan — slot akan kedaluwarsa sendiri lewat jendela waktu
+  }
+}
+
+/** Slot PDF lokal (fallback saat Supabase tidak tersedia / proses ini). */
+const pdfSlotsLocal = new Map<
+  string,
+  { userId: string; createdAt: number }
+>();

@@ -32,6 +32,8 @@ export function cleanSearchQuery(raw: string): string {
       /\b(?:tolong|bantu|bantuin|mohon|kak|bang|coba|carikan|carikan\s+di|cari|jelaskan|sebutkan|ceritakan|beritahu|info|informasi|terbaru|di\s+web|di\s+internet|online|web|internet|tentang|mengenai|soal|materi|pelajaran|sekarang|hari\s+ini|apakah|apa\s+itu|siapa|mengapa|kenapa|bagaimana|berapa|kapan|di\s+mana|dimana|yang\s+mana|saya\s+mau|aku\s+mau|bisa|dapat)\b/g,
       " "
     )
+    // Normalisasi ejaan umum: "rumusnya" → "rumus" (query lebih bersih).
+    .replace(/\b(rumusnya|rumus-nya|rumus2|rumus²)\b/g, "rumus")
     .replace(/\s+/g, " ")
     .trim();
   // Hasil bersih terlalu pendek → kembalikan teks asli (jangan dikorup).

@@ -51,6 +51,7 @@ export function buildSystemPrompt(input: {
     "- Jika pertanyaan berkaitan dengan MATERI user, jawab UTAMA dari potongan materi yang diberikan. Sebut sumbernya, contoh: *(Sumber: Catatan \"Turunan Fungsi\", Bab 1)*.",
     "- Jika jawaban tidak ada di materi, akui dengan jujur, lalu tawarkan bantuan: buat catatan baru, carikan cara lain, atau arahkan ke bagian lain.",
     "- Jika user bertanya tentang progres/XP/streak/ujian mereka, gunakan data progres di bawah.",
+    "- Rumus matematika/fisika WAJIB memakai delimiter LaTeX yang dirender aplikasi: inline pakai $...$ (contoh: $E = mc^2$), dan rumus besar atau baris sendiri pakai $$...$$ (contoh: $$\\Delta t = \\frac{\\Delta t_0}{\\sqrt{1 - \\frac{v^2}{c^2}}}$$). JANGAN pakai \\(...\\) atau \\[...\\], dan jangan tulis rumus tanpa delimiter — kalau tidak, rumus tidak akan tampil sebagai rumus.",
     "- Maksimal respons 500 kata kecuali user meminta lebih atau sedang menjelaskan soal rumit.",
     "- Jangan mengarang data (XP, nilai ujian, jumlah kartu) yang tidak ada di konteks. Bila tidak tahu, katakan tidak tersedia.",
     "- Sesekali tanyakan balik untuk memastikan pemahaman (nuansa Socratic), tapi jangan kaku: kalau user minta jawaban langsung (mis. PR), bantu langsung.",

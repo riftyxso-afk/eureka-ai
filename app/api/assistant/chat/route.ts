@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 
 import { aiChatStream, hasAiKey } from "@/lib/ai";
-import { firecrawlSearch } from "@/lib/firecrawl";
+import { cleanSearchQuery, firecrawlSearch } from "@/lib/firecrawl";
+import { checkRateLimit as checkHourlyRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { extractTextFromFile } from "@/lib/rag/extract";
 import {
   appendMessage,
@@ -44,6 +45,42 @@ function extractDomain(url: string): string {
   } catch {
     return url.replace(/^https?:\/\//, "").split("/")[0].slice(0, 80);
   }
+}
+
+/**
+ * Susun query pencarian web dari pertanyaan + konteks percakapan terakhir.
+ *
+ * Masalah lama: saat user lagi membahas "dilatasi waktu" lalu bilang "cari
+ * rumusnya", query yang dikirim hanya "cari rumusnya" — tanpa konteks topik,
+ * Firecrawl malah mencari topik/rumus lain yang tidak relevan.
+ *
+ * Solusi: gabungkan pertanyaan saat ini dengan pesan user sebelumnya (topik
+ * biasanya ada di sana) + baris pertama jawaban AI (sering memuat istilah
+ * teknis/rumus yang relevan), lalu bersihkan kata-kata perintah.
+ */
+function buildWebSearchQuery(
+  question: string,
+  history: { role: string; content: string }[]
+): string {
+  // Kumpulkan konteks: maksimal 2 pesan user terakhir (topik terkini) +
+  // baris pertama jawaban AI terakhir (istilah teknis yang relevan).
+  const userMsgs: string[] = [];
+  const aiFirstLines: string[] = [];
+  for (const m of history) {
+    const text = m.content.trim();
+    if (!text) continue;
+    if (m.role === "assistant") {
+      aiFirstLines.push(text.split(/\r?\n/)[0].slice(0, 160));
+    } else {
+      userMsgs.push(text.slice(0, 240));
+    }
+  }
+  const parts = [...userMsgs.slice(-2), ...aiFirstLines.slice(-1), question];
+  const combined = parts.join(" ").slice(0, 500);
+  const clean = cleanSearchQuery(combined);
+  // Hasil bersih terlalu pendek/aneh → pakai pertanyaan saja (dibersihkan).
+  if (clean.length < 8) return cleanSearchQuery(question);
+  return clean;
 }
 
 export const runtime = "nodejs";
@@ -149,6 +186,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Proteksi token AI: batas per jam (40 pesan/user/jam) — di samping
+  // limit per menit di atas.
+  ensureRateLimitPrune();
+  const hourly = checkHourlyRateLimit(`chat-hour:${userId}`, 40, 60 * 60 * 1000);
+  if (!hourly.ok) {
+    return respondJson(
+      {
+        error:
+          "Kamu sudah mengirim banyak pesan dalam 1 jam. Tunggu sebentar lalu lanjutkan ya 🙏",
+      },
+      429
+    );
+  }
+
   if (!hasAiKey()) {
     return respondJson(
       { error: "API key AI belum diatur di .env.local." },
@@ -221,7 +272,8 @@ export async function POST(req: NextRequest) {
         if (webSearch) {
           emit({ type: "pipeline", stage: "searching" });
           try {
-            webResults = (await firecrawlSearch(question, 10)).map((r) => ({
+            const searchQuery = buildWebSearchQuery(question, prior);
+            webResults = (await firecrawlSearch(searchQuery, 10)).map((r) => ({
               url: r.url,
               title: r.title,
               description: r.description,

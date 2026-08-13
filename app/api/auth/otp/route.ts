@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { Resend } from "resend";
 import { db } from "@/lib/supabase/admin";
+import { verifyTurnstileToken } from "@/lib/captcha";
 
 const CODE_TTL_SECONDS = 5 * 60;
 const MIN_INTERVAL_SECONDS = 60;
@@ -165,7 +166,7 @@ async function sendOtpEmail(to: string, code: string): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { action?: string; email?: string; name?: string; code?: string };
+  let body: { action?: string; email?: string; name?: string; code?: string; captchaToken?: string };
   try {
     body = await req.json();
   } catch {
@@ -180,6 +181,16 @@ export async function POST(req: NextRequest) {
   }
   if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ ok: false, error: "Format email tidak valid." }, { status: 400 });
+  }
+
+  // Proteksi bot: wajib lolos CAPTCHA (Turnstile) untuk kirim kode & verifikasi.
+  // Bila Turnstile belum dikonfigurasi, verifikasi dilewati (mode dev).
+  const captcha = await verifyTurnstileToken(String(body.captchaToken ?? ""));
+  if (!captcha.ok) {
+    return NextResponse.json(
+      { ok: false, error: captcha.error ?? "Verifikasi keamanan gagal." },
+      { status: 400 }
+    );
   }
 
   if (action === "request") {

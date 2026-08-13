@@ -18,6 +18,8 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
 import GoogleIcon from "@/components/ui/GoogleIcon";
+import TurnstileCaptcha from "@/components/ui/TurnstileCaptcha";
+import { isTurnstileClientConfigured } from "@/lib/captcha";
 import { PageLoader } from "@/components/ui/PageLoader";
 import {
   isLoggedIn,
@@ -45,6 +47,15 @@ export default function LoginPage() {
   const [googleBusy, setGoogleBusy] = useState(false);
   const [checked, setChecked] = useState(false);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // CAPTCHA (Cloudflare Turnstile) — token sekali pakai, di-reset tiap submit.
+  const captchaConfigured = isTurnstileClientConfigured();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    setCaptchaKey((k) => k + 1);
+  };
 
   // Pesan error dari halaman callback Google (?error=...).
   // Dibaca dari window.location (bukan useSearchParams) supaya halaman
@@ -119,9 +130,14 @@ export default function LoginPage() {
       setError("Isi email dan kata sandi dulu ya.");
       return;
     }
+    if (captchaConfigured && !captchaToken) {
+      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
+      return;
+    }
 
     setSubmitting(true);
-    const result = await loginUser({ email, password });
+    resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
+    const result = await loginUser({ email, password, captchaToken: captchaToken ?? undefined });
     if (!result.ok) {
       setError(result.error ?? "Gagal masuk. Coba lagi.");
       setSubmitting(false);
@@ -140,9 +156,14 @@ export default function LoginPage() {
       setError("Masukkan email dulu ya.");
       return;
     }
+    if (captchaConfigured && !captchaToken) {
+      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
+      return;
+    }
 
     setOtpSending(true);
-    const result = await requestOtpLogin(email);
+    resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
+    const result = await requestOtpLogin(email, undefined, captchaToken ?? undefined);
     setOtpSending(false);
     if (!result.ok) {
       setError(result.error ?? "Gagal mengirim kode. Coba lagi.");
@@ -163,9 +184,14 @@ export default function LoginPage() {
       setError("Masukkan kode 6 digit dari email.");
       return;
     }
+    if (captchaConfigured && !captchaToken) {
+      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
+      return;
+    }
 
     setSubmitting(true);
-    const result = await verifyOtpLogin(email, otpCode);
+    resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
+    const result = await verifyOtpLogin(email, otpCode, undefined, captchaToken ?? undefined);
     if (!result.ok) {
       setError(result.error ?? "Gagal verifikasi. Coba lagi.");
       setSubmitting(false);
@@ -308,7 +334,19 @@ export default function LoginPage() {
                 </p>
               )}
 
-              <ButtonClay type="submit" fullWidth disabled={submitting} className="!min-h-[56px]">
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  key={`pw-${captchaKey}`}
+                  onToken={setCaptchaToken}
+                />
+              </div>
+
+              <ButtonClay
+                type="submit"
+                fullWidth
+                disabled={submitting || (captchaConfigured && !captchaToken)}
+                className="!min-h-[56px]"
+              >
                 {submitting ? (
                   <Loader2 size={20} className="animate-spin" />
                 ) : (
@@ -353,10 +391,17 @@ export default function LoginPage() {
                 </p>
               )}
 
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  key={`otp-${captchaKey}`}
+                  onToken={setCaptchaToken}
+                />
+              </div>
+
               <ButtonClay
                 type="submit"
                 fullWidth
-                disabled={otpSending}
+                disabled={otpSending || (captchaConfigured && !captchaToken)}
                 className="!min-h-[56px]"
               >
                 {otpSending ? (
@@ -409,10 +454,19 @@ export default function LoginPage() {
                 </p>
               )}
 
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  key={`otpv-${captchaKey}`}
+                  onToken={setCaptchaToken}
+                />
+              </div>
+
               <ButtonClay
                 type="submit"
                 fullWidth
-                disabled={submitting || otpCode.length !== 6}
+                disabled={
+                  submitting || otpCode.length !== 6 || (captchaConfigured && !captchaToken)
+                }
                 className="!min-h-[56px]"
               >
                 {submitting ? (

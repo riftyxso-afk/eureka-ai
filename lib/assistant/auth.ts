@@ -67,3 +67,21 @@ export async function authorizeAssistantUser(
   }
   return { userId: data.user.id };
 }
+
+/**
+ * Ambil userId dari token sesi (tanpa memaksa cocok dengan param).
+ * Berguna untuk route yang hanya butuh tahu SIAPA user-nya (mis. rate limit).
+ * @returns userId, atau "" bila tanpa token / Supabase belum dikonfigurasi / token invalid.
+ */
+export async function getUserIdFromAuth(authHeader: string | null): Promise<string> {
+  const token = extractBearer(authHeader);
+  if (!token) return "";
+  try {
+    db();
+  } catch {
+    return ""; // mode dev tanpa DB
+  }
+  const { data, error } = await db().auth.getUser(token);
+  if (error || !data.user) return "";
+  return data.user.id;
+}

@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import { normalizeMathDelimiters } from "@/lib/mathText";
 
 interface MarkdownViewProps {
   content: string;
@@ -15,6 +16,9 @@ interface MarkdownViewProps {
  * Gaya dibungkus agar konsisten dengan tema clay Eureka.
  */
 export default function MarkdownView({ content, className = "" }: MarkdownViewProps) {
+  // AI sering menulis rumus dengan \(...\), \[...\], atau \begin{align}...
+  // yang tidak dikenali remark-math. Normalisasi dulu agar KaTeX merendernya.
+  const normalized = normalizeMathDelimiters(content);
   return (
     <div className={`asisten-md ${className}`}>
       <ReactMarkdown
@@ -73,7 +77,7 @@ export default function MarkdownView({ content, className = "" }: MarkdownViewPr
           hr: ({ ...props }) => <hr {...props} className="my-4 border-clay-shadow/30" />,
         }}
       >
-        {content}
+        {normalized}
       </ReactMarkdown>
     </div>
   );

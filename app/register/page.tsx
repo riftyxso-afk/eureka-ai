@@ -16,6 +16,8 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
 import GoogleIcon from "@/components/ui/GoogleIcon";
+import TurnstileCaptcha from "@/components/ui/TurnstileCaptcha";
+import { isTurnstileClientConfigured } from "@/lib/captcha";
 import { PageLoader } from "@/components/ui/PageLoader";
 import {
   isLoggedIn,
@@ -39,6 +41,15 @@ export default function RegisterPage() {
   const [googleBusy, setGoogleBusy] = useState(false);
   const [checked, setChecked] = useState(false);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // CAPTCHA (Cloudflare Turnstile) — token sekali pakai, di-reset tiap submit.
+  const captchaConfigured = isTurnstileClientConfigured();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    setCaptchaKey((k) => k + 1);
+  };
 
   // Pesan error dari halaman callback Google (?error=...).
   // Dibaca dari window.location (bukan useSearchParams) supaya halaman
@@ -83,20 +94,28 @@ export default function RegisterPage() {
     }, 1000);
   };
 
-  const canSend = name.trim().length >= 2 && email.trim().length > 0;
+  const canSend =
+    name.trim().length >= 2 &&
+    email.trim().length > 0 &&
+    (!captchaConfigured || !!captchaToken);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (sending || cooldown > 0) return;
     setError(null);
 
-    if (!canSend) {
+    if (name.trim().length < 2 || !email.trim()) {
       setError("Isi nama (minimal 2 huruf) dan email dulu ya.");
+      return;
+    }
+    if (captchaConfigured && !captchaToken) {
+      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
       return;
     }
 
     setSending(true);
-    const result = await requestOtpLogin(email, name);
+    resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
+    const result = await requestOtpLogin(email, name, captchaToken ?? undefined);
     setSending(false);
     if (!result.ok) {
       setError(result.error ?? "Gagal mengirim kode. Coba lagi.");
@@ -117,9 +136,14 @@ export default function RegisterPage() {
       setError("Masukkan kode 6 digit dari email.");
       return;
     }
+    if (captchaConfigured && !captchaToken) {
+      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
+      return;
+    }
 
     setSubmitting(true);
-    const result = await verifyOtpLogin(email, otpCode, name);
+    resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
+    const result = await verifyOtpLogin(email, otpCode, name, captchaToken ?? undefined);
     if (!result.ok) {
       setError(result.error ?? "Gagal verifikasi. Coba lagi.");
       setSubmitting(false);
@@ -249,6 +273,13 @@ export default function RegisterPage() {
                 </p>
               )}
 
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  key={`reg-${captchaKey}`}
+                  onToken={setCaptchaToken}
+                />
+              </div>
+
               <ButtonClay
                 type="submit"
                 fullWidth
@@ -307,10 +338,19 @@ export default function RegisterPage() {
                 </p>
               )}
 
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  key={`regv-${captchaKey}`}
+                  onToken={setCaptchaToken}
+                />
+              </div>
+
               <ButtonClay
                 type="submit"
                 fullWidth
-                disabled={submitting || otpCode.length !== 6}
+                disabled={
+                  submitting || otpCode.length !== 6 || (captchaConfigured && !captchaToken)
+                }
                 className="!min-h-[56px]"
               >
                 {submitting ? (
