@@ -29,6 +29,46 @@
  */
 export type AiProvider = "aimurah" | "openai" | "openagentic";
 
+/**
+ * Kecepatan jawaban AI yang bisa dipilih user di composer (/home & /chat):
+ * - "fast"   → Kilat: model ringan dari Juan Router (agnes-2.0-flash,
+ *             deepseek-v4-flash, mistral-large, gemini-3.5-flash-lite)
+ * - "normal" → Seimbang: OpenAgentic (claude-sonnet-4.5-thinking,
+ *             claude-sonnet-4.5, deepseek-v4-flash) + Juan Router fallback
+ * - "deep"   → Mendalam: model besar dari Juan Router (gpt-5.6-luna,
+ *             deepseek-v4-pro, grok-4.5, qwen3.7-plus)
+ *
+ * Pilihan dikirim dari klien → route chat → aiChat/aiChatStream. Bila satu
+ * model error (mis. tidak tersedia / 400 / 404), otomatis coba model
+ * berikutnya dalam daftar mode, lalu provider fallback — tidak memutus chat.
+ */
+export type AiSpeedMode = "fast" | "normal" | "deep";
+
+/** Daftar model per mode — urut = prioritas. */
+export const SPEED_MODEL_LISTS: Record<AiSpeedMode, string[]> = {
+  // Kilat — Juan Router
+  fast: [
+    "agnes-2.0-flash",
+    "deepseek-v4-flash",
+    "mistral-large",
+    "gemini-3.5-flash-lite",
+  ],
+  // Seimbang — OpenAgentic utama, Juan Router fallback
+  normal: [
+    "claude-sonnet-4.5-thinking",
+    "claude-sonnet-4.5",
+    "deepseek-v4-flash",
+  ],
+  // Mendalam — Juan Router
+  deep: ["gpt-5.6-luna", "deepseek-v4-pro", "grok-4.5", "qwen3.7-plus"],
+};
+
+export const SPEED_LABELS: Record<AiSpeedMode, string> = {
+  fast: "Kilat",
+  normal: "Seimbang",
+  deep: "Mendalam",
+};
+
 export const AI_PROVIDER: AiProvider =
   (process.env.AI_PROVIDER as AiProvider) ?? "openagentic";
 
@@ -71,6 +111,8 @@ interface ProviderConfig {
   baseURL: string;
   apiKey: string;
   model: string;
+  /** Model asli dari env — dipakai sebagai fallback bila model mode gagal. */
+  defaultModel: string;
   name: string;
 }
 
@@ -85,6 +127,7 @@ function getProviderConfig(): ProviderConfig | null {
       baseURL: OPENAGENTIC_BASE_URL,
       apiKey: OPENAGENTIC_API_KEY,
       model: OPENAGENTIC_MODEL,
+      defaultModel: OPENAGENTIC_MODEL,
       name: "OpenAgentic",
     };
   }
@@ -94,10 +137,12 @@ function getProviderConfig(): ProviderConfig | null {
       return null;
     }
     console.log('[AI] Using OpenAI provider');
+    const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
     return {
       baseURL: process.env.OPENAI_BASE_URL ?? OPENAI_BASE_URL,
       apiKey: AI_API_KEY,
-      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+      model,
+      defaultModel: model,
       name: "OpenAI",
     };
   }
@@ -110,6 +155,7 @@ function getProviderConfig(): ProviderConfig | null {
     baseURL: AI_BASE_URL,
     apiKey: AI_API_KEY,
     model: AI_MODEL,
+    defaultModel: AI_MODEL,
     name: "AIMurah",
   };
 }
@@ -124,28 +170,81 @@ export function isOpenAICompatible(): boolean {
 }
 
 /**
- * Rantai provider yang dicoba berurutan: provider utama → OpenRouter
- * → Juan Router (fallback, bila key masing-masing tersedia).
+ * Rantai model yang dicoba berurutan sesuai mode kecepatan.
+ * Setiap model di daftar menjadi satu entri terpisah → saat satu model error,
+ * loop provider otomatis mencoba model berikutnya (fallback antar model),
+ * lalu ke provider fallback (mis. OpenRouter bila key tersedia).
  */
-function getProviderChain(): ProviderConfig[] {
+function getProviderChain(speedMode: AiSpeedMode = "normal"): ProviderConfig[] {
   const chain: ProviderConfig[] = [];
-  const main = getProviderConfig();
-  if (main) chain.push(main);
-  if (OPENROUTER_API_KEY) {
-    chain.push({
-      baseURL: OPENROUTER_BASE_URL,
-      apiKey: OPENROUTER_API_KEY,
-      model: OPENROUTER_MODEL,
-      name: "OpenRouter",
-    });
+
+  const pushProvider = (
+    baseURL: string,
+    apiKey: string,
+    name: string,
+    models: string[]
+  ) => {
+    for (const model of models) {
+      chain.push({ baseURL, apiKey, name, model, defaultModel: model });
+    }
+  };
+
+  const juanKey = JUANROUTER_API_KEY;
+  const openRouterKey = OPENROUTER_API_KEY;
+
+  if (speedMode === "fast") {
+    // Kilat: Juan Router dengan 4 model cepat.
+    if (juanKey) {
+      pushProvider(
+        JUANROUTER_BASE_URL,
+        juanKey,
+        "JuanRouter",
+        SPEED_MODEL_LISTS.fast
+      );
+    } else {
+      // Juan Router tidak dikonfigurasi → pakai provider utama (default).
+      const main = getProviderConfig();
+      if (main) pushProvider(main.baseURL, main.apiKey, main.name, [main.defaultModel]);
+    }
+    if (openRouterKey) {
+      pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [OPENROUTER_MODEL]);
+    }
+    return chain;
   }
-  if (JUANROUTER_API_KEY) {
-    chain.push({
-      baseURL: JUANROUTER_BASE_URL,
-      apiKey: JUANROUTER_API_KEY,
-      model: JUANROUTER_MODEL,
-      name: "JuanRouter",
-    });
+
+  if (speedMode === "deep") {
+    // Mendalam: Juan Router dengan 4 model besar.
+    if (juanKey) {
+      pushProvider(
+        JUANROUTER_BASE_URL,
+        juanKey,
+        "JuanRouter",
+        SPEED_MODEL_LISTS.deep
+      );
+    } else {
+      const main = getProviderConfig();
+      if (main) pushProvider(main.baseURL, main.apiKey, main.name, [main.defaultModel]);
+    }
+    if (openRouterKey) {
+      pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [OPENROUTER_MODEL]);
+    }
+    return chain;
+  }
+
+  // Seimbang (normal): OpenAgentic 3 model → Juan Router (default) → OpenRouter.
+  const main = getProviderConfig();
+  if (main) {
+    const models =
+      main.name === "OpenAgentic"
+        ? SPEED_MODEL_LISTS.normal
+        : [main.defaultModel];
+    pushProvider(main.baseURL, main.apiKey, main.name, models);
+  }
+  if (juanKey) {
+    pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", [JUANROUTER_MODEL]);
+  }
+  if (openRouterKey) {
+    pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [OPENROUTER_MODEL]);
   }
   return chain;
 }
@@ -162,6 +261,8 @@ export interface AiChatOptions {
   json?: boolean;
   maxTokens?: number;
   temperature?: number;
+  /** Kecepatan jawaban (fast/normal/deep) — default "normal". */
+  speedMode?: AiSpeedMode;
 }
 
 /** Ekstrak objek JSON dari teks AI (toleran terhadap ```markdown fence & trailing comma). */
@@ -220,7 +321,7 @@ export function isAiBusyError(e: unknown): boolean {
  *   bila provider tidak mendukungnya.
  */
 export async function aiChat(options: AiChatOptions): Promise<string> {
-  const providers = getProviderChain();
+  const providers = getProviderChain(options.speedMode ?? "normal");
   
   console.log('[AI] aiChat called with options:', {
     hasSystem: !!options.system,
@@ -255,60 +356,80 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
     body.model = provider.model;
     console.log('[AI] Making request to:', provider.name, provider.baseURL);
     console.log('[AI] Using model:', provider.model);
-    
-    const res = await fetch(`${provider.baseURL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        "Content-Type": "application/json",
-        ...(provider.name === "OpenRouter"
-          ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
-          : {}),
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(60_000),
-    });
 
-    console.log('[AI] Response status:', res.status, res.statusText);
+    // Bila model mode (fast/deep) tidak dikenal provider (400/404), jatuh
+    // ke model default — sekali coba ulang, lalu lanjut seperti biasa.
+    let triedFallback = false;
+    for (let round = 0; round < 2; round++) {
+      const res = await fetch(`${provider.baseURL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${provider.apiKey}`,
+          "Content-Type": "application/json",
+          ...(provider.name === "OpenRouter"
+            ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
+            : {}),
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(60_000),
+      });
 
-    if (!res.ok) {
-      codesSeen.add(res.status);
-      let detail = "";
-      try {
-        const errText = await res.text();
-        const err = extractJsonObject(errText) as {
-          error?: { message?: string };
-        };
-        detail = err?.error?.message ?? "";
-        console.error('[AI Error] API error details:', err);
-      } catch {
-        // abaikan
+      console.log('[AI] Response status:', res.status, res.statusText);
+
+      if (
+        !res.ok &&
+        (res.status === 400 || res.status === 404) &&
+        provider.model !== provider.defaultModel &&
+        !triedFallback
+      ) {
+        triedFallback = true;
+        console.warn(
+          `[AI] Model ${provider.model} ditolak ${provider.name} → pakai default ${provider.defaultModel}`
+        );
+        body.model = provider.defaultModel;
+        continue;
       }
-      throw new Error(
-        `${provider.name} API error ${res.status}${detail ? `: ${detail}` : ""}`
-      );
-    }
 
-    // Sebagian gateway (mis. OpenAgentic) menambahkan sisa SSE seperti
-    // "data: [DONE]" setelah body JSON → parse manual agar tidak gagal.
-    const resText = await res.text();
-    let data: Record<string, unknown>;
-    try {
-      data = JSON.parse(resText) as Record<string, unknown>;
-    } catch {
-      data = extractJsonObject(resText) as Record<string, unknown>;
+      if (!res.ok) {
+        codesSeen.add(res.status);
+        let detail = "";
+        try {
+          const errText = await res.text();
+          const err = extractJsonObject(errText) as {
+            error?: { message?: string };
+          };
+          detail = err?.error?.message ?? "";
+          console.error('[AI Error] API error details:', err);
+        } catch {
+          // abaikan
+        }
+        throw new Error(
+          `${provider.name} API error ${res.status}${detail ? `: ${detail}` : ""}`
+        );
+      }
+
+      // Sebagian gateway (mis. OpenAgentic) menambahkan sisa SSE seperti
+      // "data: [DONE]" setelah body JSON → parse manual agar tidak gagal.
+      const resText = await res.text();
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(resText) as Record<string, unknown>;
+      } catch {
+        data = extractJsonObject(resText) as Record<string, unknown>;
+      }
+      const firstChoice = Array.isArray(data?.choices)
+        ? (data.choices[0] as Record<string, unknown> | undefined)
+        : undefined;
+      const messageObj = firstChoice?.message as Record<string, unknown> | undefined;
+      const content = messageObj?.content;
+      if (typeof content !== "string" || content.trim().length === 0) {
+        console.error('[AI Error] Empty response from API');
+        throw new Error("AI mengembalikan respons kosong.");
+      }
+      console.log('[AI] Response received, length:', content.length);
+      return content;
     }
-    const firstChoice = Array.isArray(data?.choices)
-      ? (data.choices[0] as Record<string, unknown> | undefined)
-      : undefined;
-    const messageObj = firstChoice?.message as Record<string, unknown> | undefined;
-    const content = messageObj?.content;
-    if (typeof content !== "string" || content.trim().length === 0) {
-      console.error('[AI Error] Empty response from API');
-      throw new Error("AI mengembalikan respons kosong.");
-    }
-    console.log('[AI] Response received, length:', content.length);
-    return content;
+    throw new Error(`${provider.name}: gagal memproses respons.`);
   };
 
   const isRetryable = (e: unknown): boolean => {
@@ -418,7 +539,7 @@ export async function aiChatStream(
     else if (options.onEvent) options.onEvent(e);
   };
 
-  const providers = getProviderChain();
+  const providers = getProviderChain(options.speedMode ?? "normal");
   if (providers.length === 0) {
     const hint =
       AI_PROVIDER === "openagentic"
@@ -486,46 +607,62 @@ export async function aiChatStream(
     ): Promise<{ provider: string; model: string; content: string }> => {
       body.model = provider.model;
 
-      let res: Response;
-      try {
-        res = await fetch(`${provider.baseURL}/chat/completions`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${provider.apiKey}`,
-            "Content-Type": "application/json",
-            ...(provider.name === "OpenRouter"
-              ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
-              : {}),
-          },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(120_000),
-        });
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "fetch gagal";
-        throw new Error(`[aiChatStream] ${provider.name}: ${msg}`);
-      }
-
-      if (!res.ok) {
-        let detail = "";
+      // Bila model mode (fast/deep) tidak dikenal provider (400/404), jatuh
+      // ke model default — sekali coba ulang sebelum pindah provider.
+      for (let round = 0; round < 2; round++) {
+        let res: Response;
         try {
-          const errText = await res.text();
-          const err = extractJsonObject(errText) as {
-            error?: { message?: string };
-          };
-          detail = err?.error?.message ?? "";
-        } catch {
-          // abaikan — body bukan JSON
+          res = await fetch(`${provider.baseURL}/chat/completions`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${provider.apiKey}`,
+              "Content-Type": "application/json",
+              ...(provider.name === "OpenRouter"
+                ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
+                : {}),
+            },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(120_000),
+          });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "fetch gagal";
+          throw new Error(`[aiChatStream] ${provider.name}: ${msg}`);
         }
-        throw new Error(
-          `${provider.name} API error ${res.status}${detail ? `: ${detail}` : ""}`
-        );
-      }
 
-      if (!res.body) {
-        throw new Error(`${provider.name}: respon tanpa body streaming.`);
-      }
+        if (
+          !res.ok &&
+          (res.status === 400 || res.status === 404) &&
+          provider.model !== provider.defaultModel &&
+          round === 0
+        ) {
+          console.warn(
+            `[aiChatStream] Model ${provider.model} ditolak ${provider.name} → pakai default ${provider.defaultModel}`
+          );
+          body.model = provider.defaultModel;
+          continue;
+        }
 
-      chainEmit({ type: "meta", provider: provider.name, model: provider.model });
+        if (!res.ok) {
+          let detail = "";
+          try {
+            const errText = await res.text();
+            const err = extractJsonObject(errText) as {
+              error?: { message?: string };
+            };
+            detail = err?.error?.message ?? "";
+          } catch {
+            // abaikan — body bukan JSON
+          }
+          throw new Error(
+            `${provider.name} API error ${res.status}${detail ? `: ${detail}` : ""}`
+          );
+        }
+
+        if (!res.body) {
+          throw new Error(`${provider.name}: respon tanpa body streaming.`);
+        }
+
+        chainEmit({ type: "meta", provider: provider.name, model: provider.model });
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -572,14 +709,17 @@ export async function aiChatStream(
         }
       }
 
-      if (emitted) {
-        return {
-          provider: provider.name,
-          model: provider.model,
-          content: tokens.join(""),
-        };
+        if (emitted) {
+          return {
+            provider: provider.name,
+            model: provider.model,
+            content: tokens.join(""),
+          };
+        }
+        throw new Error(`${provider.name}: stream berakhir tanpa token.`);
       }
-      throw new Error(`${provider.name}: stream berakhir tanpa token.`);
+      // Tidak akan tercapai — setiap iterasi mengembalikan hasil atau melempar.
+      throw new Error(`${provider.name}: stream berakhir tanpa hasil.`);
     };
 
     const tried: string[] = [];

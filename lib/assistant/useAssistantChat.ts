@@ -205,6 +205,7 @@ export function useAssistantChat(options: {
           mentions: input.mentions,
           webSearch: input.webSearch,
           attachment: input.attachment,
+          speedMode: input.speedMode,
         },
         (ev) => {
           if (ev.type === "token") {

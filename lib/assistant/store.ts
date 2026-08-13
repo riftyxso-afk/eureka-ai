@@ -4,6 +4,7 @@
  * Dipakai di server-side (API routes) lewat service role client.
  */
 import { db } from "../supabase/admin";
+import { aiChat } from "../ai";
 import type {
   AssistantChatMessage,
   AssistantChatSession,
@@ -148,12 +149,9 @@ export async function appendMessage(data: {
   if (error) throw error;
 
   // Judul otomatis dari pesan user pertama (jika masih default).
+  // Fire-and-forget: generate judul via AI tidak menunda stream jawaban.
   if (data.role === "user") {
-    try {
-      await autoTitleIfNeeded(data.sessionId);
-    } catch (e) {
-      console.warn("[assistant/store] auto-title dilewati:", e);
-    }
+    void autoTitleIfNeeded(data.sessionId);
   }
 
   return {
@@ -183,7 +181,13 @@ export async function lastUnansweredUserMessage(
   return { content: String(data.content ?? "") };
 }
 
-/** Isi judul sesi dari pesan pertama bila masih "Percakapan baru". */
+/**
+ * Isi judul sesi dari pesan pertama bila masih "Percakapan baru".
+ *
+ * Judul di-GENERATE AI: ringkasan singkat topik yang dibahas (bukan potongan
+ * prompt mentah) agar riwayat chat rapi. Bila AI gagal/sibuk, fallback ke
+ * potongan prompt pertama.
+ */
 async function autoTitleIfNeeded(sessionId: string): Promise<void> {
   const { data } = await db()
     .from("ai_chat_messages")
@@ -196,16 +200,41 @@ async function autoTitleIfNeeded(sessionId: string): Promise<void> {
 
   if (!data?.content) return;
 
-  const title = data.content.replace(/\s+/g, " ").trim().slice(0, 60);
-  if (!title) return;
-
+  // Sesi sudah punya judul (bukan default) → jangan timpa.
   const { data: session } = await db()
     .from("ai_chat_sessions")
     .select("title")
     .eq("id", sessionId)
     .maybeSingle();
-
   if (session?.title && session.title !== "Percakapan baru") return;
+
+  const firstPrompt = data.content.replace(/\s+/g, " ").trim();
+  if (!firstPrompt) return;
+
+  // 1) Coba generate judul via AI (mode fast — cepat & ringan).
+  let title = "";
+  try {
+    const raw = await aiChat({
+      system:
+        "Kamu adalah penamai percakapan. Buat judul SINGKAT (3-6 kata) dalam bahasa Indonesia yang merangkum topik utama pesan user. Balas HANYA dengan judul — tanpa tanda kutip, tanpa tanda baca berlebihan, tanpa kata pengantar.",
+      user: firstPrompt.slice(0, 800),
+      maxTokens: 40,
+      temperature: 0.3,
+      speedMode: "fast",
+    });
+    title = raw
+      .replace(/["“”'‘’]/g, "")
+      .split(/\r?\n/)[0]
+      .trim()
+      .slice(0, 60);
+  } catch (e) {
+    console.warn("[assistant/store] AI title gagal — pakai potongan prompt:", e);
+  }
+
+  // 2) Fallback: potongan prompt pertama (perilaku lama).
+  if (!title) {
+    title = firstPrompt.slice(0, 60);
+  }
 
   await db()
     .from("ai_chat_sessions")

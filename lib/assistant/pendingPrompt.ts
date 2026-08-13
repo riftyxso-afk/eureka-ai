@@ -11,4 +11,6 @@ export interface PendingPrompt {
   mentions?: string[];
   webSearch?: boolean;
   attachment?: ChatAttachment | null;
+  /** Kecepatan jawaban AI yang dipilih user (fast/normal/deep). */
+  speedMode?: "fast" | "normal" | "deep";
 }

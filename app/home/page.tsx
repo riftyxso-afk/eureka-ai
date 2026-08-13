@@ -156,6 +156,7 @@ export default function HomePage() {
       mentions: string[];
       webSearch?: boolean;
       attachment?: ChatAttachment | null;
+      speedMode?: "fast" | "normal" | "deep";
     }) => {
       if (launching) return;
 
@@ -190,6 +191,7 @@ export default function HomePage() {
           mentions: input.mentions,
           webSearch: input.webSearch === true,
           attachment: input.attachment ?? null,
+          speedMode: input.speedMode ?? "normal",
         })
       );
       await chat.refreshSessions();

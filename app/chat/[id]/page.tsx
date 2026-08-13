@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAssistantChat } from "@/lib/assistant/useAssistantChat";
 import { getUserId } from "@/lib/identity";
 import {
@@ -36,6 +37,7 @@ export default function ChatPage() {
     mentions: string[];
     webSearch?: boolean;
     attachment?: ChatAttachment | null;
+    speedMode?: "fast" | "normal" | "deep";
   } | null>(() => {
     const raw = sessionStorage.getItem(PENDING_PROMPT_KEY);
     if (!raw) return null;
@@ -54,6 +56,10 @@ export default function ChatPage() {
                 dataUrl: String(parsed.attachment.dataUrl ?? ""),
               }
             : null,
+        speedMode:
+          parsed.speedMode === "fast" || parsed.speedMode === "deep"
+            ? parsed.speedMode
+            : "normal",
       };
     } catch {
       return null;
@@ -68,6 +74,20 @@ export default function ChatPage() {
   const [notePrompt, setNotePrompt] = useState<string | null>(null);
   const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
   const [notePrefs, setNotePrefs] = useState<NoteCreatePrefs | null>(null);
+
+  // Header auto-hide saat scroll ke bawah (mobile) — tampil lagi saat ke atas.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastScrollY = useRef(0);
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const y = el.scrollTop;
+    const delta = y - lastScrollY.current;
+    if (delta > 4 && y > 64) setHeaderHidden(true);
+    else if (delta < -4) setHeaderHidden(false);
+    lastScrollY.current = y;
+  };
 
   const chat = useAssistantChat({
     sessionId,
@@ -96,45 +116,62 @@ export default function ChatPage() {
       />
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white sm:rounded-clay sm:border-2 sm:border-clay-borderLight sm:shadow-clay-sm">
-        {/* Topbar */}
-        <header className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <MobileSessionButton
-              sessions={chat.sessions}
-              onSelect={(id) => router.push(`/chat/${id}`)}
-            />
-            {/* Tombol Dashboard — khusus mobile (desktop ada di sidebar) */}
-            <Link
-              href="/dashboard"
-              data-tutorial-id="dashboard-nav"
-              aria-label="Buka Dashboard"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 lg:hidden"
+        {/* Topbar — auto-hide saat scroll ke bawah (slide up), muncul saat ke atas */}
+        <AnimatePresence initial={false}>
+          {!headerHidden && (
+            <motion.header
+              key="chat-topbar"
+              initial={{ height: 0, opacity: 0, y: -16 }}
+              animate={{ height: "auto", opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -16 }}
+              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+              className="overflow-hidden"
             >
-              <LayoutDashboard size={18} />
-            </Link>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Logo Eureka.AI" className="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8" />
-            <div className="min-w-0">
-              <h1 className="truncate text-sm font-extrabold text-clay-dark sm:text-base">
-                {activeSession?.title ?? "Chat Eureka"}
-              </h1>
-              <p className="hidden text-[11px] font-bold text-clay-muted sm:block">
-                Punya akses ke catatan, bab & progresmu
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={chat.handleNew}
-            className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
-            data-testid="chat-new-top"
-          >
-            <span className="sm:hidden">+ Baru</span>
-            <span className="hidden sm:inline">+ Chat Baru</span>
-          </button>
-        </header>
+              <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                  <MobileSessionButton
+                    sessions={chat.sessions}
+                    onSelect={(id) => router.push(`/chat/${id}`)}
+                  />
+                  {/* Tombol Dashboard — khusus mobile (desktop ada di sidebar) */}
+                  <Link
+                    href="/dashboard"
+                    data-tutorial-id="dashboard-nav"
+                    aria-label="Buka Dashboard"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 lg:hidden"
+                  >
+                    <LayoutDashboard size={18} />
+                  </Link>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo.png" alt="Logo Eureka.AI" className="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8" />
+                  <div className="min-w-0">
+                    <h1 className="truncate text-sm font-extrabold text-clay-dark sm:text-base">
+                      {activeSession?.title ?? "Chat Eureka"}
+                    </h1>
+                    <p className="hidden text-[11px] font-bold text-clay-muted sm:block">
+                      Punya akses ke catatan, bab & progresmu
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={chat.handleNew}
+                  className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
+                  data-testid="chat-new-top"
+                >
+                  <span className="sm:hidden">+ Baru</span>
+                  <span className="hidden sm:inline">+ Chat Baru</span>
+                </button>
+              </div>
+            </motion.header>
+          )}
+        </AnimatePresence>
 
         {/* Area pesan — scroll di sini */}
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6"
+        >
           {chat.loading && chat.messages.length === 0 ? (
             <div className="py-16 text-center">
               <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-clay-primary/30 border-t-clay-primary" />

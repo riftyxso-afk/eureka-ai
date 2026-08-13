@@ -2,7 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AtSign, BookOpen, Globe, Paperclip, Send, Square } from "lucide-react";
+import {
+  AtSign,
+  BookOpen,
+  Check,
+  ChevronDown,
+  Gem,
+  Globe,
+  Leaf,
+  Paperclip,
+  Send,
+  Square,
+  Zap,
+} from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import {
@@ -67,7 +79,41 @@ export interface ComposerSendInput {
   mentions: string[];
   webSearch?: boolean;
   attachment?: ChatAttachment | null;
+  /** Kecepatan jawaban AI yang dipilih user di composer. */
+  speedMode?: "fast" | "normal" | "deep";
 }
+
+/** 3 mode kecepatan AI — label & deskripsi untuk UI selector. */
+const SPEED_OPTIONS = [
+  {
+    value: "fast",
+    label: "Kilat",
+    desc: "Jawaban tercepat — pas untuk sekadar cek cepat",
+    icon: Zap,
+    active: "bg-amber-500/15 text-amber-600",
+    dot: "bg-amber-500",
+  },
+  {
+    value: "normal",
+    label: "Seimbang",
+    desc: "Cepat & akurat — rekomendasi untuk sehari-hari",
+    icon: Leaf,
+    active: "bg-emerald-500/15 text-emerald-600",
+    dot: "bg-emerald-500",
+  },
+  {
+    value: "deep",
+    label: "Mendalam",
+    desc: "Kualitas terbaik — jawaban panjang & detail, lebih lama",
+    icon: Gem,
+    active: "bg-clay-primary/15 text-clay-primary",
+    dot: "bg-clay-primary",
+  },
+] as const;
+
+type SpeedMode = (typeof SPEED_OPTIONS)[number]["value"];
+
+const SPEED_STORAGE_KEY = "eureka_chat_speed_mode";
 
 interface ComposerProps {
   userId: string;
@@ -123,9 +169,12 @@ export default function Composer({
   const [webSearch, setWebSearch] = useState(false);
   const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
+  const [speedMode, setSpeedMode] = useState<SpeedMode>("normal");
+  const [speedOpen, setSpeedOpen] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const speedRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Muat daftar catatan user untuk autocomplete mention. Dimuat juga saat
@@ -177,9 +226,24 @@ export default function Composer({
       ) {
         setMentionOpen(false);
       }
+      if (speedRef.current && !speedRef.current.contains(e.target as Node)) {
+        setSpeedOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Baca pilihan kecepatan dari localStorage (setiap user punya preferensi sendiri).
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(SPEED_STORAGE_KEY);
+      if (v === "fast" || v === "normal" || v === "deep") {
+        setSpeedMode(v);
+      }
+    } catch {
+      // localStorage tidak tersedia — biarkan default
+    }
   }, []);
 
   // Ukuran textarea menyesuaikan isi.
@@ -308,6 +372,7 @@ export default function Composer({
       mentions: mentionIds,
       webSearch,
       attachment: attachment ?? null,
+      speedMode,
     });
     // Prompt yang sudah terkirim tidak lagi muncul di composer.
     setText("");
@@ -379,7 +444,10 @@ export default function Composer({
 
         {/* Area input */}
         <div className="relative">
-          <div className="overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-white shadow-clay transition-all duration-75 focus-within:border-clay-primary">
+          {/* Catatan: TIDAK pakai overflow-hidden di kotak ini — kalau dipakai,
+              popover kecepatan AI & mention akan terpotong. Clipping sudut
+              wizard ditangani sendiri oleh panel wizard. */}
+          <div className="rounded-clay-md border-2 border-clay-borderLight bg-white shadow-clay transition-all duration-75 focus-within:border-clay-primary">
             {/* Wizard F&Q menyatu DI DALAM kotak composer — memanjang ke atas
                 saat muncul, menyusut kembali setelah submit (posisi normal). */}
             <AnimatePresence initial={false}>
@@ -390,7 +458,7 @@ export default function Composer({
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                  className="overflow-hidden"
+                  className="overflow-hidden rounded-t-clay-md"
                 >
                   <NoteCreateWizardPanel
                     prompt={noteWizardPrompt}
@@ -499,32 +567,104 @@ export default function Composer({
                     Enter kirim · Shift+Enter baris baru
                   </span>
                 )}
-              </div>
+              </div>              <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Pilihan kecepatan jawaban AI — di samping kiri tombol kirim */}
+                <div className="relative" ref={speedRef}>
+                  {(() => {
+                    const cur = SPEED_OPTIONS.find((o) => o.value === speedMode) ?? SPEED_OPTIONS[1];
+                    return (
+                      <button
+                        onClick={() => setSpeedOpen((o) => !o)}
+                        aria-label={`Kecepatan AI: ${cur.label}`}
+                        aria-pressed={speedOpen}
+                        title={`Kecepatan AI: ${cur.label} — ${cur.desc}`}
+                        className={`flex items-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${cur.active} ${
+                          compact ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-xs"
+                        }`}
+                      >
+                        <cur.icon size={compact ? 12 : 13} />
+                        <span className="hidden sm:inline">{cur.label}</span>
+                        <ChevronDown size={11} />
+                      </button>
+                    );
+                  })()}
 
-              {sending ? (
-                <button
-                  onClick={onStop}
-                  className={`btn-clay-primary ${compact ? "!min-h-[34px] !px-3 !py-1.5 text-xs" : "!min-h-[44px] !px-4 !py-2.5"}`}
-                  aria-label="Hentikan"
-                  data-testid="asisten-stop"
-                >
-                  <Square size={compact ? 13 : 16} className="mr-1 fill-current" /> Stop
-                </button>
-              ) : (
-                <button
-                  onClick={submit}
-                  disabled={!canSend}
-                  className={`btn-clay-primary ${
-                    compact
-                      ? "!min-h-[34px] !min-w-[34px] !px-2.5 !py-1.5"
-                      : "!min-h-[44px] !min-w-[44px] !px-4 !py-2.5"
-                  }`}
-                  aria-label="Kirim"
-                  data-testid="asisten-send"
-                >
+                  {/* Popover 3 mode kecepatan — ringkas & mobile-friendly */}
+                  <AnimatePresence>
+                    {speedOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-full right-0 z-40 mb-2 w-44 overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-white p-1 shadow-clay-lg"
+                      >
+                        {SPEED_OPTIONS.map((o) => {
+                          const active = speedMode === o.value;
+                          return (
+                            <button
+                              key={o.value}
+                              onClick={() => {
+                                setSpeedMode(o.value);
+                                setSpeedOpen(false);
+                                try {
+                                  localStorage.setItem(SPEED_STORAGE_KEY, o.value);
+                                } catch {
+                                  // abaikan
+                                }
+                              }}
+                              className={`flex w-full items-center gap-2 rounded-clay-md px-2.5 py-2 text-left transition-colors ${
+                                active ? "bg-clay-primary/10" : "hover:bg-clay-beige"
+                              }`}
+                            >
+                              <span
+                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${o.active}`}
+                              >
+                                <o.icon size={12} />
+                              </span>
+                              <span
+                                className={`flex-1 text-[12.5px] font-extrabold ${
+                                  active ? "text-clay-primary" : "text-clay-dark"
+                                }`}
+                              >
+                                {o.label}
+                              </span>
+                              {active && (
+                                <Check size={13} className="shrink-0 text-clay-primary" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {sending ? (
+                  <button
+                    onClick={onStop}
+                    className={`btn-clay-primary ${compact ? "!min-h-[34px] !px-3 !py-1.5 text-xs" : "!min-h-[44px] !px-4 !py-2.5"}`}
+                    aria-label="Hentikan"
+                    data-testid="asisten-stop"
+                  >
+                    <Square size={compact ? 13 : 16} className="mr-1 fill-current" /> Stop
+                  </button>
+                ) : (
+                  <button
+                    onClick={submit}
+                    disabled={!canSend}
+                    className={`btn-clay-primary ${
+                      compact
+                        ? "!min-h-[34px] !min-w-[34px] !px-2.5 !py-1.5"
+                        : "!min-h-[44px] !min-w-[44px] !px-4 !py-2.5"
+                    }`}
+                    aria-label="Kirim"
+                    data-testid="asisten-send"
+                  >
                     <Send size={compact ? 14 : 16} />
                   </button>
                 )}
+              </div>
               </div>
             </div>
           </div>

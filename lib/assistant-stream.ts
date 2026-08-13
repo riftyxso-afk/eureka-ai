@@ -53,6 +53,7 @@ export function buildAssistantChatBody(
     mentions: input.mentions ?? [],
     webSearch: input.webSearch === true,
     attachment: input.attachment ?? null,
+    speedMode: input.speedMode ?? "normal",
   };
 }
 

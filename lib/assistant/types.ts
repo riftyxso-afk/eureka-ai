@@ -20,6 +20,8 @@ export interface ChatToolOptions {
   webSearch?: boolean;
   /** File/gambar yang dilampirkan user (opsional). */
   attachment?: ChatAttachment | null;
+  /** Kecepatan jawaban AI: fast (Kilat) / normal (Seimbang) / deep (Mendalam). */
+  speedMode?: "fast" | "normal" | "deep";
 }
 
 /** Satu hasil pencarian web (tool globe) yang ditampilkan ke user. */

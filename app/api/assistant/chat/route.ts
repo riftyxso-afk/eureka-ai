@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { aiChatStream, hasAiKey } from "@/lib/ai";
+import { aiChatStream, hasAiKey, type AiSpeedMode } from "@/lib/ai";
 import { cleanSearchQuery, firecrawlSearch } from "@/lib/firecrawl";
 import { checkRateLimit as checkHourlyRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { extractTextFromFile } from "@/lib/rag/extract";
@@ -127,6 +127,7 @@ export async function POST(req: NextRequest) {
     mentions?: unknown;
     webSearch?: unknown;
     attachment?: unknown;
+    speedMode?: unknown;
   } | null;
 
   const rawSessionId = String(raw?.sessionId ?? "").trim();
@@ -142,6 +143,12 @@ export async function POST(req: NextRequest) {
       ].slice(0, 5)
     : [];
   const webSearch = raw?.webSearch === true;
+
+  // Kecepatan jawaban AI yang dipilih user (fast/normal/deep).
+  const speedModeRaw = String(raw?.speedMode ?? "").trim();
+  const speedMode: AiSpeedMode = ["fast", "normal", "deep"].includes(speedModeRaw)
+    ? (speedModeRaw as AiSpeedMode)
+    : "normal";
 
   // Lampiran (upload gambar/dokumen) — validasi & batasi ukuran.
   const rawAttach = (raw?.attachment ?? null) as
@@ -347,6 +354,7 @@ export async function POST(req: NextRequest) {
               maxTokens: 1600,
               temperature: 0.7,
               visionImage,
+              speedMode,
             },
             (ev) => {
               if (ev.type === "token") {
