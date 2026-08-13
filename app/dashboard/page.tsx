@@ -250,7 +250,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <Link href="/chat/belajar">
+            <Link href="/home">
               <ButtonClay className="min-h-[44px] px-5 py-2 text-sm">
                 🚀 Mulai Belajar
               </ButtonClay>

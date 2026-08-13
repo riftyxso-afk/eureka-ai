@@ -11,6 +11,7 @@ import {
   Crown,
   Flag,
   Flame,
+  Home,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -38,6 +39,7 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
+  { id: "home", label: "Home", icon: Home, href: "/home" },
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { id: "jadwal", label: "Jadwal", icon: CalendarDays, href: "/dashboard/jadwal" },
   { id: "rencana", label: "Rencana", icon: Origami, href: "/dashboard/rencana" },

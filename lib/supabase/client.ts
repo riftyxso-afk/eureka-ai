@@ -19,6 +19,20 @@ export const supabase = isSupabaseConfigured()
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+/**
+ * Ambil access token Supabase saat ini (untuk header Authorization).
+ * Null bila belum login / Supabase belum dikonfigurasi.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export type Database = {
   public: {
     Tables: {

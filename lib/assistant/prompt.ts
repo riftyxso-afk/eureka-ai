@@ -1,0 +1,183 @@
+/**
+ * System prompt asisten AI Eureka (halaman /home & /chat).
+ *
+ * Asisten bersifat "tutor cerdas dengan akses penuh ke data user":
+ * - memahami profil & progres belajar user,
+ * - menjawab dari materi catatan user (RAG) — menyebutkan sumber,
+ * - mematuhi scope catatan yang disebut user ("@" mention),
+ * - tetap bernuansa Eureka: sabar, mendorong pemahaman, bahasa Indonesia.
+ */
+import type { AssistantContext, RagHit, NoteMeta } from "./context";
+
+export const ASSISTANT_NAME = "Eureka";
+
+export interface WebSearchResult {
+  url: string;
+  title: string;
+  description: string;
+}
+
+export interface AttachedDocument {
+  filename: string;
+  text: string;
+}
+
+export function buildSystemPrompt(input: {
+  context: AssistantContext;
+  ragHits: RagHit[];
+  mentionedNotes: NoteMeta[];
+  ragSkipped: boolean;
+  /** Hasil pencarian web (tool globe) — info tambahan di luar materi user. */
+  webResults?: WebSearchResult[];
+  /** Dokumen yang dilampirkan user (tool paperclip). */
+  attachedDocument?: AttachedDocument | null;
+}): string {
+  const {
+    context,
+    ragHits,
+    mentionedNotes,
+    ragSkipped,
+    webResults = [],
+    attachedDocument = null,
+  } = input;
+
+  const lines: string[] = [
+    `Kamu adalah ${ASSISTANT_NAME}, asisten belajar pribadi dari Eureka.AI.`,
+    "Kamu punya AKSES PENUH ke data belajar user: profil, catatan, bab, subjek, progres, kartu hafalan, dan ujiannya.",
+    "Gunakan data itu untuk memberi jawaban yang PERSONAL dan RELEVAN, bukan jawaban generik.",
+    "",
+    "ATURAN MENJAWAB:",
+    "- Selalu dalam Bahasa Indonesia yang hangat, jelas, dan terstruktur (pakai markdown: heading, list, tebal bila perlu).",
+    "- Jika pertanyaan berkaitan dengan MATERI user, jawab UTAMA dari potongan materi yang diberikan. Sebut sumbernya, contoh: *(Sumber: Catatan \"Turunan Fungsi\", Bab 1)*.",
+    "- Jika jawaban tidak ada di materi, akui dengan jujur, lalu tawarkan bantuan: buat catatan baru, carikan cara lain, atau arahkan ke bagian lain.",
+    "- Jika user bertanya tentang progres/XP/streak/ujian mereka, gunakan data progres di bawah.",
+    "- Maksimal respons 500 kata kecuali user meminta lebih atau sedang menjelaskan soal rumit.",
+    "- Jangan mengarang data (XP, nilai ujian, jumlah kartu) yang tidak ada di konteks. Bila tidak tahu, katakan tidak tersedia.",
+    "- Sesekali tanyakan balik untuk memastikan pemahaman (nuansa Socratic), tapi jangan kaku: kalau user minta jawaban langsung (mis. PR), bantu langsung.",
+  ];
+
+  if (context.profileMd) {
+    lines.push("", "=== PROFIL USER ===", "", context.profileMd.slice(0, 6000));
+  }
+
+  lines.push(
+    "",
+    "=== DATA BELAJAR USER ===",
+    "",
+    `- Subjek yang dipelajari: ${context.subjectList.length > 0 ? context.subjectList.join(", ") : "belum ada data"}`,
+    `- Jumlah catatan: ${context.notes.length}`,
+    `- Progres:\n${context.progressSummary}`
+  );
+
+  if (context.notes.length > 0) {
+    const brief = context.notes
+      .slice(0, 30)
+      .map(
+        (n) =>
+          `- "${n.title}"${n.subject ? ` (${n.subject})` : ""}${
+            n.chapterTitles.length > 0
+              ? ` — bab: ${n.chapterTitles.slice(0, 12).join("; ")}${n.chapterTitles.length > 12 ? "…" : ""}`
+              : ""
+          }`
+      )
+      .join("\n");
+    lines.push("", "=== DAFTAR CATATAN USER ===", "", brief);
+  }
+
+  if (mentionedNotes.length > 0) {
+    lines.push(
+      "",
+      "=== CATATAN YANG DISEBUT USER (MENTION) ===",
+      "",
+      "User menandai catatan ini dengan '@'. Prioritaskan menjawab berdasarkan catatan ini:",
+      "",
+      mentionedNotes
+        .map(
+          (n) =>
+            `- "${n.title}"${n.subject ? ` (${n.subject})` : ""}${
+              n.chapterTitles.length > 0
+                ? ` — bab: ${n.chapterTitles.join("; ")}`
+                : ""
+            }${n.summary ? `\n  Ringkasan: ${n.summary.slice(0, 300)}` : ""}`
+        )
+        .join("\n")
+    );
+  }
+
+  if (!ragSkipped && ragHits.length > 0) {
+    lines.push(
+      "",
+      "=== MATERI RELEVAN (HASIL PENCARIAN SEMANTIK) ===",
+      "",
+      "Gunakan potongan ini sebagai sumber utama jawaban materi:",
+      "",
+      formatRag(ragHits)
+    );
+  } else if (!ragSkipped && ragHits.length === 0) {
+    lines.push(
+      "",
+      "Catatan: pencarian materi tidak menemukan potongan yang cocok. Beri tahu user secara sopan dan bantu dengan cara lain (mis. tawarkan buat catatan dari link/bahan)."
+    );
+  }
+
+  if (attachedDocument) {
+    lines.push(
+      "",
+      "=== DOKUMEN LAMPIRAN USER ===",
+      "",
+      `User melampirkan dokumen \"${attachedDocument.filename}\". Jawab berdasarkan isinya bila relevan dengan pertanyaan:`,
+      "",
+      attachedDocument.text.slice(0, 15000)
+    );
+  }
+
+  if (webResults.length > 0) {
+    lines.push(
+      "",
+      "=== HASIL PENCARIAN WEB (DIMINTA USER) ===",
+      "",
+      "User mengaktifkan pencarian web. Gunakan hasil ini sebagai info TAMBAHAN di luar materi user, dan SEBUTKAN sumbernya dengan tautan bila dipakai:",
+      "",
+      webResults
+        .map(
+          (r, i) =>
+            `[Hasil ${i + 1}] ${r.title}\n${r.description}\nURL: ${r.url}`
+        )
+        .join("\n\n")
+    );
+  }
+
+  return lines.join("\n");
+}
+
+function formatRag(hits: RagHit[]): string {
+  return hits
+    .map(
+      (h, i) =>
+        `[Potongan ${i + 1} — "${h.noteTitle}"${h.chapterId > 0 ? `, Bab ${h.chapterId}` : ""}]\n${h.text.slice(0, 1200)}`
+    )
+    .join("\n\n---\n\n");
+}
+
+/** Buat prompt user: pertanyaan + petunjuk sumber yang disebut. */
+export function buildUserPrompt(input: {
+  question: string;
+  mentions: string[];
+  noteTitleById: Map<string, string>;
+}): string {
+  const { question, mentions, noteTitleById } = input;
+  const lines: string[] = [question];
+  if (mentions.length > 0) {
+    const labels = mentions
+      .map((id) => noteTitleById.get(id))
+      .filter(Boolean)
+      .map((t) => `"${t}"`);
+    if (labels.length > 0) {
+      lines.push(
+        "",
+        `(Catatan yang saya tandai dengan @ untuk dijadikan fokus: ${labels.join(", ")}.)`
+      );
+    }
+  }
+  return lines.join("\n");
+}

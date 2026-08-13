@@ -39,7 +39,7 @@ export default function AuthCallbackPage() {
       await registerFriendsIdentity(result.user.name);
 
       const needOnboarding = await needsOnboarding().catch(() => false);
-      redirect(needOnboarding ? "/onboarding" : "/dashboard");
+      redirect(needOnboarding ? "/onboarding" : "/home");
       return true;
     };
 

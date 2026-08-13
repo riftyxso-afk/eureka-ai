@@ -52,7 +52,7 @@ export default function RegisterPage() {
     if (isLoggedIn()) {
       (async () => {
         const needOnboarding = await needsOnboarding().catch(() => false);
-        router.replace(needOnboarding ? "/onboarding" : "/dashboard");
+        router.replace(needOnboarding ? "/onboarding" : "/home");
       })();
       return;
     }

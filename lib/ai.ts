@@ -375,6 +375,278 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
   );
 }
 
+export interface AiStreamMeta {
+  provider: string;
+  model: string;
+}
+
+export type AiStreamEvent =
+  | { type: "meta"; provider: string; model: string }
+  | { type: "token"; text: string }
+  | { type: "error"; message: string };
+
+export interface AiChatStreamOptions extends AiChatOptions {
+  /** Riwayat percakapan sebelum pesan user saat ini (role user/assistant). */
+  history?: { role: "user" | "assistant"; content: string }[];
+  /** Panggil callback per kejadian (meta/token/error). */
+  onEvent?: (event: AiStreamEvent) => void;
+  /**
+   * Gambar lampiran → dikirim sebagai image_url (vision) bila model
+   * mendukungnya. Bila SEMUA provider menolak gambar, otomatis dicoba
+   * ulang teks saja (dengan catatan kecil bahwa gambar tak terbaca).
+   */
+  visionImage?: { dataUrl: string; filename: string } | null;
+}
+
+/**
+ * Chat Completions STREAMING (SSE) — dipakai chat asisten agar terasa
+ * seperti ChatGPT/Claude.
+ *
+ * - Body `stream: true`, parse baris `data: {...}` → `choices[0].delta.content`.
+ * - Memakai rantai provider yang sama dengan aiChat (utama → OpenRouter → Juan).
+ * - Bila stream terputus SEBELUM token pertama dikirim (fetch error / 5xx),
+ *   coba ulang ke attempt/provider berikutnya. Bila gugur SETELAH token
+ *   mulai mengalir, lemparkan error (token parsial dibuang) agar UI menampilkan
+ *   kartu error yang jelas.
+ */
+export async function aiChatStream(
+  options: AiChatStreamOptions,
+  onEvent?: (event: AiStreamEvent) => void
+): Promise<{ provider: string; model: string; content: string }> {
+  const emit = (e: AiStreamEvent) => {
+    if (onEvent) onEvent(e);
+    else if (options.onEvent) options.onEvent(e);
+  };
+
+  const providers = getProviderChain();
+  if (providers.length === 0) {
+    const hint =
+      AI_PROVIDER === "openagentic"
+        ? "Isi OPENAGENTIC_API_KEY di .env.local (daftar & buat key di openagentic.id)."
+        : AI_PROVIDER === "openai"
+          ? "Isi OPENAI_API_KEY di .env.local."
+          : "Tambahkan AI_API_KEY di .env.local (daftar di aimurah.my.id).";
+    throw new Error(`API key AI belum diatur. ${hint}`);
+  }
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const attemptsPerProvider = 3;
+
+  const isRetryable = (e: unknown): boolean => {
+    if (e instanceof Error) {
+      if (e.name === "TimeoutError" || e.name === "AbortError") return true;
+      if (/fetch failed|terminated|ECONNRESET|UndiciError/i.test(e.message))
+        return true;
+      const m = e.message.match(/API error (\d{3})/);
+      // 429 = kuota/rate limit → jangan retry, langsung pindah provider
+      if (m) return ["500", "502", "503", "504"].includes(m[1]);
+    }
+    return false;
+  };
+
+  // Lacak apakah token sudah sempat mengalir — penting untuk fallback vision
+  // yang aman (jangan ulang bila jawaban parsial sudah tampil di UI).
+  let emittedAnyToken = false;
+  const chainEmit = (e: AiStreamEvent) => {
+    if (e.type === "token") emittedAnyToken = true;
+    emit(e);
+  };
+
+  /** Isi pesan user: teks polos, atau array teks+gambar (vision). */
+  const buildUserContent = (withVision: boolean): unknown => {
+    if (withVision && options.visionImage) {
+      return [
+        { type: "text", text: options.user },
+        { type: "image_url", image_url: { url: options.visionImage.dataUrl } },
+      ];
+    }
+    if (options.visionImage && !withVision) {
+      return `${options.user}\n\n[User melampirkan gambar: ${options.visionImage.filename}. Model ini tidak bisa membaca gambar — jawab tanpa gambar, atau minta user menjelaskan isinya.]`;
+    }
+    return options.user;
+  };
+
+  /** Coba seluruh rantai provider (utama → OpenRouter → Juan) dengan satu mode konten. */
+  const runChain = async (
+    withVision: boolean
+  ): Promise<{ provider: string; model: string; content: string }> => {
+    const body: Record<string, unknown> = {
+      stream: true,
+      temperature: options.temperature ?? 0.7,
+      max_tokens: options.maxTokens ?? 2048,
+      messages: [
+        ...(options.system ? [{ role: "system", content: options.system }] : []),
+        ...(options.history ?? []),
+        { role: "user", content: buildUserContent(withVision) },
+      ],
+    };
+
+    const doStream = async (
+      provider: ProviderConfig
+    ): Promise<{ provider: string; model: string; content: string }> => {
+      body.model = provider.model;
+
+      let res: Response;
+      try {
+        res = await fetch(`${provider.baseURL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${provider.apiKey}`,
+            "Content-Type": "application/json",
+            ...(provider.name === "OpenRouter"
+              ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
+              : {}),
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(120_000),
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "fetch gagal";
+        throw new Error(`[aiChatStream] ${provider.name}: ${msg}`);
+      }
+
+      if (!res.ok) {
+        let detail = "";
+        try {
+          const errText = await res.text();
+          const err = extractJsonObject(errText) as {
+            error?: { message?: string };
+          };
+          detail = err?.error?.message ?? "";
+        } catch {
+          // abaikan — body bukan JSON
+        }
+        throw new Error(
+          `${provider.name} API error ${res.status}${detail ? `: ${detail}` : ""}`
+        );
+      }
+
+      if (!res.body) {
+        throw new Error(`${provider.name}: respon tanpa body streaming.`);
+      }
+
+      chainEmit({ type: "meta", provider: provider.name, model: provider.model });
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const tokens: string[] = [];
+      let buffer = "";
+      let emitted = false;
+
+      const handleLine = (line: string): boolean => {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) return false;
+        const payload = trimmed.slice(5).trim();
+        if (!payload || payload === "[DONE]") return false;
+        let parsed: Record<string, unknown>;
+        try {
+          parsed = JSON.parse(payload) as Record<string, unknown>;
+        } catch {
+          return false;
+        }
+        const choice = Array.isArray(parsed.choices)
+          ? (parsed.choices[0] as Record<string, unknown> | undefined)
+          : undefined;
+        const delta = choice?.delta as Record<string, unknown> | undefined;
+        const text = delta?.content;
+        if (typeof text === "string" && text.length > 0) {
+          emitted = true;
+          tokens.push(text);
+          chainEmit({ type: "token", text });
+        }
+        return true;
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          try {
+            handleLine(line);
+          } catch {
+            // Line malformed — abaikan
+          }
+        }
+      }
+
+      if (emitted) {
+        return {
+          provider: provider.name,
+          model: provider.model,
+          content: tokens.join(""),
+        };
+      }
+      throw new Error(`${provider.name}: stream berakhir tanpa token.`);
+    };
+
+    const tried: string[] = [];
+    for (const provider of providers) {
+      tried.push(`${provider.name}/${provider.model}`);
+      for (let attempt = 1; attempt <= attemptsPerProvider; attempt++) {
+        try {
+          const result = await doStream(provider);
+          console.log(
+            "[aiChatStream] selesai:",
+            provider.name,
+            "tokens:",
+            result.content.length
+          );
+          return result;
+        } catch (e) {
+          console.warn(
+            `[aiChatStream] ${provider.name} attempt ${attempt} gagal:`,
+            e instanceof Error ? e.message : e
+          );
+          if (attempt >= attemptsPerProvider) break;
+          if (isRetryable(e)) {
+            await sleep(1_500);
+            continue;
+          }
+          break;
+        }
+      }
+    }
+    throw new Error(
+      `Semua provider AI gagal streaming (${tried.join(" → ")}). Coba lagi nanti.`
+    );
+  };
+
+  const errMsg = (e: unknown): string =>
+    e instanceof Error ? e.message : "Terjadi kesalahan.";
+
+  // 1) Ada gambar → coba vision dulu. Bila SEMUA provider menolak gambar
+  //    (dan belum ada token yang mengalir), fallback otomatis ke teks saja.
+  if (options.visionImage) {
+    try {
+      return await runChain(true);
+    } catch (firstErr) {
+      if (emittedAnyToken) {
+        // Jawaban parsial sudah tampil — jangan ulang (hindari duplikat).
+        emit({ type: "error", message: errMsg(firstErr) });
+        throw firstErr;
+      }
+      try {
+        return await runChain(false);
+      } catch (secondErr) {
+        const msg = `${errMsg(secondErr)} (termasuk mencoba membaca gambar).`;
+        emit({ type: "error", message: msg });
+        throw secondErr;
+      }
+    }
+  }
+
+  // 2) Tanpa gambar — alur biasa.
+  try {
+    return await runChain(false);
+  } catch (e) {
+    emit({ type: "error", message: errMsg(e) });
+    throw e;
+  }
+}
+
 /**
  * Panggil AI lalu parse JSON-nya. Jika output bukan JSON valid (model thinking
  * sering merusak JSON multi-baris, mis. nilai menyatu tanpa koma), coba sekali

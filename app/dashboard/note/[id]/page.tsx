@@ -17,6 +17,7 @@ import {
   ImagePlus,
   Layers,
   Map,
+  MessageCircleQuestion,
   PenTool,
   Pencil,
   Phone,
@@ -501,6 +502,29 @@ export default function NoteDetailPage() {
     router.push(`/dashboard/note/${data.id}/bab/${chapter.id}`);
   };
 
+  /** "Tanya AI": buat sesi chat baru & import catatan ini sebagai lampiran. */
+  const askNote = async () => {
+    const userId = getUserId();
+    if (!userId) return;
+    try {
+      const res = await apiFetch("/api/assistant/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const sessData = (await res.json()) as { session?: { id: string } };
+      if (sessData.session?.id) {
+        router.push(
+          `/chat/${sessData.session.id}?note=${encodeURIComponent(data.id)}`
+        );
+      } else {
+        notify("Gagal membuat sesi chat. Coba lagi ya.");
+      }
+    } catch {
+      notify("Gagal membuat sesi chat. Coba lagi ya.");
+    }
+  };
+
   const handleAction = (label: string) => {
     if (label === "Kuis") {
       setShowQuiz(true);
@@ -586,6 +610,13 @@ export default function NoteDetailPage() {
             <PenTool size={16} className="mr-2" />
             Papan
           </Link>
+          <button
+            onClick={askNote}
+            className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
+          >
+            <MessageCircleQuestion size={16} className="mr-2" />
+            Tanya AI
+          </button>
           <button
             onClick={() =>
               notify("Panggilan suara & video call segera hadir! 🚧")

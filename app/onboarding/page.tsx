@@ -161,7 +161,7 @@ export default function OnboardingPage() {
         const res = await apiFetch(`/api/profile?userId=${encodeURIComponent(getUserId())}`);
         const payload = await res.json();
         if (!cancelled && payload?.user?.onboardingCompleted) {
-          router.replace("/dashboard");
+          router.replace("/home");
         }
       } catch {
         // biarkan (profil belum tersimpan)
@@ -361,7 +361,7 @@ export default function OnboardingPage() {
     } catch {
       // abaikan
     }
-    router.replace("/dashboard");
+    router.replace("/home");
   };
 
   const progressValue =

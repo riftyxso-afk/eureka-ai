@@ -9,6 +9,8 @@
  *   Kosongkan saat dev → otomatis pakai http://localhost:3001
  */
 
+import { getAccessToken } from "./supabase/client";
+
 /**
  * Fallback URL backend untuk production bila NEXT_PUBLIC_API_URL tidak di-set
  * saat build. Sesuaikan dengan domain backend kamu (mis. "https://api-eureka.web.id").
@@ -48,8 +50,15 @@ export function apiUrl(path: string): string {
 }
 
 /** fetch ke endpoint API backend. */
-export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(apiUrl(path), init);
+export async function apiFetch(
+  path: string,
+  init?: RequestInit
+): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  // Lampirkan token sesi (bila ada) agar backend bisa memverifikasi user.
+  const token = await getAccessToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return fetch(apiUrl(path), { ...init, headers });
 }
 
 /** EventSource ke endpoint SSE API backend. */

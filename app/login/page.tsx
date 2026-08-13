@@ -58,7 +58,7 @@ export default function LoginPage() {
     if (isLoggedIn()) {
       (async () => {
         const needOnboarding = await needsOnboarding().catch(() => false);
-        router.replace(needOnboarding ? "/onboarding" : "/dashboard");
+        router.replace(needOnboarding ? "/onboarding" : "/home");
       })();
       return;
     }
@@ -91,7 +91,7 @@ export default function LoginPage() {
 
   const goAfterLogin = async () => {
     const needOnboarding = await needsOnboarding().catch(() => false);
-    router.replace(needOnboarding ? "/onboarding" : "/dashboard");
+    router.replace(needOnboarding ? "/onboarding" : "/home");
   };
 
   const handleGoogle = async () => {

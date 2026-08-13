@@ -89,6 +89,15 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/study-buddy/chat", studyBuddyChat);
   count++;
 
+  // ─── Asisten AI (halaman /home & /chat) ────────────────
+  const assistantChat = await import("@/app/api/assistant/chat/route");
+  const assistantSessions = await import("@/app/api/assistant/sessions/route");
+  const assistantSessionsId = await import("@/app/api/assistant/sessions/[sessionId]/route");
+  mount(app, "/api/assistant/chat", assistantChat);
+  mount(app, "/api/assistant/sessions", assistantSessions);
+  mount(app, "/api/assistant/sessions/:sessionId", assistantSessionsId);
+  count += 3;
+
   // ─── Subjects ──────────────────────────────────────────
   const subjects = await import("@/app/api/subjects/route");
   const subjectsId = await import("@/app/api/subjects/[id]/route");
