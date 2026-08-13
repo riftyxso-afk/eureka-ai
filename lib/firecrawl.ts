@@ -17,6 +17,45 @@ export interface SearchResult {
   description: string;
 }
 
+/**
+ * Bersihkan query web search agar hasil relevan dengan TOPIK, bukan dengan
+ * kata-kata perintah. Mis. "Siapa raja Yunani? Cari info terbaru di web."
+ * → "raja yunani" — menghindari Firecrawl mencari kata "cari di web"
+ * (yang bisa memunculkan hasil tentang mesin pencari seperti Google/Brave).
+ */
+export function cleanSearchQuery(raw: string): string {
+  const q = raw
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/[.,!?;:()"'“”‘’]+/g, " ")
+    .replace(
+      /\b(?:tolong|bantu|bantuin|mohon|kak|bang|coba|carikan|carikan\s+di|cari|jelaskan|sebutkan|ceritakan|beritahu|info|informasi|terbaru|di\s+web|di\s+internet|online|web|internet|tentang|mengenai|soal|materi|pelajaran|sekarang|hari\s+ini|apakah|apa\s+itu|siapa|mengapa|kenapa|bagaimana|berapa|kapan|di\s+mana|dimana|yang\s+mana|saya\s+mau|aku\s+mau|bisa|dapat)\b/g,
+      " "
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+  // Hasil bersih terlalu pendek → kembalikan teks asli (jangan dikorup).
+  if (q.length < 4) return raw.trim().slice(0, 200);
+  return q.slice(0, 160);
+}
+
+/** Domain yang hasilnya hampir selalu noise (sosial & mesin pencari). */
+const NOISE_DOMAIN_RE =
+  /(^|\.)(instagram|facebook|tiktok|pinterest|snapchat|twitter|x|linkedin|google|bing|brave|duckduckgo|startpage|ecosia|yahoo)\./i;
+
+/** Apakah hasil layak ditampilkan? (bukan sosial & bukan halaman mesin pencari). */
+export function isNoiseSearchResult(url: string, title: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    if (NOISE_DOMAIN_RE.test(host)) return true;
+  } catch {
+    // URL tidak valid → anggap noise
+    return true;
+  }
+  if (/mesin pencari|search engine|search results/i.test(title)) return true;
+  return false;
+}
+
 export interface WebScrapeResult {
   text: string;
   title: string;
@@ -161,7 +200,7 @@ export async function firecrawlSearch(query: string, limit = 3): Promise<SearchR
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      query: query.slice(0, 200),
+      query: cleanSearchQuery(query).slice(0, 200),
       limit,
       country: "id",
       lang: "id",
@@ -176,7 +215,10 @@ export async function firecrawlSearch(query: string, limit = 3): Promise<SearchR
         Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ query: query.slice(0, 200), limit }),
+      body: JSON.stringify({
+        query: cleanSearchQuery(query).slice(0, 200),
+        limit,
+      }),
       signal: AbortSignal.timeout(30000),
     });
   }
@@ -193,11 +235,25 @@ export async function firecrawlSearch(query: string, limit = 3): Promise<SearchR
     : Array.isArray(data?.data?.web)
       ? data.data.web
       : [];
+  const seen = new Set<string>();
   return results
     .map((r: Record<string, unknown>) => ({
       url: String(r.url ?? ""),
       title: String(r.title ?? "").trim().slice(0, 160),
       description: String(r.description ?? "").trim().slice(0, 300),
     }))
-    .filter((r: SearchResult) => r.url && r.url.startsWith("http"));
+    .filter(
+      (r: SearchResult) =>
+        r.url &&
+        r.url.startsWith("http") &&
+        !isNoiseSearchResult(r.url, r.title)
+    )
+    .filter((r: SearchResult) => {
+      // Buang duplikat URL (Firecrawl kadang mengembalikan hasil sama 2x).
+      const key = r.url.split("#")[0];
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, limit);
 }

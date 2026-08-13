@@ -193,7 +193,7 @@ export function MobileSessionButton({
               initial={{ opacity: 0, y: -8, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.97 }}
-              className="absolute right-0 top-12 z-40 max-h-[50vh] w-64 overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-white p-2 shadow-clay-lg"
+              className="absolute left-0 top-12 z-40 max-h-[50vh] w-64 max-w-[calc(100vw-4rem)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-white p-2 shadow-clay-lg"
             >
               {sessions.map((s) => (
                 <button

@@ -314,8 +314,10 @@ export default function Composer({
                   key={id}
                   className="inline-flex items-center gap-1 rounded-clay-full border-2 border-clay-primary/40 bg-clay-primary/10 px-3 py-1 text-[12px] font-extrabold text-clay-primary"
                 >
-                  <AtSign size={12} />
-                  {note?.title ?? "Catatan"}
+                  <AtSign size={12} className="shrink-0" />
+                  <span className="max-w-[160px] truncate">
+                    {note?.title ?? "Catatan"}
+                  </span>
                   <button
                     onClick={() => removeMention(id)}
                     className="ml-0.5 text-clay-primary/70 hover:text-red-500"
@@ -406,7 +408,10 @@ export default function Composer({
                   }`}
                   title="Lampirkan catatan (@)"
                 >
-                  <AtSign size={compact ? 12 : 14} /> {compact ? "@" : "Catatan"}
+                  <AtSign size={compact ? 12 : 14} />
+                  {compact ? "@" : (
+                    <span className="hidden sm:inline">Catatan</span>
+                  )}
                 </button>
 
                 {/* Tool: pencarian web */}
@@ -426,7 +431,11 @@ export default function Composer({
                   data-testid="asisten-websearch"
                 >
                   <Globe size={compact ? 13 : 14} />
-                  {!compact && (webSearch ? "Web: ON" : "Web")}
+                  {!compact && (
+                    <span className="hidden sm:inline">
+                      {webSearch ? "Web: ON" : "Web"}
+                    </span>
+                  )}
                 </button>
 
                 {/* Tool: upload gambar/dokumen */}
@@ -439,7 +448,7 @@ export default function Composer({
                   data-testid="asisten-upload"
                 >
                   <Paperclip size={compact ? 13 : 14} />
-                  {!compact && "File"}
+                  {!compact && <span className="hidden sm:inline">File</span>}
                 </button>
                 <input
                   ref={fileInputRef}

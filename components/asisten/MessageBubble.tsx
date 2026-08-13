@@ -46,7 +46,7 @@ export default function MessageBubble({
         animate={{ opacity: 1, y: 0 }}
         className="flex justify-end"
       >
-        <div className="max-w-[70%] rounded-clay-md rounded-br-[8px] bg-clay-primary px-3.5 py-2.5 text-white shadow-clay-sm">
+        <div className="max-w-[70%] break-words rounded-clay-md rounded-br-[8px] bg-clay-primary px-3.5 py-2.5 text-white shadow-clay-sm">
           <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed">
             {message.content}
           </p>
@@ -68,7 +68,7 @@ export default function MessageBubble({
         className="mt-1 h-8 w-8 shrink-0 object-contain"
       />
       <div className="flex min-w-0 max-w-[85%] flex-col gap-1.5">
-        <div className="rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-white px-4 py-3 shadow-clay-sm">
+        <div className="break-words rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-white px-4 py-3 shadow-clay-sm">
           {isStreaming && empty ? (
             <div className="flex items-center gap-2 py-0.5">
               <ThinkingDots />
@@ -78,7 +78,7 @@ export default function MessageBubble({
             </div>
           ) : isStreaming ? (
             <div className="space-y-1">
-              <MarkdownView content={message.content} className="text-[13.5px] leading-relaxed" />
+              <MarkdownView content={message.content} className="break-words text-[13.5px] leading-relaxed" />
               <ThinkingDots />
             </div>
           ) : empty ? (
@@ -89,7 +89,7 @@ export default function MessageBubble({
               </span>
             </div>
           ) : (
-            <MarkdownView content={message.content} className="text-[13.5px] leading-relaxed" />
+            <MarkdownView content={message.content} className="break-words text-[13.5px] leading-relaxed" />
           )}
         </div>
 

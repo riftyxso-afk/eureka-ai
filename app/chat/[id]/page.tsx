@@ -154,6 +154,7 @@ export default function ChatPage() {
                       <WebSearchPipeline
                         stage={chat.streaming.webStage}
                         results={chat.streaming.webResults}
+                        completed={!chat.sending && !chat.hasError}
                       />
                     )}
                     <MessageBubble message={m} />

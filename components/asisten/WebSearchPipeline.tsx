@@ -66,12 +66,17 @@ const STAGE_INDEX: Record<WebSearchStage, number> = {
 export default function WebSearchPipeline({
   stage,
   results,
+  completed = false,
 }: {
   stage: WebSearchStage | null;
   results: WebSearchItem[];
+  /** true = jawaban selesai → semua langkah centang, spinner hilang. */
+  completed?: boolean;
 }) {
-  const activeIdx = stage ? STAGE_INDEX[stage] : 0;
-  const done = results.length > 0 && (stage === "analyzing" || stage === "writing");
+  const activeIdx = completed ? STEPS.length : stage ? STAGE_INDEX[stage] : 0;
+  const done =
+    completed ||
+    (results.length > 0 && (stage === "analyzing" || stage === "writing"));
 
   return (
     <div className="w-full max-w-3xl">
@@ -85,7 +90,11 @@ export default function WebSearchPipeline({
               Pencarian web
             </p>
             <p className="text-[11px] font-bold text-clay-muted">
-              {done ? `${results.length} sumber ditemukan` : "Mencari jawaban terbaru…"}
+              {completed
+                ? "Selesai ✓"
+                : done
+                  ? `${results.length} sumber ditemukan`
+                  : "Mencari jawaban terbaru…"}
             </p>
           </div>
         </div>
@@ -94,7 +103,7 @@ export default function WebSearchPipeline({
         <div className="space-y-1.5">
           {STEPS.map((step, i) => {
             const isDone = i < activeIdx;
-            const isActive = i === activeIdx;
+            const isActive = i === activeIdx && !completed;
             return (
               <div key={step.id} className="flex items-center gap-2.5">
                 <span
@@ -116,7 +125,11 @@ export default function WebSearchPipeline({
                 </span>
                 <span
                   className={`text-[12.5px] font-extrabold ${
-                    isActive ? "text-clay-primary" : isDone ? "text-clay-dark" : "text-clay-muted"
+                    isActive
+                      ? "text-clay-primary"
+                      : isDone
+                        ? "text-clay-dark"
+                        : "text-clay-muted"
                   }`}
                 >
                   {step.icon} {step.label}
