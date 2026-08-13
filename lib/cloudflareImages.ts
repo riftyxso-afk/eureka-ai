@@ -43,9 +43,11 @@ export async function generateAiIllustration(
   for (const model of IMAGE_MODELS) {
     try {
       const res = await fetch(
+        // Catatan: nama model TIDAK boleh di-encode — Cloudflare menolak
+        // "@cf/..." bila `/` menjadi %2F (error 7000 "No route for that URI").
         `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(
           CLOUDFLARE_ACCOUNT_ID
-        )}/ai/run/${encodeURIComponent(model)}`,
+        )}/ai/run/${model}`,
         {
           method: "POST",
           headers: {
