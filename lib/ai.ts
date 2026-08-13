@@ -231,7 +231,8 @@ function getProviderChain(speedMode: AiSpeedMode = "normal"): ProviderConfig[] {
     return chain;
   }
 
-  // Seimbang (normal): OpenAgentic 3 model → Juan Router (default) → OpenRouter.
+  // Seimbang (normal): OpenAgentic 3 model → Juan Router (gpt-5.6-luna +
+  // deepseek-v4-flash — model yang terbukti hidup) → OpenRouter.
   const main = getProviderConfig();
   if (main) {
     const models =
@@ -241,7 +242,10 @@ function getProviderChain(speedMode: AiSpeedMode = "normal"): ProviderConfig[] {
     pushProvider(main.baseURL, main.apiKey, main.name, models);
   }
   if (juanKey) {
-    pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", [JUANROUTER_MODEL]);
+    pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", [
+      "gpt-5.6-luna",
+      JUANROUTER_MODEL,
+    ]);
   }
   if (openRouterKey) {
     pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [OPENROUTER_MODEL]);
