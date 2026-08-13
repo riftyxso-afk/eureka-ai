@@ -7,11 +7,14 @@ import { Square, X } from "lucide-react";
 import { apiFetch, apiEventSource } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
+import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 
 interface NoteProgressOverlayProps {
   open: boolean;
   /** Prompt asli user (mis. "buat catatan tentang turunan" / "...dari URL"). */
   prompt: string;
+  /** Preferensi dari wizard (jenis catatan, jumlah bab, detail). Opsional. */
+  prefs?: NoteCreatePrefs;
   onClose: () => void;
 }
 
@@ -23,6 +26,7 @@ interface NoteProgressOverlayProps {
 export function NoteProgressOverlay({
   open,
   prompt,
+  prefs,
   onClose,
 }: NoteProgressOverlayProps) {
   const router = useRouter();
@@ -112,11 +116,14 @@ export function NoteProgressOverlay({
         })
       );
     }
-    form.append("studyMode", "standar");
-    form.append("generationMode", "cepat"); // ±1-2 menit, langsung inti
+    form.append("studyMode", prefs?.studyMode ?? "standar");
+    form.append(
+      "generationMode",
+      prefs?.generationMode ?? "cepat" // ±1-2 menit, langsung inti
+    );
     form.append("gayaPenulisan", "Ramah & Santai");
     form.append("bahasa", "Bahasa Indonesia");
-    form.append("chapterCount", "3");
+    form.append("chapterCount", String(prefs?.chapterCount ?? 3));
     form.append("userId", getUserId());
     form.append("sessionId", sessionId);
 
@@ -238,7 +245,8 @@ export function NoteProgressOverlay({
                   {error ? "Ups, gagal 😢" : "Membuat catatanmu…"}
                 </h2>
                 <p className="mt-1 text-xs font-bold text-clay-muted">
-                  Eureka sedang menyusun materi — ±1-2 menit
+                  Eureka sedang menyusun materi —
+                  {prefs?.generationMode === "lengkap" ? " ±3-6 menit" : " ±1-2 menit"}
                 </p>
               </div>
               <button

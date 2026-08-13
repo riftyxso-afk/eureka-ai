@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Sparkles } from "lucide-react";
+import { ChevronRight, LayoutDashboard, Sparkles } from "lucide-react";
+import TutorialHost from "@/components/tutorial/TutorialHost";
+import EmptyNotesCta from "@/components/tutorial/EmptyNotesCta";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId, getUserName } from "@/lib/identity";
 import { getSession } from "@/lib/auth";
@@ -13,6 +15,7 @@ import type { ChatAttachment } from "@/lib/assistant/types";
 import { useAssistantChat } from "@/lib/assistant/useAssistantChat";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
 import { NoteProgressOverlay } from "@/components/note/NoteProgressOverlay";
+import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import Composer from "@/components/asisten/Composer";
 
@@ -97,12 +100,40 @@ export default function HomePage() {
   const router = useRouter();
   const [launching, setLaunching] = useState<{ prompt: string } | null>(null);
   const [notePrompt, setNotePrompt] = useState<string | null>(null);
+  const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
+  const [notePrefs, setNotePrefs] = useState<NoteCreatePrefs | null>(null);
   const launchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const chat = useAssistantChat({
     sessionId: null,
     onSessionCreated: (id) => router.push(`/chat/${id}`),
   });
+
+  // Jumlah catatan user — untuk banner "belum punya catatan" + tutorial.
+  const [notesCount, setNotesCount] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const uid = getUserId();
+      if (!uid) {
+        setNotesCount(null);
+        return;
+      }
+      try {
+        const res = await apiFetch(`/api/notes?userId=${encodeURIComponent(uid)}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as { notes?: unknown[] };
+        if (!cancelled) {
+          setNotesCount(Array.isArray(data.notes) ? data.notes.length : null);
+        }
+      } catch {
+        if (!cancelled) setNotesCount(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -128,9 +159,10 @@ export default function HomePage() {
     }) => {
       if (launching) return;
 
-      // Permintaan "buat catatan" → langsung generate catatan + overlay loading.
+      // Permintaan "buat catatan" → tanya preferensi dulu (wizard F&Q),
+      // lalu generate catatan + overlay loading.
       if (detectNoteIntent(input.question).isNoteRequest) {
-        setNotePrompt(input.question);
+        setWizardPrompt(input.question);
         return;
       }
 
@@ -171,7 +203,7 @@ export default function HomePage() {
   );
 
   return (
-    <div className="flex h-dvh gap-4 bg-clay-beige p-4">
+    <div className="flex h-dvh gap-0 bg-clay-beige p-0 sm:gap-4 sm:p-4">
       <ChatSidebar
         sessions={chat.sessions}
         activeId={null}
@@ -183,41 +215,54 @@ export default function HomePage() {
         }}
       />
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-clay border-2 border-clay-borderLight bg-white shadow-clay-sm">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white sm:rounded-clay sm:border-2 sm:border-clay-borderLight sm:shadow-clay-sm">
         {/* Topbar */}
-        <header className="flex items-center justify-between gap-3 border-b-[3px] border-clay-borderLight px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
+        <header className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <MobileSessionButton
               sessions={chat.sessions}
               onSelect={(id) => router.push(`/chat/${id}`)}
             />
+            {/* Tombol Dashboard — khusus mobile (desktop ada di sidebar) */}
+            <Link
+              href="/dashboard"
+              data-tutorial-id="dashboard-nav"
+              aria-label="Buka Dashboard"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 lg:hidden"
+            >
+              <LayoutDashboard size={18} />
+            </Link>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Logo Eureka.AI" className="h-8 w-8 object-contain" />
+            <img src="/logo.png" alt="Logo Eureka.AI" className="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8" />
             <div className="min-w-0">
-              <h1 className="truncate text-base font-extrabold text-clay-dark">
+              <h1 className="truncate text-sm font-extrabold text-clay-dark sm:text-base">
                 Beranda Eureka
               </h1>
-              <p className="text-[11px] font-bold text-clay-muted">
+              <p className="hidden text-[11px] font-bold text-clay-muted sm:block">
                 Chat dengan AI yang mengenal catatan & progresmu
               </p>
             </div>
           </div>
           <button
             onClick={chat.handleNew}
-            className="btn-clay-ghost !min-h-[40px] !px-4 !py-2 text-xs"
+            className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
             data-testid="home-new-top"
           >
-            + Chat Baru
+            <span className="sm:hidden">+ Baru</span>
+            <span className="hidden sm:inline">+ Chat Baru</span>
           </button>
         </header>
 
         {/* Konten: greeting + suggestion chips (scroll di sini) */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6">
+          {/* Banner pengguna baru yang belum punya catatan + ajakan tutorial */}
+          <EmptyNotesCta notesCount={notesCount} />
+
           <div className="mx-auto flex min-h-[52vh] max-w-2xl flex-col items-center justify-center text-center">
             <span className="inline-flex items-center gap-1.5 rounded-clay-full border-3 border-clay-secondary/30 bg-clay-secondary/10 px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide text-clay-secondary">
               <Sparkles size={13} /> Asisten Belajar Eureka
             </span>
-            <h1 className="mt-5 text-3xl font-extrabold text-clay-dark sm:text-4xl">
+            <h1 className="mt-5 text-[27px] font-extrabold text-clay-dark sm:text-4xl">
               {greeting.emoji} Halo, {name}!
             </h1>
             <p className="mt-3 max-w-md text-base font-semibold leading-relaxed text-clay-muted">
@@ -276,12 +321,19 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Composer ringkas */}
+        {/* Composer ringkas — wizard "buat catatan" menyatu di atasnya */}
         <Composer
           userId={getUserId()}
           sending={false}
           disabled={!!launching || chat.sessionsLoading}
           compact
+          noteWizardPrompt={wizardPrompt}
+          onNoteWizardClose={() => setWizardPrompt(null)}
+          onNoteWizardStart={(prefs) => {
+            setNotePrefs(prefs);
+            setNotePrompt(wizardPrompt);
+            setWizardPrompt(null);
+          }}
           onSend={launchChat}
         />
       </main>
@@ -290,8 +342,17 @@ export default function HomePage() {
       <NoteProgressOverlay
         open={!!notePrompt}
         prompt={notePrompt ?? ""}
-        onClose={() => setNotePrompt(null)}
+        prefs={notePrefs ?? undefined}
+        onClose={() => {
+          setNotePrompt(null);
+          setNotePrefs(null);
+        }}
       />
+
+
+
+      {/* Tutorial realtime untuk pengguna baru (spotlight) */}
+      <TutorialHost />
 
       {/* Animasi kirim: bubble prompt terbang dari composer → layar penuh */}
       <AnimatePresence>

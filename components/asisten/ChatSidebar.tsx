@@ -151,9 +151,10 @@ export default function ChatSidebar({
         })}
       </nav>
 
-      {/* Tombol buka dashboard (selalu ada) */}
+      {/* Tombol buka dashboard (selalu ada) — jadi target tutorial juga */}
       <Link
         href="/dashboard"
+        data-tutorial-id="dashboard-nav"
         className="border-t-[3px] border-clay-borderLight pt-2 text-center text-xs font-extrabold text-clay-muted hover:text-clay-primary"
       >
         ← Kembali ke Dashboard

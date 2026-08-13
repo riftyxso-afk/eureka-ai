@@ -10,11 +10,15 @@ import {
 } from "@/lib/assistant/pendingPrompt";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
 import { NoteProgressOverlay } from "@/components/note/NoteProgressOverlay";
+import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import MessageBubble from "@/components/asisten/MessageBubble";
 import WebSearchPipeline from "@/components/asisten/WebSearchPipeline";
 import Composer from "@/components/asisten/Composer";
+import TutorialHost from "@/components/tutorial/TutorialHost";
 import type { ChatAttachment } from "@/lib/assistant/types";
+import { LayoutDashboard } from "lucide-react";
+import Link from "next/link";
 
 export default function ChatPage() {
   const params = useParams<{ id: string }>();
@@ -62,6 +66,8 @@ export default function ChatPage() {
   }, []);
 
   const [notePrompt, setNotePrompt] = useState<string | null>(null);
+  const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
+  const [notePrefs, setNotePrefs] = useState<NoteCreatePrefs | null>(null);
 
   const chat = useAssistantChat({
     sessionId,
@@ -72,7 +78,7 @@ export default function ChatPage() {
   const activeSession = chat.sessions.find((s) => s.id === sessionId);
 
   return (
-    <div className="flex h-dvh gap-4 bg-clay-beige p-4">
+    <div className="flex h-dvh gap-0 bg-clay-beige p-0 sm:gap-4 sm:p-4">
       <ChatSidebar
         sessions={chat.sessions}
         activeId={sessionId}
@@ -89,36 +95,46 @@ export default function ChatPage() {
         }}
       />
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-clay border-2 border-clay-borderLight bg-white shadow-clay-sm">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white sm:rounded-clay sm:border-2 sm:border-clay-borderLight sm:shadow-clay-sm">
         {/* Topbar */}
-        <header className="flex items-center justify-between gap-3 border-b-[3px] border-clay-borderLight px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
+        <header className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <MobileSessionButton
               sessions={chat.sessions}
               onSelect={(id) => router.push(`/chat/${id}`)}
             />
+            {/* Tombol Dashboard — khusus mobile (desktop ada di sidebar) */}
+            <Link
+              href="/dashboard"
+              data-tutorial-id="dashboard-nav"
+              aria-label="Buka Dashboard"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 lg:hidden"
+            >
+              <LayoutDashboard size={18} />
+            </Link>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Logo Eureka.AI" className="h-8 w-8 object-contain" />
+            <img src="/logo.png" alt="Logo Eureka.AI" className="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8" />
             <div className="min-w-0">
-              <h1 className="truncate text-base font-extrabold text-clay-dark">
+              <h1 className="truncate text-sm font-extrabold text-clay-dark sm:text-base">
                 {activeSession?.title ?? "Chat Eureka"}
               </h1>
-              <p className="text-[11px] font-bold text-clay-muted">
+              <p className="hidden text-[11px] font-bold text-clay-muted sm:block">
                 Punya akses ke catatan, bab & progresmu
               </p>
             </div>
           </div>
           <button
             onClick={chat.handleNew}
-            className="btn-clay-ghost !min-h-[40px] !px-4 !py-2 text-xs"
+            className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
             data-testid="chat-new-top"
           >
-            + Chat Baru
+            <span className="sm:hidden">+ Baru</span>
+            <span className="hidden sm:inline">+ Chat Baru</span>
           </button>
         </header>
 
         {/* Area pesan — scroll di sini */}
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6">
           {chat.loading && chat.messages.length === 0 ? (
             <div className="py-16 text-center">
               <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-clay-primary/30 border-t-clay-primary" />
@@ -130,7 +146,7 @@ export default function ChatPage() {
             <div className="py-14 text-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="Eureka" className="mx-auto h-16 w-16 object-contain" />
-              <h2 className="mt-4 text-xl font-extrabold text-clay-dark">
+              <h2 className="mt-4 text-lg font-extrabold text-clay-dark sm:text-xl">
                 Halo! 👋 Ada yang mau ditanya atau dipelajari?
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-relaxed text-clay-muted">
@@ -181,15 +197,22 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Composer — minta "buat catatan" → generate langsung, bukan chat */}
+        {/* Composer — minta "buat catatan" → wizard F&Q menyatu, bukan chat */}
         <Composer
           userId={getUserId()}
           sending={chat.sending}
           disabled={chat.loading || chat.sessionsLoading}
           initialMentions={importedNoteId ? [importedNoteId] : []}
+          noteWizardPrompt={wizardPrompt}
+          onNoteWizardClose={() => setWizardPrompt(null)}
+          onNoteWizardStart={(prefs) => {
+            setNotePrefs(prefs);
+            setNotePrompt(wizardPrompt);
+            setWizardPrompt(null);
+          }}
           onSend={(input) => {
             if (detectNoteIntent(input.question).isNoteRequest) {
-              setNotePrompt(input.question);
+              setWizardPrompt(input.question);
               return;
             }
             chat.handleSend(input);
@@ -202,8 +225,17 @@ export default function ChatPage() {
       <NoteProgressOverlay
         open={!!notePrompt}
         prompt={notePrompt ?? ""}
-        onClose={() => setNotePrompt(null)}
+        prefs={notePrefs ?? undefined}
+        onClose={() => {
+          setNotePrompt(null);
+          setNotePrefs(null);
+        }}
       />
+
+
+
+      {/* Tutorial realtime (berlanjut dari /home bila sedang aktif) */}
+      <TutorialHost />
     </div>
   );
 }

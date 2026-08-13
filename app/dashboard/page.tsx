@@ -24,6 +24,7 @@ import { NoteItem } from "@/components/dashboard/NoteItem";
 import { CreateNoteModal } from "@/components/dashboard/CreateNoteModal";
 import { BackgroundJobPopup } from "@/components/dashboard/BackgroundJobPopup";
 import { DashboardPreparing } from "@/components/dashboard/DashboardPreparing";
+import TutorialHost from "@/components/tutorial/TutorialHost";
 import { Reveal } from "@/components/ui/Reveal";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { getUserId, getUserName } from "@/lib/identity";
@@ -446,6 +447,7 @@ export default function DashboardPage() {
       >
         <button
           onClick={() => setIsModalOpen(true)}
+          data-tutorial-id="create-note-btn"
           className="flex h-14 w-14 items-center justify-center rounded-full bg-clay-primary text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:h-16 sm:w-16"
           aria-label="Buat catatan baru"
         >
@@ -461,6 +463,9 @@ export default function DashboardPage() {
       />
 
       <BackgroundJobPopup />
+
+      {/* Tutorial realtime (berlanjut dari /home bila sedang aktif) */}
+      <TutorialHost />
     </div>
   );
 }

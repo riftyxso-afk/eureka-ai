@@ -5,6 +5,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AtSign, BookOpen, Globe, Paperclip, Send, Square } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import type { ChatAttachment } from "@/lib/assistant/types";
+import {
+  NoteCreateWizardPanel,
+  type NoteCreatePrefs,
+} from "@/components/note/NoteCreateWizard";
 
 /** Batas ukuran file upload (~3MB) — setelah diproses jadi dataUrl. */
 const MAX_FILE_BYTES = 3 * 1024 * 1024;
@@ -78,6 +82,15 @@ interface ComposerProps {
   initialMentions?: string[];
   /** Mode ringkas: padding & tombol lebih kecil (dipakai halaman /home). */
   compact?: boolean;
+  /**
+   * Prompt "buat catatan" yang tertahan — memunculkan wizard F&Q yang
+   * menyatu di atas composer (bukan popup). null = tidak tampil.
+   */
+  noteWizardPrompt?: string | null;
+  /** User selesai menjawab wizard → mulai generate dengan prefs ini. */
+  onNoteWizardStart?: (prefs: NoteCreatePrefs) => void;
+  /** User menutup wizard tanpa jadi generate. */
+  onNoteWizardClose?: () => void;
   onSend: (input: ComposerSendInput) => void;
   onStop?: () => void;
 }
@@ -93,6 +106,9 @@ export default function Composer({
   initialValue = "",
   initialMentions = [],
   compact = false,
+  noteWizardPrompt = null,
+  onNoteWizardStart,
+  onNoteWizardClose,
   onSend,
   onStop,
 }: ComposerProps) {
@@ -302,7 +318,7 @@ export default function Composer({
   };
 
   return (
-    <div className="sticky bottom-0 z-20 bg-gradient-to-t from-clay-beige via-clay-beige/95 to-transparent px-4 pb-4 pt-6 sm:px-6">
+    <div className="sticky bottom-0 z-20 bg-gradient-to-t from-clay-beige via-clay-beige/95 to-transparent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-4 sm:pt-6">
       <div className="mx-auto max-w-3xl">
         {/* Chip mention + lampiran file */}
         {(mentionIds.length > 0 || attachment || attachError) && (
@@ -363,26 +379,44 @@ export default function Composer({
 
         {/* Area input */}
         <div className="relative">
-          <div
-            className={`rounded-clay-md border-2 border-clay-borderLight bg-white shadow-clay transition-all duration-75 focus-within:border-clay-primary ${
-              compact ? "px-3 py-2" : "px-4 py-3"
-            }`}
-          >
-            <textarea
-              ref={textareaRef}
-              value={text}
-              onChange={(e) => handleChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={disabled}
-              rows={1}
-              placeholder="Tanya apa saja… ketik @ untuk melampirkan catatanmu"
-              className={`w-full resize-none bg-transparent font-semibold leading-relaxed text-clay-dark outline-none placeholder:text-clay-muted disabled:opacity-60 ${
-                compact ? "max-h-[120px] text-sm" : "max-h-[180px] text-base"
-              }`}
-              data-testid="asisten-composer"
-            />
-            <div className={`flex items-center justify-between gap-2 ${compact ? "mt-1" : "mt-1.5"}`}>
-              <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-white shadow-clay transition-all duration-75 focus-within:border-clay-primary">
+            {/* Wizard F&Q menyatu DI DALAM kotak composer — memanjang ke atas
+                saat muncul, menyusut kembali setelah submit (posisi normal). */}
+            <AnimatePresence initial={false}>
+              {noteWizardPrompt && (
+                <motion.div
+                  key="note-wizard"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+                  className="overflow-hidden"
+                >
+                  <NoteCreateWizardPanel
+                    prompt={noteWizardPrompt}
+                    onClose={() => onNoteWizardClose?.()}
+                    onStart={(prefs) => onNoteWizardStart?.(prefs)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className={compact ? "px-3 py-2" : "px-4 py-3"}>
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => handleChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={disabled}
+                rows={1}
+                placeholder="Tanya apa saja… ketik @ untuk melampirkan catatanmu"
+                className={`w-full resize-none bg-transparent font-semibold leading-relaxed text-clay-dark outline-none placeholder:text-clay-muted disabled:opacity-60 ${
+                  compact ? "max-h-[120px] text-sm" : "max-h-[180px] text-base"
+                }`}
+                data-testid="asisten-composer"
+              />
+              <div className={`flex items-center justify-between gap-2 ${compact ? "mt-1" : "mt-1.5"}`}>
+                <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   onClick={() => {
                     if (!mentionOpen) {
@@ -409,7 +443,8 @@ export default function Composer({
                   title="Lampirkan catatan (@)"
                 >
                   <AtSign size={compact ? 12 : 14} />
-                  {compact ? "@" : (
+                  {/* Compact (halaman /home): cukup ikon saja — hindari @ ganda. */}
+                  {!compact && (
                     <span className="hidden sm:inline">Catatan</span>
                   )}
                 </button>
@@ -487,9 +522,10 @@ export default function Composer({
                   aria-label="Kirim"
                   data-testid="asisten-send"
                 >
-                  <Send size={compact ? 14 : 16} />
-                </button>
-              )}
+                    <Send size={compact ? 14 : 16} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

@@ -796,6 +796,7 @@ export const CreateNoteModal = ({
                       <button
                         key={s.id}
                         onClick={() => pickSource(s.id)}
+                        data-tutorial-id={`source-card-${s.id}`}
                         className={`relative card-clay flex flex-col items-start gap-2 border-clay-shadow/40 p-4 sm:p-5 text-left transition-all duration-75 hover:-translate-y-0.5 hover:border-clay-primary active:translate-y-1 min-h-[88px] ${
                           s.comingSoon ? "opacity-70" : ""
                         }`}
