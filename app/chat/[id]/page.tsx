@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAssistantChat } from "@/lib/assistant/useAssistantChat";
@@ -11,16 +11,28 @@ import {
 } from "@/lib/assistant/pendingPrompt";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
 import { detectImageIntent } from "@/lib/assistant/imageIntent";
+import { detectStudyCommand } from "@/lib/assistant/studyContext";
 import { NoteProgressOverlay } from "@/components/note/NoteProgressOverlay";
 import { ImageGenerationOverlay } from "@/components/note/ImageGenerationOverlay";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import MessageBubble from "@/components/asisten/MessageBubble";
+import ShareModal from "@/components/asisten/ShareModal";
+import ChatQuizModal from "@/components/asisten/ChatQuizModal";
+import ChatFlashcardModal from "@/components/asisten/ChatFlashcardModal";
+import FeedbackSurveyModal from "@/components/asisten/FeedbackSurveyModal";
+import { apiFetch } from "@/lib/apiClient";
+import {
+  isFeedbackDismissedLocally,
+  markFeedbackDismissedLocally,
+} from "@/lib/assistant/feedback";
 import WebSearchPipeline from "@/components/asisten/WebSearchPipeline";
 import Composer from "@/components/asisten/Composer";
 import TutorialHost from "@/components/tutorial/TutorialHost";
 import type { ChatAttachment } from "@/lib/assistant/types";
-import { LayoutDashboard } from "lucide-react";
+import { copyText } from "@/lib/assistant/clipboard";
+import { markdownToPlainText } from "@/lib/assistant/plainText";
+import { Check, Copy, LayoutDashboard, Share2 } from "lucide-react";
 import Link from "next/link";
 
 export default function ChatPage() {
@@ -77,6 +89,85 @@ export default function ChatPage() {
   const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
   const [notePrefs, setNotePrefs] = useState<NoteCreatePrefs | null>(null);
   const [imagePrompt, setImagePrompt] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [cardsOpen, setCardsOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+
+  // Survey performa Eureka — sekali per user, ~1 menit setelah catatan
+  // PERTAMA selesai dibuat. Kebenaran "sekali saja" di server (note_feedback);
+  // jadwal dihitung dari created_at catatan pertama di DB (tahan tutup halaman).
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleFeedbackSurvey = useCallback(async () => {
+    if (isFeedbackDismissedLocally()) return;
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = null;
+    }
+    try {
+      const res = await apiFetch(
+        `/api/feedback/note?userId=${encodeURIComponent(getUserId())}`
+      );
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        answered?: boolean;
+        earliestNoteCreatedAt?: string | null;
+      };
+      if (data.answered) return;
+      const created = data.earliestNoteCreatedAt
+        ? new Date(data.earliestNoteCreatedAt).getTime()
+        : null;
+      if (!created || Number.isNaN(created)) return;
+      // Jeda 1 menit setelah catatan pertama; bila sudah lewat (kunjungan
+      // berikutnya), tampilkan setelah jeda singkat agar tidak mengejutkan.
+      const remaining = created + 60_000 - Date.now();
+      const delay = remaining > 0 ? remaining + 500 : 1500;
+      feedbackTimerRef.current = setTimeout(() => {
+        setFeedbackOpen(true);
+      }, Math.min(delay, 60_000));
+    } catch {
+      // Gagal cek status — biarkan lewat, coba lagi pada kunjungan berikutnya.
+    }
+  }, []);
+
+  useEffect(() => {
+    void scheduleFeedbackSurvey();
+    return () => {
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+        feedbackTimerRef.current = null;
+      }
+    };
+  }, [scheduleFeedbackSurvey]);
+
+  // Catatan baru selesai dibuat (overlay ditutup) → cek kelayakan survey.
+  const prevNotePromptRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevNotePromptRef.current !== null && notePrompt === null) {
+      void scheduleFeedbackSurvey();
+    }
+    prevNotePromptRef.current = notePrompt;
+  }, [notePrompt, scheduleFeedbackSurvey]);
+
+  // "Salin chat": seluruh percakapan dalam teks bersih, label peran per pesan,
+  // tanpa metadata lain (timestamp/sumber/model). Nonaktif saat AI menulis
+  // supaya jawaban setengah jalan tidak ikut tersalin.
+  const handleCopyAll = async () => {
+    const transcript = chat.renderedMessages
+      .filter((m) => m.content.trim())
+      .map(
+        (m) =>
+          `${m.role === "user" ? "Anda" : "Eureka"}:\n${markdownToPlainText(m.content)}`
+      )
+      .join("\n\n");
+    if (!transcript.trim()) return;
+    const ok = await copyText(transcript);
+    if (!ok) return;
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
+  };
 
   // Header auto-hide saat scroll ke bawah (mobile) — tampil lagi saat ke atas.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -156,14 +247,48 @@ export default function ChatPage() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={chat.handleNew}
-                  className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
-                  data-testid="chat-new-top"
-                >
-                  <span className="sm:hidden">+ Baru</span>
-                  <span className="hidden sm:inline">+ Chat Baru</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {chat.renderedMessages.length > 0 && (
+                    <>
+                      <button
+                        onClick={handleCopyAll}
+                        disabled={chat.sending}
+                        title="Salin seluruh chat sebagai teks bersih"
+                        aria-label="Salin seluruh chat"
+                        data-testid="chat-copy-all"
+                        className="btn-clay-ghost !min-h-[40px] !px-2.5 !py-2 text-xs disabled:opacity-50 sm:!px-3.5"
+                      >
+                        {copiedAll ? (
+                          <Check size={14} className="sm:mr-1.5" />
+                        ) : (
+                          <Copy size={14} className="sm:mr-1.5" />
+                        )}
+                        <span className="hidden sm:inline">
+                          {copiedAll ? "Tersalin!" : "Salin chat"}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => setShareOpen(true)}
+                        disabled={chat.sending}
+                        title="Bagikan chat lewat link publik"
+                        aria-label="Bagikan chat"
+                        data-testid="chat-share"
+                        className="btn-clay-ghost !min-h-[40px] !px-2.5 !py-2 text-xs disabled:opacity-50 sm:!px-3.5"
+                      >
+                        <Share2 size={14} className="sm:mr-1.5" />
+                        <span className="hidden sm:inline">Bagikan</span>
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={chat.handleNew}
+                    className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
+                    data-testid="chat-new-top"
+                  >
+                    <span className="sm:hidden">+ Baru</span>
+                    <span className="hidden sm:inline">+ Chat Baru</span>
+                  </button>
+                </div>
               </div>
             </motion.header>
           )}
@@ -254,6 +379,17 @@ export default function ChatPage() {
             setWizardPrompt(null);
           }}
           onSend={(input) => {
+            // Command alat belajar: /kuis & /card → buka popup, TIDAK dikirim
+            // sebagai pesan ke AI. Exact-match (deteksi di lib/studyContext).
+            const cmd = detectStudyCommand(input.question);
+            if (cmd === "quiz") {
+              setQuizOpen(true);
+              return;
+            }
+            if (cmd === "cards") {
+              setCardsOpen(true);
+              return;
+            }
             // "buat gambar" → generate gambar AI sesuai topik percakapan.
             if (detectImageIntent(input.question).isImageRequest) {
               setImagePrompt(input.question);
@@ -289,6 +425,38 @@ export default function ChatPage() {
           .map((m) => ({ role: m.role, content: m.content }))
           .slice(-10)}
         onClose={() => setImagePrompt(null)}
+      />
+
+      {/* Modal bagikan chat (snapshot publik view-only) */}
+      <ShareModal
+        open={shareOpen}
+        sessionId={sessionId}
+        title={activeSession?.title ?? "Percakapan"}
+        onClose={() => setShareOpen(false)}
+      />
+
+      {/* Modal kuis dari percakapan (command /kuis) */}
+      <ChatQuizModal
+        open={quizOpen}
+        sessionId={sessionId}
+        onClose={() => setQuizOpen(false)}
+      />
+
+      {/* Modal flashcards dari percakapan (command /card) */}
+      <ChatFlashcardModal
+        open={cardsOpen}
+        sessionId={sessionId}
+        onClose={() => setCardsOpen(false)}
+      />
+
+      {/* Survey performa Eureka — sekali per user, ~1 menit setelah catatan
+          pertama selesai; submit/dismiss menandai selesai permanen. */}
+      <FeedbackSurveyModal
+        open={feedbackOpen}
+        onClose={() => {
+          setFeedbackOpen(false);
+          markFeedbackDismissedLocally();
+        }}
       />
 
 

@@ -43,3 +43,9 @@ next-env.d.ts
 data/
 .vercel
 .env*
+
+# Alat AI lokal (konfigurasi agent & node_modules — bukan bagian proyek)
+.opencode/
+.kiro/
+.qwen/
+.agents/

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -177,40 +178,52 @@ export function MobileSessionButton({
         onClick={() => setOpen((o) => !o)}
         className="flex h-11 w-11 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm"
         aria-label="Riwayat chat"
+        aria-expanded={open}
       >
         <MessageSquarePlus size={18} />
       </button>
+      {/* Dropdown di-render via portal ke body: topbar chat punya
+          overflow-hidden (animasi header) & main overflow-hidden yang
+          memotong dropdown absolute — fixed di body bebas dari clipping. */}
       <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)}
-              className="fixed inset-0 z-30 bg-black/30 lg:hidden"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.97 }}
-              className="absolute left-0 top-12 z-40 max-h-[50vh] w-64 max-w-[calc(100vw-4rem)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-white p-2 shadow-clay-lg"
-            >
-              {sessions.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => {
-                    onSelect(s.id);
-                    setOpen(false);
-                  }}
-                  className="block w-full truncate rounded-clay-md px-3 py-2.5 text-left text-[13.5px] font-extrabold text-clay-dark hover:bg-clay-beige"
-                >
-                  {s.title || "Percakapan baru"}
-                </button>
-              ))}
-            </motion.div>
-          </>
-        )}
+        {open &&
+          createPortal(
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setOpen(false)}
+                className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+              />
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="fixed left-3 top-14 z-40 w-64 max-w-[calc(100vw-1.5rem)] max-h-[50vh] overflow-y-auto overscroll-contain rounded-clay-md border-2 border-clay-borderLight bg-white p-2 shadow-clay-lg"
+              >
+                {sessions.length === 0 && (
+                  <p className="px-2 py-6 text-center text-xs font-bold text-clay-muted">
+                    Belum ada percakapan.
+                  </p>
+                )}
+                {sessions.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      onSelect(s.id);
+                      setOpen(false);
+                    }}
+                    className="block w-full truncate rounded-clay-md px-3 py-2.5 text-left text-[13.5px] font-extrabold text-clay-dark hover:bg-clay-beige"
+                  >
+                    {s.title || "Percakapan baru"}
+                  </button>
+                ))}
+              </motion.div>
+            </>,
+            document.body
+          )}
       </AnimatePresence>
     </div>
   );

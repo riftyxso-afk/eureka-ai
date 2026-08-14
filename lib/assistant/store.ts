@@ -3,16 +3,19 @@
  * Tabel: ai_chat_sessions, ai_chat_messages (lihat supabase_patch_003_ai_chat.sql)
  * Dipakai di server-side (API routes) lewat service role client.
  */
+import { randomBytes } from "crypto";
 import { db } from "../supabase/admin";
 import { aiChat } from "../ai";
 import type {
   AssistantChatMessage,
   AssistantChatSession,
   AssistantSource,
+  ShareMessage,
+  ShareRecord,
 } from "./types";
 
 export type { AssistantSource };
-export type { AssistantChatMessage, AssistantChatSession };
+export type { AssistantChatMessage, AssistantChatSession, ShareRecord };
 
 export async function createSession(userId: string): Promise<AssistantChatSession> {
   const { data, error } = await db()
@@ -240,4 +243,71 @@ async function autoTitleIfNeeded(sessionId: string): Promise<void> {
     .from("ai_chat_sessions")
     .update({ title })
     .eq("id", sessionId);
+}
+
+/**
+ * Buat snapshot share dari sesi: simpan salinan pesan (role + content)
+ * beserta token acak 128-bit. Snapshot BEBAS — tidak terhubung ke sesi,
+ * jadi pesan berikutnya / hapus sesi tidak mengubah halaman share.
+ */
+export async function createShare(
+  sessionId: string,
+  userId: string,
+  title: string,
+  messages: AssistantChatMessage[]
+): Promise<ShareRecord> {
+  const token = randomBytes(16).toString("hex");
+  const snapshot: ShareMessage[] = messages.map((m) => ({
+    role: m.role,
+    content: m.content,
+  }));
+  const { data, error } = await db()
+    .from("ai_chat_shares")
+    .insert({
+      session_id: sessionId,
+      user_id: userId,
+      title: title.trim().slice(0, 120),
+      token,
+      snapshot,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapShare(data);
+}
+
+/** Ambil share publik via token; null bila token tidak dikenal. */
+export async function getShare(
+  token: string
+): Promise<Pick<ShareRecord, "title" | "messages"> | null> {
+  const { data, error } = await db()
+    .from("ai_chat_shares")
+    .select("*")
+    .eq("token", token)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    title: String(data.title ?? "Percakapan"),
+    messages: mapSnapshot(data.snapshot),
+  };
+}
+
+function mapShare(row: Record<string, unknown>): ShareRecord {
+  return {
+    id: String(row.id),
+    sessionId: row.session_id ? String(row.session_id) : null,
+    userId: row.user_id ? String(row.user_id) : null,
+    title: String(row.title ?? "Percakapan"),
+    token: String(row.token),
+    messages: mapSnapshot(row.snapshot),
+    createdAt: String(row.created_at ?? ""),
+  };
+}
+
+function mapSnapshot(raw: unknown): ShareMessage[] {
+  return asArray<Record<string, unknown>>(raw).map((s) => ({
+    role: s.role === "assistant" ? "assistant" : "user",
+    content: String(s.content ?? ""),
+  }));
 }

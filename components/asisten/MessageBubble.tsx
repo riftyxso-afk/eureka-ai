@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { RefreshCw } from "lucide-react";
+import { Check, Copy, RefreshCw } from "lucide-react";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
+import { copyText } from "@/lib/assistant/clipboard";
+import { markdownToPlainText } from "@/lib/assistant/plainText";
 import type { AssistantChatMessage } from "@/lib/assistant/types";
 
 interface MessageBubbleProps {
@@ -12,6 +15,35 @@ interface MessageBubbleProps {
   onRetry?: () => void;
   /** Pesan user sebelumnya — dipakai hitung lama AI menjawab. */
   prevMessage?: AssistantChatMessage | null;
+}
+
+/**
+ * Tombol copy isi pesan dalam teks bersih (markdown di-strip).
+ * Sembunyi saat konten kosong; feedback "Tersalin" ±2 detik.
+ */
+function CopyButton({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!content.trim()) return null;
+
+  const handleCopy = async () => {
+    const ok = await copyText(markdownToPlainText(content));
+    if (!ok) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      aria-label="Salin pesan"
+      title="Salin pesan sebagai teks bersih"
+      className="inline-flex min-h-[26px] items-center gap-1 self-start rounded-clay-full border-2 border-clay-borderLight bg-white px-2 py-0.5 text-[11px] font-bold text-clay-muted shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 hover:text-clay-primary active:translate-y-1"
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+      {copied ? "Tersalin" : "Salin"}
+    </button>
+  );
 }
 
 /** Format durasi: "12 detik" / "1 mnt 20 dtk" / "3 mnt". */
@@ -78,10 +110,13 @@ export default function MessageBubble({
         animate={{ opacity: 1, y: 0 }}
         className="flex justify-end"
       >
-        <div className="max-w-[70%] break-words rounded-clay-md rounded-br-[8px] bg-clay-primary px-3.5 py-2.5 text-white shadow-clay-sm">
-          <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed">
-            {message.content}
-          </p>
+        <div className="flex items-end gap-1.5">
+          <CopyButton content={message.content} />
+          <div className="max-w-[70%] break-words rounded-clay-md rounded-br-[8px] bg-clay-primary px-3.5 py-2.5 text-white shadow-clay-sm">
+            <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed">
+              {message.content}
+            </p>
+          </div>
         </div>
       </motion.div>
     );
@@ -125,11 +160,15 @@ export default function MessageBubble({
           )}
         </div>
 
-        {message.model && (
-          <span className="self-start rounded-clay-full bg-clay-beige px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-wide text-clay-muted">
-            via {message.model}
-          </span>
-        )}
+        {/* Meta: model + salin — hanya saat jawaban lengkap (bukan streaming) */}
+        <div className="flex items-center gap-1.5 self-start">
+          {message.model && (
+            <span className="rounded-clay-full bg-clay-beige px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-wide text-clay-muted">
+              via {message.model}
+            </span>
+          )}
+          {!isStreaming && !empty && <CopyButton content={message.content} />}
+        </div>
 
         {!isStreaming && message.sources.length > 0 && (
           <SourceChips sources={message.sources} />

@@ -45,6 +45,11 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/exams", exams);
   count++;
 
+  // ─── Feedback (survey performa Eureka) ─────────────────
+  const feedbackNote = await import("@/app/api/feedback/note/route");
+  mount(app, "/api/feedback/note", feedbackNote);
+  count++;
+
   // ─── Friends ───────────────────────────────────────────
   const friends = await import("@/app/api/friends/route");
   const friendsRequests = await import("@/app/api/friends/requests/route");
@@ -93,14 +98,25 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
 
   // ─── Asisten AI (halaman /home & /chat) ────────────────
   const assistantChat = await import("@/app/api/assistant/chat/route");
+  const assistantFlashcards = await import("@/app/api/assistant/flashcards/route");
   const assistantImage = await import("@/app/api/assistant/image/route");
+  const assistantQuiz = await import("@/app/api/assistant/quiz/route");
   const assistantSessions = await import("@/app/api/assistant/sessions/route");
   const assistantSessionsId = await import("@/app/api/assistant/sessions/[sessionId]/route");
+  const assistantSessionsShare = await import("@/app/api/assistant/sessions/[sessionId]/share/route");
   mount(app, "/api/assistant/chat", assistantChat);
+  mount(app, "/api/assistant/flashcards", assistantFlashcards);
   mount(app, "/api/assistant/image", assistantImage);
+  mount(app, "/api/assistant/quiz", assistantQuiz);
   mount(app, "/api/assistant/sessions", assistantSessions);
   mount(app, "/api/assistant/sessions/:sessionId", assistantSessionsId);
-  count += 4;
+  mount(app, "/api/assistant/sessions/:sessionId/share", assistantSessionsShare);
+  count += 7;
+
+  // ─── Share chat publik (view-only) ─────────────────────
+  const sharesToken = await import("@/app/api/shares/[token]/route");
+  mount(app, "/api/shares/:token", sharesToken);
+  count += 1;
 
   // ─── Subjects ──────────────────────────────────────────
   const subjects = await import("@/app/api/subjects/route");

@@ -7,12 +7,15 @@ import {
   BookOpen,
   Check,
   ChevronDown,
+  ClipboardList,
   Gem,
   Globe,
+  Layers,
   Leaf,
   Paperclip,
   Send,
   Square,
+  Terminal,
   Zap,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
@@ -115,6 +118,24 @@ type SpeedMode = (typeof SPEED_OPTIONS)[number]["value"];
 
 const SPEED_STORAGE_KEY = "eureka_chat_speed_mode";
 
+/**
+ * Perintah cepat chat — muncul di popover saat user mengetik "/".
+ * id = teks yang diisi ke composer; diproses exact-match di halaman chat
+ * (detectStudyCommand di lib/assistant/studyContext).
+ */
+const COMMANDS = [
+  {
+    id: "/kuis",
+    desc: "Buat kuis dari percakapan sesi ini",
+    icon: ClipboardList,
+  },
+  {
+    id: "/card",
+    desc: "Buat flashcards dari percakapan sesi ini",
+    icon: Layers,
+  },
+] as const;
+
 interface ComposerProps {
   userId: string;
   sending: boolean;
@@ -164,6 +185,9 @@ export default function Composer({
   const [notes, setNotes] = useState<MentionOption[]>([]);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionOpen, setMentionOpen] = useState(false);
+  // Popover perintah "/" (kuis, flashcards).
+  const [commandQuery, setCommandQuery] = useState("");
+  const [commandOpen, setCommandOpen] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
@@ -174,6 +198,7 @@ export default function Composer({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const commandRef = useRef<HTMLDivElement>(null);
   const speedRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -215,6 +240,13 @@ export default function Composer({
       .slice(0, 6);
   }, [notes, mentionQuery, mentionIds]);
 
+  /** Perintah yang cocok dengan teks setelah "/" (mis. "/ku" → /kuis). */
+  const filteredCommands = useMemo(() => {
+    const q = commandQuery.toLowerCase().trim();
+    if (!q) return COMMANDS;
+    return COMMANDS.filter((c) => c.id.toLowerCase().includes(q));
+  }, [commandQuery]);
+
   // Tutup popover saat klik di luar.
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -225,6 +257,14 @@ export default function Composer({
         !textareaRef.current.contains(e.target as Node)
       ) {
         setMentionOpen(false);
+      }
+      if (
+        commandRef.current &&
+        !commandRef.current.contains(e.target as Node) &&
+        textareaRef.current &&
+        !textareaRef.current.contains(e.target as Node)
+      ) {
+        setCommandOpen(false);
       }
       if (speedRef.current && !speedRef.current.contains(e.target as Node)) {
         setSpeedOpen(false);
@@ -266,6 +306,29 @@ export default function Composer({
   const canSend = text.trim().length > 0 && !sending && !disabled;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (commandOpen) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIdx((i) => Math.min(i + 1, filteredCommands.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIdx((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        if (filteredCommands[selectedIdx]) {
+          e.preventDefault();
+          pickCommand(filteredCommands[selectedIdx]);
+          return;
+        }
+      }
+      if (e.key === "Escape") {
+        setCommandOpen(false);
+        return;
+      }
+    }
     if (mentionOpen) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -297,9 +360,28 @@ export default function Composer({
 
   const handleChange = (value: string) => {
     setText(value);
-    // Deteksi "@" di dekat kursor untuk membuka popover mention.
     const caret = textareaRef.current?.selectionStart ?? value.length;
     const before = value.slice(0, caret);
+
+    // Deteksi "/" di dekat kursor → popover perintah chat. Hanya bila "/"
+    // berada di awal kata (awal input atau setelah spasi) — hindari false
+    // positive seperti "5/3" atau "dir/".
+    const slashIdx = before.lastIndexOf("/");
+    const slashAtWordStart =
+      slashIdx !== -1 &&
+      slashIdx >= caret - 40 &&
+      !/[\s\n]/.test(before.slice(slashIdx + 1)) &&
+      (slashIdx === 0 || /\s/.test(before[slashIdx - 1]));
+    if (slashAtWordStart) {
+      setCommandQuery(before.slice(slashIdx + 1));
+      setCommandOpen(true);
+      setSelectedIdx(0);
+      setMentionOpen(false);
+      return;
+    }
+    setCommandOpen(false);
+
+    // Deteksi "@" di dekat kursor untuk membuka popover mention.
     const atIdx = before.lastIndexOf("@");
     if (atIdx !== -1 && atIdx >= caret - 40) {
       const segment = before.slice(atIdx + 1);
@@ -311,6 +393,21 @@ export default function Composer({
       }
     }
     setMentionOpen(false);
+  };
+
+  /** Pilih perintah → isi composer dengan "/kuis" / "/card" + fokus. */
+  const pickCommand = (cmd: (typeof COMMANDS)[number]) => {
+    setText(cmd.id);
+    setCommandOpen(false);
+    setCommandQuery("");
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        const pos = el.value.length;
+        el.setSelectionRange(pos, pos);
+      }
+    });
   };
 
   const pickMention = (note: MentionOption) => {
@@ -564,7 +661,7 @@ export default function Composer({
 
                 {!compact && (
                   <span className="hidden text-[11px] font-bold text-clay-muted sm:inline">
-                    Enter kirim · Shift+Enter baris baru
+                    Enter kirim · Shift+Enter baris baru · / perintah
                   </span>
                 )}
               </div>              <div className="flex items-center gap-1.5 sm:gap-2">
@@ -668,6 +765,54 @@ export default function Composer({
               </div>
             </div>
           </div>
+
+          {/* Popover perintah "/" — kuis, flashcards */}
+          <AnimatePresence>
+            {commandOpen && (
+              <motion.div
+                ref={commandRef}
+                initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full left-2 z-30 mb-2 w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-white shadow-clay-lg"
+              >
+                <div className="flex items-center gap-2 border-b-2 border-clay-borderLight px-3.5 py-2.5 text-xs font-extrabold text-clay-muted">
+                  <Terminal size={14} className="text-clay-primary" />
+                  Perintah chat — pilih lalu tekan Enter
+                </div>
+                <div className="max-h-56 overflow-y-auto p-1.5">
+                  {filteredCommands.length === 0 && (
+                    <p className="px-3 py-3 text-xs font-bold text-clay-muted">
+                      Tidak ada perintah cocok.
+                    </p>
+                  )}
+                  {filteredCommands.map((cmd, i) => (
+                    <button
+                      key={cmd.id}
+                      onMouseEnter={() => setSelectedIdx(i)}
+                      onClick={() => pickCommand(cmd)}
+                      className={`flex w-full items-center gap-2.5 rounded-clay-md px-3 py-2.5 text-left transition-colors ${
+                        i === selectedIdx ? "bg-clay-primary/10" : ""
+                      }`}
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-clay-beige">
+                        <cmd.icon size={13} className="text-clay-primary" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[13.5px] font-extrabold text-clay-dark">
+                          {cmd.id}
+                        </span>
+                        <span className="block text-[11px] font-bold text-clay-muted">
+                          {cmd.desc}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Popover mention */}
           <AnimatePresence>

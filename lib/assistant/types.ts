@@ -62,3 +62,20 @@ export interface AssistantChatSession {
   createdAt: string;
   updatedAt: string;
 }
+
+/** Satu pesan di dalam snapshot share (hanya teks — tanpa metadata). */
+export interface ShareMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Baris tabel ai_chat_shares (snapshot percakapan yang dibagikan). */
+export interface ShareRecord {
+  id: string;
+  sessionId: string | null;
+  userId: string | null;
+  title: string;
+  token: string;
+  messages: ShareMessage[];
+  createdAt: string;
+}
