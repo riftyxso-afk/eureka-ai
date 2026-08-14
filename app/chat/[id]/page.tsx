@@ -17,6 +17,7 @@ import { ImageGenerationOverlay } from "@/components/note/ImageGenerationOverlay
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import MessageBubble from "@/components/asisten/MessageBubble";
+import ChatSkeleton from "@/components/asisten/ChatSkeleton";
 import ShareModal from "@/components/asisten/ShareModal";
 import ChatQuizModal from "@/components/asisten/ChatQuizModal";
 import ChatFlashcardModal from "@/components/asisten/ChatFlashcardModal";
@@ -301,12 +302,7 @@ export default function ChatPage() {
           className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6"
         >
           {chat.loading && chat.messages.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-clay-primary/30 border-t-clay-primary" />
-              <p className="mt-4 text-sm font-bold text-clay-muted">
-                Memuat percakapan…
-              </p>
-            </div>
+            <ChatSkeleton />
           ) : chat.renderedMessages.length === 0 ? (
             <div className="py-14 text-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}

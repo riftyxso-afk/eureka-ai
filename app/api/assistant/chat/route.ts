@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 
 import { aiChatStream, hasAiKey, type AiSpeedMode } from "@/lib/ai";
-import { cleanSearchQuery, firecrawlSearch } from "@/lib/firecrawl";
+import { cleanSearchQuery, searchWeb } from "@/lib/firecrawl";
 import { checkRateLimit as checkHourlyRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { extractTextFromFile } from "@/lib/rag/extract";
 import {
@@ -280,7 +280,7 @@ export async function POST(req: NextRequest) {
           emit({ type: "pipeline", stage: "searching" });
           try {
             const searchQuery = buildWebSearchQuery(question, prior);
-            webResults = (await firecrawlSearch(searchQuery, 10)).map((r) => ({
+            webResults = (await searchWeb(searchQuery, 10)).map((r) => ({
               url: r.url,
               title: r.title,
               description: r.description,

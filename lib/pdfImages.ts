@@ -13,7 +13,7 @@
  * Tahap ini TIDAK boleh menggagalkan PDF: bila tidak ada gambar / scrape gagal,
  * pipeline tetap lanjut tanpa gambar.
  */
-import { isFirecrawlConfigured, scrapeWebUrl, firecrawlSearch } from "./firecrawl";
+import { isFirecrawlConfigured, scrapeWebUrl, searchWeb } from "./firecrawl";
 import type { WebImage } from "./firecrawl";
 import {
   buildIllustrationPrompt,
@@ -181,7 +181,7 @@ export async function collectImagesForPdf(
       if (query) {
         onProgress?.(40, "Mencari halaman sumber gambar via Firecrawl...");
         try {
-          const results = await firecrawlSearch(query, 2);
+          const results = await searchWeb(query, 2);
           scrapeUrl = results.find((r) => r.url?.startsWith("http"))?.url ?? null;
         } catch (e) {
           console.warn("[pdfImages] Firecrawl search dilewati:", e);

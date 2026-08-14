@@ -10,7 +10,7 @@ import { promises as fs } from "fs";
 import path from "path";
 
 import { aiChatJson } from "./ai";
-import { firecrawlSearch, isFirecrawlConfigured, scrapeWebUrl, type WebImage } from "./firecrawl";
+import { isFirecrawlConfigured, scrapeWebUrl, searchWeb, type WebImage } from "./firecrawl";
 import type { Note, NoteChapter } from "./types";
 
 const MAX_PLACED_IMAGES = 4;
@@ -85,7 +85,7 @@ export async function enrichNoteWithFirecrawl(note: Note): Promise<EnrichedNote 
   if (!query) return null;
 
   // 1) Cari materi terkait
-  const results = await firecrawlSearch(query, 2);
+  const results = await searchWeb(query, 2);
   let scrapedText = "";
   const availableImages: WebImage[] = [];
 

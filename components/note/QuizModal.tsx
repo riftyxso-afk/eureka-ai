@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/apiClient";
 import { motion } from "framer-motion";
-import { Check, Loader2, RefreshCw, X } from "lucide-react";
+import { Check, Copy, Link2, Loader2, Radio, RefreshCw, X } from "lucide-react";
+import {
+  buildQuizUrl,
+  createQuizRoom,
+  createQuizShare,
+  saveParticipantKey,
+  saveRoomName,
+} from "@/lib/quizLiveClient";
 
 interface QuizQuestion {
   id: number;
@@ -15,19 +23,31 @@ interface QuizQuestion {
 
 export default function QuizModal({
   noteId,
+  noteTitle,
   notify,
   onClose,
 }: {
   noteId: string;
+  noteTitle?: string;
   notify: (msg: string) => void;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [count, setCount] = useState(5);
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [generating, setGenerating] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Share & live room
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [roomName, setRoomName] = useState("");
+  const [roomToken, setRoomToken] = useState<string | null>(null);
+  const [roomBusy, setRoomBusy] = useState(false);
+  const [roomCopied, setRoomCopied] = useState(false);
 
   const generate = async (c: number = count) => {
     setGenerating(true);
@@ -56,6 +76,77 @@ export default function QuizModal({
   const score = questions
     ? questions.filter((q) => answers[q.id] === q.answer).length
     : 0;
+
+  const doShare = async () => {
+    if (!questions) return;
+    setSharing(true);
+    setError(null);
+    try {
+      const res = await createQuizShare({
+        noteId,
+        noteTitle: noteTitle ?? "",
+        questions,
+      });
+      setShareToken(res.token);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal membuat link.");
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const copyShare = async () => {
+    if (!shareToken) return;
+    try {
+      await navigator.clipboard.writeText(buildQuizUrl(shareToken));
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      notify("Gagal menyalin link.");
+    }
+  };
+
+  const doCreateRoom = async () => {
+    if (!questions) return;
+    const name = roomName.trim();
+    if (!name) {
+      notify("Isi nama host dulu ya!");
+      return;
+    }
+    setRoomBusy(true);
+    setError(null);
+    try {
+      let token = shareToken;
+      if (!token) {
+        const share = await createQuizShare({
+          noteId,
+          noteTitle: noteTitle ?? "",
+          questions,
+        });
+        token = share.token;
+        setShareToken(token);
+      }
+      const room = await createQuizRoom({ shareToken: token, hostName: name });
+      setRoomToken(room.token);
+      saveParticipantKey(room.token, room.participantKey);
+      saveRoomName(room.token, name);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal membuat ruang.");
+    } finally {
+      setRoomBusy(false);
+    }
+  };
+
+  const copyRoom = async () => {
+    if (!roomToken) return;
+    try {
+      await navigator.clipboard.writeText(buildQuizUrl(roomToken));
+      setRoomCopied(true);
+      setTimeout(() => setRoomCopied(false), 2000);
+    } catch {
+      notify("Gagal menyalin link.");
+    }
+  };
 
   return (
     <div
@@ -260,6 +351,107 @@ export default function QuizModal({
               >
                 Kumpulkan Jawaban
               </button>
+            )}
+
+            {submitted && (
+              <div className="space-y-3 border-t-2 border-dashed border-clay-shadow/40 pt-4">
+                <div className="flex gap-2">
+                  <button
+                    onClick={doShare}
+                    disabled={sharing || !!shareToken}
+                    className="btn-clay-ghost flex-1 !min-h-[44px] text-xs sm:text-sm disabled:opacity-50"
+                  >
+                    {sharing ? (
+                      <Loader2 size={15} className="mr-1.5 animate-spin" />
+                    ) : (
+                      <Link2 size={15} className="mr-1.5" />
+                    )}
+                    {shareToken ? "Link Dibuat ✓" : "Bagikan Kuis"}
+                  </button>
+                  <button
+                    onClick={doCreateRoom}
+                    disabled={roomBusy || !!roomToken}
+                    className="btn-clay-ghost flex-1 !min-h-[44px] text-xs sm:text-sm disabled:opacity-50"
+                  >
+                    {roomBusy ? (
+                      <Loader2 size={15} className="mr-1.5 animate-spin" />
+                    ) : (
+                      <Radio size={15} className="mr-1.5" />
+                    )}
+                    {roomToken ? "Ruang Dibuat ✓" : "Buat Ruang Live"}
+                  </button>
+                </div>
+
+                {shareToken && !roomToken && (
+                  <div className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3">
+                    <p className="mb-1.5 text-[11px] font-extrabold text-clay-muted">
+                      Link kuis — kerjakan sendiri, kunci jawaban muncul
+                      setelah submit:
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        readOnly
+                        value={buildQuizUrl(shareToken)}
+                        onFocus={(e) => e.target.select()}
+                        className="min-w-0 flex-1 rounded-xl border-2 border-clay-shadow/40 bg-white px-3 py-2 text-[11px] font-semibold text-clay-muted outline-none"
+                      />
+                      <button
+                        onClick={copyShare}
+                        className="btn-clay-primary shrink-0 !min-h-[44px] !px-3 text-xs"
+                      >
+                        <Copy size={13} className="mr-1.5" />
+                        {shareCopied ? "Tersalin!" : "Salin"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!roomToken && (
+                  <div className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3">
+                    <label className="mb-1 block text-[11px] font-extrabold text-clay-muted">
+                      Nama host (untuk ruang live):
+                    </label>
+                    <input
+                      value={roomName}
+                      onChange={(e) => setRoomName(e.target.value)}
+                      placeholder="mis. Budi"
+                      maxLength={40}
+                      className="w-full rounded-xl border-2 border-clay-shadow/40 bg-white px-3 py-2 text-xs font-semibold text-clay-dark outline-none focus:border-clay-primary min-h-[44px]"
+                    />
+                  </div>
+                )}
+
+                {roomToken && (
+                  <div className="space-y-2">
+                    <div className="rounded-2xl border-2 border-clay-primary/40 bg-clay-primary/10 p-3">
+                      <p className="mb-1.5 text-[11px] font-extrabold text-clay-muted">
+                        Link ruang live — bagikan ke teman, papan skor realtime:
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          readOnly
+                          value={buildQuizUrl(roomToken)}
+                          onFocus={(e) => e.target.select()}
+                          className="min-w-0 flex-1 rounded-xl border-2 border-clay-shadow/40 bg-white px-3 py-2 text-[11px] font-semibold text-clay-muted outline-none"
+                        />
+                        <button
+                          onClick={copyRoom}
+                          className="btn-clay-primary shrink-0 !min-h-[44px] !px-3 text-xs"
+                        >
+                          <Copy size={13} className="mr-1.5" />
+                          {roomCopied ? "Tersalin!" : "Salin"}
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => router.push(`/quiz/${roomToken}`)}
+                      className="btn-clay-primary w-full !min-h-[46px]"
+                    >
+                      🚀 Buka Ruang & Mulai
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

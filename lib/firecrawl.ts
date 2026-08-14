@@ -6,6 +6,8 @@ const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY ?? "";
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 const FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v2/search";
 
+import { isTavilyConfigured, tavilySearch } from "./tavily";
+
 export interface WebImage {
   url: string;
   alt: string;
@@ -252,6 +254,37 @@ export async function firecrawlSearch(query: string, limit = 3): Promise<SearchR
     )
     .filter((r: SearchResult) => {
       // Buang duplikat URL (Firecrawl kadang mengembalikan hasil sama 2x).
+      const key = r.url.split("#")[0];
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, limit);
+}
+
+/**
+ * Pencarian web dengan fallback otomatis: Firecrawl dulu; bila gagal/kosong
+ * dan TAVILY_API_KEY terisi → Tavily. Hasil akhir di-dedup by URL + filter
+ * noise. Semua pemakai web search memanggil helper ini, bukan provider.
+ */
+export async function searchWeb(
+  query: string,
+  limit = 3
+): Promise<SearchResult[]> {
+  const clean = cleanSearchQuery(query).slice(0, 200);
+  let results = await firecrawlSearch(clean, limit);
+  if (results.length === 0 && isTavilyConfigured()) {
+    results = await tavilySearch(clean, limit);
+  }
+  const seen = new Set<string>();
+  return results
+    .filter(
+      (r: SearchResult) =>
+        r.url &&
+        r.url.startsWith("http") &&
+        !isNoiseSearchResult(r.url, r.title)
+    )
+    .filter((r: SearchResult) => {
       const key = r.url.split("#")[0];
       if (seen.has(key)) return false;
       seen.add(key);

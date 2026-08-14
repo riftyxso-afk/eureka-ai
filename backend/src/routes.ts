@@ -118,6 +118,23 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/shares/:token", sharesToken);
   count += 1;
 
+  // ─── Quiz Live (share & live room) ─────────────────────
+  const quizShares = await import("@/app/api/quiz-shares/route");
+  const quizSharesToken = await import("@/app/api/quiz-shares/[token]/route");
+  const quizRooms = await import("@/app/api/quiz-rooms/route");
+  const quizRoomsToken = await import("@/app/api/quiz-rooms/[token]/route");
+  const quizRoomsJoin = await import("@/app/api/quiz-rooms/[token]/join/route");
+  const quizRoomsStart = await import("@/app/api/quiz-rooms/[token]/start/route");
+  const quizRoomsSubmit = await import("@/app/api/quiz-rooms/[token]/submit/route");
+  mount(app, "/api/quiz-shares", quizShares);
+  mount(app, "/api/quiz-shares/:token", quizSharesToken);
+  mount(app, "/api/quiz-rooms", quizRooms);
+  mount(app, "/api/quiz-rooms/:token", quizRoomsToken);
+  mount(app, "/api/quiz-rooms/:token/join", quizRoomsJoin);
+  mount(app, "/api/quiz-rooms/:token/start", quizRoomsStart);
+  mount(app, "/api/quiz-rooms/:token/submit", quizRoomsSubmit);
+  count += 7;
+
   // ─── Subjects ──────────────────────────────────────────
   const subjects = await import("@/app/api/subjects/route");
   const subjectsId = await import("@/app/api/subjects/[id]/route");

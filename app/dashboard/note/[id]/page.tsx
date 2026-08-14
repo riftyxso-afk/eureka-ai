@@ -876,6 +876,7 @@ export default function NoteDetailPage() {
       {showQuiz && (
         <QuizModal
           noteId={data.id}
+          noteTitle={data.title}
           notify={notify}
           onClose={() => setShowQuiz(false)}
         />

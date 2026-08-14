@@ -13,9 +13,9 @@
  */
 import { aiChatJson, extractJsonObject, hasAiKey } from "@/lib/ai";
 import {
-  firecrawlSearch,
   isFirecrawlConfigured,
   scrapeWebUrl,
+  searchWeb,
 } from "@/lib/firecrawl";
 import type { NoteChapter, SearchSource } from "@/lib/types";
 
@@ -82,7 +82,7 @@ async function searchAndScrape(
   query: string,
   maxResults: number
 ): Promise<ScrapedSource[]> {
-  const results = await firecrawlSearch(query, maxResults);
+  const results = await searchWeb(query, maxResults);
   const out: ScrapedSource[] = [];
 
   for (const r of results.slice(0, maxResults)) {
