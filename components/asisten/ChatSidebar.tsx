@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Bot, MessageSquarePlus, Pencil, Plus, Trash2 } from "lucide-react";
 import type { AssistantChatSession } from "@/lib/assistant/types";
 
@@ -172,11 +172,32 @@ export function MobileSessionButton({
   onSelect: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  // Ukur posisi tombol tepat saat membuka → panel selalu menempel di bawah
+  // tombol (aman dari beda tinggi topbar / address bar browser / header
+  // auto-hide). useLayoutEffect: posisi sudah final sebelum layar digambar.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const el = btnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const panelW = 256; // w-64
+    const left = Math.max(
+      12,
+      Math.min(r.left, window.innerWidth - panelW - 12)
+    );
+    setPos({ left, top: r.bottom + 8 });
+  }, [open]);
+
   return (
-    <div className="relative lg:hidden">
+    <div className="relative z-10 lg:hidden">
       <button
+        ref={btnRef}
+        type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 w-11 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm"
+        className="flex h-11 w-11 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm [touch-action:manipulation]"
         aria-label="Riwayat chat"
         aria-expanded={open}
       >
@@ -184,47 +205,50 @@ export function MobileSessionButton({
       </button>
       {/* Dropdown di-render via portal ke body: topbar chat punya
           overflow-hidden (animasi header) & main overflow-hidden yang
-          memotong dropdown absolute — fixed di body bebas dari clipping. */}
-      <AnimatePresence>
-        {open &&
-          createPortal(
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setOpen(false)}
-                className="fixed inset-0 z-30 bg-black/30 lg:hidden"
-              />
-              <motion.div
-                initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                transition={{ duration: 0.15 }}
-                className="fixed left-3 top-14 z-40 w-64 max-w-[calc(100vw-1.5rem)] max-h-[50vh] overflow-y-auto overscroll-contain rounded-clay-md border-2 border-clay-borderLight bg-white p-2 shadow-clay-lg"
-              >
-                {sessions.length === 0 && (
-                  <p className="px-2 py-6 text-center text-xs font-bold text-clay-muted">
-                    Belum ada percakapan.
-                  </p>
-                )}
-                {sessions.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      onSelect(s.id);
-                      setOpen(false);
-                    }}
-                    className="block w-full truncate rounded-clay-md px-3 py-2.5 text-left text-[13.5px] font-extrabold text-clay-dark hover:bg-clay-beige"
-                  >
-                    {s.title || "Percakapan baru"}
-                  </button>
-                ))}
-              </motion.div>
-            </>,
-            document.body
-          )}
-      </AnimatePresence>
+          memotong dropdown absolute — fixed di body bebas dari clipping.
+          Catatan: TIDAK pakai AnimatePresence — AnimatePresence tidak
+          merender child berupa createPortal (dropdown tak pernah muncul). */}
+      {open &&
+        createPortal(
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={() => setOpen(false)}
+              className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="fixed z-50 w-64 max-w-[calc(100vw-1.5rem)] max-h-[50vh] overflow-y-auto overscroll-contain rounded-clay-md border-2 border-clay-borderLight bg-white p-2 shadow-clay-lg"
+              style={
+                pos ? { left: pos.left, top: pos.top } : { left: 12, top: 64 }
+              }
+            >
+              {sessions.length === 0 && (
+                <p className="px-2 py-6 text-center text-xs font-bold text-clay-muted">
+                  Belum ada percakapan.
+                </p>
+              )}
+              {sessions.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(s.id);
+                    setOpen(false);
+                  }}
+                  className="block w-full truncate rounded-clay-md px-3 py-3 text-left text-[13.5px] font-extrabold text-clay-dark hover:bg-clay-beige [touch-action:manipulation]"
+                >
+                  {s.title || "Percakapan baru"}
+                </button>
+              ))}
+            </motion.div>
+          </>,
+          document.body
+        )}
     </div>
   );
 }

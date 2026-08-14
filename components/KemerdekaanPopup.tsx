@@ -32,7 +32,12 @@ export default function KemerdekaanPopup() {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm"
+      onClick={(e) => {
+        if (!(e.target as Element).closest("[data-kemerdekaan-card]")) handleClose();
+      }}
+    >
       {/* Wrapper: tengah bila muat, bisa di-scroll bila tinggi (anti terpotong di HP kecil) */}
       <div className="flex min-h-full items-center justify-center p-4 py-8">
       {/* Confetti-like decorative elements */}
@@ -46,7 +51,7 @@ export default function KemerdekaanPopup() {
       </div>
 
       {/* Popup Card */}
-      <div className="relative w-full max-w-md animate-in zoom-in-95 fade-in duration-300">
+      <div className="relative w-full max-w-md animate-in zoom-in-95 fade-in duration-300" data-kemerdekaan-card>
         <div className="overflow-hidden rounded-3xl border-4 border-red-600 shadow-2xl">
           {/* Header - Red */}
           <div className="relative bg-gradient-to-r from-red-600 via-red-500 to-red-600 px-6 py-5 text-center">

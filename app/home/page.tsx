@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, LayoutDashboard, Sparkles } from "lucide-react";
+import { ChevronRight, LayoutDashboard, Plus, Sparkles } from "lucide-react";
 import TutorialHost from "@/components/tutorial/TutorialHost";
 import EmptyNotesCta from "@/components/tutorial/EmptyNotesCta";
 import { apiFetch } from "@/lib/apiClient";
@@ -257,10 +257,10 @@ export default function HomePage() {
           <button
             onClick={chat.handleNew}
             className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
+            aria-label="Chat baru"
             data-testid="home-new-top"
           >
-            <span className="sm:hidden">+ Baru</span>
-            <span className="hidden sm:inline">+ Chat Baru</span>
+            <Plus size={16} />
           </button>
         </header>
 

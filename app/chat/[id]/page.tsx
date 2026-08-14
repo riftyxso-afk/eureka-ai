@@ -32,7 +32,7 @@ import TutorialHost from "@/components/tutorial/TutorialHost";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
-import { Check, Copy, LayoutDashboard, Share2 } from "lucide-react";
+import { Check, Copy, LayoutDashboard, Plus, Share2 } from "lucide-react";
 import Link from "next/link";
 
 export default function ChatPage() {
@@ -283,10 +283,10 @@ export default function ChatPage() {
                   <button
                     onClick={chat.handleNew}
                     className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
+                    aria-label="Chat baru"
                     data-testid="chat-new-top"
                   >
-                    <span className="sm:hidden">+ Baru</span>
-                    <span className="hidden sm:inline">+ Chat Baru</span>
+                    <Plus size={16} />
                   </button>
                 </div>
               </div>
