@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PartyPopper, X } from "lucide-react";
 import type { TutorialStep } from "@/lib/tutorial";
@@ -35,6 +35,10 @@ export default function TutorialSpotlight({
   onSkip,
 }: TutorialSpotlightProps) {
   const [rect, setRect] = useState<DOMRect | null>(null);
+  // Tinggi kartu petunjuk aktual (diukur setelah render) — dipakai untuk
+  // menempatkan kartu di atas/bawah target agar tidak terpotong layar.
+  const [tooltipH, setTooltipH] = useState(190);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
   const finished = step >= steps.length;
 
   const current: TutorialStep | null = !finished ? steps[step] : null;
@@ -69,6 +73,17 @@ export default function TutorialSpotlight({
     };
   }, [active, current]);
 
+  // Ukur tinggi kartu petunjuk aktual agar posisi atas/bawah akurat
+  // (mencegah kartu terpotong di layar kecil / landscape HP).
+  useLayoutEffect(() => {
+    if (!active || finished) return;
+    const el = tooltipRef.current;
+    if (el) {
+      const h = el.offsetHeight;
+      if (h > 0 && Math.abs(h - tooltipH) > 4) setTooltipH(h);
+    }
+  }, [active, finished, current, rect, tooltipH]);
+
   // Klik pada elemen target → lanjut (aksi asli elemen tetap berjalan).
   useEffect(() => {
     if (!active || !current) return;
@@ -86,6 +101,7 @@ export default function TutorialSpotlight({
   const tooltipStyle = useCallback(() => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const fallbackH = Math.min(tooltipH, vh * 0.6);
     if (!rect) {
       return { left: 12, top: 88, width: Math.min(vw - 24, 340) };
     }
@@ -94,11 +110,15 @@ export default function TutorialSpotlight({
       12,
       Math.min(rect.left + rect.width / 2 - cardW / 2, vw - cardW - 12)
     );
-    const below = rect.bottom + 14;
-    const placeBelow = rect.bottom + 190 < vh;
-    const top = placeBelow ? below : Math.max(12, rect.top - 190);
+    // Tempatkan di BAWAH target bila muat; kalau tidak, di ATAS target.
+    // Keduanya di-clamp agar tidak keluar viewport (aman di HP kecil).
+    const placeBelow = rect.bottom + fallbackH + 24 < vh;
+    const topRaw = placeBelow
+      ? rect.bottom + 14
+      : Math.max(12, rect.top - fallbackH - 14);
+    const top = Math.max(12, Math.min(topRaw, vh - fallbackH - 12));
     return { left, top, width: cardW };
-  }, [rect]);
+  }, [rect, tooltipH]);
 
   if (!active) return null;
 
@@ -118,7 +138,7 @@ export default function TutorialSpotlight({
               initial={{ opacity: 0, scale: 0.9, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ type: "spring", stiffness: 240, damping: 20 }}
-              className="pointer-events-auto absolute left-1/2 top-1/2 w-[min(92vw,380px)] -translate-x-1/2 -translate-y-1/2 rounded-clay-md border-3 border-clay-primary/40 bg-white p-6 text-center shadow-clay-lg"
+              className="pointer-events-auto absolute left-1/2 top-1/2 max-h-[min(88vh,480px)] w-[min(92vw,380px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-clay-md border-3 border-clay-primary/40 bg-white p-6 text-center shadow-clay-lg"
             >
               <motion.div
                 initial={{ scale: 0, rotate: -30 }}
@@ -172,9 +192,10 @@ export default function TutorialSpotlight({
 
               {/* Kartu petunjuk */}
               <motion.div
+                ref={tooltipRef}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="pointer-events-auto fixed rounded-clay-md border-2 border-clay-borderLight bg-white p-4 shadow-clay-lg"
+                className="pointer-events-auto fixed max-h-[min(60vh,320px)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-white p-4 shadow-clay-lg"
                 style={tooltipStyle()}
               >
                 <button
@@ -211,7 +232,7 @@ export default function TutorialSpotlight({
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="pointer-events-auto absolute left-1/2 top-16 w-[min(92vw,340px)] -translate-x-1/2 rounded-clay-md border-2 border-clay-borderLight bg-white p-4 text-center shadow-clay-lg"
+              className="pointer-events-auto absolute left-1/2 top-16 max-h-[min(70vh,400px)] w-[min(92vw,340px)] -translate-x-1/2 overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-white p-4 text-center shadow-clay-lg"
             >
               <p className="text-sm font-bold text-clay-dark">
                 {current?.text}

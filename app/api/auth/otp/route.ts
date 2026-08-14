@@ -309,6 +309,7 @@ async function handleVerify(email: string, code: string, name: string) {
 
   // --- Pastikan akun Supabase Auth ada & confirmed, tanpa kirim email ---
   let user: { id: string; email?: string | null; email_confirmed_at?: string | null; created_at?: string; user_metadata?: Record<string, unknown> } | null = null;
+  let isNewUser = false; // true = akun BARU dibuat di verifikasi ini
   {
     const { data: list } = await client.auth.admin.listUsers({ page: 1, perPage: 1000 });
     user = list?.users?.find((u) => u.email === email) ?? null;
@@ -324,6 +325,7 @@ async function handleVerify(email: string, code: string, name: string) {
       return NextResponse.json({ ok: false, error: `Gagal membuat akun: ${created.error.message}` }, { status: 500 });
     }
     user = created.data.user;
+    isNewUser = true;
   } else if (!user.email_confirmed_at) {
     const updated = await client.auth.admin.updateUserById(user.id, { email_confirm: true });
     if (updated.error) {
@@ -339,6 +341,24 @@ async function handleVerify(email: string, code: string, name: string) {
   }
 
   const displayName = String(user.user_metadata?.name ?? "").trim() || email.split("@")[0];
+
+  // ── Email otomatis (fire-and-forget, tidak memblokir login) ──
+  // User BARU → selamat datang; user lama → notifikasi login.
+  try {
+    const { sendWelcomeEmail, sendLoginNotificationEmail } = await import("@/lib/email");
+    if (isNewUser) {
+      void sendWelcomeEmail(email, displayName).catch((e) =>
+        console.error("[otp] gagal kirim email selamat datang:", e)
+      );
+    } else {
+      void sendLoginNotificationEmail(email, displayName).catch((e) =>
+        console.error("[otp] gagal kirim notifikasi login:", e)
+      );
+    }
+  } catch (e) {
+    console.warn("[otp] email otomatis dilewati:", e);
+  }
+
   return NextResponse.json({
     ok: true,
     tokenHash,

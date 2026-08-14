@@ -20,6 +20,7 @@ import {
   isCloudflareImagesConfigured,
 } from "@/lib/cloudflareImages";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { enforcePremium } from "@/lib/premium";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -76,6 +77,15 @@ export async function POST(req: NextRequest) {
   );
   if (!auth.userId) {
     return Response.json({ error: auth.error }, { status: auth.status ?? 401 });
+  }
+
+  // Gating premium: generate gambar AI hanya untuk pengguna Pro.
+  const premiumImg = await enforcePremium(auth.userId, "assistant-image");
+  if (!premiumImg.ok) {
+    return Response.json(
+      { error: premiumImg.error, upgradeUrl: premiumImg.upgradeUrl },
+      { status: premiumImg.status ?? 402 }
+    );
   }
 
   // Rate limit ringan: 8 generate gambar / menit / user.

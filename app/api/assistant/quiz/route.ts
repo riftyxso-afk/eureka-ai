@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getMessages, getSession } from "@/lib/assistant/store";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { enforcePremium, recordFeatureUsage } from "@/lib/premium";
 import {
   buildStudyContext,
   collectMentionIds,
@@ -43,6 +44,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Gating premium: kuota kuis AI harian untuk free.
+    const premiumQuiz = await enforcePremium(auth.userId, "assistant-quiz");
+    if (!premiumQuiz.ok) {
+      return NextResponse.json(
+        { error: premiumQuiz.error, upgradeUrl: premiumQuiz.upgradeUrl },
+        { status: premiumQuiz.status ?? 402 }
+      );
+    }
+
     const session = await getSession(sessionId, auth.userId);
     if (!session) {
       return NextResponse.json(
@@ -73,6 +83,9 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Catat pemakaian (kuota free) setelah berhasil.
+    await recordFeatureUsage(auth.userId, "assistant-quiz");
 
     return NextResponse.json({ questions });
   } catch (e) {

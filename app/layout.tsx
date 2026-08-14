@@ -4,6 +4,7 @@ import { OnboardingProvider } from "@/context/OnboardingContext";
 import { JobWatcherProvider } from "@/context/JobWatcherContext";
 import LevelUpOverlay from "@/components/dashboard/LevelUpOverlay";
 import KemerdekaanPopup from "@/components/KemerdekaanPopup";
+import PremiumSuccessPopup from "@/components/PremiumSuccessPopup";
 
 const SITE_URL = "https://www.eureka-ai.web.id";
 
@@ -67,6 +68,7 @@ export default function RootLayout({
             {children}
             <LevelUpOverlay />
             <KemerdekaanPopup />
+            <PremiumSuccessPopup />
           </OnboardingProvider>
         </JobWatcherProvider>
       </body>

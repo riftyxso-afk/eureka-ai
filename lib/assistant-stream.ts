@@ -11,7 +11,7 @@
  *   { type: "pipeline", stage: "searching" | "analyzing" | "writing" }
  *   { type: "web", results: [{url, title, description, domain}] }
  *   { type: "done" }
- *   { type: "error", message }
+ *   { type: "error", message, upgradeUrl? }
  */
 import { apiUrl } from "@/lib/apiClient";
 import { getAccessToken } from "@/lib/supabase/client";
@@ -30,7 +30,7 @@ export type AssistantStreamEvent =
   | { type: "pipeline"; stage: WebSearchStage }
   | { type: "web"; results: WebSearchItem[] }
   | { type: "done" }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string; upgradeUrl?: string };
 
 export interface AssistantChatInput extends ChatToolOptions {
   sessionId: string;
@@ -80,13 +80,15 @@ export async function streamAssistantChat(
 
     if (!res.ok || !res.body) {
       let message = `Server error ${res.status}`;
+      let upgradeUrl: string | undefined;
       try {
-        const data = (await res.json()) as { error?: string };
+        const data = (await res.json()) as { error?: string; upgradeUrl?: string };
         if (data.error) message = data.error;
+        if (data.upgradeUrl) upgradeUrl = data.upgradeUrl;
       } catch {
         // body bukan JSON — biarkan pesan default
       }
-      onEvent({ type: "error", message });
+      onEvent({ type: "error", message, ...(upgradeUrl ? { upgradeUrl } : {}) });
       return;
     }
 

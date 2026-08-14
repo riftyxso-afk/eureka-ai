@@ -31,9 +31,11 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   // ─── Auth ──────────────────────────────────────────────
   const otp = await import("@/app/api/auth/otp/route");
   const verifyCaptcha = await import("@/app/api/auth/verify-captcha/route");
+  const authNotify = await import("@/app/api/auth/notify/route");
   mount(app, "/api/auth/otp", otp);
   mount(app, "/api/auth/verify-captcha", verifyCaptcha);
-  count += 2;
+  mount(app, "/api/auth/notify", authNotify);
+  count += 3;
 
   // ─── Chat ──────────────────────────────────────────────
   const chat = await import("@/app/api/chat/route");
@@ -80,6 +82,19 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const onboardingAnalyze = await import("@/app/api/onboarding/analyze/route");
   mount(app, "/api/onboarding/analyze", onboardingAnalyze);
   count++;
+
+  // ─── Payments (langganan Mayar.id) ──────────────────────
+  const paymentsCheckout = await import("@/app/api/payments/checkout/route");
+  const paymentsWebhook = await import("@/app/api/payments/webhook/route");
+  const paymentsStatus = await import("@/app/api/payments/status/route");
+  const paymentsTrial = await import("@/app/api/payments/trial/route");
+  const paymentsCancel = await import("@/app/api/payments/cancel/route");
+  mount(app, "/api/payments/checkout", paymentsCheckout);
+  mount(app, "/api/payments/webhook", paymentsWebhook);
+  mount(app, "/api/payments/status", paymentsStatus);
+  mount(app, "/api/payments/trial", paymentsTrial);
+  mount(app, "/api/payments/cancel", paymentsCancel);
+  count += 5;
 
   // ─── Profile ───────────────────────────────────────────
   const profile = await import("@/app/api/profile/route");

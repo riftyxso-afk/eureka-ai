@@ -22,6 +22,8 @@ export interface StreamingState {
   content: string;
   sources: AssistantChatMessage["sources"];
   error: string | null;
+  /** Link upgrade (402 premium) — tampilkan tombol ke /pricing. */
+  upgradeUrl: string | null;
   model: string | null;
   /** Pipeline web search (tool globe) — loading bertahap. */
   webStage: WebSearchStage | null;
@@ -34,6 +36,7 @@ function newStreaming(): StreamingState {
     content: "",
     sources: [],
     error: null,
+    upgradeUrl: null,
     model: null,
     webStage: null,
     webResults: [],
@@ -229,7 +232,11 @@ export function useAssistantChat(options: {
               webStage: s.webStage === "writing" ? s.webStage : "analyzing",
             }));
           } else if (ev.type === "error") {
-            setStreaming((s) => ({ ...s, error: ev.message }));
+            setStreaming((s) => ({
+              ...s,
+              error: ev.message,
+              upgradeUrl: ev.upgradeUrl ?? null,
+            }));
           }
         }
       );

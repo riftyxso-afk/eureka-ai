@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/apiClient";
+import { getUserId } from "@/lib/identity";
+import { isLoggedIn } from "@/lib/auth";
 
 const DISMISS_KEY = "eureka_kemerdekaan_dismissed";
 
@@ -24,9 +27,44 @@ export default function KemerdekaanPopup() {
     return () => clearTimeout(timer);
   }, []);
 
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
   const handleClose = () => {
     setShow(false);
     localStorage.setItem(DISMISS_KEY, "true");
+  };
+
+  // Klaim promo → checkout Mayar tier promo (Rp 5.000).
+  const handleClaim = async () => {
+    if (!isLoggedIn()) {
+      window.location.href = "/login";
+      return;
+    }
+    setCheckoutError(null);
+    setCheckingOut(true);
+    try {
+      const res = await apiFetch("/api/payments/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: getUserId(), tier: "promo" }),
+      });
+      const body = (await res.json().catch(() => null)) as {
+        link?: string;
+        error?: string;
+      } | null;
+      if (!res.ok || !body?.link) {
+        setCheckoutError(
+          body?.error ?? "Gagal membuat pembayaran. Coba lagi ya 🙏"
+        );
+        return;
+      }
+      window.location.href = body.link;
+    } catch {
+      setCheckoutError("Gagal membuat pembayaran. Coba lagi ya 🙏");
+    } finally {
+      setCheckingOut(false);
+    }
   };
 
   if (!show) return null;
@@ -115,12 +153,25 @@ export default function KemerdekaanPopup() {
 
           {/* Footer - White with red accent */}
           <div className="bg-white border-t-2 border-red-100 px-6 py-4">
-            <a
-              href="/register"
-              className="block w-full rounded-2xl bg-gradient-to-r from-red-600 to-red-500 py-4 text-center text-base font-extrabold text-white shadow-lg shadow-red-500/30 transition-all hover:from-red-700 hover:to-red-600 hover:shadow-xl hover:shadow-red-500/40 active:scale-[0.98]"
+            {checkoutError && (
+              <p className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
+                {checkoutError}
+              </p>
+            )}
+            <button
+              onClick={handleClaim}
+              disabled={checkingOut}
+              className="block w-full rounded-2xl bg-gradient-to-r from-red-600 to-red-500 py-4 text-center text-base font-extrabold text-white shadow-lg shadow-red-500/30 transition-all hover:from-red-700 hover:to-red-600 hover:shadow-xl hover:shadow-red-500/40 active:scale-[0.98] disabled:opacity-60"
             >
-              Klaim Promo Sekarang! 🚀
-            </a>
+              {checkingOut ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 size={18} className="animate-spin" />
+                  Mengarahkan ke Mayar…
+                </span>
+              ) : (
+                "Klaim Promo Sekarang! 🚀"
+              )}
+            </button>
             <button
               onClick={handleClose}
               className="mt-3 w-full text-center text-xs font-bold text-gray-400 transition-colors hover:text-red-500"

@@ -263,6 +263,11 @@ Required in both `.env.local` and Vercel Dashboard:
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key (server only) | **YES!** |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID — untuk gambar AI PDF (opsional) | No |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API token (izin Workers AI:Run) — gambar AI PDF | No |
+| `MAYAR_API_KEY` | Mayar.id API key (langganan Pro) — web.mayar.id/api-keys | **YES!** |
+| `MAYAR_MERCHANT_ID` | Mayar merchant ID (dari payload webhook / dashboard) | No |
+| `MAYAR_PRODUCT_ID_PROMO` | Product ID produk Membership SaaS "Pro Promo" (Rp 5.000) | No |
+| `MAYAR_PRODUCT_ID_NORMAL` | Product ID produk Membership SaaS "Pro Normal" (Rp 59.000) | No |
+| `MAYAR_REDIRECT_URL` | URL kembali setelah bayar di Mayar | No |
 
 ---
 

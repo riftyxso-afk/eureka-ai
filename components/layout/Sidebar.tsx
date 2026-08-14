@@ -30,6 +30,7 @@ import { SidebarItem } from "./SidebarItem";
 import { logoutUser } from "@/lib/auth";
 import { getAvatar } from "@/lib/avatar";
 import { getUserName } from "@/lib/identity";
+import { usePremium } from "@/lib/usePremium";
 
 interface MenuItem {
   id: string;
@@ -65,6 +66,7 @@ const menuItems: MenuItem[] = [
 
 export const Sidebar = () => {
   const pathname = usePathname();
+  const { isPremium } = usePremium();
   const [isOpen, setIsOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -163,7 +165,7 @@ export const Sidebar = () => {
       <div className="mt-1 border-t-2 border-clay-shadow/30 pt-1">
         <SidebarItem
           icon={Crown}
-          label="Tingkatkan Pro"
+          label={isPremium ? "Pro Aktif ✓" : "Tingkatkan Pro"}
           href="/pricing"
           variant="pro"
           onClick={onNavigate}

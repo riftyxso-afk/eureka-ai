@@ -57,6 +57,29 @@ export function isEmailValid(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+/**
+ * Kirim email otomatis (welcome/login) via /api/auth/notify untuk jalur
+ * login PASSWORD. Fire-and-forget: kegagalan tidak mengganggu login.
+ */
+async function notifyAuthEmail(
+  email: string,
+  _userId: string,
+  kind: "welcome" | "login"
+): Promise<void> {
+  try {
+    const { getAccessToken } = await import("./supabase/client");
+    const token = await getAccessToken();
+    if (!token) return;
+    await apiFetch("/api/auth/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, kind }),
+    });
+  } catch (e) {
+    console.warn(`[auth] email otomatis (${kind}) dilewati:`, e);
+  }
+}
+
 export function isLoggedIn(): boolean {
   return getSession() !== null;
 }
@@ -155,6 +178,9 @@ export async function registerUser(input: {
   if (data.session) {
     // Verifikasi email nonaktif → langsung login.
     cacheSession(authUser.id, name, email);
+    // Email selamat datang untuk akun BARU (jalur password, via route
+    // /api/auth/notify yang memverifikasi token sesi). Fire-and-forget.
+    void notifyAuthEmail(email, authUser.id, "welcome");
     return { ok: true, user };
   }
 
@@ -209,6 +235,9 @@ export async function loginUser(input: {
     "Pengguna";
 
   cacheSession(data.user.id, name, email);
+
+  // Notifikasi login (jalur password). Fire-and-forget — jangan blokir masuk.
+  void notifyAuthEmail(email, data.user.id, "login");
 
   return {
     ok: true,

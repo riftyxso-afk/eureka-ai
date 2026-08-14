@@ -357,6 +357,16 @@ export default function ChatPage() {
                   onRetry={chat.handleRetry}
                 />
               )}
+              {chat.hasError && chat.streaming.upgradeUrl && (
+                <div className="mx-auto w-full max-w-3xl">
+                  <Link
+                    href={chat.streaming.upgradeUrl}
+                    className="block w-full rounded-clay-md border-3 border-clay-borderLight bg-clay-primary px-5 py-3 text-center text-sm font-extrabold text-white shadow-clay-btn transition-all hover:brightness-110 active:translate-y-0.5"
+                  >
+                    👑 Upgrade ke Pro untuk lanjut
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>

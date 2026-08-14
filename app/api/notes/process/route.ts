@@ -14,6 +14,7 @@ import { randomUUID } from "crypto";
 
 import { runAfter } from "@/lib/after";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { enforcePremium } from "@/lib/premium";
 import {
   canStartGeneration,
   createJob,
@@ -90,6 +91,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: auth.error ?? "Autentikasi diperlukan." },
         { status: auth.status ?? 401 }
+      );
+    }
+
+    // ── Gating premium: kuota generate catatan bulanan untuk free. ──
+    const premiumNote = await enforcePremium(userId, "note-generate");
+    if (!premiumNote.ok) {
+      return NextResponse.json(
+        { error: premiumNote.error, upgradeUrl: premiumNote.upgradeUrl },
+        { status: premiumNote.status ?? 402 }
       );
     }
 

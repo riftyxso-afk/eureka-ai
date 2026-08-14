@@ -33,6 +33,7 @@ export function NoteProgressOverlay({
   const [percent, setPercent] = useState(0);
   const [message, setMessage] = useState("Menyiapkan materi…");
   const [error, setError] = useState<string | null>(null);
+  const [upgradeUrl, setUpgradeUrl] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   const startedRef = useRef(false);
@@ -159,7 +160,9 @@ export function NoteProgressOverlay({
         });
         const data = await res.json().catch(() => null);
         if (!res.ok) {
-          throw new Error(data?.error || "Gagal memulai pembuatan catatan.");
+          const err = new Error(data?.error || "Gagal memulai pembuatan catatan.");
+          (err as Error & { upgradeUrl?: string }).upgradeUrl = data?.upgradeUrl;
+          throw err;
         }
         if (data?.jobId) {
           jobId = String(data.jobId);
@@ -200,6 +203,9 @@ export function NoteProgressOverlay({
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Terjadi kesalahan.");
+        if (e instanceof Error && (e as Error & { upgradeUrl?: string }).upgradeUrl) {
+          setUpgradeUrl((e as Error & { upgradeUrl?: string }).upgradeUrl ?? null);
+        }
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -293,6 +299,14 @@ export function NoteProgressOverlay({
               </>
             )}
 
+            {error && upgradeUrl && (
+              <a
+                href={upgradeUrl}
+                className="btn-clay-primary mt-4 block w-full !py-2.5 text-center text-sm"
+              >
+                👑 Upgrade ke Pro
+              </a>
+            )}
             {error && (
               <button
                 onClick={() => {

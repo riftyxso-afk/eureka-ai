@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getMessages, getSession } from "@/lib/assistant/store";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { enforcePremium, recordFeatureUsage } from "@/lib/premium";
 import {
   buildStudyContext,
   collectMentionIds,
@@ -42,6 +43,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Gating premium: kuota flashcards AI harian untuk free.
+    const premiumCards = await enforcePremium(auth.userId, "assistant-flashcards");
+    if (!premiumCards.ok) {
+      return NextResponse.json(
+        { error: premiumCards.error, upgradeUrl: premiumCards.upgradeUrl },
+        { status: premiumCards.status ?? 402 }
+      );
+    }
+
     const session = await getSession(sessionId, auth.userId);
     if (!session) {
       return NextResponse.json(
@@ -71,6 +81,9 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Catat pemakaian (kuota free) setelah berhasil.
+    await recordFeatureUsage(auth.userId, "assistant-flashcards");
 
     return NextResponse.json({ cards });
   } catch (e) {

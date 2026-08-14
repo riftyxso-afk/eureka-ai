@@ -13,6 +13,7 @@ import { runAfter } from "@/lib/after";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { regenerateChapter } from "@/lib/regenerate";
 import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { enforcePremium, recordFeatureUsage } from "@/lib/premium";
 import { canStartGeneration, createJob, executeJob, updateJob } from "@/lib/jobQueue";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
@@ -51,6 +52,15 @@ export async function POST(
     // Keamanan: userId diambil dari token sesi (apiFetch melampirkan Bearer).
     const userId =
       (await getUserIdFromAuth(req.headers.get("authorization"))) || "anonymous";
+
+    // Gating premium: kuota tulis ulang bab bulanan untuk free.
+    const premiumBab = await enforcePremium(userId, "bab-regenerate");
+    if (!premiumBab.ok) {
+      return NextResponse.json(
+        { error: premiumBab.error, upgradeUrl: premiumBab.upgradeUrl },
+        { status: premiumBab.status ?? 402 }
+      );
+    }
 
     // Rate limit per user (proteksi token AI): maks 5 regenerate/jam.
     ensureRateLimitPrune();
@@ -99,6 +109,10 @@ export async function POST(
             noteId,
             noteTitle: `Bab ${chapter.id}: ${chapter.title}`,
           });
+          // Catat pemakaian (kuota free) setelah berhasil.
+          if (userId && userId !== "anonymous") {
+            await recordFeatureUsage(userId, "bab-regenerate");
+          }
         } catch (e) {
           const msg =
             e instanceof Error

@@ -24,6 +24,7 @@ import {
   type WebSearchResult,
 } from "@/lib/assistant/prompt";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { enforcePremium } from "@/lib/premium";
 import type { RagHit } from "@/lib/assistant/context";
 
 /** Batas ukuran lampiran (dataUrl base64) — ~3MB file asli. */
@@ -185,6 +186,24 @@ export async function POST(req: NextRequest) {
   }
   const sessionId = rawSessionId;
   const userId = auth.userId;
+
+  // ── Gating premium: kuota chat harian untuk free; web search wajib Pro. ──
+  const premiumChat = await enforcePremium(userId, "assistant-chat");
+  if (!premiumChat.ok) {
+    return respondJson(
+      { error: premiumChat.error, upgradeUrl: premiumChat.upgradeUrl },
+      premiumChat.status ?? 402
+    );
+  }
+  if (webSearch) {
+    const premiumWeb = await enforcePremium(userId, "web-search");
+    if (!premiumWeb.ok) {
+      return respondJson(
+        { error: premiumWeb.error, upgradeUrl: premiumWeb.upgradeUrl },
+        premiumWeb.status ?? 402
+      );
+    }
+  }
 
   if (!checkRateLimit(userId)) {
     return respondJson(
