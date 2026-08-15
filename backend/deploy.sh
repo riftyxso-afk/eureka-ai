@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # ============================================================
 # Deploy backend Eureka.AI di VPS.
-# Jalankan DI VPS dari folder repo (mis. /var/www/eureka-backend):
+# Jalankan DI VPS dari folder repo (mis. /opt/eureka-ai):
 #   bash backend/deploy.sh
 # Prasyarat:
-#   - repo sudah di-clone & pernah jalan (backend/.env.local sudah diisi)
+#   - repo sudah di-clone & pernah jalan
+#   - .env.local di ROOT REPO sudah diisi (backend membacanya dari root,
+#     lihat backend/src/server.ts) — BUKAN di folder backend/
 #   - pm2 (disarankan) ATAU systemd — skrip mendeteksi keduanya
 # ============================================================
 set -euo pipefail
@@ -19,16 +21,16 @@ echo "── 2/5 npm ci"
 cd backend
 npm ci
 
-# ── 3. Cek env ─────────────────────────────────────────────
-echo "── 3/5 cek .env.local"
-if [ ! -f .env.local ]; then
-  echo "⚠️  backend/.env.local TIDAK ADA. Salin dari .env.example dan isi nilai produksi:"
+# ── 3. Cek env (di ROOT repo, bukan backend/) ─────────────
+echo "── 3/5 cek .env.local (root repo)"
+if [ ! -f ../.env.local ]; then
+  echo "⚠️  .env.local di ROOT REPO TIDAK ADA. Buat di $(cd .. && pwd)/.env.local:"
   echo "    cp .env.example .env.local && nano .env.local"
   echo "    (wajib: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AI keys,"
   echo "     PAKASIR_PROJECT, PAKASIR_API_KEY, PAKASIR_REDIRECT_URL, RESEND_API_KEY, CORS_ORIGIN)"
   exit 1
 fi
-echo "   ✓ .env.local ada"
+echo "   ✓ .env.local ada di root repo"
 
 # ── 4. Restart proses ──────────────────────────────────────
 echo "── 4/5 restart"
