@@ -20,6 +20,8 @@ import { ImageGenerationOverlay } from "@/components/note/ImageGenerationOverlay
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import Composer from "@/components/asisten/Composer";
+import AiCallModal from "@/components/assistant/AiCallModal";
+import { useBeta } from "@/lib/useBeta";
 
 interface FeatureChip {
   emoji: string;
@@ -105,6 +107,8 @@ export default function HomePage() {
   const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
   const [notePrefs, setNotePrefs] = useState<NoteCreatePrefs | null>(null);
   const [imagePrompt, setImagePrompt] = useState<string | null>(null);
+  const [callOpen, setCallOpen] = useState(false);
+  const { isBeta } = useBeta();
   const launchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const chat = useAssistantChat({
@@ -338,6 +342,8 @@ export default function HomePage() {
           sending={false}
           disabled={!!launching || chat.sessionsLoading}
           compact
+          isBeta={isBeta}
+          onCall={() => setCallOpen(true)}
           noteWizardPrompt={wizardPrompt}
           onNoteWizardClose={() => setWizardPrompt(null)}
           onNoteWizardStart={(prefs) => {
@@ -366,6 +372,9 @@ export default function HomePage() {
         prompt={imagePrompt ?? ""}
         onClose={() => setImagePrompt(null)}
       />
+
+      {/* Panggilan suara AI (beta) */}
+      <AiCallModal open={callOpen} onClose={() => setCallOpen(false)} />
 
 
 

@@ -270,15 +270,23 @@ export function NoteCreateWizardPanel({
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
               {CHAPTER_OPTIONS.map((c) => {
                 const active = chapterCount === c.n;
+                // Mode Cepat maksimal 3 bab — opsi 4-6 dinonaktifkan.
+                const disabled = generationMode === "cepat" && c.n > 3;
                 return (
                   <button
                     key={c.n}
-                    onClick={() => setChapterCount(c.n)}
+                    onClick={() => {
+                      if (disabled) return;
+                      setChapterCount(c.n);
+                    }}
                     aria-pressed={active}
+                    disabled={disabled}
                     className={`flex min-h-[68px] flex-col items-center justify-center rounded-clay-md border-2 px-1 py-1.5 transition-all duration-75 ${
                       active
                         ? "border-clay-primary bg-clay-primary text-white shadow-clay-btn -translate-y-0.5"
-                        : "border-clay-shadow/40 bg-clay-inputBg text-clay-dark shadow-clay-inset hover:border-clay-primary"
+                        : disabled
+                          ? "cursor-not-allowed border-clay-shadow/20 bg-clay-beige/60 text-clay-muted/50 opacity-60"
+                          : "border-clay-shadow/40 bg-clay-inputBg text-clay-dark shadow-clay-inset hover:border-clay-primary"
                     }`}
                   >
                     <span className="text-2xl font-extrabold">{c.n}</span>
@@ -290,7 +298,7 @@ export function NoteCreateWizardPanel({
                         active ? "text-white/80" : "text-clay-muted"
                       }`}
                     >
-                      {c.hint}
+                      {disabled ? "Cepat: maks 3" : c.hint}
                     </span>
                   </button>
                 );

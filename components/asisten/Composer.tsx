@@ -12,7 +12,10 @@ import {
   Globe,
   Layers,
   Leaf,
+  Loader2,
+  Mic,
   Paperclip,
+  PhoneCall,
   Send,
   Square,
   Terminal,
@@ -158,6 +161,10 @@ interface ComposerProps {
   onNoteWizardStart?: (prefs: NoteCreatePrefs) => void;
   /** User menutup wizard tanpa jadi generate. */
   onNoteWizardClose?: () => void;
+  /** Beta tester: tampilkan tombol mic & panggilan AI. */
+  isBeta?: boolean;
+  /** User menekan tombol panggilan AI → parent membuka modal. */
+  onCall?: () => void;
   onSend: (input: ComposerSendInput) => void;
   onStop?: () => void;
 }
@@ -176,6 +183,8 @@ export default function Composer({
   noteWizardPrompt = null,
   onNoteWizardStart,
   onNoteWizardClose,
+  isBeta = false,
+  onCall,
   onSend,
   onStop,
 }: ComposerProps) {
@@ -195,6 +204,13 @@ export default function Composer({
   const [attachError, setAttachError] = useState<string | null>(null);
   const [speedMode, setSpeedMode] = useState<SpeedMode>("normal");
   const [speedOpen, setSpeedOpen] = useState(false);
+  // ── Beta: rekam suara → transkripsi → masuk textarea ──
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -461,6 +477,85 @@ export default function Composer({
     }
   };
 
+  /** Mulai/heutikan rekam suara (beta). Saat berhenti → transkripsi → textarea. */
+  const toggleMic = async () => {
+    setMicError(null);
+    if (recording) {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+    if (transcribing) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
+      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, {
+          type: mime || "audio/webm",
+        });
+        if (blob.size === 0) return;
+        setRecording(false);
+        void sendForTranscription(blob);
+      };
+      // Stop otomatis setelah 60 detik (jaga ukuran audio).
+      window.setTimeout(() => {
+        if (mediaRecorderRef.current?.state === "recording") {
+          mediaRecorderRef.current.stop();
+        }
+      }, 60_000);
+      mediaRecorderRef.current = recorder;
+      recorder.start(1000);
+      setRecording(true);
+    } catch {
+      setMicError(
+        "Mikrofon tidak bisa diakses. Pastikan izin mikrofon di browser diaktifkan."
+      );
+    }
+  };
+
+  /** Kirim blob audio ke /api/audio/transcribe → tambahkan teks ke textarea. */
+  const sendForTranscription = async (blob: Blob) => {
+    setTranscribing(true);
+    try {
+      const fd = new FormData();
+      fd.append("userId", userId);
+      fd.append("audio", blob, `rekaman-${Date.now()}.webm`);
+      const res = await apiFetch("/api/audio/transcribe", {
+        method: "POST",
+        body: fd,
+      });
+      const body = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        text?: string;
+        error?: string;
+      } | null;
+      if (!res.ok || !body?.ok) {
+        setMicError(body?.error ?? "Transkripsi gagal. Coba lagi ya 🙏");
+        return;
+      }
+      setText((t) => {
+        const sep = t.trim() ? (t.endsWith("\n") ? "" : " ") : "";
+        return t + sep + (body.text ?? "");
+      });
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    } catch (e) {
+      setMicError(
+        e instanceof Error ? e.message : "Transkripsi gagal. Coba lagi ya 🙏"
+      );
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
   const submit = () => {
     const question = text.trim();
     if (!question || sending || disabled) return;
@@ -582,6 +677,62 @@ export default function Composer({
               />
               <div className={`flex items-center justify-between gap-2 ${compact ? "mt-1" : "mt-1.5"}`}>
                 <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* ── Beta: rekam suara → teks ── */}
+                {isBeta && (
+                  <button
+                    onClick={toggleMic}
+                    className={`flex items-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
+                      recording
+                        ? "animate-pulse bg-red-500 text-white"
+                        : "bg-clay-primary/10 text-clay-primary"
+                    } ${compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs"}`}
+                    title={
+                      recording
+                        ? "Rekam — klik untuk berhenti"
+                        : transcribing
+                          ? "Mentranskripsikan…"
+                          : "Rekam suara → otomatis jadi teks"
+                    }
+                    aria-label="Rekam suara"
+                  >
+                    {transcribing ? (
+                      <Loader2 size={compact ? 12 : 14} className="animate-spin" />
+                    ) : (
+                      <Mic size={compact ? 13 : 14} />
+                    )}
+                    {!compact && (
+                      <span className="hidden sm:inline">
+                        {recording ? "Berhenti" : transcribing ? "Memproses" : "Rekam"}
+                      </span>
+                    )}
+                  </button>
+                )}
+                {isBeta && micError && (
+                  <span className="inline-flex items-center gap-1 rounded-clay-full border-2 border-red-300 bg-red-50 px-2 py-1 text-[11px] font-extrabold text-red-600">
+                    {micError}
+                    <button
+                      onClick={() => setMicError(null)}
+                      className="ml-0.5 text-red-400 hover:text-red-600"
+                      aria-label="Tutup error mic"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+
+                {/* ── Beta: panggilan AI (realtime) ── */}
+                {isBeta && onCall && (
+                  <button
+                    onClick={onCall}
+                    className={`flex items-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
+                      compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+                    }`}
+                    title="Panggilan suara AI — tahan untuk bicara"
+                  >
+                    <PhoneCall size={compact ? 13 : 14} />
+                    {!compact && <span className="hidden sm:inline">Call AI</span>}
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     if (!mentionOpen) {

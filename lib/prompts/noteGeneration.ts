@@ -165,13 +165,15 @@ export function buildPreferencesText(prefs: NotePreferences): string {
 /** Struktur bab sesuai Mode Belajar (dipakai prompt generator bab). */
 export const MODE_CHAPTER_RULES: Record<string, string> = {
   ringkas: `Mode RINGKAS: seluruh catatan maksimal 500 kata.
-- Cukup 1-2 bab.
+- Jumlah bab MENGIKUTI instruksi JUMLAH BAB di atas (bila ada); jangan menambah atau mengurangi sendiri.
 - Setiap bab: "## Ringkasan" (3-5 kalimat langsung ke inti), "## Poin-poin Penting" (5 bullet "- ..."), "## Kesimpulan" (1 paragraf singkat).
 - Tanpa basa-basi, langsung ke inti.`,
-  standar: `Mode STANDAR (800-1500 kata): 2-3 bab yang seimbang.
+  standar: `Mode STANDAR (800-1500 kata).
+- Jumlah bab MENGIKUTI instruksi JUMLAH BAB di atas (bila ada); jangan menambah atau mengurangi sendiri.
 - Tiap bab: pembuka 2-3 kalimat, lalu sub-judul "## " untuk tiap aspek/topik, tutup dengan "## 💡 Intisari" (2-3 kalimat).
 - Pakai tabel "| A | B |" bila ada perbandingan, dan "**teks**" untuk istilah penting.`,
-  lengkap: `Mode LENGKAP (2000-4000 kata): 3-5 bab yang mendalam.
+  lengkap: `Mode LENGKAP (2000-4000 kata).
+- Jumlah bab MENGIKUTI instruksi JUMLAH BAB di atas (bila ada); jangan menambah atau mengurangi sendiri.
 ${CHAPTER_CONTENT_GUIDE}
 - Di bab TERAKHIR tambahkan:
   - "## 🗺️ Mind Map" — peta pikiran berformat "- Cabang > Sub-cabang > detail" (5-8 cabang)
@@ -199,7 +201,7 @@ export function buildChapterContentGuide(prefs: NotePreferences): string {
 /** Aturan mode CEPAT: hasil singkat, padat, dan cepat selesai. */
 export const GENERATION_MODE_RULES: Record<string, string> = {
   cepat: `Mode CEPAT (kilat & ringkas): seluruh catatan maksimal 400 kata.
-- Cukup 1-3 bab — langsung ke inti, tanpa bab yang berlebihan.
+- Jumlah bab MENGIKUTI instruksi JUMLAH BAB di atas (bila ada); jangan menambah atau mengurangi sendiri.
 - Tiap bab: "## Ringkasan" (3-4 kalimat padat), "## Poin Penting" (4-5 bullet "- ..." singkat), "## Kesimpulan" (1 kalimat).
 - Tanpa tabel besar, tanpa mind map, tanpa glosarium — fokus ke kecepatan selesai.
 - Tetap akurat: hanya tulis fakta yang ada di sumber (no hallucination).`,

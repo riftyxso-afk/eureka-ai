@@ -105,6 +105,23 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/profile", profile);
   count++;
 
+  // ─── Beta tester (halaman /join & gating fitur baru) ───
+  const betaJoin = await import("@/app/api/beta/join/route");
+  const betaStatus = await import("@/app/api/beta/status/route");
+  mount(app, "/api/beta/join", betaJoin);
+  mount(app, "/api/beta/status", betaStatus);
+  count += 2;
+
+  // ─── Audio (transkripsi rekaman suara, beta) ───────────
+  const audioTranscribe = await import("@/app/api/audio/transcribe/route");
+  mount(app, "/api/audio/transcribe", audioTranscribe);
+  count++;
+
+  // ─── Call (percakapan suara AI, beta) ──────────────────
+  const call = await import("@/app/api/call/route");
+  mount(app, "/api/call", call);
+  count++;
+
   // ─── Referral (program ajak teman) ─────────────────────
   const referral = await import("@/app/api/referral/route");
   const referralApply = await import("@/app/api/referral/apply/route");

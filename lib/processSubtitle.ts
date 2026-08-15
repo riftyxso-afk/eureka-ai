@@ -128,18 +128,28 @@ function summarizeExtractively(
 /**
  * Metode 2: Parsing manual (fallback).
  * Jika ada segments (transkrip YouTube), kelompokkan dengan timestamp asli.
+ * Jumlah bab mengikuti chapterCount bila diminta user, baru diturunkan ke
+ * target berbasis jumlah kata bila materi terlalu pendek.
  */
 function chaptersManually(
   text: string,
-  segments?: TranscriptSegment[]
+  segments?: TranscriptSegment[],
+  chapterCount?: number
 ): NoteChapter[] {
+  // Jumlah target: hormati permintaan user (max MAX_CHAPTERS), tetapi jangan
+  // memaksa bab melebihi kapasitas materi — minimal 2 bab.
+  const totalWords = countWords(text);
+  const byWords = Math.min(
+    MAX_CHAPTERS,
+    Math.max(2, Math.ceil(totalWords / MIN_WORDS_PER_CHAPTER))
+  );
+  const requested = clampChapterCount(chapterCount);
+  const targetChapters = requested
+    ? Math.min(requested, Math.max(2, byWords))
+    : byWords;
+
   if (!segments || segments.length === 0) {
     const sentences = splitIntoSentences(text);
-    const totalWords = countWords(text);
-    const targetChapters = Math.min(
-      MAX_CHAPTERS,
-      Math.max(2, Math.ceil(totalWords / MIN_WORDS_PER_CHAPTER))
-    );
     const wordsPerChapter = Math.ceil(totalWords / targetChapters);
 
     const chapters: NoteChapter[] = [];
@@ -171,11 +181,6 @@ function chaptersManually(
     return chapters;
   }
 
-  const totalWords = countWords(text);
-  const targetChapters = Math.min(
-    MAX_CHAPTERS,
-    Math.max(2, Math.ceil(totalWords / MIN_WORDS_PER_CHAPTER))
-  );
   const wordsPerChapter = Math.ceil(totalWords / targetChapters);
 
   const chapters: NoteChapter[] = [];
@@ -367,7 +372,7 @@ export async function processSubtitleToChapters(
     }
   }
 
-  return chaptersManually(clean, segments);
+  return chaptersManually(clean, segments, prefs.chapterCount);
 }
 
 export interface AiSummaryResult {

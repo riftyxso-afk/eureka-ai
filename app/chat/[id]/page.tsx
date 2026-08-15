@@ -29,6 +29,8 @@ import {
 } from "@/lib/assistant/feedback";
 import WebSearchPipeline from "@/components/asisten/WebSearchPipeline";
 import Composer from "@/components/asisten/Composer";
+import AiCallModal from "@/components/assistant/AiCallModal";
+import { useBeta } from "@/lib/useBeta";
 import TutorialHost from "@/components/tutorial/TutorialHost";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { copyText } from "@/lib/assistant/clipboard";
@@ -95,6 +97,8 @@ export default function ChatPage() {
   const [quizOpen, setQuizOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [callOpen, setCallOpen] = useState(false);
+  const { isBeta } = useBeta();
 
   // Survey performa Eureka — sekali per user, ~1 menit setelah catatan
   // PERTAMA selesai dibuat. Kebenaran "sekali saja" di server (note_feedback);
@@ -377,6 +381,8 @@ export default function ChatPage() {
           sending={chat.sending}
           disabled={chat.loading || chat.sessionsLoading}
           initialMentions={importedNoteId ? [importedNoteId] : []}
+          isBeta={isBeta}
+          onCall={() => setCallOpen(true)}
           noteWizardPrompt={wizardPrompt}
           onNoteWizardClose={() => setWizardPrompt(null)}
           onNoteWizardStart={(prefs) => {
@@ -464,6 +470,9 @@ export default function ChatPage() {
           markFeedbackDismissedLocally();
         }}
       />
+
+      {/* Panggilan suara AI (beta) */}
+      <AiCallModal open={callOpen} onClose={() => setCallOpen(false)} />
 
 
 

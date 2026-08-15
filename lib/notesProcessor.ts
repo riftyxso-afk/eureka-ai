@@ -258,6 +258,10 @@ export async function processNoteForBackground(
   const requestedChapters = clampChapterCount(prefs.chapterCount);
   if (requestedChapters && chapters.length > requestedChapters) {
     chapters = chapters.slice(0, requestedChapters).map((c, i) => ({ ...c, id: i + 1 }));
+  } else if (requestedChapters && chapters.length < requestedChapters) {
+    console.warn(
+      `[notesProcessor] AI menghasilkan ${chapters.length} bab, diminta ${requestedChapters} — hasil tetap dipakai (topik yang tersisa digabung).`
+    );
   }
 
   const note: Note = {

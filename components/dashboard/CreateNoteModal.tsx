@@ -1352,7 +1352,17 @@ export const CreateNoteModal = ({
                         <button
                           key={mode.value}
                           type="button"
-                          onClick={() => setGenerationMode(mode.value)}
+                          onClick={() => {
+                            // Mode Cepat maksimal 3 bab — turunkan otomatis
+                            // bila user sudah memilih 4-6 di langkah Jumlah Bab.
+                            setGenerationMode(mode.value);
+                            if (mode.value === "cepat" && chapterCount > 3) {
+                              setChapterCount(3);
+                              setError(
+                                "Mode Cepat maksimal 3 bab — jumlah bab disesuaikan ke 3."
+                              );
+                            }
+                          }}
                           aria-pressed={active}
                           className={`relative card-clay w-full p-4 sm:p-5 text-left transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 ${
                             active

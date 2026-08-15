@@ -633,6 +633,9 @@ export default function LandingPage() {
             <a href="/pricing" className="transition-colors hover:text-[#7B42F5]">
               Pricing
             </a>
+            <a href="/join" className="transition-colors hover:text-[#7B42F5]">
+              Beta
+            </a>
           </div>
           <p className="text-xs font-bold text-[#B9B6C7]">
             © {new Date().getFullYear()} Eureka.AI — AI Tutor Socratic untuk
