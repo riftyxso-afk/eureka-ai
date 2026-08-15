@@ -89,12 +89,16 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const paymentsStatus = await import("@/app/api/payments/status/route");
   const paymentsTrial = await import("@/app/api/payments/trial/route");
   const paymentsCancel = await import("@/app/api/payments/cancel/route");
+  const paymentsValidateCode = await import(
+    "@/app/api/payments/validate-code/route"
+  );
   mount(app, "/api/payments/checkout", paymentsCheckout);
   mount(app, "/api/payments/webhook", paymentsWebhook);
   mount(app, "/api/payments/status", paymentsStatus);
   mount(app, "/api/payments/trial", paymentsTrial);
   mount(app, "/api/payments/cancel", paymentsCancel);
-  count += 5;
+  mount(app, "/api/payments/validate-code", paymentsValidateCode);
+  count += 6;
 
   // ─── Profile ───────────────────────────────────────────
   const profile = await import("@/app/api/profile/route");
