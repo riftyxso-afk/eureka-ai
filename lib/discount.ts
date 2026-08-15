@@ -83,13 +83,14 @@ export async function applyDiscount(
 
   const type = data.type as "percent" | "nominal" | "free";
 
-  // Kode gratis 100% → harga final Rp 1 agar Pakasir mau membuat order
-  // (Pakasir menolak amount 0); checkout route yang menangani pembayaran.
+  // Kode gratis 100% → harga final Rp 500 agar Pakasir mau membuat order
+  // (Pakasir menolak amount 0 dan minimal transaksi Rp 500);
+  // checkout route yang menangani pembayaran.
   if (type === "free") {
     return {
       ok: true,
       code,
-      finalAmount: 1,
+      finalAmount: 500,
       label: "Gratis 100% 🎉",
       free: true,
     };

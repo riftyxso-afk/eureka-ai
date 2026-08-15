@@ -84,7 +84,8 @@ export async function POST(req: NextRequest) {
     const baseAmount = TIER_PRICES[tier];
 
     // Diskon: hitung harga final bila kode diberikan (opsional).
-    // Kode 'free' → finalAmount Rp 1 (Pakasir menolak Rp 0), HANYA 1x per user.
+    // Kode 'free' → finalAmount Rp 500 (Pakasir menolak Rp 0 & minimal Rp 500),
+    // HANYA 1x per user.
     let amount = baseAmount;
     let discountLabel: string | null = null;
     if (discountCode) {
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
           .from("pakasir_payment_requests")
           .select("id")
           .eq("user_id", auth.userId)
-          .in("amount", [0, 1]);
+          .in("amount", [0, 500]);
         if (prevErr) {
           console.error(
             "[api/payments/checkout] cek riwayat kode gratis gagal:",

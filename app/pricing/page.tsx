@@ -438,7 +438,8 @@ export default function PricingPage() {
                     <div className="mt-2">
                       {appliedCode?.free ? (
                         <>
-                          {/* Harga normal dicoret (animasi) → Rp 1 (simbolis) */}
+                          {/* Harga normal dicoret (animasi) → Rp 500 (simbolis,
+                              minimal transaksi Pakasir) */}
                           <p
                             className={`text-3xl font-extrabold text-gray-400 transition-all duration-700 ${
                               priceCrossed
@@ -452,7 +453,7 @@ export default function PricingPage() {
                             </span>
                           </p>
                           <p className="text-4xl font-extrabold text-green-600">
-                            Rp 1
+                            Rp 500
                             <span className="text-sm font-bold text-green-400">
                               /bulan
                             </span>

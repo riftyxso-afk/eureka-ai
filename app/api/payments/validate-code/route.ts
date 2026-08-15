@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * POST /api/payments/validate-code
  * Body: { code: string, tier: "promo" | "normal" }
  * Validasi kode diskon TANPA mengonsumsi — dipakai UI pricing saat user
- * menekan Enter: menampilkan harga final (mis. Rp 1 untuk kode free 100%)
+ * menekan Enter: menampilkan harga final (mis. Rp 500 untuk kode free 100%)
  * sebelum checkout. Mengembalikan sisa kuota bila kode punya max_uses.
  */
 export async function POST(req: NextRequest) {
