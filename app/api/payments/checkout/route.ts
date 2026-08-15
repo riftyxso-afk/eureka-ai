@@ -122,9 +122,32 @@ export async function POST(req: NextRequest) {
     // ── Kode diskon gratis 100% (type 'free') → aktivasi langsung ──
     // Pakasir tidak menerima amount 0, jadi kode "Rp 59.000 → Rp 0" tidak
     // lewat gateway: catat pemakaian kode, aktivasi premium 30 hari langsung.
+    // Kode gratis HANYA boleh dipakai 1x per user (cek riwayat amount=0).
     if (discountCode) {
       const disc = await applyDiscount(discountCode, baseAmount);
       if (disc.free) {
+        const { data: prevFree, error: prevErr } = await db()
+          .from("pakasir_payment_requests")
+          .select("id")
+          .eq("user_id", auth.userId)
+          .eq("amount", 0);
+        if (prevErr) {
+          console.error(
+            "[api/payments/checkout] cek riwayat kode gratis gagal:",
+            prevErr
+          );
+          return NextResponse.json(
+            { error: "Gagal memvalidasi kode gratis, coba lagi." },
+            { status: 502 }
+          );
+        }
+        if (prevFree && prevFree.length > 0) {
+          return NextResponse.json(
+            { error: "Kode gratis hanya bisa dipakai 1x per akun." },
+            { status: 409 }
+          );
+        }
+
         await consumeDiscount(discountCode);
         const activated = await activatePremium({
           userId: auth.userId,
@@ -143,6 +166,12 @@ export async function POST(req: NextRequest) {
             { status: 502 }
           );
         }
+        // Tandai request lunas agar riwayat "sudah pernah pakai" tersimpan
+        // & konsisten (amount 0 = klaim kode gratis).
+        await db()
+          .from("pakasir_payment_requests")
+          .update({ status: "paid", paid_at: new Date().toISOString() })
+          .eq("order_id", orderId);
         return NextResponse.json({
           ok: true,
           activated: true,
