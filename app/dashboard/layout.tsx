@@ -1,7 +1,13 @@
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import { Sidebar } from "@/components/layout/Sidebar";
 import StudyBuddyProvider from "@/components/study-buddy/StudyBuddyProvider";
 import AuthGuard from "@/components/auth/AuthGuard";
+
+// Dashboard = area login → jangan diindeks Google (buang crawl budget).
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function DashboardLayout({
   children,

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     "Daftar gratis di Eureka.AI — AI Tutor Socratic yang membimbingmu memahami materi, bukan sekadar memberi jawaban. Tanpa kartu kredit.",
   alternates: { canonical: "/register" },
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
 };
 
 export default function RegisterLayout({

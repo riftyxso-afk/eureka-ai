@@ -98,6 +98,22 @@ const FAQS = [
     q: "Bisa belajar bersama teman?",
     a: "Bisa. Eureka.AI mendukung kolaborasi real-time pada catatan yang sama — chat, stabilo bersama, dan papan tulis — cocok untuk belajar kelompok online.",
   },
+  {
+    q: "Aplikasi belajar AI gratis di Indonesia apa?",
+    a: "Eureka.AI adalah aplikasi belajar AI gratis untuk pelajar Indonesia. Tanpa biaya, kamu bisa chat dengan AI tutor, membuat 3 catatan otomatis per bulan, dan mengerjakan kuis. Cukup daftar dengan email atau Google — tanpa kartu kredit.",
+  },
+  {
+    q: "Bisakah Eureka.AI membuat rangkuman dari YouTube?",
+    a: "Bisa. Tempel link video YouTube di dashboard, lalu AI mengekstrak subtitle dan menyusunnya menjadi catatan per bab dengan ringkasan, poin penting, kuis, dan kartu hafalan — siap dibaca ulang sebelum ujian.",
+  },
+  {
+    q: "Bagaimana cara kerja AI tutor Eureka?",
+    a: "Eureka memakai metode Socratic: ia mengajukan pertanyaan bertahap dan membimbingmu menemukan jawaban sendiri. Materi diubah jadi catatan terstruktur, lalu AI berperan sebagai tutor yang menyesuaikan tingkat kesulitan dengan pemahamanmu.",
+  },
+  {
+    q: "Untuk jenjang apa Eureka.AI cocok?",
+    a: "Eureka.AI cocok untuk pelajar SMP, SMA, hingga mahasiswa. Setiap akun bisa memilih jenjang dan mata pelajaran di profil, sehingga AI menyesuaikan bahasa, tingkat kesulitan, dan contoh materi dengan kebutuhan belajarmu.",
+  },
 ];
 
 const AI_MODELS = [
@@ -114,8 +130,10 @@ export default function LandingPage() {
     setLoggedIn(isLoggedIn());
   }, []);
 
-  // Data terstruktur untuk mesin pencari: Organization + SoftwareApplication
-  // + FAQ (FAQPage). Dirender di dalam SSR HTML sehingga crawler membacanya.
+  // Data terstruktur untuk mesin pencari & AI generatif: Organization +
+  // WebSite + SoftwareApplication + FAQ (FAQPage). Dirender di dalam SSR
+  // HTML sehingga crawler (Google, Bing, Perplexity, GPTBot, ClaudeBot)
+  // membacanya.
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -126,7 +144,20 @@ export default function LandingPage() {
         logo: `${SITE_URL}/logo.png`,
         description:
           "AI Tutor Socratic untuk pelajar Indonesia: catatan otomatis, kuis, dan kartu hafalan.",
-        sameAs: [],
+        inLanguage: "id",
+        // TODO: isi link media sosial di sini setelah akun dibuat —
+        // (mis. Instagram/TikTok/YouTube/X) untuk sinyal kredibilitas di AI.
+        // (Jangan isi `sameAs` dengan array kosong — hapus properti sampai
+        // ada URL sosial nyata.)
+      },
+      {
+        "@type": "WebSite",
+        name: "Eureka.AI",
+        url: SITE_URL,
+        inLanguage: "id",
+        // Catatan: SearchAction sengaja TIDAK dipakai — situs belum punya
+        // halaman search publik, jadi SearchAction yang menunjuk URL tak ada
+        // akan membuat data terstruktur ditolak Google.
       },
       {
         "@type": "SoftwareApplication",
@@ -134,6 +165,9 @@ export default function LandingPage() {
         applicationCategory: "EducationalApplication",
         operatingSystem: "Web",
         url: SITE_URL,
+        inLanguage: "id",
+        datePublished: "2026-08-15",
+        dateModified: "2026-08-15",
         offers: {
           "@type": "AggregateOffer",
           priceCurrency: "IDR",
@@ -216,7 +250,7 @@ export default function LandingPage() {
 
       <main>
         {/* ── Hero ──────────────────────────────────────────── */}
-        <section className="relative overflow-hidden">
+        <section className="relative overflow-hidden" aria-label="Eureka.AI — AI tutor Socratic untuk pelajar Indonesia">
           <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#7B42F5]/10" />
           <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[#7B42F5]/10" />
           <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-16 text-center sm:px-6 sm:pt-24">
@@ -296,13 +330,13 @@ export default function LandingPage() {
         </section>
 
         {/* ── AI Models ─────────────────────────────────────── */}
-        <section className="border-t-2 border-[#E5E5E5] py-14">
+        <section className="border-t-2 border-[#E5E5E5] py-14" aria-label="Teknologi AI di balik Eureka.AI">
           <div className="mx-auto max-w-6xl px-4 text-center sm:px-6">
             <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-[#B9B6C7]">
               Didukung oleh Model AI Terdepan
             </p>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[#13102B]">
-              Teknologi di balik Eureka.AI
+              AI apa yang mendukung Eureka.AI?
             </h2>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-8 sm:gap-12">
               {AI_MODELS.map((model) => (
@@ -328,7 +362,11 @@ export default function LandingPage() {
         </section>
 
         {/* ── Fitur ─────────────────────────────────────────── */}
-        <section id="fitur" className="border-t-2 border-[#E5E5E5] py-16 sm:py-24">
+        <section
+          id="fitur"
+          className="border-t-2 border-[#E5E5E5] py-16 sm:py-24"
+          aria-label="Fitur Eureka.AI"
+        >
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-[#7B42F5]">
@@ -367,6 +405,7 @@ export default function LandingPage() {
         <section
           id="cara-kerja"
           className="border-t-2 border-[#E5E5E5] bg-[#FAF8FF] py-16 sm:py-24"
+          aria-label="Cara kerja Eureka.AI"
         >
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="mx-auto max-w-2xl text-center">
@@ -374,8 +413,13 @@ export default function LandingPage() {
                 Cara Kerja
               </p>
               <h2 className="mt-3 text-4xl font-extrabold leading-tight tracking-[-0.02em] text-[#13102B] sm:text-5xl">
-                Dari materi mentah hingga benar-benar paham
+                Bagaimana cara kerja Eureka.AI?
               </h2>
+              <p className="mt-4 text-lg text-[#5A5670]">
+                Eureka.AI bekerja dalam 3 langkah: unggah atau tempel materi,
+                AI menyusunnya menjadi catatan per bab, lalu kamu belajar
+                lewat tanya jawab, kuis, dan kartu hafalan.
+              </p>
             </div>
             <div className="mt-14 grid gap-6 md:grid-cols-3">
               {STEPS.map((s, i) => (
@@ -401,40 +445,59 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Bukti Sosial ──────────────────────────────────── */}
-        <section className="border-t-2 border-[#E5E5E5] py-16">
+        {/* ── Fakta Eureka.AI (GEO — angka yang bisa dikutip AI) ── */}
+        <section
+          className="border-t-2 border-[#E5E5E5] py-16"
+          aria-label="Fakta Eureka.AI"
+        >
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-[#7B42F5]">
+                Fakta Eureka.AI
+              </p>
+              <h2 className="mt-3 text-4xl font-extrabold tracking-tight text-[#13102B]">
+                Angka yang membuat Eureka.AI beda
+              </h2>
+              <p className="mt-4 text-lg text-[#5A5670]">
+                Eureka.AI adalah aplikasi belajar AI gratis untuk pelajar
+                Indonesia: 4 tipe rangkuman otomatis, hingga 6 bab per
+                catatan, dan 3 sumber materi — video YouTube, artikel web,
+                dan dokumen.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-6 sm:grid-cols-3">
               <div className="k-card flex flex-col items-center text-center">
                 <Trophy size={24} className="text-[#7B42F5]" />
                 <p className="mt-4 text-5xl font-extrabold tracking-tight text-[#13102B]">
-                  60%+
+                  4
                 </p>
                 <p className="mt-2 text-sm font-bold text-[#B9B6C7]">
-                  rata-rata peningkatan pemahaman konsep dalam 2 minggu*
+                  tipe rangkuman: biasa, makalah, laporan, dan poin penting
                 </p>
               </div>
               <div className="k-card flex flex-col items-center text-center">
                 <Flame size={24} className="text-[#7B42F5]" />
                 <p className="mt-4 text-5xl font-extrabold tracking-tight text-[#13102B]">
-                  7 hari
+                  30
                 </p>
                 <p className="mt-2 text-sm font-bold text-[#B9B6C7]">
-                  rata-rata streak belajar pengguna aktif
+                  hari masa aktif Pro per pembayaran — Rp 59.000, tanpa
+                  langganan berulang
                 </p>
               </div>
               <div className="k-card flex flex-col items-center text-center">
                 <BookOpen size={24} className="text-[#7B42F5]" />
                 <p className="mt-4 text-5xl font-extrabold tracking-tight text-[#13102B]">
-                  100%
+                  3
                 </p>
                 <p className="mt-2 text-sm font-bold text-[#B9B6C7]">
-                  catatan dibuat AI — tinggal belajar, tanpa mencatat manual
+                  sumber materi: video YouTube, artikel web, dan file dokumen
+                  (PDF, DOCX, PPTX)
                 </p>
               </div>
             </div>
             <p className="mt-5 text-center text-xs font-bold text-[#B9B6C7]">
-              *angka ilustrasi dari pengujian internal
+              Terakhir diperbarui: Agustus 2026
             </p>
           </div>
         </section>
@@ -443,6 +506,7 @@ export default function LandingPage() {
         <section
           id="harga"
           className="border-t-2 border-[#E5E5E5] bg-[#FAF8FF] py-16 sm:py-24"
+          aria-label="Harga Eureka.AI"
         >
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="mx-auto max-w-2xl text-center">
@@ -450,7 +514,7 @@ export default function LandingPage() {
                 Harga
               </p>
               <h2 className="mt-3 text-4xl font-extrabold leading-tight tracking-[-0.02em] text-[#13102B] sm:text-5xl">
-                Mulai gratis, upgrade kapan pun
+                Berapa biaya Eureka.AI?
               </h2>
               <p className="mt-4 text-lg text-[#5A5670]">
                 Paket Pro Rp 59.000/bulan — bayar sekali, aktif 30 hari.
@@ -543,7 +607,11 @@ export default function LandingPage() {
         </section>
 
         {/* ── FAQ ───────────────────────────────────────────── */}
-        <section id="faq" className="border-t-2 border-[#E5E5E5] py-16 sm:py-24">
+        <section
+          id="faq"
+          className="border-t-2 border-[#E5E5E5] py-16 sm:py-24"
+          aria-label="Pertanyaan yang sering ditanyakan tentang Eureka.AI"
+        >
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
             <div className="text-center">
               <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-[#7B42F5]">

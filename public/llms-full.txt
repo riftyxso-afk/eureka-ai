@@ -1,0 +1,58 @@
+# Eureka.AI — Profil Lengkap
+
+> Eureka.AI adalah AI Tutor Socratic untuk pelajar Indonesia (SMP, SMA, dan mahasiswa). Bukan sekadar memberi jawaban — kami membimbing siswa menemukan momen "Eureka!" lewat pertanyaan bertahap. Versi ringkas tersedia di https://www.eureka-ai.web.id/llms.txt
+
+## Tentang Eureka.AI
+
+Eureka.AI mengubah materi belajar menjadi catatan otomatis terstruktur per bab, lalu membimbing siswa memahami setiap topik dengan metode Socratic: AI mengajukan pertanyaan bertahap sehingga siswa menemukan sendiri jawabannya — pemahaman yang dalam dan bertahan, bukan hafalan instan.
+
+Platform: web app (PWA, bisa diinstall di HP). Bahasa utama: Indonesia. Target pengguna: pelajar SMP, SMA, dan mahasiswa Indonesia.
+
+## Fitur utama
+
+- **Catatan otomatis dari 3 sumber materi**: video YouTube (subtitle diekstrak otomatis), artikel web (tempel link), dan file dokumen (unggah PDF, DOCX, PPTX).
+- **4 tipe rangkuman**: rangkuman biasa, makalah, laporan, dan poin penting — pilih sesuai kebutuhan tugas atau ujian.
+- **Catatan per bab**: materi dipecah menjadi bab-bab rapi lengkap dengan ringkasan, poin penting, kuis, dan kartu hafalan.
+- **AI tutor Socratic per bab**: tanya apa saja pada bab yang sedang dipelajari; jawaban fokus pada materi milik siswa (RAG), bukan jawaban umum.
+- **Kuis & kartu hafalan (flashcards)**: dibuat AI otomatis dari setiap catatan; berlatih tanpa menyusun soal sendiri. Kuis juga bisa dibuat langsung di chat dengan perintah `/kuis` dan `/card`.
+- **Kolaborasi real-time**: belajar kelompok di catatan yang sama — chat, stabilo bersama, dan papan tulis.
+- **Web search real-time**: AI bisa mencari informasi terbaru dari internet saat menjawab pertanyaan.
+- **Eureka Draw**: generate gambar AI untuk membantu visualisasi materi (Pro).
+- **Gamifikasi**: streak, XP, level, misi, dan papan peringkat untuk menjaga kebiasaan belajar.
+- **Program Beta (aktif)**: rekam suara di composer (transkripsi otomatis) dan panggilan suara AI dengan visualizer (hold-to-talk).
+
+## Harga
+
+- **Gratis (selamanya)**: chat AI Socratic dengan batas harian, 3 catatan otomatis per bulan, kuis & kartu hafalan dasar, streak/XP/papan peringkat. Tanpa kartu kredit.
+- **Pro Rp 59.000/bulan**: bayar sekali, aktif 30 hari (bukan langganan berulang). Semua fitur tanpa batas: chat AI, catatan otomatis, kuis & flashcards, web search real-time, Eureka Draw, kolaborasi, akses fitur baru lebih dulu.
+- **Trial gratis 7 hari**: sekali seumur hidup, semua fitur Pro tanpa bayar.
+- **Pembayaran**: aman via Pakasir — QRIS, e-wallet, dan virtual account. Status premium aktif otomatis setelah pembayaran terverifikasi.
+
+## FAQ singkat
+
+- **Apakah Eureka.AI gratis?** Ya. Paket Gratis tersedia selamanya; upgrade Pro Rp 59.000 (aktif 30 hari) untuk akses tanpa batas.
+- **Bisa membuat rangkuman dari YouTube?** Bisa. Tempel link video, AI mengekstrak subtitle dan menyusun catatan per bab dengan ringkasan, poin penting, kuis, dan kartu hafalan.
+- **Metode Socratic itu apa?** Cara belajar dengan pertanyaan bertahap: alih-alih memberi jawaban langsung, AI membimbing siswa menemukan sendiri jawabannya sehingga pemahaman lebih dalam.
+- **Untuk jenjang apa cocok?** SMP, SMA, hingga mahasiswa. Jenjang dan mata pelajaran bisa dipilih di profil; AI menyesuaikan bahasa, tingkat kesulitan, dan contoh materi.
+- **Bisa belajar bersama teman?** Bisa — kolaborasi real-time di catatan yang sama: chat, stabilo bersama, dan papan tulis.
+
+## Teknologi
+
+- Sistem multi-model AI: otomatis memilih model terbaik untuk setiap tugas belajar (berbasis API OpenAI-compatible: OpenAgentic, Juan Router, OpenRouter).
+- Web search real-time untuk jawaban yang butuh informasi terbaru.
+- PWA: bisa diinstall di HP (Android & iOS) untuk pengalaman aplikasi dan notifikasi.
+
+## Halaman penting
+
+- Beranda: https://www.eureka-ai.web.id/
+- Harga: https://www.eureka-ai.web.id/pricing
+- Daftar: https://www.eureka-ai.web.id/register
+- Masuk: https://www.eureka-ai.web.id/login
+- Program Beta: https://www.eureka-ai.web.id/join
+- Sitemap: https://www.eureka-ai.web.id/sitemap.xml
+
+## Kontak
+
+- Email: via dashboard Eureka.AI (menu Pengaturan)
+
+Terakhir diperbarui: Agustus 2026

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     "Masuk ke akun Eureka.AI dan lanjutkan belajarmu bersama AI Tutor Socratic: catatan otomatis, kuis, kartu hafalan, dan kolaborasi real-time.",
   alternates: { canonical: "/login" },
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
 };
 
 export default function LoginLayout({

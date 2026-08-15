@@ -1,0 +1,43 @@
+# Eureka.AI
+
+> Eureka.AI adalah AI Tutor Socratic untuk pelajar Indonesia. Bukan sekadar memberi jawaban — kami membimbing siswa menemukan momen "Eureka!" lewat pertanyaan bertahap.
+
+## Tentang Eureka.AI
+
+Eureka.AI mengubah materi belajar (video YouTube, artikel web, PDF, DOCX, PPTX) menjadi catatan otomatis terstruktur per bab. Setiap catatan dilengkapi ringkasan, poin penting, kuis, dan kartu hafalan. Siswa juga bisa bertanya langsung kepada AI tutor per bab, berkolaborasi real-time dengan teman, dan melacak kebiasaan belajar.
+
+## Fitur utama
+
+- Catatan otomatis dari video, artikel, dan dokumen (4 tipe: rangkuman biasa, makalah, laporan, poin penting)
+- AI tutor Socratic yang membimbing lewat pertanyaan, bukan memberi jawaban instan
+- Tanya jawab per bab pada catatan sendiri (RAG dari materi milik siswa)
+- Kuis dan kartu hafalan (flashcards) otomatis dari materi
+- Kolaborasi real-time: edit bersama, stabilo, dan papan tulis
+- Web search real-time untuk pertanyaan
+- Beta: rekam suara di composer & panggilan suara AI dengan visualizer
+
+## Harga
+
+- Gratis selamanya: chat AI harian, 3 catatan otomatis/bulan, kuis & flashcards dasar
+- Pro Rp 59.000/bulan (bayar sekali, aktif 30 hari): semua fitur tanpa batas
+- Trial gratis 7 hari untuk pengguna baru
+
+## Halaman penting
+
+- Beranda: https://www.eureka-ai.web.id/
+- Harga: https://www.eureka-ai.web.id/pricing
+- Daftar: https://www.eureka-ai.web.id/register
+- Program Beta: https://www.eureka-ai.web.id/join
+- Sitemap: https://www.eureka-ai.web.id/sitemap.xml
+- [Eureka.AI — Profil Lengkap](https://www.eureka-ai.web.id/llms-full.txt): semua detail fitur, harga, FAQ, dan teknologi
+
+## Fakta singkat
+
+- Bahasa utama: Indonesia
+- Target pengguna: pelajar SMP, SMA, dan mahasiswa Indonesia
+- Model AI: berbasis API OpenAI-compatible (OpenAgentic, Juan Router, OpenRouter)
+- Platform: web app (PWA, bisa diinstall di HP)
+
+## Kontak
+
+- Email: via dashboard Eureka.AI (menu Pengaturan)
