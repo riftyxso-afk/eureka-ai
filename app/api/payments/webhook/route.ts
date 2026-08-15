@@ -7,6 +7,9 @@ import { activatePremium } from "@/lib/premium";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Jendela pencarian fallback: pending request dengan amount sama (≤ 24 jam). */
+const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 /**
  * POST /api/payments/webhook — webhook Pakasir (JSON, POST).
  *
@@ -18,8 +21,11 @@ export const dynamic = "force-dynamic";
  * Flow (fail-closed, karena webhook Pakasir TIDAK bersignature):
  *   0. PAKASIR_PROJECT/PAKASIR_API_KEY harus terisi (503 bila belum);
  *      field `project` webhook harus cocok (401 bila beda).
- *   1. Idempotensi: UNIQUE order_id di pakasir_notification_events →
- *      insert pertama menang, duplikat diabaikan (200).
+ *   1. Audit event disimpan (order_id UNIQUE). Event duplikat BUKAN batu
+ *      sandungan: bila request belum ditandai `paid`, webhook `completed`
+ *      yang datang belakangan TETAP diproses (perbaikan: sebelumnya event
+ *      `pending` yang masuk duluan memblokir webhook `completed` — user
+ *      bayar tapi premium tak pernah aktif).
  *   2. Hanya status `completed` yang memproses; status lain → 200 tanpa aktivasi.
  *   3. Cocokkan order_id → user + tier + amount (pakasir_payment_requests);
  *      amount webhook harus konsisten dengan amount tercatat.
@@ -27,6 +33,12 @@ export const dynamic = "force-dynamic";
  *      `completed`); bila API gagal/tak terjangkau → 5xx TANPA aktivasi agar
  *      Pakasir mengulang; status ≠ completed → 200 tanpa aktivasi.
  *   5. Aktivasi premium 30 hari + tandai payment request lunas.
+ *   6. FALLBACK (order tidak tercatat): bila webhook `completed` terbukti via
+ *      transactiondetail namun order-nya tidak ditemukan di
+ *      pakasir_payment_requests (mis. baris checkout hilang/tak sempat
+ *      tersimpan), cari pending request user dengan amount SAMA dalam 24 jam
+ *      terakhir — bila tepat satu kandidat → aktivasi user tsb dan catat
+ *      order-nya (recovered). Bila ambigu → log keras untuk review manual.
  */
 export async function POST(req: NextRequest) {
   const rawBody = await req.text().catch(() => "");
@@ -74,7 +86,7 @@ export async function POST(req: NextRequest) {
   const status = String(body?.status ?? "").trim().toLowerCase();
   const amount = Number(body?.amount) || 0;
 
-  // ── 1. Idempotensi via order_id (UNIQUE) ───────────────────
+  // ── 1. Audit event (idempotensi TIDAK memblokir proses ulang) ──
   const { error: insertErr } = await db()
     .from("pakasir_notification_events")
     .insert({
@@ -85,12 +97,30 @@ export async function POST(req: NextRequest) {
     });
 
   if (insertErr) {
-    // Duplikat (unique violation) → sudah pernah diproses → 200 tanpa aksi.
-    if (String(insertErr.message ?? "").toLowerCase().includes("duplicate")) {
+    const isDup = String(insertErr.message ?? "")
+      .toLowerCase()
+      .includes("duplicate");
+
+    if (!isDup) {
+      console.error("[webhook] simpan event gagal:", insertErr);
+      return NextResponse.json({ error: "Gagal menyimpan event." }, { status: 500 });
+    }
+
+    // Duplikat: cek apakah order SUDAH berhasil diproses (request = paid).
+    // - Sudah paid → duplikat murni, 200 tanpa aksi.
+    // - Belum paid (mis. event pending dulu, atau percobaan 500 gagal)
+    //   → webhook `completed` ini TETAP diproses (bukan block).
+    const { data: paidReq } = await db()
+      .from("pakasir_payment_requests")
+      .select("status")
+      .eq("order_id", orderId)
+      .maybeSingle();
+    if (paidReq?.status === "paid") {
       return NextResponse.json({ ok: true, duplicate: true });
     }
-    console.error("[webhook] simpan event gagal:", insertErr);
-    return NextResponse.json({ error: "Gagal menyimpan event." }, { status: 500 });
+    console.log(
+      `[webhook] event duplikat untuk order ${orderId} (belum paid) — lanjut proses`
+    );
   }
 
   if (!orderId) {
@@ -118,20 +148,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, matched: false });
   }
 
-  if (!reqRow) {
-    console.warn(
-      `[webhook] order ${orderId} tidak tercatat di pakasir_payment_requests — diabaikan`
-    );
-    return NextResponse.json({ ok: true, matched: false });
-  }
-
-  if (reqRow.status === "paid") {
+  if (reqRow && reqRow.status === "paid") {
     // Sudah pernah dibayar & diproses → abaikan (perlindungan ganda).
     return NextResponse.json({ ok: true, duplicate: true });
   }
 
-  // Verifikasi amount konsisten.
-  if (amount && reqRow.amount && Number(amount) !== Number(reqRow.amount)) {
+  // Verifikasi amount konsisten (hanya bila request tercatat).
+  if (reqRow && amount && reqRow.amount && Number(amount) !== Number(reqRow.amount)) {
     console.warn(
       `[webhook] amount tidak cocok: notif=${amount} expected=${reqRow.amount} (order ${orderId}) — diabaikan`
     );
@@ -143,7 +166,7 @@ export async function POST(req: NextRequest) {
   try {
     const detail = await verifyTransactionDetail({
       orderId,
-      amount: Number(reqRow.amount),
+      amount: Number(reqRow?.amount ?? amount),
     });
     verifiedStatus = detail.status;
   } catch (e) {
@@ -167,8 +190,52 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 5. Aktivasi premium 30 hari (jalur bersama activatePremium) ──
-  const userId = reqRow.user_id as string;
-  const tier = reqRow.tier as "promo" | "normal";
+  let userId: string;
+  let tier: "promo" | "normal";
+  let recovered = false;
+
+  if (reqRow) {
+    userId = reqRow.user_id as string;
+    tier = reqRow.tier as "promo" | "normal";
+  } else {
+    // ── 6. FALLBACK: order completed terbukti (transactiondetail) tapi
+    // tidak tercatat di pakasir_payment_requests. Cari pending request user
+    // dengan amount SAMA dalam 24 jam terakhir → TEPAT SATU kandidat.
+    const since = new Date(Date.now() - FALLBACK_WINDOW_MS).toISOString();
+    const { data: candidates, error: candErr } = await db()
+      .from("pakasir_payment_requests")
+      .select("user_id, tier, amount")
+      .eq("status", "pending")
+      .eq("amount", amount)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false });
+
+    if (candErr) {
+      console.error("[webhook] fallback cari pending request gagal:", candErr);
+      return NextResponse.json({ ok: true, matched: false, fallback: "query error" });
+    }
+
+    if (!candidates || candidates.length !== 1) {
+      console.error(
+        `[webhook] ⚠️ ORDER TERBAYAR TIDAK TERCATAT: order ${orderId} (Rp ${amount}) ` +
+          `status=completed terverifikasi, tapi fallback ambigu (${candidates?.length ?? 0} kandidat). ` +
+          "Perlu review manual & aktivasi manual!"
+      );
+      return NextResponse.json({
+        ok: true,
+        matched: false,
+        fallback: candidates?.length === 0 ? "no candidate" : "ambiguous",
+      });
+    }
+
+    userId = candidates[0].user_id as string;
+    tier = candidates[0].tier as "promo" | "normal";
+    recovered = true;
+    console.log(
+      `[webhook] FALLBACK: order ${orderId} (Rp ${amount}) → user ${userId} (tier ${tier})`
+    );
+  }
+
   const activated = await activatePremium({
     userId,
     tier,
@@ -182,10 +249,28 @@ export async function POST(req: NextRequest) {
   }
   const premiumUntil = activated.premiumUntil;
 
-  // Tandai payment request lunas (mencegah aktivasi ganda).
+  // Order yang dibayar tapi tidak tercatat → catat barisnya (status paid)
+  // agar lookup berikutnya cocok & audit lengkap.
+  if (recovered) {
+    await db().from("pakasir_payment_requests").insert({
+      user_id: userId,
+      order_id: orderId,
+      amount,
+      tier,
+      status: "paid",
+      paid_at: new Date().toISOString(),
+    });
+  }
+
+  // Tandai payment request lunas (mencegah aktivasi ganda) + catat audit
+  // matched_user_id pada event webhook (kolom sudah ada di skema).
   await db()
     .from("pakasir_payment_requests")
     .update({ status: "paid", paid_at: new Date().toISOString() })
+    .eq("order_id", orderId);
+  await db()
+    .from("pakasir_notification_events")
+    .update({ matched_user_id: userId })
     .eq("order_id", orderId);
 
   // ── Email konfirmasi premium (fire-and-forget, tidak memblokir) ──
@@ -211,7 +296,12 @@ export async function POST(req: NextRequest) {
   }
 
   console.log(
-    `[webhook] completed order ${orderId} → premium aktif untuk user ${userId} (${tier}, s/d ${premiumUntil})`
+    `[webhook] completed order ${orderId} → premium aktif untuk user ${userId} ` +
+      `(${tier}, s/d ${premiumUntil})${recovered ? " [RECOVERED]" : ""}`
   );
-  return NextResponse.json({ ok: true, activated: true });
+  return NextResponse.json({
+    ok: true,
+    activated: true,
+    ...(recovered ? { recovered: true } : {}),
+  });
 }
