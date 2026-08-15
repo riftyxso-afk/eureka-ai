@@ -46,6 +46,63 @@ export default function PricingPage() {
   const [cancelling, setCancelling] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
+  // ── Validasi kode diskon (Enter) → harga dicoret + harga final ──
+  const [validating, setValidating] = useState(false);
+  const [appliedCode, setAppliedCode] = useState<{
+    code: string;
+    label: string;
+    finalAmount: number;
+    free: boolean;
+    remainingUses: number | null;
+  } | null>(null);
+  const [priceCrossed, setPriceCrossed] = useState(false);
+
+  const applyCode = async () => {
+    const code = discountCode.trim();
+    if (!code || validating) return;
+    setError(null);
+    setValidating(true);
+    setAppliedCode(null);
+    setPriceCrossed(false);
+    try {
+      const res = await apiFetch("/api/payments/validate-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, tier: "normal" }),
+      });
+      const body = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        code?: string;
+        label?: string;
+        finalAmount?: number;
+        free?: boolean;
+        remainingUses?: number | null;
+      } | null;
+      if (!res.ok || !body?.ok) {
+        setError(body?.error ?? "Kode tidak valid.");
+        return;
+      }
+      setAppliedCode({
+        code: body.code as string,
+        label: body.label as string,
+        finalAmount: body.finalAmount ?? 0,
+        free: body.free === true,
+        remainingUses: body.remainingUses ?? null,
+      });
+      // Animasi coret harga setelah kartu harga ter-render.
+      requestAnimationFrame(() =>
+        setTimeout(() => setPriceCrossed(true), 150)
+      );
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Gagal memvalidasi kode. Coba lagi ya 🙏"
+      );
+    } finally {
+      setValidating(false);
+    }
+  };
+
   const choosePlan = async (plan: "promo" | "normal") => {
     setError(null);
     setBusy(plan);
@@ -70,7 +127,7 @@ export default function PricingPage() {
         body: JSON.stringify({
           userId,
           tier: plan,
-          discountCode: discountCode.trim() || undefined,
+          discountCode: appliedCode?.code ?? (discountCode.trim() || undefined),
         }),
       });
       const body = (await res.json().catch(() => null)) as {
@@ -372,20 +429,46 @@ export default function PricingPage() {
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-base font-extrabold">{t.name}</p>
-                      {t.highlight && (
-                        <span className="rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                          Hemat 91% 🔥
+                      {appliedCode?.free && (
+                        <span className="rounded-full bg-green-500 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                          Gratis 100% 🎉
                         </span>
                       )}
                     </div>
-                    <p className="mt-2 text-3xl font-extrabold">
-                      Rp {t.price.toLocaleString("id-ID")}
-                      <span className="text-sm font-bold text-clay-muted">
-                        /bulan
-                      </span>
-                    </p>
+                    <div className="mt-2">
+                      {appliedCode?.free ? (
+                        <>
+                          {/* Harga normal dicoret (animasi) → Rp 0 */}
+                          <p
+                            className={`text-3xl font-extrabold text-gray-400 transition-all duration-700 ${
+                              priceCrossed
+                                ? "line-through decoration-red-500 decoration-[3px]"
+                                : ""
+                            }`}
+                          >
+                            Rp {t.price.toLocaleString("id-ID")}
+                            <span className="text-sm font-bold text-clay-muted">
+                              /bulan
+                            </span>
+                          </p>
+                          <p className="text-4xl font-extrabold text-green-600">
+                            Rp 0
+                            <span className="text-sm font-bold text-green-400">
+                              /bulan
+                            </span>
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-3xl font-extrabold">
+                          Rp {t.price.toLocaleString("id-ID")}
+                          <span className="text-sm font-bold text-clay-muted">
+                            /bulan
+                          </span>
+                        </p>
+                      )}
+                    </div>
                     <p className="mt-1 text-xs font-semibold text-clay-muted">
-                      {t.note}
+                      {appliedCode?.free ? appliedCode.label : t.note}
                     </p>
                     <ButtonClay
                       fullWidth
@@ -398,6 +481,8 @@ export default function PricingPage() {
                           <Loader2 size={16} className="animate-spin" />
                           Ke Pakasir…
                         </span>
+                      ) : appliedCode?.free ? (
+                        "Klaim Gratis 🎉"
                       ) : (
                         `Pilih ${t.name}`
                       )}
@@ -412,17 +497,44 @@ export default function PricingPage() {
                   <Ticket size={16} className="text-clay-primary" />
                   Punya kode diskon?
                 </label>
-                <input
-                  value={discountCode}
-                  onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                  placeholder="MASUKKAN KODE (mis. GRATIS100)"
-                  className="mt-2 w-full rounded-clay-md border-2 border-clay-borderLight bg-white px-3 py-2 text-sm font-bold uppercase text-clay-dark outline-none focus:border-clay-primary"
-                />
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={discountCode}
+                    onChange={(e) => {
+                      setDiscountCode(e.target.value.toUpperCase());
+                      setAppliedCode(null);
+                      setPriceCrossed(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void applyCode();
+                      }
+                    }}
+                    placeholder="MASUKKAN KODE (mis. GRATIS100)"
+                    className="w-full rounded-clay-md border-2 border-clay-borderLight bg-white px-3 py-2 text-sm font-bold uppercase text-clay-dark outline-none focus:border-clay-primary"
+                  />
+                  <button
+                    onClick={() => void applyCode()}
+                    disabled={validating || !discountCode.trim()}
+                    className="shrink-0 rounded-clay-md bg-clay-primary px-4 py-2 text-sm font-extrabold text-white transition-colors hover:bg-clay-primaryDark disabled:opacity-50"
+                  >
+                    {validating ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      "Pakai"
+                    )}
+                  </button>
+                </div>
                 <p className="mt-2 text-[11px] font-semibold text-clay-muted">
-                  Kode otomatis dipakai saat memilih paket di atas. Kalau kode
-                  tidak valid, kamu akan diberi tahu sebelum diarahkan ke
-                  pembayaran.
+                  Tekan <b>Enter</b> atau tombol <b>Pakai</b> untuk menerapkan
+                  kode sebelum memilih paket.
                 </p>
+                {appliedCode?.free && appliedCode.remainingUses !== null && (
+                  <p className="mt-1.5 text-[11px] font-extrabold text-green-600">
+                    ⚡ Sisa kuota {appliedCode.remainingUses} dari 10 orang.
+                  </p>
+                )}
               </div>
             </div>
 
