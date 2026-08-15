@@ -40,6 +40,10 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Eureka.AI",
   },
+  // Verifikasi Google Search Console (property URL prefix).
+  verification: {
+    google: "r55Jc2M7F8_mVv-0bdIHcatfKxGYSwyR5abbNv3ZwZw",
+  },
   openGraph: {
     type: "website",
     locale: "id_ID",
