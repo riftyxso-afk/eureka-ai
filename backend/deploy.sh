@@ -17,9 +17,15 @@ cd "$(dirname "$0")/.."            # pindah ke root repo
 git pull origin master
 
 # ── 2. Install dependensi ──────────────────────────────────
-echo "── 2/5 npm ci"
+echo "── 2/5 npm ci (mode hemat RAM)"
 cd backend
-npm ci
+# VPS kecil (<1GB RAM) gampang ngelag saat npm ci — batasi heap Node npm
+# dan matikan audit/fund (tidak mengubah hasil install). Tambahan: jalankan
+# sekali saja `free -h` untuk memantau; kalau masih berat, tambah swap:
+#   sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+#   sudo mkswap /swapfile && sudo swapon /swapfile
+#   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+NODE_OPTIONS=--max-old-space-size=512 npm ci --no-audit --no-fund --prefer-offline
 
 # ── 3. Cek env (di ROOT repo, bukan backend/) ─────────────
 echo "── 3/5 cek .env.local (root repo)"
