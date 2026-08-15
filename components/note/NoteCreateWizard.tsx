@@ -7,7 +7,9 @@ import {
   ArrowRight,
   BookOpen,
   Check,
+  FileText,
   Layers,
+  ListChecks,
   Sparkles,
   X,
   Zap,
@@ -18,6 +20,8 @@ export interface NoteCreatePrefs {
   generationMode: "cepat" | "lengkap";
   chapterCount: number;
   studyMode: "ringkas" | "standar" | "lengkap";
+  /** Jenis rangkuman: rangkuman | makalah | laporan | poin. */
+  noteType: "rangkuman" | "makalah" | "laporan" | "poin";
 }
 
 interface NoteCreateWizardPanelProps {
@@ -79,6 +83,33 @@ const CHAPTER_OPTIONS = [
   { n: 6, label: "6 Bab", hint: "Maksimal" },
 ];
 
+const TYPE_OPTIONS = [
+  {
+    value: "rangkuman",
+    icon: BookOpen,
+    title: "Rangkuman Biasa",
+    desc: "Catatan belajar bergaya buku teks — bab & sub-judul jelas.",
+  },
+  {
+    value: "makalah",
+    icon: FileText,
+    title: "Makalah",
+    desc: "Struktur akademik: pendahuluan, pembahasan, kesimpulan, daftar pustaka.",
+  },
+  {
+    value: "laporan",
+    icon: ListChecks,
+    title: "Laporan",
+    desc: "Struktur laporan: tujuan, metode, hasil, kesimpulan.",
+  },
+  {
+    value: "poin",
+    icon: Zap,
+    title: "Poin Penting",
+    desc: "Intisari bullet super ringkas untuk belajar cepat.",
+  },
+] as const;
+
 const cardSelect =
   "flex w-full items-start gap-3 rounded-clay-md border-3 p-3 text-left transition-all duration-75 min-h-[60px]";
 
@@ -93,7 +124,7 @@ export function NoteCreateWizardPanel({
   onClose,
   onStart,
 }: NoteCreateWizardPanelProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [generationMode, setGenerationMode] = useState<"cepat" | "lengkap">(
     "lengkap"
   );
@@ -101,6 +132,9 @@ export function NoteCreateWizardPanel({
   const [studyMode, setStudyMode] = useState<"ringkas" | "standar" | "lengkap">(
     "standar"
   );
+  const [noteType, setNoteType] = useState<
+    "rangkuman" | "makalah" | "laporan" | "poin"
+  >("rangkuman");
 
   return (
     <div className="bg-white">
@@ -129,7 +163,7 @@ export function NoteCreateWizardPanel({
         </div>
         {/* Indikator langkah */}
         <div className="mt-3 flex items-center gap-2">
-          {[1, 2, 3].map((n) => (
+          {[1, 2, 3, 4].map((n) => (
             <div key={n} className="flex flex-1 items-center gap-2">
               <span
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold transition-colors ${
@@ -140,7 +174,7 @@ export function NoteCreateWizardPanel({
               >
                 {step > n ? <Check size={12} /> : n}
               </span>
-              {n < 3 && (
+              {n < 4 && (
                 <span
                   className={`h-0.5 flex-1 rounded-full ${
                     step > n ? "bg-clay-primary" : "bg-clay-shadow/30"
@@ -265,8 +299,69 @@ export function NoteCreateWizardPanel({
           </motion.div>
         )}
 
-        {/* ── Langkah 3: tingkat detail ── */}
+        {/* ── Langkah 3: jenis rangkuman ── */}
         {step === 3 && (
+          <motion.div
+            key="s3"
+            initial={{ opacity: 0, x: 14 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.16 }}
+          >
+            <h3 className="text-sm font-extrabold text-clay-dark">
+              Bentuk catatannya seperti apa?
+            </h3>
+            <p className="mt-0.5 text-xs font-bold text-clay-muted">
+              Rangkuman biasa, makalah, laporan, atau poin penting?
+            </p>
+            <div className="mt-3 space-y-2">
+              {TYPE_OPTIONS.map((o) => {
+                const active = noteType === o.value;
+                return (
+                  <button
+                    key={o.value}
+                    onClick={() => setNoteType(o.value)}
+                    aria-pressed={active}
+                    className={`${cardSelect} ${
+                      active
+                        ? "border-clay-primary bg-clay-primary/10 shadow-clay-sm"
+                        : "border-clay-shadow/40 bg-white hover:-translate-y-0.5 hover:shadow-clay-sm"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                        active
+                          ? "bg-clay-primary text-white"
+                          : "bg-clay-beige text-clay-muted"
+                      }`}
+                    >
+                      <o.icon size={19} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-extrabold text-clay-dark">
+                        {o.title}
+                      </span>
+                      <span className="mt-0.5 block text-xs font-bold leading-snug text-clay-muted">
+                        {o.desc}
+                      </span>
+                    </span>
+                    <span
+                      className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 ${
+                        active
+                          ? "border-clay-primary bg-clay-primary text-white"
+                          : "border-clay-shadow/40 text-transparent"
+                      }`}
+                    >
+                      <Check size={13} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Langkah 4: tingkat detail ── */}
+        {step === 4 && (
           <motion.div
             key="s3"
             initial={{ opacity: 0, x: 14 }}
@@ -331,7 +426,7 @@ export function NoteCreateWizardPanel({
       <div className="flex items-center justify-between gap-3 border-t-2 border-clay-borderLight px-4 py-3 sm:px-5">
         {step > 1 ? (
           <button
-            onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
+            onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3 | 4)}
             className="inline-flex min-h-[40px] items-center gap-1.5 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-4 py-2 text-sm font-extrabold text-clay-muted transition-colors hover:text-clay-dark"
           >
             <ArrowLeft size={15} /> Kembali
@@ -340,9 +435,9 @@ export function NoteCreateWizardPanel({
           <span />
         )}
 
-        {step < 3 ? (
+        {step < 4 ? (
           <button
-            onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+            onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3 | 4)}
             className="inline-flex min-h-[40px] items-center gap-1.5 rounded-clay-md bg-clay-primary px-5 py-2 text-sm font-extrabold text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
           >
             Lanjut <ArrowRight size={15} />
@@ -354,6 +449,7 @@ export function NoteCreateWizardPanel({
                 generationMode,
                 chapterCount,
                 studyMode,
+                noteType,
               };
               onStart(prefs);
             }}

@@ -52,6 +52,8 @@ export interface NotePrefs {
   assignment?: boolean;
   /** Terjemahkan materi sumber ke bahasa target. */
   translate?: boolean;
+  /** Jenis rangkuman: rangkuman | makalah | laporan | poin (mempengaruhi prompt AI). */
+  noteType?: "rangkuman" | "makalah" | "laporan" | "poin";
 }
 
 /** Batas bab pada mode CEPAT — dijamin selesai cepat. */
@@ -269,6 +271,7 @@ export async function processNoteForBackground(
     chapters,
     summary,
     keyPoints,
+    noteType: prefs.noteType ?? "rangkuman",
   };
   let references: SearchSource[] = [];
 

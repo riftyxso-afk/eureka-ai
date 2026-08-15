@@ -83,6 +83,8 @@ export interface Note {
   keyPoints?: string[];
   /** Kumpulan sumber web untuk bagian "Sumber & Referensi". */
   references?: SearchSource[];
+  /** Jenis rangkuman: rangkuman | makalah | laporan | poin. */
+  noteType?: string;
   /** Pemilik catatan (UUID users). */
   user_id?: string;
 }

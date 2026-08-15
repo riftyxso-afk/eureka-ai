@@ -125,6 +125,7 @@ export function NoteProgressOverlay({
     form.append("gayaPenulisan", "Ramah & Santai");
     form.append("bahasa", "Bahasa Indonesia");
     form.append("chapterCount", String(prefs?.chapterCount ?? 3));
+    form.append("noteType", prefs?.noteType ?? "rangkuman");
     form.append("userId", getUserId());
     form.append("sessionId", sessionId);
 

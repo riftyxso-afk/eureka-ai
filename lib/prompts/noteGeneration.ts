@@ -69,6 +69,55 @@ export interface NotePreferences {
   assignment?: boolean;
   /** Terjemahkan materi sumber ke bahasa target (biasanya Indonesia). */
   translate?: boolean;
+  /** Jenis rangkuman: biasa | makalah | laporan | poin. */
+  noteType?: NoteType;
+}
+
+/** Jenis rangkuman yang bisa dipilih user saat membuat catatan. */
+export type NoteType = "rangkuman" | "makalah" | "laporan" | "poin";
+
+/** Label tampilan (badge) per jenis rangkuman. */
+export const NOTE_TYPE_LABELS: Record<NoteType, string> = {
+  rangkuman: "Rangkuman",
+  makalah: "Makalah",
+  laporan: "Laporan",
+  poin: "Poin Penting",
+};
+
+/** Aturan struktur per jenis rangkuman (dimasukkan ke prompt). */
+export const NOTE_TYPE_RULES: Record<NoteType, string> = {
+  rangkuman: `Jenis: CATATAN RANGKUMAN biasa bergaya buku teks — susun sesuai mode yang dipilih (Diátaxis / ringkas / standar / lengkap).`,
+  makalah: `Jenis: MAKALAH akademik. Susun dengan struktur formal:
+- Bagian Awal: judul makalah, lalu "## Latar Belakang" (2-3 paragraf konteks & alasan pentingnya topik).
+- "## Kajian Teori / Tinjauan Pustaka" — 1-2 bab berisi konsep, istilah, dan teori yang relevan dari sumber.
+- "## Pembahasan" — analisis mendalam topik dari sumber (pakai tabel perbandingan bila relevan).
+- "## Kesimpulan" — rangkum temuan utama (tanpa menambah info baru).
+- "## Daftar Pustaka" — daftar sumber yang dipakai (dari materi yang tersedia).
+- Tulis formal, objektif, dan ilmiah (hindari sapaan akrab). Tanpa kuadran Diátaxis.`,
+  laporan: `Jenis: LAPORAN. Susun dengan struktur:
+- "## Judul & Identitas" — judul laporan.
+- "## Tujuan" — tujuan laporan (2-4 bullet).
+- "## Metode / Cara Kerja" — langkah-langkah bernomor.
+- "## Hasil" — temuan/data utama (pakai tabel bila ada data).
+- "## Pembahasan" — analisis hasil 1-2 paragraf.
+- "## Kesimpulan" — 1 paragraf ringkas.
+- Tulis objektif dan terstruktur. Tanpa kuadran Diátaxis.`,
+  poin: `Jenis: POIN-POIN PENTING. Susun super ringkas untuk belajar cepat:
+- "## Poin Utama" — 5-10 bullet "- ..." langsung ke inti.
+- "## Fakta & Istilah Kunci" — bullet pendek.
+- "## Rumus/Catatan Penting" — bullet bila relevan.
+- Tanpa paragraf panjang, tanpa tabel besar, tanpa kuadran Diátaxis.`,
+};
+
+/** Kalimat aturan jenis rangkuman siap pakai dalam prompt (default rangkuman). */
+export function buildNoteTypeRule(prefs: NotePreferences): string {
+  const type: NoteType =
+    prefs.noteType === "makalah" ||
+    prefs.noteType === "laporan" ||
+    prefs.noteType === "poin"
+      ? prefs.noteType
+      : "rangkuman";
+  return NOTE_TYPE_RULES[type];
 }
 
 export const MAX_CHAPTERS_ALLOWED = 6;
@@ -132,10 +181,14 @@ ${CHAPTER_CONTENT_GUIDE}
 /**
  * Panduan struktur konten bab: mode CEPAT memakai struktur ringkas
  * (bukan 4 kuadran Diátaxis penuh) agar tidak ada instruksi yang bertentangan.
+ * Jenis rangkuman (makalah/laporan/poin) mengambil alih struktur konten.
  */
 export function buildChapterContentGuide(prefs: NotePreferences): string {
   if (prefs.assignment) {
     return `Struktur konten bab (mode SOAL/TUGAS): "## Jawaban" (uraian tuntas 1-3 paragraf), "## Penjelasan" (alasan benar / langkah pengerjaan bernomor), "## Poin Kunci" (3-5 bullet "- ..."). Tanpa kuadran Diátaxis.`;
+  }
+  if (prefs.noteType === "makalah" || prefs.noteType === "laporan" || prefs.noteType === "poin") {
+    return `Struktur konten mengikuti jenis rangkuman yang dipilih (lihat aturan jenis). Tanpa kuadran Diátaxis.`;
   }
   if (prefs.generationMode === "cepat") {
     return `Struktur konten bab (mode CEPAT): "## Ringkasan" (3-4 kalimat padat), "## Poin Penting" (4-5 bullet "- ..." singkat), "## Kesimpulan" (1 kalimat). Tanpa sub-judul lain yang berlebihan, tanpa tabel besar.`;
@@ -181,6 +234,9 @@ export const ASSIGNMENT_MODE_RULES = `MODE SOAL/TUGAS — teks sumber adalah soa
 export function buildModeRules(prefs: NotePreferences): string {
   if (prefs.assignment) {
     return ASSIGNMENT_MODE_RULES;
+  }
+  if (prefs.noteType === "makalah" || prefs.noteType === "laporan" || prefs.noteType === "poin") {
+    return buildNoteTypeRule(prefs);
   }
   if (prefs.generationMode === "cepat") {
     return GENERATION_MODE_RULES.cepat;

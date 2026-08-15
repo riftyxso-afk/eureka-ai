@@ -38,6 +38,16 @@ import { clampChapterCount } from "@/lib/prompts/noteGeneration";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const NOTE_TYPES = ["rangkuman", "makalah", "laporan", "poin"] as const;
+
+/** Validasi jenis rangkuman dari FormData (default: rangkuman). */
+function validateNoteType(value: FormDataEntryValue | null): NotePrefs["noteType"] {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return (NOTE_TYPES as readonly string[]).includes(raw)
+    ? (raw as NotePrefs["noteType"])
+    : "rangkuman";
+}
+
 const SUBJECT_BY_SOURCE: Record<string, string> = {
   dokumen: "Dokumen",
   youtube: "YouTube",
@@ -137,6 +147,7 @@ export async function POST(req: NextRequest) {
       generationMode: String(form.get("generationMode") ?? "lengkap") as NotePrefs["generationMode"],
       assignment: form.get("assignment") === "1" || form.get("assignment") === "true",
       translate: form.get("translate") === "1" || form.get("translate") === "true",
+      noteType: validateNoteType(form.get("noteType")),
     };
 
     // Baca file ke Buffer SEKARANG (FormData tidak bisa dibaca lagi nanti).

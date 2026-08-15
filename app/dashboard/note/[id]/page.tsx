@@ -61,7 +61,15 @@ interface NoteDetail {
   createdAt: string;
   subject: string;
   keyPoints?: string[];
+  noteType?: string;
 }
+
+const NOTE_TYPE_BADGES: Record<string, { label: string; icon: string }> = {
+  rangkuman: { label: "Rangkuman", icon: "📚" },
+  makalah: { label: "Makalah", icon: "📄" },
+  laporan: { label: "Laporan", icon: "📋" },
+  poin: { label: "Poin Penting", icon: "⚡" },
+};
 
 function firstSentence(text: string): string {
   const match = text.match(/^.{1,90}?[.!?](\s|$)/);
@@ -241,6 +249,7 @@ export default function NoteDetailPage() {
           createdAt: data.note.createdAt,
           subject: data.note.subject,
           keyPoints: data.note.keyPoints ?? [],
+          noteType: data.note.noteType ?? "rangkuman",
         });
       }
     } catch {
@@ -835,6 +844,14 @@ export default function NoteDetailPage() {
               <BookOpen size={16} />
               <span>{data.subject}</span>
             </div>
+            {data.noteType && NOTE_TYPE_BADGES[data.noteType] && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-clay-full bg-clay-primary/10 px-2.5 py-0.5 text-xs font-extrabold text-clay-primary">
+                  {NOTE_TYPE_BADGES[data.noteType].icon}{" "}
+                  {NOTE_TYPE_BADGES[data.noteType].label}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Calendar size={16} />
               <span>{formatDate(data.createdAt)}</span>
