@@ -4,8 +4,9 @@
  * Admin membuat kode langsung di tabel `discount_codes` (Supabase):
  *   - type 'percent'  → value 1-100 (persen potongan)
  *   - type 'nominal'  → value potongan Rupiah tetap
- *   - type 'free'     → aktivasi premium LANGSUNG tanpa pembayaran
- *                      (Pakasir tidak menerima Rp 0 — dipakai kode 100% gratis)
+ *   - type 'free'     → diskon 100%: harga final Rp 1 (Pakasir menolak Rp 0,
+ *                      jadi order tetap dibuat sebesar Rp 1 untuk jejak
+ *                      transaksi; aktivasi premium setelah bayar lunas)
  *   - max_uses NULL = tak terbatas; used_count di-increment saat checkout
  *     berhasil dibuat (link Pakasir diterbitkan).
  *   - active=false / expires_at lewat → kode tidak berlaku.
@@ -82,13 +83,13 @@ export async function applyDiscount(
 
   const type = data.type as "percent" | "nominal" | "free";
 
-  // Kode gratis 100% → aktivasi langsung tanpa pembayaran (Pakasir menolak
-  // amount 0). Harga final 0; checkout route yang menangani aktivasi.
+  // Kode gratis 100% → harga final Rp 1 agar Pakasir mau membuat order
+  // (Pakasir menolak amount 0); checkout route yang menangani pembayaran.
   if (type === "free") {
     return {
       ok: true,
       code,
-      finalAmount: 0,
+      finalAmount: 1,
       label: "Gratis 100% 🎉",
       free: true,
     };

@@ -6,7 +6,6 @@ import {
   isPakasirConfigured,
 } from "@/lib/pakasir";
 import { applyDiscount, consumeDiscount } from "@/lib/discount";
-import { activatePremium } from "@/lib/premium";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
 
@@ -85,12 +84,36 @@ export async function POST(req: NextRequest) {
     const baseAmount = TIER_PRICES[tier];
 
     // Diskon: hitung harga final bila kode diberikan (opsional).
+    // Kode 'free' → finalAmount Rp 1 (Pakasir menolak Rp 0), HANYA 1x per user.
     let amount = baseAmount;
     let discountLabel: string | null = null;
     if (discountCode) {
       const disc = await applyDiscount(discountCode, baseAmount);
       if (!disc.ok) {
         return NextResponse.json({ error: disc.error }, { status: 400 });
+      }
+      if (disc.free) {
+        const { data: prevFree, error: prevErr } = await db()
+          .from("pakasir_payment_requests")
+          .select("id")
+          .eq("user_id", auth.userId)
+          .in("amount", [0, 1]);
+        if (prevErr) {
+          console.error(
+            "[api/payments/checkout] cek riwayat kode gratis gagal:",
+            prevErr
+          );
+          return NextResponse.json(
+            { error: "Gagal memvalidasi kode gratis, coba lagi." },
+            { status: 502 }
+          );
+        }
+        if (prevFree && prevFree.length > 0) {
+          return NextResponse.json(
+            { error: "Kode gratis hanya bisa dipakai 1x per akun." },
+            { status: 409 }
+          );
+        }
       }
       amount = disc.finalAmount;
       discountLabel = disc.label;
@@ -117,69 +140,6 @@ export async function POST(req: NextRequest) {
         { error: "Gagal menyiapkan pembayaran, coba lagi." },
         { status: 502 }
       );
-    }
-
-    // ── Kode diskon gratis 100% (type 'free') → aktivasi langsung ──
-    // Pakasir tidak menerima amount 0, jadi kode "Rp 59.000 → Rp 0" tidak
-    // lewat gateway: catat pemakaian kode, aktivasi premium 30 hari langsung.
-    // Kode gratis HANYA boleh dipakai 1x per user (cek riwayat amount=0).
-    if (discountCode) {
-      const disc = await applyDiscount(discountCode, baseAmount);
-      if (disc.free) {
-        const { data: prevFree, error: prevErr } = await db()
-          .from("pakasir_payment_requests")
-          .select("id")
-          .eq("user_id", auth.userId)
-          .eq("amount", 0);
-        if (prevErr) {
-          console.error(
-            "[api/payments/checkout] cek riwayat kode gratis gagal:",
-            prevErr
-          );
-          return NextResponse.json(
-            { error: "Gagal memvalidasi kode gratis, coba lagi." },
-            { status: 502 }
-          );
-        }
-        if (prevFree && prevFree.length > 0) {
-          return NextResponse.json(
-            { error: "Kode gratis hanya bisa dipakai 1x per akun." },
-            { status: 409 }
-          );
-        }
-
-        await consumeDiscount(discountCode);
-        const activated = await activatePremium({
-          userId: auth.userId,
-          tier,
-          days: 30,
-          invoiceNumber: orderId,
-          transactionId: null,
-        });
-        if (!activated.ok || !activated.premiumUntil) {
-          console.error(
-            "[api/payments/checkout] aktivasi kode gratis gagal:",
-            activated.error
-          );
-          return NextResponse.json(
-            { error: "Gagal mengaktifkan kode gratis, coba lagi." },
-            { status: 502 }
-          );
-        }
-        // Tandai request lunas agar riwayat "sudah pernah pakai" tersimpan
-        // & konsisten (amount 0 = klaim kode gratis).
-        await db()
-          .from("pakasir_payment_requests")
-          .update({ status: "paid", paid_at: new Date().toISOString() })
-          .eq("order_id", orderId);
-        return NextResponse.json({
-          ok: true,
-          activated: true,
-          transactionId: orderId,
-          amount: 0,
-          premiumUntil: activated.premiumUntil,
-        });
-      }
     }
 
     const link = buildPayUrl({ amount, orderId, redirectUrl });
