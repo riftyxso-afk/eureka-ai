@@ -76,8 +76,8 @@ export async function POST(req: NextRequest) {
     }
 
     const filename =
-      audio instanceof File
-        ? audio.name
+      audio instanceof Blob && typeof (audio as { name?: unknown }).name === "string"
+        ? String((audio as { name: string }).name)
         : `rekaman-${Date.now()}.webm`;
     const result = await transcribeAudioVideo(bytes, filename);
 
