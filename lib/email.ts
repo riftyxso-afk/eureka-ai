@@ -184,9 +184,66 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
   if (error) throw new Error(`Kirim email gagal: ${error.message}`);
 }
 
+function premiumWelcomeHtml(
+  name: string,
+  tier: "promo" | "normal" | string,
+  days: number
+): string {
+  const firstName = name.split(" ")[0] || "Kawan Belajar";
+  const tierLabel =
+    tier === "promo"
+      ? "Pro Promo"
+      : tier === "normal"
+        ? "Pro"
+        : tier === "referral"
+          ? "Pro (Referral)"
+          : tier === "trial"
+            ? "Trial"
+            : "Pro";
+  return shell({
+    kicker: "PREMIUM AKTIF",
+    headline: "Selamat, Premium Aktif! 👑",
+    bodyHtml: `
+      <p class="cardtext" style="margin:0;font-family:${FONT};font-size:14.5px;line-height:1.7;color:#44403c;">
+        Halo <b>${escapeHtml(firstName)}</b>! 🎉<br /><br />
+        Paket <b>${escapeHtml(tierLabel)}</b> kamu sekarang <b>aktif</b> — nikmati semua fitur Eureka.AI tanpa batas.
+      </p>
+      <table class="infobox" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;background-color:#fbf6ec;border:1px solid #f0e2c8;border-radius:12px;">
+        <tr>
+          <td style="padding:16px 18px;font-family:${FONT};font-size:13px;line-height:1.8;color:#44403c;">
+            👑 Paket: <b style="color:#b45309;">${escapeHtml(tierLabel)}</b><br />
+            ⏳ Durasi: <b style="color:#b45309;">${days} hari</b><br />
+            ✨ Chat AI tanpa batas · catatan otomatis tanpa batas · kolaborasi real-time
+          </td>
+        </tr>
+      </table>
+      <p style="margin:22px 0 0;text-align:center;">
+        <a href="${SITE_URL}/dashboard" style="display:inline-block;background:linear-gradient(135deg,#d97706,#b45309);color:#ffffff;font-family:${FONT};font-size:14px;font-weight:800;text-decoration:none;padding:13px 30px;border-radius:12px;">Masuk ke Dashboard 🚀</a>
+      </p>
+      <p class="subtext" style="margin:18px 0 0;font-family:${FONT};font-size:11.5px;color:#a8a29e;text-align:center;">
+        Terima kasih sudah mempercayai Eureka.AI. Selamat belajar!
+      </p>
+    `,
+  });
+}
+
 /** Kirim email selamat datang (user baru). Throw bila gagal. */
 export async function sendWelcomeEmail(to: string, name: string): Promise<void> {
   await sendEmail(to, `Selamat datang di Eureka.AI, ${name.split(" ")[0] || "Kawan"}! 🎉`, welcomeHtml(name));
+}
+
+/** Kirim email konfirmasi saat premium diaktifkan. Throw bila gagal. */
+export async function sendPremiumWelcomeEmail(
+  to: string,
+  name: string,
+  tier: "promo" | "normal" | string,
+  days: number
+): Promise<void> {
+  await sendEmail(
+    to,
+    `Premium Eureka.AI aktif — ${days} hari! 👑`,
+    premiumWelcomeHtml(name, tier, days)
+  );
 }
 
 /** Kirim notifikasi login. Throw bila gagal. */

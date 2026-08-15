@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { BuddyCharacter, ChatMessage } from '@/lib/study-buddy/buddyTypes';
 import { BUDDY_TEMPLATES } from '@/lib/study-buddy/buddyTemplates';
+import { AI_SAFETY_GUARDRAIL } from '@/lib/prompts/safety';
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,7 +39,9 @@ Gaya bicara:
 - Jika user bertanya tentang materi, berikan penjelasan yang jelas dengan contoh
 - Jika user terlihat stuck, tawarkan bantuan dengan pertanyaan guiding
 
-PENTING: Jangan terlalu panjang! Maksimal 3-4 kalimat per response.`;
+PENTING: Jangan terlalu panjang! Maksimal 3-4 kalimat per response.
+
+${AI_SAFETY_GUARDRAIL}`;
 
     // Build messages array for AI
     const messages: { role: "system" | "assistant" | "user"; content: string }[] = [

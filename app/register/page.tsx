@@ -40,6 +40,9 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [checked, setChecked] = useState(false);
+  // Kode referral dari link ?ref=... (disimpan juga ke localStorage agar
+  // tetap terbawa sampai proses OTP selesai).
+  const [refCode, setRefCode] = useState("");
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // CAPTCHA (Cloudflare Turnstile) — token sekali pakai, di-reset tiap submit.
@@ -51,12 +54,32 @@ export default function RegisterPage() {
     setCaptchaKey((k) => k + 1);
   };
 
-  // Pesan error dari halaman callback Google (?error=...).
-  // Dibaca dari window.location (bukan useSearchParams) supaya halaman
-  // tetap bisa di-prerender statis tanpa memerlukan Suspense boundary.
+  // Pesan error dari halaman callback Google (?error=...) & kode referral
+  // (?ref=...). Dibaca dari window.location (bukan useSearchParams) supaya
+  // halaman tetap bisa di-prerender statis tanpa memerlukan Suspense boundary.
   useEffect(() => {
-    const err = new URLSearchParams(window.location.search).get("error");
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("error");
     if (err) setError(err);
+    const ref = params.get("ref")?.trim().slice(0, 32);
+    if (ref) {
+      setRefCode(ref);
+      try {
+        window.localStorage.setItem("eureka_ref", ref);
+      } catch {
+        // abaikan
+      }
+    }
+  }, []);
+
+  // Fallback: user refresh halaman di tengah alur OTP → kode tetap terbawa.
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("eureka_ref");
+      if (stored) setRefCode(stored);
+    } catch {
+      // abaikan
+    }
   }, []);
 
   useEffect(() => {
@@ -143,7 +166,13 @@ export default function RegisterPage() {
 
     setSubmitting(true);
     resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
-    const result = await verifyOtpLogin(email, otpCode, name, captchaToken ?? undefined);
+    const result = await verifyOtpLogin(
+      email,
+      otpCode,
+      name,
+      captchaToken ?? undefined,
+      refCode || undefined
+    );
     if (!result.ok) {
       setError(result.error ?? "Gagal verifikasi. Coba lagi.");
       setSubmitting(false);
@@ -167,7 +196,7 @@ export default function RegisterPage() {
     setError(null);
     setGoogleBusy(true);
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(refCode || undefined);
       // Browser sedang dialihkan ke Google; jika kembali, reset state.
       setGoogleBusy(false);
     } catch (e) {

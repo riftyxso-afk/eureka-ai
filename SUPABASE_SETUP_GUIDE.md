@@ -263,11 +263,43 @@ Required in both `.env.local` and Vercel Dashboard:
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key (server only) | **YES!** |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID — untuk gambar AI PDF (opsional) | No |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API token (izin Workers AI:Run) — gambar AI PDF | No |
-| `MAYAR_API_KEY` | Mayar.id API key (langganan Pro) — web.mayar.id/api-keys | **YES!** |
-| `MAYAR_MERCHANT_ID` | Mayar merchant ID (dari payload webhook / dashboard) | No |
-| `MAYAR_PRODUCT_ID_PROMO` | Product ID produk Membership SaaS "Pro Promo" (Rp 5.000) | No |
-| `MAYAR_PRODUCT_ID_NORMAL` | Product ID produk Membership SaaS "Pro Normal" (Rp 59.000) | No |
-| `MAYAR_REDIRECT_URL` | URL kembali setelah bayar di Mayar | No |
+| `PAKASIR_PROJECT` | Pakasir slug proyek (payment gateway langganan Pro) — app.pakasir.com → detail proyek | **YES!** |
+| `PAKASIR_API_KEY` | Pakasir API key proyek (verifikasi webhook via transactiondetail) — app.pakasir.com | **YES!** |
+| `PAKASIR_REDIRECT_URL` | URL kembali setelah bayar — netral, tidak mengklaim hasil (default `/dashboard?upgrade=done`); popup sukses hanya muncul bila server mengonfirmasi premium aktif | No |
+
+---
+
+## 💳 Pakasir Payment Gateway (langganan Pro)
+
+Payment gateway pengganti DOKU. Model: **bayar sekali = premium aktif 30 hari**
+(one-time, tanpa auto-renew & tanpa lisensi). Dua tier: Promo Rp 5.000 & Normal Rp 59.000.
+
+### Setup di Pakasir
+
+1. Daftar/login di https://app.pakasir.com (dokumentasi: pakasir.com/p/docs).
+2. Buat **Proyek** → catat **Slug** & **API Key** (halaman detail proyek).
+3. Isi env (`.env.local` + Vercel/Render): `PAKASIR_PROJECT`, `PAKASIR_API_KEY`,
+   `PAKASIR_REDIRECT_URL`.
+4. **Isi Webhook URL** proyek di dashboard Pakasir (Edit Proyek):
+   ```
+   https://<domainmu>/api/payments/webhook
+   ```
+   Webhook Pakasir **tidak bersignature** — verifikasi fail-closed: `project` harus
+   cocok, `order_id` + `amount` harus tercatat, lalu dikonfirmasi via API
+   `transactiondetail` (status `completed`) sebelum premium aktif. Tanpa
+   `PAKASIR_PROJECT`/`PAKASIR_API_KEY` semua webhook ditolak (503).
+5. **Migrasi DB**: jalankan `supabase_patch_010_pakasir_payments.sql` di Supabase SQL Editor
+   (⚠️ backup dulu — tabel/kolom `doku_*` dihapus).
+6. Uji sandbox: checkout → halaman bayar Pakasir → `POST /api/paymentsimulation`
+   (mode sandbox) → webhook `completed` → status premium aktif di DB selama 30 hari.
+
+### Catatan migrasi dari DOKU
+
+- User premium eksisting **tetap aktif** sampai `premium_until` mereka habis
+  (data premium tidak dihapus; hanya tabel/kolom `doku_*` yang di-drop). Setelah habis,
+  mereka berlangganan ulang lewat Pakasir.
+- Tidak ada lagi verifikasi lisensi eksternal — status premium murni dari `premium_until`
+  (dikonfirmasi webhook Pakasir + `transactiondetail`).
 
 ---
 

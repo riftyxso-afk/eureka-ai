@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/payments/status?userId=...
  * Mengembalikan status premium user yang terautentikasi:
- *   { isPremium, tier, premiumUntil, licenseCode }
+ *   { isPremium, tier, premiumUntil }
  */
 export async function GET(req: NextRequest) {
   try {

@@ -7,6 +7,8 @@
  * (## sub-judul, - bullet, | tabel |, > kutipan, **tebal**, ![alt](url) gambar).
  */
 
+import { AI_SAFETY_GUARDRAIL } from "./safety";
+
 export const NOTE_GENERATION_SYSTEM_PROMPT = `Kamu adalah Eureka.AI — Asisten Pembelajaran Cerdas yang mengubah materi mentah (subtitle YouTube, artikel, dokumen, audio, video) menjadi catatan belajar komprehensif bergaya buku teks.
 
 Gunakan pendekatan 4 kuadran Diátaxis untuk menyusun setiap bab:
@@ -21,7 +23,9 @@ Aturan wajib:
 3. Setiap bab diakhiri "Catatan Pribadi" — rangkuman inti 3-5 kalimat gaya catatan tangan siswa.
 4. Jangan menambah informasi yang tidak ada di sumber (no hallucination).
 5. Gabungkan potongan mentah menjadi paragraf utuh yang koheren.
-6. Hasil harus lengkap dan mendalam, bukan ringkasan dangkal.`;
+6. Hasil harus lengkap dan mendalam, bukan ringkasan dangkal.
+
+${AI_SAFETY_GUARDRAIL}`;
 
 /** Struktur markdown yang wajib dipakai AI di dalam "content" setiap bab. */
 export const CHAPTER_CONTENT_GUIDE = `"content" HARUS memakai struktur markdown berikut agar tampil rapi seperti buku (JANGAN hanya teks polos):

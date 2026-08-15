@@ -5,7 +5,7 @@
  *   - type 'percent'  → value 1-100 (persen potongan)
  *   - type 'nominal'  → value potongan Rupiah tetap
  *   - max_uses NULL = tak terbatas; used_count di-increment saat checkout
- *     berhasil dibuat (link Mayar diterbitkan).
+ *     berhasil dibuat (link Pakasir diterbitkan).
  *   - active=false / expires_at lewat → kode tidak berlaku.
  */
 import { db } from "./supabase/admin";
@@ -28,7 +28,7 @@ export interface DiscountValidation {
   label: string;
 }
 
-/** Harga minimum yang boleh dikirim ke Mayar (hindari amount 0/negatif). */
+/** Harga minimum yang boleh dikirim ke Pakasir (hindari amount 0/negatif). */
 export const MIN_AMOUNT = 1000;
 
 /** Normalisasi kode: uppercase, hapus spasi. */
@@ -95,7 +95,7 @@ export async function applyDiscount(
 
 /**
  * Catat pemakaian kode (increment atomik via RPC) — dipanggil SETELAH
- * checkout Mayar berhasil dibuat agar kode tidak dipakai tanpa batas.
+ * checkout Pakasir berhasil dibuat agar kode tidak dipakai tanpa batas.
  * RPC hanya menambah bila kode masih aktif & kuota tersisa.
  */
 export async function consumeDiscount(code: string): Promise<void> {

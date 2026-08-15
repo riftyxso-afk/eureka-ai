@@ -19,6 +19,7 @@ import {
   Origami,
   Pin,
   Settings,
+  Share2,
   Sun,
   Trophy,
   User,
@@ -31,6 +32,8 @@ import { logoutUser } from "@/lib/auth";
 import { getAvatar } from "@/lib/avatar";
 import { getUserName } from "@/lib/identity";
 import { usePremium } from "@/lib/usePremium";
+import { PlanBadge } from "@/components/PlanBadge";
+import { ReferralPopup } from "@/components/ReferralPopup";
 
 interface MenuItem {
   id: string;
@@ -71,6 +74,7 @@ export const Sidebar = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [referralOpen, setReferralOpen] = useState(false);
   const [avatar, setAvatarState] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -140,13 +144,16 @@ export const Sidebar = () => {
             <span>{getUserName().charAt(0).toUpperCase()}</span>
           )}
         </span>
-        <Link
-          href="/dashboard/profil"
-          className="min-w-0 flex-1 truncate text-xs font-extrabold text-clay-dark hover:text-clay-primary"
-          onClick={onNavigate}
-        >
-          {getUserName().split(" ")[0]}
-        </Link>
+        <div className="min-w-0 flex-1">
+          <Link
+            href="/dashboard/profil"
+            className="block truncate text-xs font-extrabold text-clay-dark hover:text-clay-primary"
+            onClick={onNavigate}
+          >
+            {getUserName().split(" ")[0]}
+          </Link>
+          <PlanBadge size="sm" className="mt-1" />
+        </div>
       </div>
 
       <nav className="flex flex-col gap-1">
@@ -165,11 +172,21 @@ export const Sidebar = () => {
       <div className="mt-1 border-t-2 border-clay-shadow/30 pt-1">
         <SidebarItem
           icon={Crown}
-          label={isPremium ? "Pro Aktif ✓" : "Tingkatkan Pro"}
+          label={isPremium ? "Top Up Pro" : "Tingkatkan Pro"}
           href="/pricing"
           variant="pro"
           onClick={onNavigate}
         />
+      </div>
+
+      <div className="mt-1 flex flex-col gap-1 border-t-2 border-clay-shadow/30 pt-1">
+        <button
+          onClick={() => setReferralOpen(true)}
+          className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-clay-primary hover:shadow-[0_4px_0_#D1C4B4]"
+        >
+          <Share2 size={15} />
+          Bagikan Link (Referral)
+        </button>
       </div>
 
       <div className="mt-1 flex flex-col gap-1 border-t-2 border-clay-shadow/30 pt-1">
@@ -283,6 +300,12 @@ export const Sidebar = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Popup referral: progres + link + klaim premium */}
+      <ReferralPopup
+        open={referralOpen}
+        onClose={() => setReferralOpen(false)}
+      />
     </>
   );
 };

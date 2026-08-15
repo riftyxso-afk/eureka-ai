@@ -1,0 +1,118 @@
+# Deployment Produksi — Eureka.AI
+
+Panduan go-live Eureka.AI:
+
+- **Frontend**: Next.js di **Vercel** (sudah terhubung ke repo).
+- **Backend**: server Node (Express/Hono) di **VPS milikmu** (port 3001) — frontend memanggil backend via `NEXT_PUBLIC_API_URL`.
+
+---
+
+## 1. Variabel Lingkungan
+
+### 1.1 Frontend (Vercel → Settings → Environment Variables)
+
+| Variabel | Wajib | Sumber |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | **YES** | URL backend produksi, mis. `https://api.eureka-ai.web.id` (tanpa `/` di akhir) |
+| `NEXT_PUBLIC_SUPABASE_URL` | **YES** | Supabase Dashboard → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **YES** | Supabase Dashboard → API (anon public key) |
+| `AI_PROVIDER` / `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | **YES** | Provider AI utama (OpenAgentic/OpenRouter, lihat `.env.example`) |
+| `OPENAGENTIC_API_KEY` | No | Bila memakai provider OpenAgentic |
+| `OPENROUTER_API_KEY` | No | Bila memakai provider OpenRouter |
+| `OPENAI_API_KEY` | No | Bila memakai provider OpenAI |
+| `JUANROUTER_API_KEY` | No | Bila memakai provider JuanRouter |
+| `FIRECRAWL_API_KEY` | No | Web search (fitur Pro) |
+| `RESEND_API_KEY` | **YES** | Resend (email OTP/welcome/premium) — awalan `re_` |
+| `RESEND_FROM_EMAIL` | No | Pengirim email, mis. `Eureka.AI <noreply@domainmu.com>` |
+| `PAKASIR_PROJECT` | **YES** | Slug proyek Pakasir (dari app.pakasir.com → detail proyek) |
+| `PAKASIR_API_KEY` | **YES** | API key Pakasir |
+| `PAKASIR_REDIRECT_URL` | **YES** | `https://www.eureka-ai.web.id/dashboard?upgrade=done` |
+| `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` | No | Gambar AI PDF (opsional) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | No | CAPTCHA Cloudflare Turnstile (bila dipakai) |
+
+> Redeploy setelah mengubah env. Jangan pernah menaruh rahasia di repo — `.env.example` hanya placeholder.
+
+### 1.2 Backend (VPS)
+
+Buat file `/var/www/eureka-backend/.env` (salin dari `backend/.env.example`):
+
+| Variabel | Wajib | Sumber |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | **YES** | Supabase Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | **YES** | Supabase → service_role key (RAHASIA — jangan bocor ke frontend) |
+| `AI_PROVIDER` / `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | **YES** | Provider AI utama |
+| `OPENAGENTIC_API_KEY` | No | Bila memakai OpenAgentic |
+| `OPENROUTER_API_KEY` | No | Bila memakai OpenRouter |
+| `JUANROUTER_API_KEY` | No | Bila memakai JuanRouter |
+| `FIRECRAWL_API_KEY` | No | Web search |
+| `SUMOPOD_API_KEY` | No | Ekstraksi audio/video (opsional) |
+| `RESEND_API_KEY` | **YES** | Resend — awalan `re_` |
+| `RESEND_FROM_EMAIL` | No | Pengirim email |
+| `CORS_ORIGIN` | **YES** | Origin frontend, mis. `https://www.eureka-ai.web.id` (pisahkan koma bila banyak) |
+| `PORT` | No | Default `3001` |
+| `PAKASIR_PROJECT` | **YES** | Slug proyek Pakasir |
+| `PAKASIR_API_KEY` | **YES** | API key Pakasir |
+| `PAKASIR_REDIRECT_URL` | **YES** | Redirect produksi |
+
+---
+
+## 2. Setup Backend di VPS
+
+```bash
+# 1) Pastikan Node 20+
+node -v
+
+# 2) Salin kode & install
+git clone <repo-url> /var/www/eureka-backend
+cd /var/www/eureka-backend/backend
+npm ci
+# Isi .env sesuai tabel 1.2, lalu:
+
+# 3) Build & jalankan (contoh pakai pm2)
+npm run build
+pm2 start npm --name eureka-backend -- run start
+pm2 save && pm2 startup
+
+# 4) Reverse proxy (contoh Nginx) → forward ke 127.0.0.1:3001
+#    server { server_name api.eureka-ai.web.id; location / { proxy_pass http://127.0.0.1:3001; ... } }
+```
+
+Cek sehat:
+
+```bash
+curl -s http://localhost:3001/ | head -5
+# dan dari luar: curl -s https://api.eureka-ai.web.id/
+```
+
+---
+
+## 3. Konfigurasi Pakasir (dashboard app.pakasir.com → Edit Proyek)
+
+| Setting | Nilai |
+|---|---|
+| **Webhook URL** | `https://api.eureka-ai.web.id/api/payments/webhook` (arahkan ke domain backend yang menerima webhook) |
+| **Redirect / callback** | dikendalikan `PAKASIR_REDIRECT_URL` = `https://www.eureka-ai.web.id/dashboard?upgrade=done` |
+
+> Webhook Pakasir tidak bersignature — server memverifikasi `project` + `order_id`/`amount` lalu mengonfirmasi via API `transactiondetail` (fail-closed). Pastikan domain webhook di atas **dapat diakses publik** (bukan localhost).
+
+---
+
+## 4. Checklist Verifikasi Pasca-Deploy
+
+- [ ] `GET https://api.eureka-ai.web.id/` → 200 (backend sehat)
+- [ ] `https://www.eureka-ai.web.id/` → landing page termuat, navbar & CTA berfungsi
+- [ ] `https://www.eureka-ai.web.id/sitemap.xml` → memuat URL halaman publik
+- [ ] `https://www.eureka-ai.web.id/robots.txt` → mengizinkan index + referensi sitemap
+- [ ] `/pricing` → pilih paket → halaman bayar Pakasir terbuka (`app.pakasir.com/pay/...`)
+- [ ] Bayar (sandbox) → kembali ke `/dashboard?upgrade=done` → ±15 dtk popup sukses + email premium masuk
+- [ ] `/api/payments/status` → `isPremium: true` setelah pembayaran terverifikasi
+- [ ] Login/register OTP → email kode masuk (Resend)
+- [ ] Google Search Console: submit `sitemap.xml`, cek metadata & JSON-LD halaman
+
+---
+
+## 5. Rollback
+
+- **Frontend**: Vercel → Deployments → pilih versi sebelumnya → Promote.
+- **Backend**: `pm2 reload eureka-backend` ke versi commit sebelumnya (`git checkout <rev> && npm ci && npm run build && pm2 reload`).
+- **DB**: semua patch bersifat aditif (kecuali migrasi pembayaran yang menyebutkan DROP — backup Supabase dulu). Rollback referral = drop kolom `referral_code/referred_by/referral_rewarded`.

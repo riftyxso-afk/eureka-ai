@@ -1,108 +1,86 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isPakasirConfigured, verifyTransactionDetail } from "@/lib/pakasir";
 import { db } from "@/lib/supabase/admin";
+import { activatePremium } from "@/lib/premium";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/payments/webhook — callback dari Mayar (JSON, POST).
+ * POST /api/payments/webhook — webhook Pakasir (JSON, POST).
  *
- * Payload (docs.mayar.id/integration/webhook):
- *   { "event": { "received": "payment.received" | "membership.*" },
- *     "data": {
- *       "id": "...", "transactionId"?: "...", "status": bool,
- *       "merchantId": "...", "customerEmail": "...", "customerName": "...",
- *       "amount": 59000, "productId": "...", "productName": "...", ...
- *     } }
+ * Payload (pakasir.com/p/docs → Webhook):
+ *   { "amount": 22000, "order_id": "240910HDE7C9", "project": "depodomain",
+ *     "status": "completed", "payment_method": "qris", "completed_at": "..." }
+ * Dikirim oleh Pakasir ke Webhook URL proyek (diisi di dashboard Pakasir).
  *
- * Flow:
- *   1. Validasi merchantId == MAYAR_MERCHANT_ID (bila env diisi) → selain itu 401.
- *   2. Idempotensi: UNIQUE transaction_id di mayar_webhook_events →
+ * Flow (fail-closed, karena webhook Pakasir TIDAK bersignature):
+ *   0. PAKASIR_PROJECT/PAKASIR_API_KEY harus terisi (503 bila belum);
+ *      field `project` webhook harus cocok (401 bila beda).
+ *   1. Idempotensi: UNIQUE order_id di pakasir_notification_events →
  *      insert pertama menang, duplikat diabaikan (200).
- *   3. payment.received / membership.newMemberRegistered → aktifkan premium
- *      (cari user by email case-insensitive; premium_until = now + 30 hari).
- *   4. membership.memberExpired / memberUnsubscribed → nonaktifkan premium.
- *   5. Selalu balas 200 (kecuali 401) agar Mayar tidak retry tanpa perlu.
+ *   2. Hanya status `completed` yang memproses; status lain → 200 tanpa aktivasi.
+ *   3. Cocokkan order_id → user + tier + amount (pakasir_payment_requests);
+ *      amount webhook harus konsisten dengan amount tercatat.
+ *   4. Verifikasi authoritative via API transactiondetail (status harus
+ *      `completed`); bila API gagal/tak terjangkau → 5xx TANPA aktivasi agar
+ *      Pakasir mengulang; status ≠ completed → 200 tanpa aktivasi.
+ *   5. Aktivasi premium 30 hari + tandai payment request lunas.
  */
 export async function POST(req: NextRequest) {
+  const rawBody = await req.text().catch(() => "");
+  if (!rawBody) {
+    return NextResponse.json({ error: "Body kosong." }, { status: 400 });
+  }
+
   let payload: unknown = null;
   try {
-    payload = await req.json();
+    payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Body bukan JSON valid." }, { status: 400 });
   }
 
   const body = payload as {
-    event?: { received?: string } | string;
-    eventType?: string;
-    data?: {
-      id?: string;
-      transactionId?: string;
-      transaction_id?: string;
-      status?: boolean;
-      merchantId?: string;
-      merchantEmail?: string;
-      customerEmail?: string;
-      customerName?: string;
-      amount?: number;
-      productId?: string;
-      productName?: string;
-      licenseCode?: string;
-      [key: string]: unknown;
-    };
+    amount?: unknown;
+    order_id?: unknown;
+    project?: unknown;
+    status?: unknown;
+    payment_method?: unknown;
+    completed_at?: unknown;
+    [key: string]: unknown;
   };
 
-  const data = body?.data ?? {};
-  const eventRaw =
-    (typeof body?.event === "object"
-      ? body.event.received
-      : body?.event) ??
-    body?.eventType ??
-    "";
-  const eventType = String(eventRaw ?? "").trim();
-
-  // ── 1. Validasi merchantId (FAIL-CLOSED) ─────────────────────
-  // Bila MAYAR_MERCHANT_ID belum diisi di env → TOLAK SEMUA webhook
-  // (503). Jangan pernah memproses webhook tanpa verifikasi — kalau tidak,
-  // attacker bisa kirim `payment.received` palsu dan dapat premium gratis.
-  const expectedMerchantId = process.env.MAYAR_MERCHANT_ID?.trim();
-  if (!expectedMerchantId) {
+  // ── 0. Fail-closed: konfigurasi + project ──────────────────
+  if (!isPakasirConfigured()) {
     console.error(
-      "[webhook] MAYAR_MERCHANT_ID belum di-set — semua webhook ditolak (fail-closed)."
+      "[webhook] PAKASIR_PROJECT / PAKASIR_API_KEY belum di-set — semua webhook ditolak (fail-closed)."
     );
     return NextResponse.json(
-      { error: "Server belum dikonfigurasi untuk webhook." },
+      { error: "Server belum dikonfigurasi untuk notifikasi." },
       { status: 503 }
     );
   }
-  const gotMerchantId = String(data.merchantId ?? "").trim();
-  if (gotMerchantId !== expectedMerchantId) {
+
+  const project = String(body?.project ?? "").trim();
+  if (project !== process.env.PAKASIR_PROJECT?.trim()) {
     console.warn(
-      `[webhook] merchantId tidak cocok: got=${gotMerchantId} expected=${expectedMerchantId}`
+      `[webhook] project "${project}" tidak cocok dengan PAKASIR_PROJECT — ditolak`
     );
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ── 2. Idempotensi via transactionId ─────────────────────────
-  const transactionId = String(
-    data.transactionId ?? data.transaction_id ?? data.id ?? ""
-  ).trim();
+  const orderId = String(body?.order_id ?? "").trim();
+  const status = String(body?.status ?? "").trim().toLowerCase();
+  const amount = Number(body?.amount) || 0;
 
-  const amount = Number(data.amount) || 0;
-  const customerEmail = String(data.customerEmail ?? "").trim().toLowerCase();
-  const customerName = String(data.customerName ?? "").trim();
-  const productId = String(data.productId ?? "").trim();
-  const licenseCodeRaw = String(
-    (data as Record<string, unknown>).licenseCode ?? ""
-  ).trim();
-
-  // Simpan payload audit + klaim slot idempotensi (atomic via UNIQUE).
+  // ── 1. Idempotensi via order_id (UNIQUE) ───────────────────
   const { error: insertErr } = await db()
-    .from("mayar_webhook_events")
+    .from("pakasir_notification_events")
     .insert({
-      event_type: eventType,
-      transaction_id: transactionId || null,
+      order_id: orderId || null,
+      status: status || null,
+      amount: amount || null,
       payload: body as Record<string, unknown>,
     });
 
@@ -112,122 +90,128 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, duplicate: true });
     }
     console.error("[webhook] simpan event gagal:", insertErr);
+    return NextResponse.json({ error: "Gagal menyimpan event." }, { status: 500 });
+  }
+
+  if (!orderId) {
+    console.warn("[webhook] webhook tanpa order_id — diabaikan");
+    return NextResponse.json({ ok: true, skipped: "no order_id" });
+  }
+
+  // ── 2. Hanya completed yang mengaktifkan premium ────────────
+  if (status !== "completed") {
+    console.log(
+      `[webhook] status=${status || "?"} untuk order ${orderId} — tanpa aktivasi`
+    );
+    return NextResponse.json({ ok: true, skipped: status || "unknown status" });
+  }
+
+  // ── 3. Cocokkan order_id → user + tier (pakasir_payment_requests) ─
+  const { data: reqRow, error: reqErr } = await db()
+    .from("pakasir_payment_requests")
+    .select("user_id, tier, amount, status")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (reqErr) {
+    console.error("[webhook] cari payment request gagal:", reqErr);
+    return NextResponse.json({ ok: true, matched: false });
+  }
+
+  if (!reqRow) {
+    console.warn(
+      `[webhook] order ${orderId} tidak tercatat di pakasir_payment_requests — diabaikan`
+    );
+    return NextResponse.json({ ok: true, matched: false });
+  }
+
+  if (reqRow.status === "paid") {
+    // Sudah pernah dibayar & diproses → abaikan (perlindungan ganda).
+    return NextResponse.json({ ok: true, duplicate: true });
+  }
+
+  // Verifikasi amount konsisten.
+  if (amount && reqRow.amount && Number(amount) !== Number(reqRow.amount)) {
+    console.warn(
+      `[webhook] amount tidak cocok: notif=${amount} expected=${reqRow.amount} (order ${orderId}) — diabaikan`
+    );
+    return NextResponse.json({ ok: true, skipped: "amount mismatch" });
+  }
+
+  // ── 4. Verifikasi authoritative via transactiondetail ──────
+  let verifiedStatus: string | null = null;
+  try {
+    const detail = await verifyTransactionDetail({
+      orderId,
+      amount: Number(reqRow.amount),
+    });
+    verifiedStatus = detail.status;
+  } catch (e) {
+    // API tak terjangkau / error → TIDAK mengaktifkan premium, balas 5xx agar
+    // Pakasir mengulang webhook (aktivasi hanya lewat status confirmed).
+    console.error(
+      `[webhook] transactiondetail error untuk order ${orderId}:`,
+      e instanceof Error ? e.message : e
+    );
     return NextResponse.json(
-      { error: "Gagal menyimpan event." },
+      { error: "Verifikasi gagal, coba lagi." },
       { status: 500 }
     );
   }
 
-  // ── 3 & 4. Proses event ──────────────────────────────────────
-  if (
-    eventType === "payment.received" ||
-    eventType === "membership.newMemberRegistered" ||
-    eventType === "membership.changeTierMemberRegistered"
-  ) {
-    // Event aktifasi dengan status transaksi false → tolak (jangan aktifkan).
-    if (data.status === false) {
-      console.warn(`[webhook] ${eventType} dengan status=false — diabaikan`);
-      return NextResponse.json({ ok: true, skipped: "status false" });
-    }
-    if (!customerEmail) {
-      console.warn("[webhook] event tanpa customerEmail:", eventType);
-      return NextResponse.json({ ok: true, skipped: "no email" });
-    }
-
-    // Cari user by email (case-insensitive).
-    const { data: users, error: findErr } = await db()
-      .from("users")
-      .select("id, is_premium, premium_tier, premium_until")
-      .ilike("email", customerEmail)
-      .limit(1);
-    if (findErr) {
-      console.error("[webhook] cari user gagal:", findErr);
-      return NextResponse.json({ ok: true, matched: false });
-    }
-
-    const user = users?.[0];
-    if (!user) {
-      // Email belum terdaftar → catat saja (audit), balas 200.
-      console.warn(
-        `[webhook] email ${customerEmail} tidak cocok dengan user mana pun (${eventType})`
-      );
-      return NextResponse.json({ ok: true, matched: false });
-    }
-
-    // Validasi transaksi hanya untuk produk kita: cocokkan productId ke env,
-    // fallback ke amount yang dikenal. Bila tidak cocok → JANGAN aktifkan.
-    const promoProductId = process.env.MAYAR_PRODUCT_ID_PROMO?.trim();
-    const normalProductId = process.env.MAYAR_PRODUCT_ID_NORMAL?.trim();
-    let tier: "promo" | "normal" | null = null;
-    if (productId) {
-      if (promoProductId && productId === promoProductId) tier = "promo";
-      else if (normalProductId && productId === normalProductId) tier = "normal";
-    }
-    if (!tier) {
-      if (amount === 5000) tier = "promo";
-      else if (amount === 59000) tier = "normal";
-    }
-    if (!tier) {
-      // Produk/amount tidak dikenal → kemungkinan produk lain di akun Mayar
-      // yang sama. Catat & abaikan (200 agar Mayar tidak retry), JANGAN
-      // aktifkan premium.
-      console.warn(
-        `[webhook] transaksi bukan produk Eureka (event=${eventType} productId=${productId} amount=${amount}) — diabaikan`
-      );
-      return NextResponse.json({ ok: true, skipped: "unknown product" });
-    }
-
-    const now = new Date();
-    const premiumUntil = new Date(
-      now.getTime() + 30 * 24 * 60 * 60 * 1000
-    ).toISOString();
-
-    const updates: Record<string, unknown> = {
-      is_premium: true,
-      premium_until: premiumUntil,
-    };
-    if (tier) updates.premium_tier = tier;
-    if (productId) updates.mayar_product_id = productId;
-    if (licenseCodeRaw) updates.mayar_license_code = licenseCodeRaw;
-    if (data.id) updates.mayar_customer_id = String(data.id);
-
-    const { error: updErr } = await db()
-      .from("users")
-      .update(updates)
-      .eq("id", user.id);
-    if (updErr) {
-      console.error("[webhook] update premium gagal:", updErr);
-      return NextResponse.json({ ok: true, error: "update failed" });
-    }
-
+  if (verifiedStatus !== "completed") {
     console.log(
-      `[webhook] ${eventType} → premium aktif untuk ${customerEmail} (${tier ?? "?"}, s/d ${premiumUntil})`
+      `[webhook] transactiondetail status=${verifiedStatus} untuk order ${orderId} — tanpa aktivasi`
     );
-    return NextResponse.json({ ok: true, activated: true });
+    return NextResponse.json({ ok: true, skipped: `status ${verifiedStatus}` });
   }
 
-  if (
-    eventType === "membership.memberExpired" ||
-    eventType === "membership.memberUnsubscribed"
-  ) {
-    if (customerEmail) {
-      const { data: users } = await db()
-        .from("users")
-        .select("id")
-        .ilike("email", customerEmail)
-        .limit(1);
-      const user = users?.[0];
-      if (user) {
-        await db()
-          .from("users")
-          .update({ is_premium: false })
-          .eq("id", user.id);
-        console.log(`[webhook] ${eventType} → premium nonaktif untuk ${customerEmail}`);
-      }
+  // ── 5. Aktivasi premium 30 hari (jalur bersama activatePremium) ──
+  const userId = reqRow.user_id as string;
+  const tier = reqRow.tier as "promo" | "normal";
+  const activated = await activatePremium({
+    userId,
+    tier,
+    days: 30,
+    invoiceNumber: orderId,
+    transactionId: null, // webhook Pakasir tidak membawa transaction id
+  });
+  if (!activated.ok || !activated.premiumUntil) {
+    console.error("[webhook] update premium gagal:", activated.error);
+    return NextResponse.json({ ok: true, error: "update failed" });
+  }
+  const premiumUntil = activated.premiumUntil;
+
+  // Tandai payment request lunas (mencegah aktivasi ganda).
+  await db()
+    .from("pakasir_payment_requests")
+    .update({ status: "paid", paid_at: new Date().toISOString() })
+    .eq("order_id", orderId);
+
+  // ── Email konfirmasi premium (fire-and-forget, tidak memblokir) ──
+  try {
+    const { data: userRow } = await db()
+      .from("users")
+      .select("email, name")
+      .eq("id", userId)
+      .maybeSingle();
+    if (userRow?.email) {
+      const { sendPremiumWelcomeEmail } = await import("@/lib/email");
+      void sendPremiumWelcomeEmail(
+        String(userRow.email),
+        userRow.name ? String(userRow.name) : "",
+        tier,
+        30
+      ).catch((e) =>
+        console.error("[webhook] gagal kirim email premium:", e)
+      );
     }
-    return NextResponse.json({ ok: true, deactivated: true });
+  } catch (e) {
+    console.warn("[webhook] email premium dilewati:", e);
   }
 
-  // Event lain (mis. payment.reminder, shipper.status) → diabaikan, 200.
-  return NextResponse.json({ ok: true, ignored: eventType });
+  console.log(
+    `[webhook] completed order ${orderId} → premium aktif untuk user ${userId} (${tier}, s/d ${premiumUntil})`
+  );
+  return NextResponse.json({ ok: true, activated: true });
 }

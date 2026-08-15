@@ -8,7 +8,9 @@ import {
   needsOnboarding,
   registerFriendsIdentity,
 } from "@/lib/auth";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
+import { supabase, isSupabaseConfigured, getAccessToken } from "@/lib/supabase/client";
+import { apiFetch } from "@/lib/apiClient";
+import { getUserId } from "@/lib/identity";
 
 const SESSION_TIMEOUT_MS = 20000;
 
@@ -39,6 +41,29 @@ export default function AuthCallbackPage() {
       await registerFriendsIdentity(result.user.name);
 
       const needOnboarding = await needsOnboarding().catch(() => false);
+
+      // Referral: akun BARU (butuh onboarding) yang datang dari link ?ref=...
+      // dicatat sebagai rujukan pengundang (best-effort, tidak memblokir).
+      const ref =
+        new URLSearchParams(window.location.search).get("ref") ?? "";
+      if (needOnboarding && ref) {
+        try {
+          const token = await getAccessToken();
+          if (token) {
+            await apiFetch("/api/referral/apply", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ userId: getUserId(), ref }),
+            });
+          }
+        } catch (e) {
+          console.warn("[auth/callback] atribusi referral dilewati:", e);
+        }
+      }
+
       redirect(needOnboarding ? "/onboarding" : "/home");
       return true;
     };

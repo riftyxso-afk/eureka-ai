@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "crypto";
 import { Resend } from "resend";
 import { db } from "@/lib/supabase/admin";
 import { verifyTurnstileToken } from "@/lib/captcha";
+import { applyReferral } from "@/lib/referral";
 
 const CODE_TTL_SECONDS = 5 * 60;
 const MIN_INTERVAL_SECONDS = 60;
@@ -166,7 +167,7 @@ async function sendOtpEmail(to: string, code: string): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { action?: string; email?: string; name?: string; code?: string; captchaToken?: string };
+  let body: { action?: string; email?: string; name?: string; code?: string; captchaToken?: string; ref?: string };
   try {
     body = await req.json();
   } catch {
@@ -196,7 +197,12 @@ export async function POST(req: NextRequest) {
   if (action === "request") {
     return handleRequest(email, String(body.name ?? "").trim().slice(0, 60));
   }
-  return handleVerify(email, String(body.code ?? "").trim(), String(body.name ?? "").trim().slice(0, 60));
+  return handleVerify(
+    email,
+    String(body.code ?? "").trim(),
+    String(body.name ?? "").trim().slice(0, 60),
+    String(body.ref ?? "").trim().slice(0, 32)
+  );
 }
 
 async function handleRequest(email: string, name: string) {
@@ -265,7 +271,7 @@ async function handleRequest(email: string, name: string) {
   return NextResponse.json({ ok: true, name: name || null });
 }
 
-async function handleVerify(email: string, code: string, name: string) {
+async function handleVerify(email: string, code: string, name: string, ref = "") {
   if (!/^\d{6}$/.test(code)) {
     return NextResponse.json({ ok: false, error: "Kode harus 6 digit angka." }, { status: 400 });
   }
@@ -341,6 +347,18 @@ async function handleVerify(email: string, code: string, name: string) {
   }
 
   const displayName = String(user.user_metadata?.name ?? "").trim() || email.split("@")[0];
+
+  // ── Atribusi referral (HANYA akun baru) ────────────────────
+  // Pendaftar yang membuka link ?ref=CODE tercatat sebagai rujukan pengundang.
+  // Best-effort: kode tidak valid / self-referral / email sama → dilewati,
+  // pendaftaran TETAP berhasil. Akun lama yang login tidak di-atribusi.
+  if (isNewUser && ref) {
+    try {
+      await applyReferral(user.id, email, ref);
+    } catch (e) {
+      console.warn("[otp] atribusi referral dilewati:", e);
+    }
+  }
 
   // ── Email otomatis (fire-and-forget, tidak memblokir login) ──
   // User BARU → selamat datang; user lama → notifikasi login.

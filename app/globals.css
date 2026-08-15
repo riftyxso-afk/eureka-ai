@@ -123,3 +123,157 @@
     animation: shimmer 1.6s infinite;
   }
 }
+
+/* ────────────────────────────────────────────────────────────
+   Kreate Bold Play — design system khusus LANDING PAGE saja
+   (kreate.gg-design.md). Kelas di-prefix .k- supaya tidak
+   mengganggu tema clay yang dipakai halaman lain.
+   Violet #7B42F5 · navy #13102B · latar putih · tombol capsule
+   "sticker" dengan border tegas + shadow tajam ke bawah.
+   ──────────────────────────────────────────────────────────── */
+.k-landing {
+  font-family: "SN Pro", "Inter", "Nunito", system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  background: #ffffff;
+  color: #13102b;
+}
+
+.k-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #7b42f5;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: 0.02em;
+  border: 2px solid #5e2bc7;
+  border-radius: 9999px;
+  padding: 16px 28px;
+  min-height: 52px;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 6px 0 #5e2bc7;
+  transition: background-color 0.15s ease, transform 0.1s ease,
+    box-shadow 0.1s ease;
+  user-select: none;
+}
+.k-btn-primary:hover {
+  background: #5e2bc7;
+}
+.k-btn-primary:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #5e2bc7;
+}
+
+.k-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ffffff;
+  color: #7b42f5;
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: 0.02em;
+  border: 2px solid #7b42f5;
+  border-radius: 9999px;
+  padding: 16px 28px;
+  min-height: 52px;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 6px 0 #e3d8fb;
+  transition: background-color 0.15s ease, transform 0.1s ease,
+    box-shadow 0.1s ease;
+  user-select: none;
+}
+.k-btn-secondary:hover {
+  background: #f4effe;
+}
+.k-btn-secondary:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #e3d8fb;
+}
+
+.k-btn-link {
+  background: transparent;
+  color: #7b42f5;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: 0.03em;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+.k-btn-link:hover {
+  text-decoration: underline;
+}
+
+.k-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #7b42f5;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  padding: 10px 16px;
+}
+
+.k-chip-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f4effe;
+  color: #7b42f5;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 2px solid #7b42f5;
+  border-radius: 9999px;
+  padding: 8px 14px;
+}
+
+.k-card {
+  background: #ffffff;
+  border: 2px solid #e5e5e5;
+  border-radius: 16px;
+  padding: 32px;
+}
+
+.k-card-accent {
+  background: #ffffff;
+  border: 2px solid #7b42f5;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 6px 0 rgba(123, 66, 245, 0.18);
+}
+
+.k-input {
+  background: #ffffff;
+  color: #13102b;
+  border: 1.5px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 14px 16px;
+  height: 52px;
+  width: 100%;
+  font-size: 16px;
+}
+.k-input:focus {
+  border-color: #7b42f5;
+  outline: none;
+}
+.k-input::placeholder {
+  color: #b9b6c7;
+}

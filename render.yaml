@@ -81,3 +81,11 @@ services:
       # Contoh: https://eureka-ai.vercel.app
       - key: CORS_ORIGIN
         sync: false
+
+      # ── Pakasir payment gateway (langganan Pro) ────────────
+      - key: PAKASIR_PROJECT
+        sync: false
+      - key: PAKASIR_API_KEY
+        sync: false
+      - key: PAKASIR_REDIRECT_URL
+        sync: false

@@ -1,5 +1,5 @@
 /**
- * Premium gating — status langganan Mayar + kuota free tier.
+ * Premium gating — status langganan Pakasir + kuota free tier.
  *
  * Setiap route AI berbiaya tinggi memanggil `enforcePremium(userId, feature)`
  * SETELAH auth user lolos. Keputusan 100% server-side; frontend hanya
@@ -15,7 +15,6 @@
  *   - bab-regenerate       : 3/bulan  (tabel feature_usage)
  */
 import { db } from "./supabase/admin";
-import { verifyLicense } from "./mayar";
 
 export type PremiumTier = "promo" | "normal" | "trial" | null;
 
@@ -23,7 +22,6 @@ export interface PremiumStatus {
   isPremium: boolean;
   tier: PremiumTier;
   premiumUntil: string | null;
-  licenseCode: string | null;
 }
 
 export type PremiumFeature =
@@ -59,6 +57,77 @@ export const UPGRADE_URL = "/pricing";
 /** Durasi trial gratis (7 hari). */
 export const TRIAL_DAYS = 7;
 
+export interface ActivatePremiumInput {
+  userId: string;
+  tier: "promo" | "normal" | "trial";
+  /** Lama premium aktif dalam hari (biasanya 30). */
+  days: number;
+  /** Dicatat di users.pakasir_invoice_number (bila ada). */
+  invoiceNumber?: string | null;
+  /** Dicatat di users.pakasir_transaction_id (bila ada). */
+  transactionId?: string | null;
+}
+
+export interface ActivatePremiumResult {
+  ok: boolean;
+  premiumUntil?: string;
+  error?: string;
+}
+
+/**
+ * Aktivasi premium — satu-satunya jalur untuk menyalakan premium (dipakai
+ * webhook Pakasir, trial, dan reward referral). Perpanjangan bersifat aditif:
+ * bila user masih premium, durasi ditambahkan dari premium_until yang ada.
+ * Mengembalikan premiumUntil bila berhasil.
+ */
+export async function activatePremium(
+  input: ActivatePremiumInput
+): Promise<ActivatePremiumResult> {
+  let client;
+  try {
+    client = db();
+  } catch {
+    return { ok: false, error: "Supabase belum dikonfigurasi." };
+  }
+
+  const { data: row } = await client
+    .from("users")
+    .select("premium_until")
+    .eq("id", input.userId)
+    .maybeSingle();
+
+  const now = Date.now();
+  const existing = row?.premium_until
+    ? new Date(row.premium_until).getTime()
+    : 0;
+  const base = existing > now ? existing : now;
+  const premiumUntil = new Date(
+    base + input.days * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const patch: Record<string, unknown> = {
+    is_premium: true,
+    premium_tier: input.tier,
+    premium_until: premiumUntil,
+  };
+  if (input.invoiceNumber !== undefined) {
+    patch.pakasir_invoice_number = input.invoiceNumber;
+  }
+  if (input.transactionId !== undefined) {
+    patch.pakasir_transaction_id = input.transactionId;
+  }
+
+  const { error } = await client
+    .from("users")
+    .update(patch)
+    .eq("id", input.userId);
+  if (error) {
+    console.error("[premium] aktivasi premium gagal:", error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, premiumUntil };
+}
+
 export interface PremiumCheck {
   ok: boolean;
   error?: string;
@@ -78,13 +147,12 @@ const NOT_CONFIGURED: PremiumStatus = {
   isPremium: false,
   tier: null,
   premiumUntil: null,
-  licenseCode: null,
 };
 
 /**
- * Baca status premium user dari DB + verifikasi lisensi Mayar bila
- * `premium_until` hampir habis (D4). Bila Supabase belum dikonfigurasi
- * (mode dev), semua user dianggap non-premium.
+ * Baca status premium user dari DB. Bila Supabase belum dikonfigurasi
+ * (mode dev), semua user dianggap non-premium. Status murni dari
+ * `premium_until` (pembayaran Pakasir one-time = 30 hari) — tanpa lisensi.
  */
 export async function getPremiumStatus(
   userId: string
@@ -98,9 +166,7 @@ export async function getPremiumStatus(
 
   const { data, error } = await client
     .from("users")
-    .select(
-      "is_premium, premium_until, premium_tier, mayar_license_code, mayar_product_id"
-    )
+    .select("is_premium, premium_until, premium_tier")
     .eq("id", userId)
     .maybeSingle();
 
@@ -124,53 +190,13 @@ export async function getPremiumStatus(
       isPremium: false,
       tier: (data.premium_tier as PremiumTier) ?? null,
       premiumUntil: data.premium_until ?? null,
-      licenseCode: data.mayar_license_code ?? null,
     };
-  }
-
-  // Verifikasi lisensi ke Mayar bila < 12 jam lagi habis.
-  const twelveHoursMs = 12 * 60 * 60 * 1000;
-  if (
-    data.mayar_license_code &&
-    data.mayar_product_id &&
-    untilMs - now < twelveHoursMs
-  ) {
-    try {
-      const license = await verifyLicense(
-        data.mayar_license_code,
-        data.mayar_product_id
-      );
-      if (!license.isLicenseActive) {
-        await client
-          .from("users")
-          .update({ is_premium: false })
-          .eq("id", userId)
-          .maybeSingle();
-        return {
-          isPremium: false,
-          tier: (data.premium_tier as PremiumTier) ?? null,
-          premiumUntil: data.premium_until ?? null,
-          licenseCode: data.mayar_license_code ?? null,
-        };
-      }
-      if (license.expiredAt) {
-        await client
-          .from("users")
-          .update({ premium_until: license.expiredAt })
-          .eq("id", userId)
-          .maybeSingle();
-      }
-    } catch (e) {
-      // Gagal verifikasi → pertahankan status saat ini (jangan blokir user).
-      console.error("[premium] verifikasi lisensi gagal:", e);
-    }
   }
 
   return {
     isPremium: true,
     tier: (data.premium_tier as PremiumTier) ?? null,
     premiumUntil: data.premium_until ?? null,
-    licenseCode: data.mayar_license_code ?? null,
   };
 }
 
@@ -355,25 +381,25 @@ export async function claimTrial(userId: string): Promise<TrialResult> {
     };
   }
 
-  const premiumUntil = new Date(
-    now + TRIAL_DAYS * 24 * 60 * 60 * 1000
-  ).toISOString();
-
-  const { error: updErr } = await client
-    .from("users")
-    .update({
-      is_premium: true,
-      premium_tier: "trial",
-      premium_until: premiumUntil,
-      trial_claimed_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
-  if (updErr) {
-    console.error("[premium] claim trial gagal:", updErr);
+  const activated = await activatePremium({
+    userId,
+    tier: "trial",
+    days: TRIAL_DAYS,
+  });
+  if (!activated.ok || !activated.premiumUntil) {
+    console.error("[premium] claim trial gagal:", activated.error);
     return { ok: false, error: "Gagal mengaktifkan trial.", status: 500 };
   }
 
-  return { ok: true, premiumUntil };
+  const { error: claimErr } = await client
+    .from("users")
+    .update({ trial_claimed_at: new Date().toISOString() })
+    .eq("id", userId);
+  if (claimErr) {
+    console.error("[premium] catat trial_claimed_at gagal:", claimErr);
+  }
+
+  return { ok: true, premiumUntil: activated.premiumUntil };
 }
 
 export interface CancelResult {
@@ -384,8 +410,7 @@ export interface CancelResult {
 
 /**
  * Batalkan langganan — nonaktifkan premium segera di DB (tanpa refund).
- * Bila user punya license code Mayar, coba nonaktifkan lisensi juga
- * (best-effort, tidak menggagalkan proses bila Mayar error).
+ * Tanpa panggilan API ke provider pembayaran (Pakasir one-time).
  */
 export async function cancelSubscription(userId: string): Promise<CancelResult> {
   let client;
@@ -397,7 +422,7 @@ export async function cancelSubscription(userId: string): Promise<CancelResult> 
 
   const { data: user, error } = await client
     .from("users")
-    .select("is_premium, mayar_license_code, mayar_product_id")
+    .select("is_premium")
     .eq("id", userId)
     .maybeSingle();
   if (error || !user) {
@@ -407,20 +432,8 @@ export async function cancelSubscription(userId: string): Promise<CancelResult> 
     return { ok: false, error: "Kamu tidak punya langganan aktif.", status: 409 };
   }
 
-  // Nonaktifkan lisensi di Mayar (best-effort, jangan blokir proses).
-  if (user.mayar_license_code && user.mayar_product_id) {
-    try {
-      const { deactivateLicense } = await import("./mayar");
-      await deactivateLicense(user.mayar_license_code, user.mayar_product_id);
-      console.log(`[premium] lisensi Mayar dinonaktifkan untuk ${userId}`);
-    } catch (e) {
-      console.warn(
-        "[premium] gagal nonaktifkan lisensi Mayar (dilanjutkan):",
-        e
-      );
-    }
-  }
-
+  // Nonaktifkan premium segera di DB — tanpa panggilan API ke provider
+  // pembayaran (Pakasir one-time, tidak ada lisensi yang perlu dimatikan).
   const { error: updErr } = await client
     .from("users")
     .update({ is_premium: false })

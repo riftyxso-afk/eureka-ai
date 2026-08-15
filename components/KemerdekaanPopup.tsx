@@ -35,7 +35,7 @@ export default function KemerdekaanPopup() {
     localStorage.setItem(DISMISS_KEY, "true");
   };
 
-  // Klaim promo → checkout Mayar tier promo (Rp 5.000).
+  // Klaim promo → checkout Pakasir tier promo (Rp 5.000).
   const handleClaim = async () => {
     if (!isLoggedIn()) {
       window.location.href = "/login";
@@ -166,7 +166,7 @@ export default function KemerdekaanPopup() {
               {checkingOut ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader2 size={18} className="animate-spin" />
-                  Mengarahkan ke Mayar…
+                  Mengarahkan ke Pakasir…
                 </span>
               ) : (
                 "Klaim Promo Sekarang! 🚀"

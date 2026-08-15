@@ -83,7 +83,7 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/onboarding/analyze", onboardingAnalyze);
   count++;
 
-  // ─── Payments (langganan Mayar.id) ──────────────────────
+  // ─── Payments (langganan Pakasir) ───────────────────────
   const paymentsCheckout = await import("@/app/api/payments/checkout/route");
   const paymentsWebhook = await import("@/app/api/payments/webhook/route");
   const paymentsStatus = await import("@/app/api/payments/status/route");
@@ -100,6 +100,15 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const profile = await import("@/app/api/profile/route");
   mount(app, "/api/profile", profile);
   count++;
+
+  // ─── Referral (program ajak teman) ─────────────────────
+  const referral = await import("@/app/api/referral/route");
+  const referralApply = await import("@/app/api/referral/apply/route");
+  const referralClaim = await import("@/app/api/referral/claim/route");
+  mount(app, "/api/referral", referral);
+  mount(app, "/api/referral/apply", referralApply);
+  mount(app, "/api/referral/claim", referralClaim);
+  count += 3;
 
   // ─── Progress ──────────────────────────────────────────
   const progress = await import("@/app/api/progress/route");

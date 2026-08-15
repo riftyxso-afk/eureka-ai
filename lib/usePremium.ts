@@ -4,25 +4,24 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiFetch } from "./apiClient";
 import { getUserId } from "./identity";
+import { syncAuthSession, isLoggedIn } from "./auth";
 
 export interface PremiumStatus {
   isPremium: boolean;
   tier: "promo" | "normal" | "trial" | null;
   premiumUntil: string | null;
-  licenseCode: string | null;
 }
 
 const EMPTY: PremiumStatus = {
   isPremium: false,
   tier: null,
   premiumUntil: null,
-  licenseCode: null,
 };
 
 /**
  * Hook status premium — diambil dari server (GET /api/payments/status),
  * bukan localStorage. Otomatis dimuat saat mount & bisa di-refresh manual
- * (mis. setelah kembali dari checkout Mayar).
+ * (mis. setelah kembali dari checkout Pakasir).
  */
 export function usePremium() {
   const [status, setStatus] = useState<PremiumStatus>(EMPTY);
@@ -30,6 +29,20 @@ export function usePremium() {
   const mounted = useRef(true);
 
   const refresh = useCallback(async () => {
+    // Sync sesi dulu → userId yang dipakai HARUS id akun asli dari Supabase,
+    // bukan fallback random per-device. Ini yang membuat status premium/trial
+    // konsisten di SEMUA perangkat untuk akun yang sama (sebelumnya, device
+    // baru tanpa cache sesi dapat userId acak → server menolak → tampak Free).
+    try {
+      await syncAuthSession();
+    } catch {
+      // mode dev tanpa Supabase — lanjut (server demo mempercayai param)
+    }
+    if (!isLoggedIn()) {
+      setStatus(EMPTY);
+      setLoading(false);
+      return;
+    }
     const userId = getUserId();
     if (!userId) {
       setStatus(EMPTY);
@@ -58,7 +71,6 @@ export function usePremium() {
         isPremium: data.isPremium === true,
         tier: data.tier ?? null,
         premiumUntil: data.premiumUntil ?? null,
-        licenseCode: data.licenseCode ?? null,
       });
     } catch (e) {
       console.warn("[usePremium] error:", e);

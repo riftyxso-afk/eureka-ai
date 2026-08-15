@@ -297,7 +297,9 @@ export async function verifyOtpLogin(
   code: string,
   name?: string,
   /** Token Cloudflare Turnstile — wajib saat captcha aktif. */
-  captchaToken?: string
+  captchaToken?: string,
+  /** Kode referral dari link ?ref=... (dipakai server untuk akun baru). */
+  ref?: string
 ): Promise<AuthResult> {
   const clean = email.trim().toLowerCase();
 
@@ -322,6 +324,7 @@ export async function verifyOtpLogin(
         code: code.trim(),
         name: name ?? "",
         captchaToken: captchaToken ?? "",
+        ref: ref ?? "",
       }),
     });
     const json = await res.json().catch(() => null);
@@ -375,16 +378,19 @@ export async function verifyOtpLogin(
  * Browser dialihkan ke Google, lalu kembali ke /auth/callback.
  * Provider Google harus diaktifkan di Supabase Dashboard (lihat SUPABASE_SETUP_GUIDE.md).
  */
-export async function signInWithGoogle(): Promise<void> {
+export async function signInWithGoogle(ref?: string): Promise<void> {
   if (!isSupabaseConfigured() || !supabase) {
     throw new Error(
       "Supabase belum dikonfigurasi. Isi kunci asli di .env.local lalu jalankan supabase_schema.sql."
     );
   }
+  const cleanRef = String(ref ?? "").trim().slice(0, 32);
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${window.location.origin}/auth/callback${
+        cleanRef ? `?ref=${encodeURIComponent(cleanRef)}` : ""
+      }`,
       // Selalu tampilkan pemilih akun Google supaya user bisa ganti akun.
       queryParams: { prompt: "select_account" },
     },

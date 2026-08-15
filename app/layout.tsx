@@ -8,14 +8,27 @@ import PremiumSuccessPopup from "@/components/PremiumSuccessPopup";
 
 const SITE_URL = "https://www.eureka-ai.web.id";
 
-const BRAND_TITLE = "Eureka.AI — Bukan sekadar jawaban, tapi momen Eureka!";
+const BRAND_TITLE = "Eureka.AI — AI Tutor Socratic untuk Pelajar Indonesia";
 const BRAND_DESC =
-  "AI Tutor Socratic untuk semua pelajar Indonesia. Bukan sekadar memberi jawaban, tapi membimbingmu menemukan momen Eureka!";
+  "Eureka.AI adalah AI Tutor Socratic untuk pelajar Indonesia: ubah video, artikel & PDF jadi catatan otomatis, tanya apa saja per bab, kerjakan kuis & kartu hafalan, dan belajar bersama teman secara real-time. Bukan sekadar memberi jawaban, tapi membimbingmu menemukan momen Eureka!";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: BRAND_TITLE,
   description: BRAND_DESC,
+  keywords: [
+    "AI tutor",
+    "tutor AI Indonesia",
+    "AI belajar",
+    "catatan otomatis AI",
+    "AI Socratic",
+    "belajar online",
+    "kuis AI",
+    "kartu hafalan",
+    "Eureka AI",
+    "aplikasi belajar",
+    "belajar dengan AI gratis",
+  ],
   // PWA: manifest + meta Apple agar bisa "Add to Home Screen" (wajib untuk
   // notifikasi web di iOS) — ikon pakai /logo.png yang sudah tersedia.
   manifest: "/manifest.webmanifest",
@@ -34,12 +47,13 @@ export const metadata: Metadata = {
     siteName: "Eureka.AI",
     title: BRAND_TITLE,
     description: BRAND_DESC,
+    url: SITE_URL,
     images: [
       {
         url: "/banner.png",
         width: 1200,
         height: 800,
-        alt: "Eureka.AI — Bukan sekadar jawaban, tapi momen Eureka!",
+        alt: "Eureka.AI — AI Tutor Socratic untuk Pelajar Indonesia",
       },
     ],
   },

@@ -9,6 +9,7 @@ import { useOnboarding } from "@/context/OnboardingContext";
 import { usePremium } from "@/lib/usePremium";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
+import { isLoggedIn, syncAuthSession } from "@/lib/auth";
 
 const PERKS = [
   { icon: "♾️", text: "Sesi belajar & chat AI tak terbatas" },
@@ -56,6 +57,15 @@ export default function PricingPage() {
     setError(null);
     setBusy(plan);
     try {
+      // Wajib akun asli (sync sesi) — id fallback random per-device ditolak
+      // server dan membuat status tidak konsisten antar perangkat.
+      await syncAuthSession().catch(() => undefined);
+      if (!isLoggedIn()) {
+        setError("Silakan masuk dulu untuk berlangganan.");
+        setBusy(null);
+        window.location.href = "/login";
+        return;
+      }
       const userId = getUserId();
       if (!userId) {
         setError("Silakan masuk dulu untuk berlangganan.");
@@ -78,7 +88,7 @@ export default function PricingPage() {
         setError(body?.error ?? "Gagal membuat pembayaran. Coba lagi ya 🙏");
         return;
       }
-      // Redirect ke halaman pembayaran Mayar.
+      // Redirect ke halaman pembayaran Pakasir.
       window.location.href = body.link;
     } catch (e) {
       setError(
@@ -93,6 +103,14 @@ export default function PricingPage() {
     setError(null);
     setClaimingTrial(true);
     try {
+      // Wajib akun asli (sync sesi) — trial dicatat per akun di server.
+      await syncAuthSession().catch(() => undefined);
+      if (!isLoggedIn()) {
+        setError("Silakan masuk dulu untuk mencoba trial.");
+        setClaimingTrial(false);
+        window.location.href = "/login";
+        return;
+      }
       const userId = getUserId();
       if (!userId) {
         setError("Silakan masuk dulu untuk mencoba trial.");
@@ -171,6 +189,43 @@ export default function PricingPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-clay-beige px-4 py-10">
+      {/* Data terstruktur untuk mesin pencari (Product/Offer, IDR) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: "Eureka.AI Pro",
+            description:
+              "AI Tutor Socratic untuk pelajar Indonesia: chat AI tanpa batas, catatan otomatis dari materi, kuis & kartu hafalan, dan kolaborasi real-time.",
+            brand: { "@type": "Brand", name: "Eureka.AI" },
+            offers: {
+              "@type": "AggregateOffer",
+              priceCurrency: "IDR",
+              lowPrice: "0",
+              highPrice: "59000",
+              offerCount: "2",
+              offers: [
+                {
+                  "@type": "Offer",
+                  name: "Gratis",
+                  price: "0",
+                  priceCurrency: "IDR",
+                  availability: "https://schema.org/InStock",
+                },
+                {
+                  "@type": "Offer",
+                  name: "Pro Bulanan",
+                  price: "59000",
+                  priceCurrency: "IDR",
+                  availability: "https://schema.org/InStock",
+                },
+              ],
+            },
+          }),
+        }}
+      />
       <CardClay className="w-full max-w-5xl">
         {/* Header */}
         <div className="text-center">
@@ -181,6 +236,10 @@ export default function PricingPage() {
             {isPremium ? "Kamu Sudah Pro! 👑" : "Tingkatkan ke Pro"}
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-base font-semibold text-clay-muted">
+            Harga Eureka.AI — AI Tutor Socratic untuk pelajar Indonesia. Mulai
+            gratis selamanya, upgrade Pro untuk belajar tanpa batas.
+          </p>
+          <p className="mx-auto mt-1 max-w-xl text-base font-semibold text-clay-muted">
             {isPremium ? (
               <>
                 Langganan aktif —{" "}
@@ -224,6 +283,20 @@ export default function PricingPage() {
               </p>
             </div>
             <div className="flex w-full max-w-md flex-col gap-3">
+              <ButtonClay
+                fullWidth
+                onClick={() => void choosePlan("normal")}
+                disabled={busy !== null}
+              >
+                {busy === "normal" ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    Ke Pakasir…
+                  </span>
+                ) : (
+                  "Top Up Pro (Perpanjang 30 Hari) 👑"
+                )}
+              </ButtonClay>
               <ButtonClay
                 fullWidth
                 variant="secondary"
@@ -324,7 +397,7 @@ export default function PricingPage() {
                       {busy === t.id ? (
                         <span className="flex items-center justify-center gap-2">
                           <Loader2 size={16} className="animate-spin" />
-                          Ke Mayar…
+                          Ke Pakasir…
                         </span>
                       ) : (
                         `Pilih ${t.name}`
@@ -373,9 +446,8 @@ export default function PricingPage() {
                 ))}
               </ul>
               <div className="mt-6 rounded-clay-md bg-clay-beige/60 px-4 py-3 text-xs font-semibold text-clay-muted">
-                💳 Pembayaran aman via <b>Mayar.id</b> — QRIS, e-wallet, VA,
-                kartu kredit. Status premium aktif otomatis setelah pembayaran
-                terverifikasi.
+                💳 Pembayaran aman via <b>Pakasir</b> — QRIS, e-wallet, VA.
+                Status premium aktif otomatis setelah pembayaran terverifikasi.
               </div>
               <Link href="/dashboard" className="mt-4 block">
                 <ButtonClay fullWidth variant="secondary">

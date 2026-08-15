@@ -5,11 +5,14 @@ import { apiFetch } from "@/lib/apiClient";
 import {
   BookOpen,
   Camera,
+  Copy,
   Flame,
+  Gift,
   GraduationCap,
   LogOut,
   Mail,
   School,
+  Share2,
   Trash2,
   TrendingUp,
   User,
@@ -21,6 +24,7 @@ import { useOnboarding } from "@/context/OnboardingContext";
 import { getUserId, getUserName, setUserName } from "@/lib/identity";
 import { logoutUser } from "@/lib/auth";
 import { fileToAvatarDataUrl, getAvatar, setAvatar } from "@/lib/avatar";
+import { PlanBadge } from "@/components/PlanBadge";
 
 const SCHOOL_KEY = "eureka_school";
 
@@ -54,6 +58,13 @@ export default function ProfilPage() {
     rank: null as number | null,
     totalNotes: 0,
   });
+  const [refStatus, setRefStatus] = useState<{
+    code: string;
+    count: number;
+    goal: number;
+    rewarded: boolean;
+    link: string;
+  } | null>(null);
 
   useEffect(() => {
     setForm((prev) => ({
@@ -132,6 +143,22 @@ export default function ProfilPage() {
     loadStats();
   }, [loadStats]);
 
+  // Status program referral (link, progres x/5, status reward).
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiFetch(
+          `/api/referral?userId=${encodeURIComponent(userId)}`
+        );
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (payload?.code) setRefStatus(payload);
+      } catch {
+        // tabel referral belum ada → sembunyikan seksi
+      }
+    })();
+  }, [userId]);
+
   const handleSave = async () => {
     if (!form.name.trim()) {
       showToast("Nama tidak boleh kosong! ⚠️");
@@ -203,6 +230,33 @@ export default function ProfilPage() {
     showToast("Foto profil dihapus.");
   };
 
+  const copyRefLink = async () => {
+    if (!refStatus?.link) return;
+    try {
+      await navigator.clipboard.writeText(refStatus.link);
+      showToast("Link referral disalin! 📋");
+    } catch {
+      showToast("Gagal menyalin. Salin manual dari kotak di bawah.");
+    }
+  };
+
+  const shareRefLink = async () => {
+    if (!refStatus?.link) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Ajak teman belajar di Eureka.AI",
+          text: "Daftar lewat link ini dan dapatkan Premium 30 hari setelah 5 teman bergabung!",
+          url: refStatus.link,
+        });
+      } else {
+        await copyRefLink();
+      }
+    } catch {
+      // dibatalkan user
+    }
+  };
+
   const handleLogout = async () => {
     if (window.confirm("Yakin ingin keluar dari Eureka.AI?")) {
       await logoutUser();
@@ -261,7 +315,10 @@ export default function ProfilPage() {
             <Trash2 size={12} /> Hapus foto profil
           </button>
         )}
-        <p className="mt-4 text-2xl font-extrabold text-clay-dark">{form.name}</p>
+        <p className="mt-4 flex items-center justify-center gap-2 text-2xl font-extrabold text-clay-dark">
+          <span className="truncate">{form.name}</span>
+          <PlanBadge size="md" className="shrink-0" />
+        </p>
         <p className="text-sm font-bold text-clay-muted">{form.email}</p>
         {form.username && (
           <p className="mt-1 text-sm font-extrabold text-clay-primary">
@@ -291,6 +348,78 @@ export default function ProfilPage() {
           </div>
         ))}
       </div>
+
+      {/* Program Referral */}
+      {refStatus && (
+        <CardClay className="mt-6 !border-clay-primary/50">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
+              <Gift size={20} className="text-clay-primary" />
+              Program Referral
+            </h2>
+            {refStatus.rewarded ? (
+              <span className="rounded-clay-full bg-clay-success/15 px-4 py-1.5 text-xs font-extrabold text-clay-success">
+                🎉 Reward Premium sudah kamu dapatkan!
+              </span>
+            ) : (
+              <span className="rounded-clay-full bg-clay-primary/10 px-4 py-1.5 text-xs font-extrabold text-clay-primary">
+                Ajak {refStatus.goal} teman → Premium {refStatus.goal === 5 ? "30" : ""} hari
+              </span>
+            )}
+          </div>
+          <p className="mt-3 text-sm font-semibold text-clay-muted">
+            Bagikan link kamu. Setiap teman yang benar-benar mendaftar lewat
+            link ini dihitung sebagai rujukan — dapatkan Premium 30 hari
+            setelah {refStatus.goal} rujukan valid (sekali pakai).
+          </p>
+
+          <div className="mt-4 flex items-center gap-2">
+            <div className="min-w-0 flex-1 rounded-clay-md border-2 border-clay-shadow/40 bg-clay-inputBg px-4 py-3 text-sm font-bold text-clay-dark">
+              <span className="block truncate">{refStatus.link}</span>
+            </div>
+            <button
+              onClick={copyRefLink}
+              aria-label="Salin link referral"
+              title="Salin link referral"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md border-2 border-clay-primary bg-clay-primary text-white transition-all duration-75 active:translate-y-0.5"
+            >
+              <Copy size={17} />
+            </button>
+            <button
+              onClick={shareRefLink}
+              aria-label="Bagikan link referral"
+              title="Bagikan link referral"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md border-2 border-clay-primary bg-clay-primary text-white transition-all duration-75 active:translate-y-0.5"
+            >
+              <Share2 size={17} />
+            </button>
+          </div>
+
+          <div className="mt-5">
+            <div className="flex items-center justify-between text-xs font-extrabold text-clay-muted">
+              <span>
+                Rujukan valid: {refStatus.count}/{refStatus.goal}
+              </span>
+              <span>
+                {refStatus.count >= refStatus.goal
+                  ? "Siap! Cek status premium kamu 🎉"
+                  : `Kurang ${Math.max(refStatus.goal - refStatus.count, 0)} lagi`}
+              </span>
+            </div>
+            <div className="mt-2 h-3 w-full overflow-hidden rounded-clay-full bg-clay-shadow/25">
+              <div
+                className="h-full rounded-clay-full bg-gradient-to-r from-clay-primary to-clay-secondary transition-all duration-500"
+                style={{
+                  width: `${Math.min(
+                    Math.round((refStatus.count / refStatus.goal) * 100),
+                    100
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+        </CardClay>
+      )}
 
       {/* Form edit profil */}
       <CardClay className="mt-6">

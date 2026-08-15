@@ -30,7 +30,8 @@ export function buildProfileMarkdown(input: ProfileInput): string {
     "",
     `- Nama: ${input.name?.trim() || "-"}`,
     `- Username: @${(input.username ?? "").trim() || "-"}`,
-    `- No. Pengguna: ${input.userNumber ?? "-"}`,
+    // Catatan keamanan: user_number (No. Pengguna) sengaja TIDAK dimasukkan —
+    // nomor internal pengguna tidak boleh diketahui/bocor lewat asisten AI.
     `- Plan: ${input.plan === "pro" ? "Pro" : "Free"}`,
   ];
 
