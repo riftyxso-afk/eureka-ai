@@ -6,6 +6,7 @@ import {
   isPakasirConfigured,
 } from "@/lib/pakasir";
 import { applyDiscount, consumeDiscount } from "@/lib/discount";
+import { activatePremium } from "@/lib/premium";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
 
@@ -116,6 +117,40 @@ export async function POST(req: NextRequest) {
         { error: "Gagal menyiapkan pembayaran, coba lagi." },
         { status: 502 }
       );
+    }
+
+    // ── Kode diskon gratis 100% (type 'free') → aktivasi langsung ──
+    // Pakasir tidak menerima amount 0, jadi kode "Rp 59.000 → Rp 0" tidak
+    // lewat gateway: catat pemakaian kode, aktivasi premium 30 hari langsung.
+    if (discountCode) {
+      const disc = await applyDiscount(discountCode, baseAmount);
+      if (disc.free) {
+        await consumeDiscount(discountCode);
+        const activated = await activatePremium({
+          userId: auth.userId,
+          tier,
+          days: 30,
+          invoiceNumber: orderId,
+          transactionId: null,
+        });
+        if (!activated.ok || !activated.premiumUntil) {
+          console.error(
+            "[api/payments/checkout] aktivasi kode gratis gagal:",
+            activated.error
+          );
+          return NextResponse.json(
+            { error: "Gagal mengaktifkan kode gratis, coba lagi." },
+            { status: 502 }
+          );
+        }
+        return NextResponse.json({
+          ok: true,
+          activated: true,
+          transactionId: orderId,
+          amount: 0,
+          premiumUntil: activated.premiumUntil,
+        });
+      }
     }
 
     const link = buildPayUrl({ amount, orderId, redirectUrl });

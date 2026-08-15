@@ -22,13 +22,6 @@ const PERKS = [
 
 const TIERS = [
   {
-    id: "promo" as const,
-    name: "Promo Kemerdekaan 🇮🇩",
-    price: 5000,
-    note: "Harga spesial selama Agustus 2026",
-    highlight: true,
-  },
-  {
     id: "normal" as const,
     name: "Pro Bulanan",
     price: 59000,
@@ -38,7 +31,7 @@ const TIERS = [
 ];
 
 const TIER_LABEL: Record<string, string> = {
-  promo: "Promo Kemerdekaan",
+  promo: "Promo",
   normal: "Normal",
   trial: "Trial",
 };
@@ -82,14 +75,20 @@ export default function PricingPage() {
       });
       const body = (await res.json().catch(() => null)) as {
         link?: string;
+        activated?: boolean;
         error?: string;
       } | null;
-      if (!res.ok || !body?.link) {
+      if (!res.ok || (!body?.link && !body?.activated)) {
         setError(body?.error ?? "Gagal membuat pembayaran. Coba lagi ya 🙏");
         return;
       }
+      // Kode gratis 100% → sudah aktif langsung, tanpa diarahkan ke Pakasir.
+      if (body.activated) {
+        await refresh();
+        return;
+      }
       // Redirect ke halaman pembayaran Pakasir.
-      window.location.href = body.link;
+      window.location.href = body.link as string;
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Gagal membuat pembayaran. Coba lagi ya 🙏"
@@ -416,7 +415,7 @@ export default function PricingPage() {
                 <input
                   value={discountCode}
                   onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                  placeholder="MASUKKAN KODE (mis. MERDEKA15)"
+                  placeholder="MASUKKAN KODE (mis. GRATIS100)"
                   className="mt-2 w-full rounded-clay-md border-2 border-clay-borderLight bg-white px-3 py-2 text-sm font-bold uppercase text-clay-dark outline-none focus:border-clay-primary"
                 />
                 <p className="mt-2 text-[11px] font-semibold text-clay-muted">
