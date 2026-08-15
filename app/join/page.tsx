@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Mic, PhoneCall, Loader2, CheckCircle2, Sparkles, LogIn } from "lucide-react";
+import { Mic, PhoneCall, Loader2, CheckCircle2, Sparkles } from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import { useBeta } from "@/lib/useBeta";
@@ -153,18 +153,14 @@ export default function JoinBetaPage() {
                       <span className="flex items-center justify-center gap-2">
                         <Loader2 size={16} className="animate-spin" /> Mengaktifkan...
                       </span>
-                    ) : isLoggedIn() ? (
-                      "Gabung Beta Sekarang"
                     ) : (
-                      <>
-                        <LogIn size={16} className="mr-2" /> Masuk &amp; Gabung Beta
-                      </>
+                      "Gabung Beta Sekarang"
                     )}
                   </ButtonClay>
                 </div>
                 <p className="mt-3 text-[11px] font-bold text-clay-muted">
-                  Butuh akun — masuk dengan email/Google dulu, lalu kembali ke
-                  halaman ini.
+                  Butuh akun — bila belum masuk, kamu akan diarahkan ke halaman
+                  login dulu, lalu kembali otomatis.
                 </p>
               </div>
             )}
