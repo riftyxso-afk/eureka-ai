@@ -207,10 +207,40 @@ export function renderInlineText(
   });
 }
 
+const MARKDOWN_LINK_RE = /^\[([^\]]+)\]\(([^)\s]+)\)$/;
+
+/** Render link markdown [teks](url) → <a> (tab baru, aman). */
+function renderLink(text: string, label: string, url: string) {
+  // Amankan URL — hanya izinkan http(s) untuk menghindari javascript: dsb.
+  let href = url;
+  try {
+    const u = new URL(url);
+    if (u.protocol === "http:" || u.protocol === "https:") {
+      href = u.toString();
+    } else {
+      href = "#";
+    }
+  } catch {
+    href = "#";
+  }
+  return (
+    <a
+      key={text}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-bold text-clay-primary underline underline-offset-2 hover:text-clay-dark"
+    >
+      {label}
+    </a>
+  );
+}
+
 function renderMarkup(text: string) {
-  // Pisahkan LaTeX math ($...$) dan block math ($$...$$) dulu
+  // Pisahkan LaTeX math ($...$), block math ($$...$$), link markdown
+  // [teks](url), bold, italic, dan marker referensi ^[n]
   const parts = text.split(
-    /(\$\$[^$]+\$\$|\$[^$]+\$|\*\*[^*]+\*\*|\*[^*]+\*|\^\[\d+\])/g
+    /(\$\$[^$]+\$\$|\$[^$]+\$|\[([^\]]+)\]\(([^)\s]+)\)|\*\*[^*]+\*\*|\*[^*]+\*|\^\[\d+\])/g
   );
   return parts.map((part, i) => {
     // Block math: $$...$$
@@ -245,13 +275,19 @@ function renderMarkup(text: string) {
         return <span key={i} className="text-red-600">{part}</span>;
       }
     }
+    // Link markdown: [teks](url)
+    const linkMatch = MARKDOWN_LINK_RE.exec(part);
+    if (linkMatch) {
+      return renderLink(part, linkMatch[1], linkMatch[2]);
+    }
+    // Bold — bisa berisi link (mis. **[judul](url)**) → render isinya ulang
     if (/^\*\*[^*]+\*\*$/.test(part)) {
-      return <strong key={i}>{part.slice(2, -2)}</strong>;
+      return <strong key={i}>{renderMarkup(part.slice(2, -2))}</strong>;
     }
     if (/^\*[^*]+\*$/.test(part)) {
       return (
         <em key={i} className="font-semibold text-clay-dark">
-          {part.slice(1, -1)}
+          {renderMarkup(part.slice(1, -1))}
         </em>
       );
     }

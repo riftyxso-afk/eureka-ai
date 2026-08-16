@@ -299,12 +299,44 @@ export async function enrichChaptersWithWebSearch(
   };
 }
 
-/** Format markdown untuk bab "Sumber & Referensi". */
+/**
+ * Bersihkan judul hasil web dari metadata platform (YouTube, dsb) agar bagian
+ * "Sumber & Referensi" rapi: buang "Visibility: Public", "Uploaded by:",
+ * "Uploaded at:", tag markdown **, dan sisa pipe/kolom. Hasil dipotong pendek.
+ */
+function cleanReferenceTitle(raw: string): string {
+  const t = raw
+    .replace(/Visibility:\s*Public/gi, "")
+    .replace(/Uploaded\s+by:\s*[^|]*/gi, "")
+    .replace(/Uploaded\s+at:\s*[^|]*/gi, "")
+    .replace(/\*\*Published[^*]*/gi, "")
+    .replace(/\*\*/g, "")
+    .replace(/\|/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return t.slice(0, 100);
+}
+
+/** Bersihkan snippet dari metadata & baris kosong, lalu potong rapi. */
+function cleanReferenceSnippet(raw: string): string {
+  const s = raw
+    .replace(/Visibility:\s*Public/gi, "")
+    .replace(/Uploaded\s+by:\s*[^|]*/gi, "")
+    .replace(/Uploaded\s+at:\s*[^|]*/gi, "")
+    .replace(/\*\*Published[^*]*/gi, "")
+    .replace(/\*\*/g, "")
+    .replace(/\|/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return s.slice(0, 200);
+}
+
+/** Format markdown untuk bab "Sumber & Referensi" — judul bersih, link, snippet ringkas. */
 export function buildReferencesMarkdown(references: SearchSource[]): string {
   return references
     .map(
       (r, i) =>
-        `${i + 1}. **[${r.title}](${r.url})**  \n   ${r.snippet.trim()}`
+        `${i + 1}. **[${cleanReferenceTitle(r.title)}](${r.url})**  \n   ${cleanReferenceSnippet(r.snippet)}`
     )
     .join("\n\n");
 }
