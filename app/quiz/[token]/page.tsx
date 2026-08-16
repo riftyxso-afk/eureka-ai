@@ -25,7 +25,6 @@ import {
   saveRoomName,
   startQuizRoom,
   submitQuizRoom,
-  subscribeRoomUpdates,
   type QuizQuestion,
   type RoomInfo,
 } from "@/lib/quizLiveClient";
@@ -168,18 +167,20 @@ export default function QuizPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // Realtime: subscribe setelah join room.
+  // Live: poll room berkala. (Realtime postgres_changes butuh policy SELECT
+  // publik pada quiz_room_participants yang sengaja dihapus di patch 017 —
+  // polling lewat route service-role lebih aman & tetap mengikuti leaderboard.)
   const roomId = room?.id ?? "";
   useEffect(() => {
     if (!roomId || phase === "join" || phase === "loading" || phase === "error") {
       return;
     }
     setRealtimeConnected(true);
-    const sub = subscribeRoomUpdates(roomId, () => {
-      refreshRoom();
-    });
+    const timer = setInterval(() => {
+      void refreshRoom();
+    }, 5000);
     return () => {
-      sub.unsubscribe();
+      clearInterval(timer);
       setRealtimeConnected(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -380,7 +381,7 @@ export default function QuizPage() {
               {room.status === "live" && "Sedang berlangsung"}
               {room.status === "ended" && "Ruang selesai"}
               {" · "}
-              {realtimeConnected ? "realtime aktif" : "memuat..."}
+              {realtimeConnected ? "live" : "memuat..."}
             </p>
           </div>
           <button

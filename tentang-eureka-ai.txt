@@ -1,0 +1,135 @@
+TENTANG EUREKA AI
+=================
+Apa itu, cara kerja, dan fitur-fitur lengkap Eureka AI.
+(Diperbarui: Agustus 2026)
+
+
+APA ITU EUREKA AI?
+------------------
+Eureka AI adalah aplikasi belajar berbasis kecerdasan buatan (AI) yang
+dibuat khusus untuk pelajar Indonesia. Eureka AI berperan sebagai tutor
+pribadi yang tersedia 24 jam: ia bisa menjelaskan materi yang sulit,
+meringkas bahan belajar, membuat kuis, dan membimbingmu memahami konsep
+dengan metode Socratic — yaitu mengajukan pertanyaan bertahap dan
+membimbingmu menemukan jawaban sendiri, bukan sekadar memberi jawaban
+instan.
+
+Eureka AI cocok untuk jenjang SMP, SMA/SMK, hingga mahasiswa. Setiap
+akun bisa memilih jenjang dan mata pelajaran di profil, sehingga AI
+menyesuaikan bahasa, tingkat kesulitan, dan contoh materi dengan
+kebutuhan belajarmu.
+
+Eureka AI tersedia gratis di https://www.eureka-ai.web.id — cukup daftar
+dengan email atau Google, tanpa kartu kredit. Ada paket Pro berbayar
+untuk yang ingin belajar tanpa batas.
+
+
+CARA KERJA EUREKA AI
+--------------------
+Eureka AI bekerja dalam tiga langkah sederhana:
+
+1. MASUKKAN MATERI
+   Kamu bisa memasukkan bahan belajar dari 3 sumber:
+   - Link video YouTube (subtitle diekstrak otomatis)
+   - Link artikel web
+   - File dokumen (PDF, DOCX, PPTX)
+
+2. AI MENYUSUN CATATAN
+   AI mengekstrak isi materi, lalu menyusunnya menjadi catatan belajar
+   yang terstruktur per bab. Setiap catatan dilengkapi ringkasan,
+   poin-poin penting, kuis, dan kartu hafalan — siap dibaca ulang
+   sebelum ujian.
+
+3. BELAJAR DENGAN AI
+   Kamu belajar lewat tanya jawab dengan AI tutor, mengerjakan kuis,
+   menghafal dengan kartu hafalan, dan menstabilo poin penting. AI
+   menggunakan metode Socratic: ia mengajukan pertanyaan bertahap dan
+   menyesuaikan tingkat kesulitan dengan pemahamanmu.
+
+Saat membuat catatan, kamu bisa memilih jenis rangkuman (4 tipe):
+- Rangkuman biasa
+- Makalah
+- Laporan
+- Poin penting
+
+dan menentukan jumlah bab catatan (hingga 6 bab). AI mengerjakan
+sisanya dalam hitungan menit — kamu tidak perlu mencatat manual.
+
+
+FITUR-FITUR EUREKA AI
+---------------------
+
+1. CHAT DENGAN AI TUTOR (TANYA AI)
+   Ngobrol langsung dengan AI untuk bertanya apa pun tentang materi.
+   AI menjawab berdasarkan isi catatanmu (RAG), jadi jawabannya relevan
+   dan tidak keluar dari topik. Gaya Socratic membuatmu paham, bukan
+   sekadar dapat jawaban.
+
+2. CATATAN OTOMATIS
+   Ubah video YouTube, artikel web, atau file dokumen menjadi catatan
+   rapi per bab dengan ringkasan dan poin penting. Ada 4 jenis
+   rangkuman dan hingga 6 bab per catatan.
+
+3. STABILO AI
+   Sekali tekan, AI membaca catatanmu dan menstabilo otomatis
+   poin-poin penting — bab demi bab, tepat di teksnya, dengan animasi
+   realtime. Kamu juga bisa menstabilo manual dengan warna kuning,
+   pink, atau biru.
+
+4. FLASHCARDS (KARTU HAFALAN)
+   AI mengubah materi menjadi kartu hafalan otomatis. Cocok untuk
+   menghafal istilah, rumus, dan definisi.
+
+5. KUIS & UJI PEMAHAMAN
+   AI membuat soal dari materi catatanmu: kuis pilihan ganda, dan uji
+   pemahaman dengan soal campuran (pilihan ganda + esai). Langsung
+   tahu skor dan pembahasannya.
+
+6. DOKUMEN (PDF)
+   Ubah catatanmu menjadi dokumen PDF yang rapi — siap dicetak atau
+   dibagikan sebagai bahan belajar.
+
+7. BAGIKAN CATATAN
+   Bagikan catatan ke teman lewat link, bisa dibuka tanpa login.
+
+8. KOLABORASI REAL-TIME
+   Belajar kelompok online: chat, stabilo bersama, dan papan tulis pada
+   catatan yang sama secara real-time dengan teman-temanmu.
+
+9. MIC COMPOSER & PANGGILAN SUARA AI (BETA)
+   Ketik pakai suara (transkripsi otomatis) atau ngobrol langsung
+   dengan AI lewat panggilan suara — seperti les privat via telepon.
+
+10. PILIHAN MODEL AI
+    Sesuaikan kecepatan dan kedalaman jawaban dengan 3 tingkatan model:
+    - Kilat: respons paling cepat untuk tanya jawab ringan
+    - Seimbang: keseimbangan kecepatan dan kualitas
+    - Mendalam: pemikiran paling dalam untuk materi kompleks
+    Setiap tingkatan punya beberapa model AI yang saling fallback, jadi
+    saat satu model gangguan, model lain mengambil alih otomatis.
+
+
+HARGA
+-----
+GRATIS (Rp 0) — selamanya:
+- Chat dengan AI tutor
+- 3 catatan otomatis per bulan
+- Kuis dan kartu hafalan
+
+PRO (Rp 59.000) — bayar sekali, aktif 30 hari:
+- Chat AI tanpa batas
+- Catatan otomatis tanpa batas
+- Kuis & kartu hafalan tanpa batas
+- Kolaborasi real-time
+- Dan semua fitur Eureka AI
+
+Tanpa langganan berulang — sekali bayar, aktif 30 hari penuh.
+
+
+RINGKASAN
+---------
+Eureka AI adalah AI Tutor Socratic untuk pelajar Indonesia: gratis,
+tanpa kartu kredit, dan bisa langsung dipakai. Tempel link YouTube,
+tempel artikel, atau unggah dokumen — AI menyusun catatan rapi per bab,
+lalu temani kamu belajar lewat tanya jawab, kuis, kartu hafalan, dan
+stabilo otomatis. Mulai belajar di https://www.eureka-ai.web.id

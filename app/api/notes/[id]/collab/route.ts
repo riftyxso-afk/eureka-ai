@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import {
   acceptInvite,
@@ -17,10 +18,14 @@ async function ensureNoteExists(noteId: string): Promise<boolean> {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     if (!(await ensureNoteExists(id))) {
       return NextResponse.json(
@@ -34,7 +39,7 @@ export async function GET(
       collaborators: collab.collaborators,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat kolaborasi.";
+    const msg = "Gagal memuat kolaborasi.";
     console.error("[api/notes/[id]/collab] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -45,6 +50,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     const body = (await req.json().catch(() => null)) as {
       action?: string;
@@ -110,7 +119,7 @@ export async function POST(
         );
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memproses kolaborasi.";
+    const msg = "Gagal memproses kolaborasi.";
     console.error("[api/notes/[id]/collab] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

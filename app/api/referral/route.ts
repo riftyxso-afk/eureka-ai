@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     const status = await getReferralStatus(auth.userId, origin);
     return NextResponse.json(status);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat status referral.";
+    const msg = "Gagal memuat status referral.";
     console.error("[api/referral] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

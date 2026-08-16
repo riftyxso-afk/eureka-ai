@@ -7,6 +7,7 @@ import {
   type FriendRelation,
 } from "@/lib/friends-store";
 import { pushNotification } from "@/lib/notifications-store";
+import { requireAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,11 @@ export async function GET(req: NextRequest) {
         { status: 400 }
       );
     }
+    // Wajib login; userId dari query harus cocok dengan token sesi.
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     await ensureUser(userId, name);
     const results = await searchUsers(userId, q);
     return NextResponse.json({
@@ -32,7 +38,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal mencari pengguna.";
+    const msg = "Gagal mencari pengguna.";
     console.error("[api/friends] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -52,6 +58,11 @@ export async function POST(req: NextRequest) {
         { error: "userId diperlukan." },
         { status: 400 }
       );
+    }
+    // Wajib login; userId dari body harus cocok dengan token sesi.
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     if (body?.action === "register") {
@@ -92,7 +103,7 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memproses teman.";
+    const msg = "Gagal memproses teman.";
     console.error("[api/friends] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

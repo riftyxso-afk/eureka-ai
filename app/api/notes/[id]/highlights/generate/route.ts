@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import {
   generateHighlightsForChapters,
   type AiHighlightEvent,
@@ -25,7 +26,7 @@ function sse(data: unknown): Uint8Array {
  *   - { type: "error", error }           → gagal
  */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const stream = new ReadableStream<Uint8Array>({
@@ -39,10 +40,24 @@ export async function POST(
       };
 
       try {
+        const auth = await requireAuth(req.headers.get("authorization"));
+        if ("error" in auth) {
+          send({ type: "error", error: auth.error });
+          controller.close();
+          return;
+        }
         const { id } = await params;
         const data = await getNoteWithChunks(id);
         if (!data) {
           send({ type: "error", error: "Catatan tidak ditemukan." });
+          controller.close();
+          return;
+        }
+        if (data.note.user_id !== auth.userId) {
+          send({
+            type: "error",
+            error: "Akses ditolak. Kamu bukan pemilik catatan ini.",
+          });
           controller.close();
           return;
         }
@@ -59,8 +74,7 @@ export async function POST(
         );
         send({ type: "done", count });
       } catch (e) {
-        const msg =
-          e instanceof Error ? e.message : "Gagal membuat stabilo AI.";
+        const msg = "Gagal membuat stabilo AI.";
         console.error("[api/notes/[id]/highlights/generate]", e);
         send({ type: "error", error: msg });
       } finally {

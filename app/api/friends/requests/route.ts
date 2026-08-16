@@ -8,6 +8,7 @@ import {
   listOutgoingRequests,
 } from "@/lib/friends-store";
 import { pushNotification } from "@/lib/notifications-store";
+import { requireAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,11 @@ export async function GET(req: NextRequest) {
         { status: 400 }
       );
     }
+    // Wajib login; userId dari query harus cocok dengan token sesi.
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const [incoming, outgoing] = await Promise.all([
       listIncomingRequests(userId),
       listOutgoingRequests(userId),
@@ -29,7 +35,7 @@ export async function GET(req: NextRequest) {
       outgoing: outgoing.map((u) => ({ id: u.id, name: u.name })),
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat permintaan.";
+    const msg = "Gagal memuat permintaan.";
     console.error("[api/friends/requests] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -50,6 +56,11 @@ export async function POST(req: NextRequest) {
         { error: "userId dan fromId diperlukan." },
         { status: 400 }
       );
+    }
+    // Wajib login; userId (akseptor) harus cocok dengan token sesi.
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     if (body?.action === "accept") {
@@ -74,7 +85,7 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memproses permintaan.";
+    const msg = "Gagal memproses permintaan.";
     console.error("[api/friends/requests] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

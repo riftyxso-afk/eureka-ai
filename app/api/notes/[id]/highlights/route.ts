@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
+import { getNoteWithChunks } from "@/lib/rag/store";
 import {
   addHighlight,
   listHighlights,
@@ -9,12 +11,38 @@ import {
 
 export const runtime = "nodejs";
 
+async function ensureOwner(
+  noteId: string,
+  userId: string
+): Promise<NextResponse | null> {
+  const found = await getNoteWithChunks(noteId);
+  if (!found) {
+    return NextResponse.json(
+      { error: "Catatan tidak ditemukan." },
+      { status: 404 }
+    );
+  }
+  if (found.note.user_id !== userId) {
+    return NextResponse.json(
+      { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+      { status: 403 }
+    );
+  }
+  return null;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
+    const denied = await ensureOwner(id, auth.userId);
+    if (denied) return denied;
     const chapterIdRaw = req.nextUrl.searchParams.get("chapterId");
     const chapterId =
       chapterIdRaw != null && chapterIdRaw !== ""
@@ -26,7 +54,7 @@ export async function GET(
     );
     return NextResponse.json({ highlights });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat highlight.";
+    const msg = "Gagal memuat highlight.";
     console.error("[api/notes/[id]/highlights] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -37,7 +65,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
+    const denied = await ensureOwner(id, auth.userId);
+    if (denied) return denied;
     const body = (await req.json().catch(() => null)) as {
       chapterId?: number;
       text?: string;
@@ -59,11 +93,11 @@ export async function POST(
       chapterId: Number.isFinite(chapterId) ? chapterId : 1,
       text,
       color,
-      userId: String(body?.userId ?? "unknown"),
+      userId: auth.userId,
     });
     return NextResponse.json({ highlight: entry });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menyimpan highlight.";
+    const msg = "Gagal menyimpan highlight.";
     console.error("[api/notes/[id]/highlights] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -74,7 +108,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
+    const denied = await ensureOwner(id, auth.userId);
+    if (denied) return denied;
     const highlightId = String(req.nextUrl.searchParams.get("id") ?? "");
     if (!highlightId) {
       return NextResponse.json(
@@ -85,7 +125,7 @@ export async function DELETE(
     const ok = await removeHighlight(id, highlightId);
     return NextResponse.json({ ok });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menghapus highlight.";
+    const msg = "Gagal menghapus highlight.";
     console.error("[api/notes/[id]/highlights] DELETE", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

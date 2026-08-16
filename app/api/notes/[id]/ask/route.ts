@@ -7,6 +7,8 @@ import { aiChat, hasAiKey } from "@/lib/ai";
 import { db } from "@/lib/supabase/admin";
 import { getProfileMd } from "@/lib/profile";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
+import { requireAuth } from "@/lib/assistant/auth";
+import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -36,8 +38,27 @@ export async function POST(
       );
     }
 
+    // Wajib login; userId dari body harus cocok dengan token sesi.
+    const userId = String(body?.userId ?? "").trim();
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    // Rate limit per user (proteksi token AI): maks 30 tanya/jam.
+    ensureRateLimitPrune();
+    const rl = checkRateLimit(`note-ask:${userId}`, 30, 60 * 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Terlalu banyak pertanyaan dalam 1 jam. Tunggu sebentar ya." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+        }
+      );
+    }
+
     let profileMd = "";
-    const userId = String(body?.userId ?? "");
     if (userId) {
       const { data } = await db()
         .from("users")
@@ -61,6 +82,12 @@ export async function POST(
       return NextResponse.json(
         { error: "Catatan tidak ditemukan." },
         { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
       );
     }
 
@@ -90,7 +117,7 @@ export async function POST(
 
     return NextResponse.json({ answer: answer.trim() });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menjawab pertanyaan.";
+    const msg = "Gagal menjawab pertanyaan.";
     console.error("[api/notes/[id]/ask]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

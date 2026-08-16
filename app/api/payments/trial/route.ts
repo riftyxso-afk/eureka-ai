@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ ok: true, premiumUntil: result.premiumUntil });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal mengaktifkan trial.";
+    const msg = "Gagal mengaktifkan trial.";
     console.error("[api/payments/trial] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

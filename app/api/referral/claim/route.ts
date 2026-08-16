@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       premiumUntil: result.premiumUntil ?? null,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal klaim reward.";
+    const msg = "Gagal klaim reward.";
     console.error("[api/referral/claim] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

@@ -11,7 +11,7 @@ import { randomUUID } from "crypto";
 import { runAfter } from "@/lib/after";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { regenerateAllChapters } from "@/lib/regenerate";
-import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { requireAuth } from "@/lib/assistant/auth";
 import { canStartGeneration, createJob, executeJob, updateJob } from "@/lib/jobQueue";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
@@ -22,6 +22,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     const body = (await req.json().catch(() => null)) as {
       instruction?: string;
@@ -34,6 +38,12 @@ export async function POST(
         { status: 404 }
       );
     }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
+      );
+    }
 
     if (!found.note.chapters || found.note.chapters.length === 0) {
       return NextResponse.json(
@@ -44,9 +54,8 @@ export async function POST(
 
     const instruction = String(body?.instruction ?? "").trim().slice(0, 500);
 
-    // Keamanan: userId diambil dari token sesi (apiFetch melampirkan Bearer).
-    const userId =
-      (await getUserIdFromAuth(req.headers.get("authorization"))) || "anonymous";
+    // Keamanan: userId dari token sesi (apiFetch melampirkan Bearer).
+    const userId = auth.userId;
 
     // Rate limit per user (proteksi token AI): maks 5 regenerate/jam.
     ensureRateLimitPrune();
@@ -98,10 +107,7 @@ export async function POST(
             `[api/notes/[id]/regenerate] Selesai: ${chapters.length} bab untuk ${id}`
           );
         } catch (e) {
-          const msg =
-            e instanceof Error
-              ? e.message
-              : "Terjadi kesalahan saat menulis ulang catatan.";
+          const msg = "Terjadi kesalahan saat menulis ulang catatan.";
           console.error("[regenerate catatan] Job gagal:", e);
           updateJob(id, {
             status: "error",
@@ -123,7 +129,7 @@ export async function POST(
       { status: 202 }
     );
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menulis ulang catatan.";
+    const msg = "Gagal menulis ulang catatan.";
     console.error("[api/notes/[id]/regenerate]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

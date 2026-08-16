@@ -5,21 +5,54 @@ import {
   getNoteWithChunks,
   updateNote,
 } from "@/lib/rag/store";
-import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { requireAuth } from "@/lib/assistant/auth";
+import { db } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    // Wajib login; kepemilikan dicek di bawah.
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const found = await getNoteWithChunks(id);
     if (!found) {
       return NextResponse.json(
         { error: "Catatan tidak ditemukan." },
         { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      // Baca via link undangan (?invite=TOKEN) — token berlaku & belum kedaluwarsa.
+      const inviteToken = req.nextUrl.searchParams.get("invite") ?? "";
+      if (inviteToken) {
+        const { data: invite } = await db()
+          .from("invite_tokens")
+          .select("token")
+          .eq("token", inviteToken)
+          .eq("note_id", id)
+          .neq("status", "expired")
+          .gt("expires_at", new Date().toISOString())
+          .maybeSingle();
+        if (invite) {
+          return NextResponse.json({
+            note: found.note,
+            chapters: found.note.chapters ?? [],
+            chunks: found.chunks.map(({ id, text }) => ({ id, text })),
+          });
+        }
+      }
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
       );
     }
     return NextResponse.json({
@@ -28,7 +61,7 @@ export async function GET(
       chunks: found.chunks.map(({ id, text }) => ({ id, text })),
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat catatan.";
+    const msg = "Gagal memuat catatan.";
     console.error("[api/notes/[id]]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -40,6 +73,13 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+
+    // Wajib login; kepemilikan dicek sebelum update.
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = (await req.json().catch(() => null)) as {
       title?: string;
       summary?: string;
@@ -63,6 +103,21 @@ export async function PATCH(
         { status: 400 }
       );
     }
+
+    const found = await getNoteWithChunks(id);
+    if (!found) {
+      return NextResponse.json(
+        { error: "Catatan tidak ditemukan." },
+        { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
+      );
+    }
+
     const updated = await updateNote(id, {
       ...(title !== undefined ? { title } : {}),
       summary: body?.summary !== undefined
@@ -78,7 +133,7 @@ export async function PATCH(
     }
     return NextResponse.json({ note: updated });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memperbarui catatan.";
+    const msg = "Gagal memperbarui catatan.";
     console.error("[api/notes/[id]] PATCH", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -92,13 +147,11 @@ export async function DELETE(
     const { id } = await params;
 
     // Hanya pemilik yang bisa menghapus — identitas dari token sesi.
-    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Autentikasi diperlukan. Silakan masuk ulang." },
-        { status: 401 }
-      );
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
+    const userId = auth.userId;
 
     const found = await getNoteWithChunks(id);
     if (!found) {
@@ -117,7 +170,7 @@ export async function DELETE(
     await deleteNote(id);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menghapus catatan.";
+    const msg = "Gagal menghapus catatan.";
     console.error("[api/notes/[id]] DELETE", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

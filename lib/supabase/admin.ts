@@ -15,7 +15,8 @@ export const CONFIG_ERROR_MSG =
 /** True bila .env.local berisi kredensial Supabase asli (bukan placeholder). */
 export function isSupabaseConfigured(): boolean {
   return (
-    url.includes(".supabase.co") &&
+    url.startsWith("https://") &&
+    url.length > 20 &&
     serviceKey.length > 40 &&
     serviceKey.startsWith("eyJ")
   );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks, updateNote } from "@/lib/rag/store";
 import {
   addVersion,
@@ -15,10 +16,14 @@ async function ensureNoteExists(noteId: string): Promise<boolean> {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     if (!(await ensureNoteExists(id))) {
       return NextResponse.json(
@@ -28,7 +33,7 @@ export async function GET(
     }
     return NextResponse.json({ versions: await listVersions(id) });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat riwayat versi.";
+    const msg = "Gagal memuat riwayat versi.";
     console.error("[api/notes/[id]/versions] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -39,6 +44,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     const body = (await req.json().catch(() => null)) as {
       action?: string;
@@ -86,7 +95,7 @@ export async function POST(
     });
     return NextResponse.json({ version });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memproses versi.";
+    const msg = "Gagal memproses versi.";
     console.error("[api/notes/[id]/versions] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

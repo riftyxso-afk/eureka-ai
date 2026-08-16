@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ questions });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membuat kuis.";
+    const msg = "Gagal membuat kuis.";
     console.error("[api/assistant/quiz] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

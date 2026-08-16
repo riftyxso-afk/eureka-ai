@@ -7,21 +7,35 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { cancelJob, getJob } from "@/lib/jobQueue";
+import { requireAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
     const { jobId } = await params;
+
+    // Wajib login; job hanya boleh dibaca pemiliknya.
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const job = await getJob(jobId);
     if (!job) {
       return NextResponse.json(
         { error: "Job tidak ditemukan atau sudah kedaluwarsa." },
         { status: 404 }
+      );
+    }
+    if (job.userId !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Job ini bukan milikmu." },
+        { status: 403 }
       );
     }
     return NextResponse.json({
@@ -37,7 +51,7 @@ export async function GET(
       },
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membaca status job.";
+    const msg = "Gagal membaca status job.";
     console.error("[api/notes/jobs/[jobId]]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -48,16 +62,29 @@ export async function GET(
  * Proses berhenti di checkpoint berikutnya; catatan tidak disimpan.
  */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
     const { jobId } = await params;
+
+    // Wajib login; job hanya boleh dibatalkan pemiliknya.
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const job = await getJob(jobId);
     if (!job) {
       return NextResponse.json(
         { error: "Job tidak ditemukan atau sudah selesai." },
         { status: 404 }
+      );
+    }
+    if (job.userId !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Job ini bukan milikmu." },
+        { status: 403 }
       );
     }
     if (!(await cancelJob(jobId))) {
@@ -68,7 +95,7 @@ export async function POST(
     }
     return NextResponse.json({ cancelled: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membatalkan job.";
+    const msg = "Gagal membatalkan job.";
     console.error("[api/notes/jobs/[jobId]] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/lib/supabase/admin";
 import { buildProfileMarkdown } from "@/lib/profile";
+import { requireAuth } from "@/lib/assistant/auth";
 import type { OnboardingAnalysis } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -59,11 +60,10 @@ export async function GET(req: NextRequest) {
       String(req.nextUrl.searchParams.get("checkUsername") ?? "")
     );
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "userId diperlukan." },
-        { status: 400 }
-      );
+    // Wajib login; userId dari query harus cocok dengan token sesi.
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     if (checkUsername) {
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json({ user: toPayload(row) });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat profil.";
+    const msg = "Gagal memuat profil.";
     console.error("[api/profile] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -114,6 +114,12 @@ export async function PUT(req: NextRequest) {
         { error: "userId diperlukan." },
         { status: 400 }
       );
+    }
+
+    // Wajib login; userId dari body harus cocok dengan token sesi.
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     let row = await loadProfile(userId);
@@ -175,10 +181,11 @@ export async function PUT(req: NextRequest) {
 
     let profileData = { ...(row.profile_data ?? {}) } as Record<string, unknown>;
     if (body?.profileData && typeof body.profileData === "object") {
-      profileData = { ...profileData, ...body.profileData };
-    }
-    if (typeof body?.plan === "string") {
-      profileData.plan = body.plan === "pro" ? "pro" : "free";
+      // Plan TIDAK boleh diubah dari client — entitlement ditentukan
+      // server-side dari data langganan (lihat grup 4 / spec api-authorization).
+      const incoming = { ...body.profileData } as Record<string, unknown>;
+      delete incoming.plan;
+      profileData = { ...profileData, ...incoming };
     }
     patch.profile_data = profileData;
 
@@ -261,7 +268,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ user: toPayload(data as ProfileRow) });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menyimpan profil.";
+    const msg = "Gagal menyimpan profil.";
     console.error("[api/profile] PUT", e);
     return NextResponse.json({ error: msg }, { status: 400 });
   }

@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
         : null,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat status survey.";
+    const msg = "Gagal memuat status survey.";
     console.error("[api/feedback/note] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -131,8 +131,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg =
-      e instanceof Error ? e.message : "Gagal menyimpan jawaban survey.";
+    const msg = "Gagal menyimpan jawaban survey.";
     console.error("[api/feedback/note] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

@@ -86,10 +86,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ ok: true, reply });
   } catch (e) {
-    const msg =
-      e instanceof Error
-        ? e.message
-        : "Gagal memanggil AI suara. Coba lagi ya.";
+    const msg = "Gagal memanggil AI suara. Coba lagi ya.";
     console.error("[api/call] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

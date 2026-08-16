@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     const sessions = await listSessions(auth.userId);
     return NextResponse.json({ sessions });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat sesi chat.";
+    const msg = "Gagal memuat sesi chat.";
     console.error("[api/assistant/sessions] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const session = await createSession(auth.userId);
     return NextResponse.json({ session }, { status: 201 });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membuat sesi chat.";
+    const msg = "Gagal membuat sesi chat.";
     console.error("[api/assistant/sessions] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

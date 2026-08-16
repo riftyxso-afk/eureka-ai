@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { aiChatJson, hasAiKey } from "@/lib/ai";
+import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import type { OnboardingAnalysis } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -42,6 +44,27 @@ const FALLBACK: OnboardingAnalysis = {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    // Rate limit per user (proteksi token AI): maks 10 analisis/jam.
+    ensureRateLimitPrune();
+    const rl = checkRateLimit(
+      `onboarding-analyze:${auth.userId}`,
+      10,
+      60 * 60 * 1000
+    );
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Terlalu sering menganalisis profil. Tunggu sebentar ya." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+        }
+      );
+    }
     const body = (await req.json().catch(() => null)) as {
       name?: string;
       education?: string;
@@ -173,7 +196,6 @@ Maksimal 4 rekomendasi dan 3 tips.`,
 
     return NextResponse.json({ analysis });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menganalisis profil.";
     console.error("[api/onboarding/analyze]", e);
     // Analisis AI gagal → tetap berikan konten umum agar onboarding lancar.
     return NextResponse.json({ analysis: FALLBACK });

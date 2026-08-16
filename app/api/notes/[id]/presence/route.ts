@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { listPresence, setPresence, type CollabRole } from "@/lib/collab";
 
@@ -13,15 +14,19 @@ async function ensureNoteExists(noteId: string): Promise<boolean> {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     const presence = await listPresence(id);
     return NextResponse.json({ presence });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat kehadiran.";
+    const msg = "Gagal memuat kehadiran.";
     console.error("[api/notes/[id]/presence] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -32,6 +37,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     const body = (await req.json().catch(() => null)) as {
       userId?: string;
@@ -39,13 +48,7 @@ export async function POST(
       role?: string;
     } | null;
 
-    const userId = String(body?.userId ?? "").slice(0, 80);
-    if (!userId) {
-      return NextResponse.json(
-        { error: "ID pengguna tidak valid." },
-        { status: 400 }
-      );
-    }
+    const userId = auth.userId;
     if (!(await ensureNoteExists(id))) {
       return NextResponse.json(
         { error: "Catatan tidak ditemukan." },
@@ -65,7 +68,7 @@ export async function POST(
       pollInterval: MAX_POLL_SECONDS,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memperbarui kehadiran.";
+    const msg = "Gagal memperbarui kehadiran.";
     console.error("[api/notes/[id]/presence] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

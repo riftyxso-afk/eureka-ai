@@ -40,7 +40,7 @@ export async function GET(
     const messages = await getMessages(sessionId, userId);
     return NextResponse.json({ session, messages });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat sesi.";
+    const msg = "Gagal memuat sesi.";
     console.error("[api/assistant/sessions/[sessionId]] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -77,7 +77,7 @@ export async function PATCH(
     await renameSession(sessionId, auth.userId, title);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal mengganti judul.";
+    const msg = "Gagal mengganti judul.";
     console.error("[api/assistant/sessions/[sessionId]] PATCH", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -105,7 +105,7 @@ export async function DELETE(
     await deleteSession(sessionId, auth.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menghapus sesi.";
+    const msg = "Gagal menghapus sesi.";
     console.error("[api/assistant/sessions/[sessionId]] DELETE", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

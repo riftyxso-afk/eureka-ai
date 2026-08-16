@@ -7,6 +7,7 @@ import {
   reviewAllCards,
   type ProgressStats,
 } from "@/lib/progress-store";
+import { requireAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -19,10 +20,15 @@ export async function GET(req: NextRequest) {
         { status: 400 }
       );
     }
+    // Wajib login; userId dari query harus cocok dengan token sesi.
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const stats = await getStats(userId);
     return NextResponse.json({ stats });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat progres.";
+    const msg = "Gagal memuat progres.";
     console.error("[api/progress] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -44,6 +50,11 @@ export async function POST(req: NextRequest) {
         { error: "userId diperlukan." },
         { status: 400 }
       );
+    }
+    // Wajib login; userId dari body harus cocok dengan token sesi.
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
     const action = String(body?.action ?? "");
     const xp = Math.max(0, Number(body?.xp ?? 0) || 0);
@@ -80,7 +91,7 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memproses progres.";
+    const msg = "Gagal memproses progres.";
     console.error("[api/progress] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

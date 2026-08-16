@@ -37,23 +37,37 @@ for (const envPath of [
 const app = new Hono();
 
 // ─── CORS ──────────────────────────────────────────────────
-const corsOrigins = (process.env.CORS_ORIGIN ?? "*")
+const isProd = process.env.NODE_ENV === "production";
+const rawCors = process.env.CORS_ORIGIN ?? "";
+const corsOrigins = rawCors
   .split(",")
   .map((s) => s.trim().replace(/\/+$/, ""))
   .filter(Boolean);
-const corsAllowAll = corsOrigins.includes("*");
+const explicitlyAllowAll = corsOrigins.includes("*");
+
+// Produksi TIDAK BOLEH "*" (dan TIDAK BOLEH kosong → default deny).
+// Ini mencegah origin asing membaca respons ber-credential.
+if (isProd && (explicitlyAllowAll || corsOrigins.length === 0)) {
+  console.warn(
+    "[backend] PERINGATAN KEAMANAN: CORS_ORIGIN harus berisi daftar origin di produksi. " +
+      (explicitlyAllowAll
+        ? "'*' ditolak — origin lintas domain diblokir."
+        : "kosong — origin lintas domain diblokir.")
+  );
+}
+const corsAllowAll = !isProd && explicitlyAllowAll;
 
 /**
  * Resolver origin CORS:
  * - non-browser (tanpa Origin, mis. curl/server-to-server) → izinkan
  * - localhost (dev) → selalu izinkan
- * - CORS_ORIGIN kosong / "*" → izinkan SEMUA origin (direfleksikan)
- * - CORS_ORIGIN berisi daftar → hanya origin yang terdaftar
+ * - CORS_ORIGIN "*" → hanya untuk non-produksi, izinkan SEMUA origin
+ * - CORS_ORIGIN berisi daftar → hanya origin yang terdaftar (wajib di produksi)
  */
 const resolveCorsOrigin: (origin: string) => string | null = (origin) => {
   if (!origin) return "*";
   if (corsAllowAll) return origin;
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+  if (!isProd && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return origin;
   }
   return corsOrigins.includes(origin.replace(/\/+$/, "")) ? origin : null;

@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ cards });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membuat flashcards.";
+    const msg = "Gagal membuat flashcards.";
     console.error("[api/assistant/flashcards] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

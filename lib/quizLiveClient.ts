@@ -1,12 +1,13 @@
 /**
  * Klien Kuis Share & Live Room (browser).
  * - apiFetch ke route /api/quiz-* (backend via NEXT_PUBLIC_API_URL)
- * - Supabase Realtime: subscribe perubahan quiz_room_participants
- *   (filter room_id) → leaderboard otomatis.
+ * - Leaderboard room di-refresh via polling GET /api/quiz-rooms/[token]
+ *   (realtime postgres_changes tidak dipakai: policy SELECT publik pada
+ *   quiz_room_participants dihapus di patch 017 — polling lewat server
+ *   service-role sama amannya).
  * - sessionStorage: participant_key + jawaban dipulihkan saat buka ulang.
  */
 import { apiFetch } from "./apiClient";
-import { supabase } from "./supabase/client";
 
 export interface QuizQuestion {
   id: string;
@@ -222,44 +223,4 @@ export function clearAnswers(token: string): void {
   } catch {
     // abaikan
   }
-}
-
-/* ─── Realtime leaderboard ─────────────────────────────────── */
-
-export interface RealtimeUnsubscribe {
-  unsubscribe: () => void;
-}
-
-/**
- * Subscribe perubahan quiz_room_participants (filter room_id).
- * Setiap perubahan (join/submit) memicu onRoomUpdate() → pemanggil
- * me-refetch room via getQuizRoom. Return objek ber-unsubscribe.
- * Tanpa Supabase terkonfigurasi → no-op yang aman.
- */
-export function subscribeRoomUpdates(
-  roomId: string,
-  onRoomUpdate: () => void
-): RealtimeUnsubscribe {
-  const client = supabase;
-  if (!client) {
-    return { unsubscribe: () => {} };
-  }
-  const channel = client
-    .channel(`quiz_room:${roomId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "quiz_room_participants",
-        filter: `room_id=eq.${roomId}`,
-      },
-      () => onRoomUpdate()
-    )
-    .subscribe();
-  return {
-    unsubscribe: () => {
-      client.removeChannel(channel);
-    },
-  };
 }

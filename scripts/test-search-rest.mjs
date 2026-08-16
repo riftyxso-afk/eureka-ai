@@ -2,10 +2,11 @@
 /**
  * Test RAG search via REST (fallback jika RPC tidak aktif).
  */
-const SUPABASE_URL = "https://ruajiywsdixhsketfurf.supabase.co";
-const SVC_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1YWppeXdzZGl4aHNrZXRmdXJmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjQzOTc5NSwiZXhwIjoyMTAyMDE1Nzk1fQ.4AQoPb7XcIBtjXRApp5HFHOzUdHm0YtQB_jIN8V8G4k";
-
 import { readFileSync } from "node:fs";
+
+import { getSupabaseConfig } from "./_supabase-env.mjs";
+
+const { url: SUPABASE_URL, key: SVC_KEY } = getSupabaseConfig();
 
 const sumoKey = readFileSync(".env.local", "utf8")
   .split("\n")

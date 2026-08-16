@@ -43,8 +43,8 @@ Saya telah berhasil mengimplementasikan **Supabase Integration** yang lengkap un
 Edit `.env.local`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key-dari-dashboard>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key-dari-dashboard>
 
 # (keep existing AI keys)
 ```

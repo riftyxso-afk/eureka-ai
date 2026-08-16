@@ -60,7 +60,7 @@ export async function POST(
     const url = `${siteUrl.replace(/\/+$/, "")}/share/${share.token}`;
     return NextResponse.json({ token: share.token, url });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membuat link share.";
+    const msg = "Gagal membuat link share.";
     console.error("[api/assistant/sessions/[sessionId]/share] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

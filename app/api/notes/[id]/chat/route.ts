@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { addChatMessage, listChatMessages } from "@/lib/collab";
 
@@ -29,6 +30,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     if (!(await ensureNoteExists(id))) {
       return NextResponse.json(
@@ -42,7 +47,7 @@ export async function GET(
       messages: after > 0 ? messages.filter((m) => Date.parse(m.createdAt) > after) : messages,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat chat.";
+    const msg = "Gagal memuat chat.";
     console.error("[api/notes/[id]/chat] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -53,6 +58,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     const body = (await req.json().catch(() => null)) as {
       senderName?: string;
@@ -86,7 +95,7 @@ export async function POST(
     );
     return NextResponse.json({ message });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal mengirim pesan.";
+    const msg = "Gagal mengirim pesan.";
     console.error("[api/notes/[id]/chat] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       joinedAt: data?.beta_joined_at ?? null,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal cek status beta.";
+    const msg = "Gagal cek status beta.";
     console.error("[api/beta/status] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

@@ -567,7 +567,7 @@ export async function POST(req: NextRequest) {
           if (!answer) answer = result.content;
           modelUsed = modelUsed || result.model;
         } catch (e) {
-          const msg = e instanceof Error ? e.message : "AI gagal.";
+          const msg = "AI gagal.";
           // Pesan user sudah tersimpan; tampilkan error agar UI bisa retry.
           console.error("[api/assistant/chat] AI:", e);
           emit({ type: "error", message: msg });
@@ -589,7 +589,7 @@ export async function POST(req: NextRequest) {
         emit({ type: "sources", sources });
         emit({ type: "done" });
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Terjadi kesalahan.";
+        const msg = "Terjadi kesalahan.";
         console.error("[api/assistant/chat] handler:", e);
         emit({ type: "error", message: msg });
       } finally {

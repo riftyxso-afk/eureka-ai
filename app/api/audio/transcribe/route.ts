@@ -89,10 +89,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ ok: true, text: result.text.trim() });
   } catch (e) {
-    const msg =
-      e instanceof Error
-        ? e.message
-        : "Gagal mentranskripsi audio. Coba lagi ya.";
+    const msg = "Gagal mentranskripsi audio. Coba lagi ya.";
     console.error("[api/audio/transcribe] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

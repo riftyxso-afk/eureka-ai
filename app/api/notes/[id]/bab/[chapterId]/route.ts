@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { db } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; chapterId: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id, chapterId } = await params;
     const found = await getNoteWithChunks(id);
     if (!found) {
       return NextResponse.json(
         { error: "Catatan tidak ditemukan." },
         { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
       );
     }
     const chapters = found.note.chapters ?? [];
@@ -52,7 +63,7 @@ export async function GET(
           : null,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat bab.";
+    const msg = "Gagal memuat bab.";
     console.error("[api/notes/[id]/bab/[chapterId] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -63,11 +74,29 @@ export async function PUT(
   { params }: { params: Promise<{ id: string; chapterId: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id, chapterId } = await params;
     const body = (await req.json().catch(() => null)) as {
       content?: string;
     } | null;
     const content = String(body?.content ?? "").slice(0, 20000);
+
+    const found = await getNoteWithChunks(id);
+    if (!found) {
+      return NextResponse.json(
+        { error: "Catatan tidak ditemukan." },
+        { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
+      );
+    }
 
     const { data, error } = await db()
       .from("chapter_notes")
@@ -83,7 +112,7 @@ export async function PUT(
 
     return NextResponse.json({ ok: true, updatedAt: data.updated_at });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menyimpan catatan pribadi.";
+    const msg = "Gagal menyimpan catatan pribadi.";
     console.error("[api/notes/[id]/bab/[chapterId] PUT", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

@@ -6,6 +6,7 @@
  * Body: { userId: string, subscription: PushSubscriptionJSON }
  */
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/assistant/auth";
 import {
   savePushSubscription,
   type PushSubscriptionRecord,
@@ -13,12 +14,16 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const body = (await req.json().catch(() => null)) as {
       userId?: string;
       subscription?: PushSubscriptionRecord;
     } | null;
 
-    const userId = (body?.userId ?? "").trim().slice(0, 80);
+    const userId = auth.userId;
     const sub = body?.subscription;
     if (!userId || !sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
       return NextResponse.json(

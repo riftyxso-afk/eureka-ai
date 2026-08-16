@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal kirim email.";
+    const msg = "Gagal kirim email.";
     console.error("[api/auth/notify] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

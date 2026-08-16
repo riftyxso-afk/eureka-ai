@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     await applyReferral(auth.userId, email, ref);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memproses referral.";
+    const msg = "Gagal memproses referral.";
     console.error("[api/referral/apply] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

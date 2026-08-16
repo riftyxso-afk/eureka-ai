@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     }));
     return NextResponse.json({ subjects: withCount });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat mata pelajaran.";
+    const msg = "Gagal memuat mata pelajaran.";
     console.error("[api/subjects]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json({ subject }, { status: 201 });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menambah mata pelajaran.";
+    const msg = "Gagal menambah mata pelajaran.";
     console.error("[api/subjects POST]", e);
     return NextResponse.json({ error: msg }, { status: 400 });
   }

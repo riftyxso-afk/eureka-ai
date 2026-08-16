@@ -34,6 +34,7 @@ import {
 import { recordActivity } from "@/lib/progress-store";
 import { acquirePdfSlot, releasePdfSlot } from "@/lib/jobQueue";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
+import { requireAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -118,8 +119,20 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const userId = String(req.nextUrl.searchParams.get("userId") ?? "");
+  const userId = String(req.nextUrl.searchParams.get("userId") ?? "").trim();
   const includeImages = req.nextUrl.searchParams.get("images") === "1";
+
+  // EventSource tidak bisa mengirim header Authorization → token boleh
+  // lewat query param `token` (sesi access token, berlaku sementara).
+  let authHeader = req.headers.get("authorization");
+  if (!authHeader) {
+    const token = req.nextUrl.searchParams.get("token") ?? "";
+    if (token) authHeader = `Bearer ${token}`;
+  }
+  const auth = await requireAuth(authHeader, userId);
+  if (auth.error) {
+    return Response.json({ error: auth.error }, { status: auth.status ?? 401 });
+  }
 
   // Pramuat data catatan di luar stream supaya error 404/500 bisa
   // langsung dibalas sebagai JSON biasa.
@@ -128,6 +141,12 @@ export async function GET(
     return Response.json({ error: "Catatan tidak ditemukan." }, { status: 404 });
   }
   const note = found.note;
+  if (note.user_id !== auth.userId) {
+    return Response.json(
+      { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+      { status: 403 }
+    );
+  }
   const title = (note.title || "Rangkuman Materi")
     .replace(/[^\w\- ]+/g, "")
     .trim()
@@ -339,7 +358,8 @@ export async function GET(
         controller.close();
         success = true;
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Gagal membuat PDF.";
+        console.error("[api/notes/[id]/pdf/stream]", e);
+        const msg = "Gagal membuat PDF.";
         try {
           controller.enqueue(
             encoder.encode(`event: error\ndata: ${JSON.stringify({ error: msg })}\n\n`)

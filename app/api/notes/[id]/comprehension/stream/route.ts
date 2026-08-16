@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { TextEncoder } from "util";
 
 import { getNoteWithChunks } from "@/lib/rag/store";
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { requireAuth } from "@/lib/assistant/auth";
 import { aiChatStream, extractJsonObject, hasAiKey } from "@/lib/ai";
 import {
   buildComprehensionPrompt,
@@ -44,11 +44,11 @@ export async function POST(
           userId?: unknown;
         } | null;
         const userId = String(body?.userId ?? "").trim().slice(0, 80);
-        const auth = await authorizeAssistantUser(
+        const auth = await requireAuth(
           req.headers.get("authorization"),
           userId
         );
-        if (!auth.userId) {
+        if ("error" in auth) {
           fail(auth.error ?? "Autentikasi diperlukan.");
           return;
         }
@@ -69,6 +69,10 @@ export async function POST(
         const found = await getNoteWithChunks(id);
         if (!found) {
           fail("Catatan tidak ditemukan.");
+          return;
+        }
+        if (found.note.user_id !== auth.userId) {
+          fail("Akses ditolak. Kamu bukan pemilik catatan ini.");
           return;
         }
         const chapters = found.note.chapters ?? [];
@@ -110,7 +114,7 @@ export async function POST(
           );
           if (!raw) raw = result.content;
         } catch (e) {
-          const msg = e instanceof Error ? e.message : "AI gagal menjawab.";
+          const msg = "AI gagal menjawab.";
           console.error("[api/notes/[id]/comprehension/stream] AI:", e);
           fail(msg);
           return;
@@ -131,8 +135,7 @@ export async function POST(
         }
         controller.close();
       } catch (e) {
-        const msg =
-          e instanceof Error ? e.message : "Gagal membuat soal uji pemahaman.";
+        const msg = "Gagal membuat soal uji pemahaman.";
         console.error("[api/notes/[id]/comprehension/stream]", e);
         try {
           emit({ type: "error", message: msg });

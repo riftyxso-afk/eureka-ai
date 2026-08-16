@@ -6,6 +6,8 @@ import { getProfileMd } from "@/lib/profile";
 import { embedTexts } from "@/lib/rag/embed";
 import { searchChunks } from "@/lib/rag/store";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
+import { requireAuth } from "@/lib/assistant/auth";
+import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -44,9 +46,32 @@ export async function POST(req: NextRequest) {
     const askNotes = body?.askNotes === true;
     const history = turns.slice(-16);
 
+    // Wajib login; userId dari body harus cocok dengan token sesi — profil
+    // dan RAG hanya boleh berjalan atas data milik pemilik sesi.
+    const userId = String(body?.userId ?? "").trim();
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    // Rate limit per user (proteksi token AI): maks 30 chat/jam.
+    ensureRateLimitPrune();
+    const rl = checkRateLimit(`chat:${userId}`, 30, 60 * 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        {
+          error:
+            "Kamu sudah mengobrol terlalu sering dalam 1 jam. Tunggu sebentar ya.",
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+        }
+      );
+    }
+
     // Profil user dari DB → AI paham jenjang, topik sulit, dan gaya belajar user.
     let profileMd = "";
-    const userId = String(body?.userId ?? "");
     if (userId) {
       const { data } = await db()
         .from("users")
@@ -127,7 +152,7 @@ export async function POST(req: NextRequest) {
     const reply = raw.trim();
     return NextResponse.json({ reply });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memanggil AI.";
+    const msg = "Gagal memanggil AI.";
     console.error("[api/chat]", e);
     return NextResponse.json(
       { error: msg, reply: "Hmm, AI-nya lagi sibuk. Coba tanya lagi ya 🙏" },

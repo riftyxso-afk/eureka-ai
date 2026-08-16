@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membatalkan langganan.";
+    const msg = "Gagal membatalkan langganan.";
     console.error("[api/payments/cancel] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

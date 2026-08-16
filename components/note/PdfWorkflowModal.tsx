@@ -27,6 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { apiUrl } from "@/lib/apiClient";
+import { getAccessToken } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/identity";
 
 interface WorkflowStep {
@@ -133,51 +134,55 @@ export function PdfWorkflowModal({
     abortedRef.current = false;
     doneRef.current = false;
 
-    const es = new EventSource(
-      apiUrl(
-        `/api/notes/${encodeURIComponent(noteId)}/pdf/stream?userId=${encodeURIComponent(
-          getUserId()
-        )}&images=${includeImages ? 1 : 0}`
-      )
-    );
+    let es: EventSource | null = null;
 
-    es.onmessage = (ev) => {
+    void (async () => {
+      const token = await getAccessToken();
       if (abortedRef.current) return;
-      try {
-        const data = JSON.parse(ev.data) as SseProgress;
-        if (data && typeof data.percent === "number") {
-          setProgress({
-            percent: data.percent,
-            message: data.message || "Bekerja...",
-            step: data.step ?? 0,
-          });
+      es = new EventSource(
+        apiUrl(
+          `/api/notes/${encodeURIComponent(noteId)}/pdf/stream?userId=${encodeURIComponent(
+            getUserId()
+          )}&images=${includeImages ? 1 : 0}&token=${encodeURIComponent(token ?? "")}`
+        )
+      );
+      es.onmessage = (ev) => {
+        if (abortedRef.current) return;
+        try {
+          const data = JSON.parse(ev.data) as SseProgress;
+          if (data && typeof data.percent === "number") {
+            setProgress({
+              percent: data.percent,
+              message: data.message || "Bekerja...",
+              step: data.step ?? 0,
+            });
+          }
+        } catch {
+          // abaikan event tak dikenal
         }
-      } catch {
-        // abaikan event tak dikenal
-      }
-    };
+      };
 
-    es.addEventListener("done", (ev) => {
-      if (abortedRef.current || doneRef.current) return;
-      doneRef.current = true;
-      try {
-        const data = JSON.parse((ev as MessageEvent).data) as {
-          base64?: string;
-          filename?: string;
-        };
-        if (data.base64) {
-          setProgress((p) => ({ ...p, percent: 100, step: 7, message: "PDF selesai!" }));
-          setSavedBase64(data.base64);
-          setSavedFilename(data.filename ?? "");
-          setStatus("done");
-          downloadPdf(data.base64, data.filename ?? "");
-          notify("Dokumen PDF selesai!");
-        }
-      } catch {
-        setErrorMsg("Respons selesai tidak valid.");
+      es.addEventListener("done", (ev) => {
+        if (abortedRef.current || doneRef.current) return;
+        doneRef.current = true;
+        try {
+          const data = JSON.parse((ev as MessageEvent).data) as {
+            base64?: string;
+            filename?: string;
+          };
+          if (data.base64) {
+            setProgress((p) => ({ ...p, percent: 100, step: 7, message: "PDF selesai!" }));
+            setSavedBase64(data.base64);
+            setSavedFilename(data.filename ?? "");
+            setStatus("done");
+            downloadPdf(data.base64, data.filename ?? "");
+            notify("Dokumen PDF selesai!");
+          }
+        } catch {
+          setErrorMsg("Respons selesai tidak valid.");
         setStatus("error");
       }
-      es.close();
+      es?.close();
     });
 
     es.addEventListener("error", (ev) => {
@@ -190,7 +195,7 @@ export function PdfWorkflowModal({
           if (data.error) {
             setErrorMsg(data.error);
             setStatus("error");
-            es.close();
+            es?.close();
             return;
           }
         } catch {
@@ -202,13 +207,14 @@ export function PdfWorkflowModal({
       if (!doneRef.current) {
         setErrorMsg("Koneksi terputus saat menyusun PDF. Coba lagi.");
         setStatus("error");
-        es.close();
+        es?.close();
       }
     });
+    })();
 
     return () => {
       abortedRef.current = true;
-      es.close();
+      es?.close();
     };
   }, [noteId, notify, downloadPdf, retryKey, status, includeImages]);
 

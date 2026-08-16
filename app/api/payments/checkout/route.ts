@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
       discount: discountLabel,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membuat pembayaran.";
+    const msg = "Gagal membuat pembayaran.";
     console.error("[api/payments/checkout] POST", e);
     return NextResponse.json({ error: msg }, { status: 502 });
   }

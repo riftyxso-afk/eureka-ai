@@ -12,7 +12,7 @@ import { randomUUID } from "crypto";
 import { runAfter } from "@/lib/after";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { regenerateChapter } from "@/lib/regenerate";
-import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { requireAuth } from "@/lib/assistant/auth";
 import { enforcePremium, recordFeatureUsage } from "@/lib/premium";
 import { canStartGeneration, createJob, executeJob, updateJob } from "@/lib/jobQueue";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
@@ -24,6 +24,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string; chapterId: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id, chapterId } = await params;
     const body = (await req.json().catch(() => null)) as {
       instruction?: string;
@@ -34,6 +38,12 @@ export async function POST(
       return NextResponse.json(
         { error: "Catatan tidak ditemukan." },
         { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
       );
     }
 
@@ -49,9 +59,8 @@ export async function POST(
 
     const instruction = String(body?.instruction ?? "").trim().slice(0, 500);
 
-    // Keamanan: userId diambil dari token sesi (apiFetch melampirkan Bearer).
-    const userId =
-      (await getUserIdFromAuth(req.headers.get("authorization"))) || "anonymous";
+    // Keamanan: userId dari token sesi (apiFetch melampirkan Bearer).
+    const userId = auth.userId;
 
     // Gating premium: kuota tulis ulang bab bulanan untuk free.
     const premiumBab = await enforcePremium(userId, "bab-regenerate");
@@ -110,14 +119,9 @@ export async function POST(
             noteTitle: `Bab ${chapter.id}: ${chapter.title}`,
           });
           // Catat pemakaian (kuota free) setelah berhasil.
-          if (userId && userId !== "anonymous") {
-            await recordFeatureUsage(userId, "bab-regenerate");
-          }
+          await recordFeatureUsage(userId, "bab-regenerate");
         } catch (e) {
-          const msg =
-            e instanceof Error
-              ? e.message
-              : "Terjadi kesalahan saat menulis ulang bab.";
+          const msg = "Terjadi kesalahan saat menulis ulang bab.";
           console.error("[regenerate bab] Job gagal:", e);
           updateJob(id, {
             status: "error",
@@ -139,7 +143,7 @@ export async function POST(
       { status: 202 }
     );
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menulis ulang bab.";
+    const msg = "Gagal menulis ulang bab.";
     console.error("[api/notes/[id]/bab/[chapterId]/regenerate]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

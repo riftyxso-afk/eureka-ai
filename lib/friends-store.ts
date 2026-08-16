@@ -101,25 +101,19 @@ export async function searchUsers(
   const client = db();
   const q = query.trim().replace(/^@+/, "").toLowerCase();
 
-  let rows: any[] = [];
-  if (q === "") {
-    const { data } = await client
-      .from("users")
-      .select("id, name, username, created_at")
-      .limit(limit);
-    rows = data ?? [];
-  } else {
-    const { data } = await client
-      .from("users")
-      .select("id, name, username, created_at")
-      .or(`name.ilike.%${q}%,username.ilike.%${q}%`)
-      .limit(limit);
-    rows = data ?? [];
-  }
+  // Pakai function SECURITY DEFINER search_users (patch 017) — hanya
+  // kolom publik (id, name, username) yang diekspos, tanpa email/profile_data.
+  const { data } = await client.rpc("search_users", { q }).limit(limit);
+  const rows = (data ?? []) as { id: string; name: string | null; username: string | null }[];
 
   const relations = await loadRelationships(client, selfId);
   return rows.map((r) => ({
-    user: mapUser(r),
+    user: {
+      id: r.id,
+      name: r.name ?? "Pengguna",
+      username: r.username ?? undefined,
+      createdAt: new Date().toISOString(),
+    },
     relation:
       r.id === selfId ? "self" : ((relations.get(r.id) ?? "none") as FriendRelation),
   }));

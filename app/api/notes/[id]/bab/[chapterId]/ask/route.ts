@@ -5,6 +5,7 @@ import { aiChat, hasAiKey } from "@/lib/ai";
 import { db } from "@/lib/supabase/admin";
 import { getProfileMd } from "@/lib/profile";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
+import { requireAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -41,8 +42,14 @@ export async function POST(
       );
     }
 
+    // Wajib login; userId dari body harus cocok dengan token sesi.
+    const userId = String(body?.userId ?? "").trim();
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     let profileMd = "";
-    const userId = String(body?.userId ?? "");
     if (userId) {
       const { data } = await db()
         .from("users")
@@ -66,6 +73,12 @@ export async function POST(
       return NextResponse.json(
         { error: "Catatan tidak ditemukan." },
         { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
       );
     }
     const chapters = found.note.chapters ?? [];
@@ -127,7 +140,7 @@ export async function POST(
 
     return NextResponse.json({ answer: answer.trim() });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menjawab pertanyaan.";
+    const msg = "Gagal menjawab pertanyaan.";
     console.error("[api/notes/[id]/bab/[chapterId]/ask]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

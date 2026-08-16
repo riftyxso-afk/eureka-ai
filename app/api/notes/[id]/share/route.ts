@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 
 import { getNoteWithChunks } from "@/lib/rag/store";
-import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { requireAuth } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -16,15 +16,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
 
-    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Autentikasi diperlukan. Silakan masuk ulang." },
-        { status: 401 }
-      );
-    }
+    const userId = auth.userId;
 
     const found = await getNoteWithChunks(id);
     if (!found) {
@@ -74,7 +72,7 @@ export async function POST(
       url: `${siteUrl.replace(/\/+$/, "")}/share/note/${token}`,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membuat link share.";
+    const msg = "Gagal membuat link share.";
     console.error("[api/notes/[id]/share]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

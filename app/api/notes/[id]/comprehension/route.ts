@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import {
   generateComprehension,
@@ -16,6 +17,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     const body = (await req.json().catch(() => null)) as Partial<ComprehensionConfig> | null;
     const count = Math.min(Math.max(Number(body?.count) || 5, 3), 15);
@@ -36,6 +41,12 @@ export async function POST(
       return NextResponse.json(
         { error: "Catatan tidak ditemukan." },
         { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
       );
     }
 
@@ -62,7 +73,7 @@ export async function POST(
 
     return NextResponse.json({ questions });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membuat soal uji pemahaman.";
+    const msg = "Gagal membuat soal uji pemahaman.";
     console.error("[api/notes/[id]/comprehension]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

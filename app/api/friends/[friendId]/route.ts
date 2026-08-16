@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { removeFriend } from "@/lib/friends-store";
+import { requireAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -17,10 +18,15 @@ export async function DELETE(
         { status: 400 }
       );
     }
+    // Wajib login; userId dari query harus cocok dengan token sesi.
+    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     await removeFriend(userId, friendId);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menghapus teman.";
+    const msg = "Gagal menghapus teman.";
     console.error("[api/friends/[friendId]] DELETE", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

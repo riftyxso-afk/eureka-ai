@@ -3,6 +3,8 @@ import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 
+import { requireAuth } from "@/lib/assistant/auth";
+import { getNoteWithChunks } from "@/lib/rag/store";
 import {
   addImage,
   listImages,
@@ -12,6 +14,26 @@ import {
 } from "@/lib/note-images-store";
 
 export const runtime = "nodejs";
+
+async function ensureOwner(
+  noteId: string,
+  userId: string
+): Promise<NextResponse | null> {
+  const found = await getNoteWithChunks(noteId);
+  if (!found) {
+    return NextResponse.json(
+      { error: "Catatan tidak ditemukan." },
+      { status: 404 }
+    );
+  }
+  if (found.note.user_id !== userId) {
+    return NextResponse.json(
+      { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+      { status: 403 }
+    );
+  }
+  return null;
+}
 
 /** Resolve path relative to project root (works in both Next.js and standalone backend) */
 function rootPath(...segments: string[]): string {
@@ -28,15 +50,21 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
+    const denied = await ensureOwner(id, auth.userId);
+    if (denied) return denied;
     const images = await listImages(id);
     return NextResponse.json({ images });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat gambar.";
+    const msg = "Gagal memuat gambar.";
     console.error("[api/notes/[id]/images] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -47,7 +75,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
+    const denied = await ensureOwner(id, auth.userId);
+    if (denied) return denied;
     const form = await req.formData();
     const file = form.get("file");
     if (!file || typeof file === "string" || !("arrayBuffer" in file)) {
@@ -100,7 +134,7 @@ export async function POST(
 
     return NextResponse.json({ image });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal mengunggah gambar.";
+    const msg = "Gagal mengunggah gambar.";
     console.error("[api/notes/[id]/images] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -111,7 +145,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
+    const denied = await ensureOwner(id, auth.userId);
+    if (denied) return denied;
     const imageId = String(req.nextUrl.searchParams.get("id") ?? "");
     if (!imageId) {
       return NextResponse.json(
@@ -130,7 +170,7 @@ export async function DELETE(
     }
     return NextResponse.json({ ok: result.ok });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menghapus gambar.";
+    const msg = "Gagal menghapus gambar.";
     console.error("[api/notes/[id]/images] DELETE", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

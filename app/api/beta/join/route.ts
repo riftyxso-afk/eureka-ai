@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, isBeta: true, already });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal join beta.";
+    const msg = "Gagal join beta.";
     console.error("[api/beta/join] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

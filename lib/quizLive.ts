@@ -8,8 +8,8 @@
  * - quiz_room_participants: nama unik per room; participant_key
  *   = otorisasi submit; satu submit per partisipan (409 bila dobel).
  *
- * Realtime: klien subscribe postgres_changes pada quiz_room_participants
- * (filter room_id) untuk leaderboard otomatis — lihat lib/quizLiveClient.
+ * Realtime: klien me-refresh room via polling GET /api/quiz-rooms/[token]
+ * (postgres_changes tidak dipakai — lihat lib/quizLiveClient).
  */
 import { randomBytes } from "crypto";
 

@@ -9,7 +9,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 export function isSupabaseConfigured(): boolean {
   return (
-    supabaseUrl.includes(".supabase.co") &&
+    supabaseUrl.startsWith("https://") &&
+    supabaseUrl.length > 20 &&
     supabaseAnonKey.length > 40 &&
     supabaseAnonKey.startsWith("eyJ")
   );

@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { aiChat, hasAiKey } from "@/lib/ai";
 
 export const runtime = "nodejs";
@@ -32,6 +33,10 @@ materi yang bisa dipelajari, buat jadwal, teknik mengingat yang efektif, dan car
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const body = (await req.json().catch(() => null)) as {
       type?: string;
       title?: string;
@@ -117,7 +122,7 @@ Pastikan langkah sesuai jenis misi di atas, angka dan istilah akurat (SNBP/SNBT/
       steps: steps.length > 0 ? steps : [],
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menyusun bimbingan.";
+    const msg = "Gagal menyusun bimbingan.";
     console.error("[api/missions/guide]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

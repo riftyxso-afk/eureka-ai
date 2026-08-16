@@ -81,11 +81,15 @@ export function mountNextRoutes(
         return await toResponse(result);
       } catch (e) {
         console.error(`[adapter] ${method} ${routePath} gagal:`, e);
-        const msg = e instanceof Error ? e.message : "Terjadi kesalahan.";
-        return new Response(JSON.stringify({ error: msg }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
+        // Pesan generik ke client; detail (stack/message) hanya di log —
+        // pesan exception mentah bisa membocorkan path/rahasia internal.
+        return new Response(
+          JSON.stringify({ error: "Terjadi kesalahan internal server." }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
     });
   }

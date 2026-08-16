@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { extractQuestionsFromSheet } from "@/lib/studyTools";
 
@@ -13,12 +14,22 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
     const found = await getNoteWithChunks(id);
     if (!found) {
       return NextResponse.json(
         { error: "Catatan tidak ditemukan." },
         { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
       );
     }
 
@@ -48,14 +59,16 @@ export async function POST(
     const questions = await extractQuestionsFromSheet(buffer, upload.name);
     return NextResponse.json({ questions });
   } catch (e) {
-    const msg =
-      e instanceof Error
-        ? e.message
-        : "Gagal membaca lembar soal. Coba unggah ulang.";
     console.error("[api/notes/[id]/comprehension/upload]", e);
-    // Error "tidak terbaca" dari ekstraksi → 422 agar UI menampilkan pesan
-    // spesifik; error lain → 500.
-    const status = /tidak terbaca|tidak punya teks|Format file/i.test(msg) ? 422 : 500;
-    return NextResponse.json({ error: msg }, { status });
+    const detail = e instanceof Error ? e.message : "";
+    // Pesan sengaja dari ekstraksi → 422 agar UI menampilkan petunjuk
+    // spesifik; exception internal → 500 dengan pesan generik.
+    if (/tidak terbaca|tidak punya teks|Format file/i.test(detail)) {
+      return NextResponse.json({ error: detail }, { status: 422 });
+    }
+    return NextResponse.json(
+      { error: "Gagal membaca lembar soal. Coba unggah ulang." },
+      { status: 500 }
+    );
   }
 }

@@ -253,7 +253,7 @@ async function handleRequest(email: string, name: string) {
   });
   if (insertError) {
     return NextResponse.json(
-      { ok: false, error: `Gagal menyimpan kode: ${insertError.message}` },
+      { ok: false, error: "Gagal mengirim kode verifikasi. Coba lagi." },
       { status: 500 }
     );
   }
@@ -261,9 +261,10 @@ async function handleRequest(email: string, name: string) {
   try {
     await sendOtpEmail(email, code);
   } catch (err) {
+    console.error("[api/auth/otp] kirim email:", err);
     await db().from("otp_codes").delete().eq("email", email).is("used_at", null);
     return NextResponse.json(
-      { ok: false, error: err instanceof Error ? err.message : "Gagal mengirim email." },
+      { ok: false, error: "Gagal mengirim email. Coba lagi." },
       { status: 500 }
     );
   }
@@ -328,14 +329,14 @@ async function handleVerify(email: string, code: string, name: string, ref = "")
       user_metadata: name ? { name: name.slice(0, 60) } : {},
     });
     if (created.error) {
-      return NextResponse.json({ ok: false, error: `Gagal membuat akun: ${created.error.message}` }, { status: 500 });
+      return NextResponse.json({ ok: false, error: "Gagal membuat akun. Coba lagi." }, { status: 500 });
     }
     user = created.data.user;
     isNewUser = true;
   } else if (!user.email_confirmed_at) {
     const updated = await client.auth.admin.updateUserById(user.id, { email_confirm: true });
     if (updated.error) {
-      return NextResponse.json({ ok: false, error: `Gagal verifikasi akun: ${updated.error.message}` }, { status: 500 });
+      return NextResponse.json({ ok: false, error: "Gagal verifikasi akun. Coba lagi." }, { status: 500 });
     }
     user = updated.data.user;
   }

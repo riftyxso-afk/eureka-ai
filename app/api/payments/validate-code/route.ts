@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       remainingUses,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memvalidasi kode.";
+    const msg = "Gagal memvalidasi kode.";
     console.error("[api/payments/validate-code] POST", e);
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }

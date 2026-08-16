@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { generateFlashcards } from "@/lib/studyTools";
 
@@ -7,10 +8,14 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { id } = await params;
 
     const found = await getNoteWithChunks(id);
@@ -18,6 +23,12 @@ export async function POST(
       return NextResponse.json(
         { error: "Catatan tidak ditemukan." },
         { status: 404 }
+      );
+    }
+    if (found.note.user_id !== auth.userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
       );
     }
 
@@ -39,7 +50,7 @@ export async function POST(
 
     return NextResponse.json({ cards });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal membuat flashcards.";
+    const msg = "Gagal membuat flashcards.";
     console.error("[api/notes/[id]/flashcards]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

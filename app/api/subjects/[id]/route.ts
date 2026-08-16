@@ -21,7 +21,7 @@ export async function DELETE(
     await deleteSubject(id, userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menghapus mata pelajaran.";
+    const msg = "Gagal menghapus mata pelajaran.";
     console.error("[api/subjects/[id]]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

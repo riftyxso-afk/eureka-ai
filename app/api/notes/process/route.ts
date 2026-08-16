@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
 import { runAfter } from "@/lib/after";
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { requireAuth } from "@/lib/assistant/auth";
 import { enforcePremium } from "@/lib/premium";
 import {
   canStartGeneration,
@@ -185,14 +185,14 @@ export async function POST(req: NextRequest) {
     const sources = parsed.sources;
 
     // ── Keamanan: userId wajib cocok dengan token sesi (apiFetch melampirkan Bearer). ──
-    const auth = await authorizeAssistantUser(
+    const auth = await requireAuth(
       req.headers.get("authorization"),
       userId
     );
-    if (!auth.userId) {
+    if ("error" in auth) {
       return NextResponse.json(
-        { error: auth.error ?? "Autentikasi diperlukan." },
-        { status: auth.status ?? 401 }
+        { error: auth.error },
+        { status: auth.status }
       );
     }
 
@@ -326,10 +326,7 @@ export async function POST(req: NextRequest) {
             tracker.emit("extract", jobProgress ? 100 : 100, "Proses dibatalkan.");
             return;
           }
-          const msg =
-            e instanceof Error
-              ? e.message
-              : "Terjadi kesalahan saat memproses materi.";
+          const msg = "Terjadi kesalahan saat memproses materi.";
           console.error("[api/notes/process] Job gagal:", e);
           updateJob(id, {
             status: "error",
@@ -354,10 +351,7 @@ export async function POST(req: NextRequest) {
       { status: 202 }
     );
   } catch (e) {
-    const msg =
-      e instanceof Error
-        ? e.message
-        : "Terjadi kesalahan saat memproses materi.";
+    const msg = "Terjadi kesalahan saat memproses materi.";
     console.error("[api/notes/process]", e);
     tracker.emit("extract", 100, "Proses gagal.");
     return NextResponse.json({ error: msg }, { status: 500 });

@@ -221,7 +221,10 @@ export default function NoteDetailPage() {
 
   const loadNote = async () => {
     try {
-      const res = await apiFetch(`/api/notes/${params.id}`);
+      const invite = searchParams.get("invite");
+      const res = await apiFetch(
+        `/api/notes/${params.id}${invite ? `?invite=${encodeURIComponent(invite)}` : ""}`
+      );
       if (res.ok) {
         const data = await res.json();
         const rawChapters = data.chapters ?? [];

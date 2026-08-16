@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const status = await getPremiumStatus(auth.userId);
     return NextResponse.json(status);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat status premium.";
+    const msg = "Gagal memuat status premium.";
     console.error("[api/payments/status] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

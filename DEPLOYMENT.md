@@ -48,7 +48,7 @@ Buat file `/var/www/eureka-backend/.env` (salin dari `backend/.env.example`):
 | `SUMOPOD_API_KEY` | No | Ekstraksi audio/video (opsional) |
 | `RESEND_API_KEY` | **YES** | Resend — awalan `re_` |
 | `RESEND_FROM_EMAIL` | No | Pengirim email |
-| `CORS_ORIGIN` | **YES** | Origin frontend, mis. `https://www.eureka-ai.web.id` (pisahkan koma bila banyak) |
+| `CORS_ORIGIN` | **YES** | Origin FRONTEND yang diizinkan memanggil API (BUKAN domain backend), mis. `https://www.eureka-ai.web.id` (pisahkan koma bila banyak). Setiap origin harus lengkap dengan `https://`. Bila kosong atau `*` di produksi, backend menolak SEMUA permintaan lintas-origin (fail-closed) |
 | `PORT` | No | Default `3001` |
 | `PAKASIR_PROJECT` | **YES** | Slug proyek Pakasir |
 | `PAKASIR_API_KEY` | **YES** | API key Pakasir |
@@ -108,6 +108,18 @@ curl -s http://localhost:3001/ | head -5
 - [ ] `/api/payments/status` → `isPremium: true` setelah pembayaran terverifikasi
 - [ ] Login/register OTP → email kode masuk (Resend)
 - [ ] Google Search Console: submit `sitemap.xml`, cek metadata & JSON-LD halaman
+- [ ] Header respons: `content-security-policy`, `x-content-type-options: nosniff`, `x-frame-options: DENY`, `strict-transport-security` (produksi HTTPS) ada di halaman & API
+
+---
+
+## 4b. Rotasi `SUPABASE_SERVICE_ROLE_KEY` (wajib sebelum go-live)
+
+Key lama pernah terekspos di riwayat git → **rotasi wajib**:
+
+1. Supabase Dashboard → Project Settings → **API Keys** → `service_role` → **Reveal** → **Regenerate** (key lama langsung nonaktif).
+2. Update `SUPABASE_SERVICE_ROLE_KEY` di **semua** tempat: env VPS backend (`/var/www/eureka-backend/backend/.env`), Vercel (frontend, bila dipakai), dan `.env.local` lokal.
+3. Restart backend (`pm2 reload eureka-backend`) lalu verifikasi: `curl -s https://api.eureka-ai.web.id/api/health` → 200, dan `/api/payments/status` masih `isPremium` benar.
+4. Setelah aplikasi berjalan normal dengan key baru, jalankan `git log -S "<fragment-key-lama>"` — hasil kosong berarti key lama sudah tidak ada di sejarah yang aktif; bersihkan sisa riwayat dengan `git filter-repo`/BFG bila diperlukan (task 1.5).
 
 ---
 

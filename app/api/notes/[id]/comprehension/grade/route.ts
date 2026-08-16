@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/assistant/auth";
 import {
   gradeEssayAnswers,
   type ComprehensionQuestion,
@@ -9,11 +10,13 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest
 ) {
   try {
-    const { id } = await params;
+    const auth = await requireAuth(req.headers.get("authorization"));
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const body = (await req.json().catch(() => null)) as {
       questions?: ComprehensionQuestion[];
       answers?: Record<number, string>;
@@ -31,7 +34,7 @@ export async function POST(
     const grades = await gradeEssayAnswers(questions, answers);
     return NextResponse.json({ grades });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menilai jawaban essay.";
+    const msg = "Gagal menilai jawaban essay.";
     console.error("[api/notes/[id]/comprehension/grade]", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

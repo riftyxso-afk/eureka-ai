@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       history,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal memuat riwayat pembelian.";
+    const msg = "Gagal memuat riwayat pembelian.";
     console.error("[api/payments/history] GET", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
