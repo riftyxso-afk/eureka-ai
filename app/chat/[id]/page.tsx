@@ -29,6 +29,7 @@ import {
   markFeedbackDismissedLocally,
 } from "@/lib/assistant/feedback";
 import WebSearchPipeline from "@/components/asisten/WebSearchPipeline";
+import AiErrorPopup from "@/components/asisten/AiErrorPopup";
 import Composer from "@/components/asisten/Composer";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
@@ -108,6 +109,9 @@ export default function ChatPage() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
   const { isBeta } = useBeta();
+  // Pop-up error AI — muncul saat model down; "Tutup" menyembunyikan sampai
+  // error BARU datang (di-reset lewat useEffect di bawah).
+  const [errorDismissed, setErrorDismissed] = useState(false);
 
   // Survey performa Eureka — sekali per user, ~1 menit setelah catatan
   // PERTAMA selesai dibuat. Kebenaran "sekali saja" di server (note_feedback);
@@ -202,6 +206,12 @@ export default function ChatPage() {
     onSessionCreated: (id) => router.replace(`/chat/${id}`),
     initialSend,
   });
+
+  // Reset dismiss saat error baru muncul (hasError berubah false → true),
+  // agar pop-up tampil lagi untuk error berikutnya.
+  useEffect(() => {
+    if (chat.hasError) setErrorDismissed(false);
+  }, [chat.hasError]);
 
   const activeSession = chat.sessions.find((s) => s.id === sessionId);
 
@@ -494,6 +504,17 @@ export default function ChatPage() {
 
       {/* Panggilan suara AI (beta) */}
       <AiCallModal open={callOpen} onClose={() => setCallOpen(false)} />
+
+      {/* Pop-up model AI down — info cepat tanpa menunggu lama */}
+      <AiErrorPopup
+        open={chat.hasError && !errorDismissed && !chat.streaming.upgradeUrl}
+        message={chat.streaming.error}
+        onRetry={() => {
+          setErrorDismissed(false);
+          chat.handleRetry();
+        }}
+        onClose={() => setErrorDismissed(true)}
+      />
 
 
 

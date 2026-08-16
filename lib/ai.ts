@@ -664,7 +664,10 @@ export async function aiChatStream(
   }
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const attemptsPerProvider = 3;
+  // 2 percobaan per provider (bukan 3) + timeout 45 detik (bukan 120) agar
+  // user TIDAK menunggu lama saat model down — cepat pindah ke provider
+  // berikutnya / menyerah dengan pesan error yang jelas.
+  const attemptsPerProvider = 2;
 
   const isRetryable = (e: unknown): boolean => {
     if (e instanceof Error) {
@@ -735,7 +738,7 @@ export async function aiChatStream(
                 : {}),
             },
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(120_000),
+            signal: AbortSignal.timeout(45_000),
           });
         } catch (e) {
           const msg = e instanceof Error ? e.message : "fetch gagal";
