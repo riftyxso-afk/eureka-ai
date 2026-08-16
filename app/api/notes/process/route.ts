@@ -27,6 +27,8 @@ import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { ProgressTracker, phaseToPercent } from "@/lib/progressTracker";
 import {
   processNoteForBackground,
+  SOURCE_LABEL,
+  type NoteSource,
   type NotesProcessorProgress,
   type NotePrefs,
 } from "@/lib/notesProcessor";
@@ -48,14 +50,119 @@ function validateNoteType(value: FormDataEntryValue | null): NotePrefs["noteType
     : "rangkuman";
 }
 
-const SUBJECT_BY_SOURCE: Record<string, string> = {
-  dokumen: "Dokumen",
-  youtube: "YouTube",
-  audio: "Audio",
-  video: "Video",
-  web: "Web",
-  soal: "Soal/Tugas",
-};
+/** Maksimal sumber per catatan. */
+const MAX_SOURCES = 5;
+
+/**
+ * Baca & validasi daftar sumber dari FormData.
+ * - `sources`: JSON array metadata `[{ type, url?, soalText?, fileName? }]`
+ * - File dikirim sebagai `file0`, `file1`, … sesuai indeks sumber.
+ * Mengembalikan daftar sumber siap proses, atau `{ error, status }`.
+ */
+async function parseSources(form: FormData): Promise<
+  | { ok: true; sources: NoteSource[] }
+  | { ok: false; error: string; status: number }
+> {
+  const raw = String(form.get("sources") ?? "").trim();
+  if (!raw) {
+    return {
+      ok: false,
+      error: "Minimal satu sumber diperlukan.",
+      status: 400,
+    };
+  }
+
+  let list: unknown;
+  try {
+    list = JSON.parse(raw);
+  } catch {
+    return {
+      ok: false,
+      error: "Data sumber tidak valid.",
+      status: 400,
+    };
+  }
+  if (!Array.isArray(list) || list.length === 0) {
+    return {
+      ok: false,
+      error: "Minimal satu sumber diperlukan.",
+      status: 400,
+    };
+  }
+  if (list.length > MAX_SOURCES) {
+    return {
+      ok: false,
+      error: `Maksimal ${MAX_SOURCES} sumber per catatan.`,
+      status: 400,
+    };
+  }
+
+  const sources: NoteSource[] = [];
+  for (let i = 0; i < list.length; i++) {
+    const item = (list[i] ?? {}) as Record<string, unknown>;
+    const type = String(item.type ?? "").trim();
+    if (!(type in SOURCE_LABEL)) {
+      return {
+        ok: false,
+        error: `Jenis sumber #${i + 1} tidak valid.`,
+        status: 400,
+      };
+    }
+
+    const src: NoteSource = { type: type as NoteSource["type"] };
+    if (type === "youtube" || type === "web") {
+      const url = String(item.url ?? "").trim();
+      if (!url) {
+        return {
+          ok: false,
+          error: `Masukkan link untuk sumber #${i + 1} (${SOURCE_LABEL[type as keyof typeof SOURCE_LABEL]}).`,
+          status: 400,
+        };
+      }
+      src.url = url;
+    } else if (type === "soal") {
+      const soalText = String(item.soalText ?? "").trim();
+      if (soalText.length < 10) {
+        return {
+          ok: false,
+          error: `Tempel soal/tugas sumber #${i + 1} dulu (minimal 10 karakter).`,
+          status: 400,
+        };
+      }
+      src.soalText = soalText.slice(0, 60000);
+    } else {
+      // dokumen/audio/video → wajib file yang dikirim sebagai file<i>.
+      const file = form.get(`file${i}`);
+      if (!file || typeof file === "string" || !("arrayBuffer" in file)) {
+        return {
+          ok: false,
+          error: `Unggah file untuk sumber #${i + 1} (${SOURCE_LABEL[type as keyof typeof SOURCE_LABEL]}).`,
+          status: 400,
+        };
+      }
+      const upload = file as File;
+      if (upload.size > 4 * 1024 * 1024) {
+        return {
+          ok: false,
+          error: `File #${i + 1} terlalu besar (maksimal 4 MB). Unggah versi ringkas atau gunakan link YouTube/Web.`,
+          status: 413,
+        };
+      }
+      const buffer = Buffer.from(await upload.arrayBuffer());
+      if (!buffer.length) {
+        return {
+          ok: false,
+          error: `File #${i + 1} yang diunggah kosong.`,
+          status: 400,
+        };
+      }
+      src.fileBuffer = buffer;
+      src.fileName = upload.name;
+    }
+    sources.push(src);
+  }
+  return { ok: true, sources };
+}
 
 export async function POST(req: NextRequest) {
   const sessionId = String(req.headers.get("x-session-id") ?? "")
@@ -65,32 +172,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const form = await req.formData();
-    const sourceType = String(form.get("sourceType") ?? "");
-    const url = String(form.get("url") ?? "").trim();
-    const soalText = String(form.get("soalText") ?? "").trim().slice(0, 60000);
-    const file = form.get("file");
     const userId = String(form.get("userId") ?? "").trim().slice(0, 80);
 
-    // Validasi cepat (hanya yang bisa dicek sebelum kerja berat).
-    if (!(sourceType in SUBJECT_BY_SOURCE)) {
+    // Validasi cepat sumber (hanya yang bisa dicek sebelum kerja berat).
+    const parsed = await parseSources(form);
+    if (!parsed.ok) {
       return NextResponse.json(
-        { error: "Jenis sumber tidak valid." },
-        { status: 400 }
+        { error: parsed.error },
+        { status: parsed.status }
       );
     }
-    const isLinkSource = sourceType === "youtube" || sourceType === "web";
-    if (isLinkSource && !url) {
-      return NextResponse.json(
-        { error: "Masukkan link dulu." },
-        { status: 400 }
-      );
-    }
-    if (sourceType === "soal" && soalText.length < 10) {
-      return NextResponse.json(
-        { error: "Tempel soal/tugasnya dulu (minimal 10 karakter)." },
-        { status: 400 }
-      );
-    }
+    const sources = parsed.sources;
 
     // ── Keamanan: userId wajib cocok dengan token sesi (apiFetch melampirkan Bearer). ──
     const auth = await authorizeAssistantUser(
@@ -120,7 +212,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Kamu sudah membuat 3 catatan dalam 1 jam. Tunggu sebentar lalu coba lagi ya 🙏",
+            "Kamu sudah membuat 3 catatan dalam 1 jam. Tunggu sebentar lalu coba lagi ya.",
         },
         {
           status: 429,
@@ -134,8 +226,8 @@ export async function POST(req: NextRequest) {
     if (!cap.ok) {
       const busy =
         cap.reason === "global"
-          ? "Server sedang sibuk. Coba lagi dalam beberapa menit ya 🙏"
-          : "Kamu masih punya catatan yang sedang diproses. Tunggu sampai selesai ya 🙏";
+          ? "Server sedang sibuk. Coba lagi dalam beberapa menit ya."
+          : "Kamu masih punya catatan yang sedang diproses. Tunggu sampai selesai ya.";
       return NextResponse.json({ error: busy }, { status: 429 });
     }
 
@@ -149,38 +241,6 @@ export async function POST(req: NextRequest) {
       translate: form.get("translate") === "1" || form.get("translate") === "true",
       noteType: validateNoteType(form.get("noteType")),
     };
-
-    // Baca file ke Buffer SEKARANG (FormData tidak bisa dibaca lagi nanti).
-    let fileBuffer: Buffer | undefined;
-    let fileName: string | undefined;
-    if (file && typeof file !== "string" && "arrayBuffer" in file) {
-      const upload = file as File;
-      if (upload.size > 4 * 1024 * 1024) {
-        return NextResponse.json(
-          {
-            error:
-              "File terlalu besar (maksimal 4 MB). Unggah versi ringkas atau gunakan link YouTube/Web.",
-          },
-          { status: 413 }
-        );
-      }
-      const buffer = Buffer.from(await upload.arrayBuffer());
-      if (!buffer.length) {
-        return NextResponse.json(
-          { error: "File yang diunggah kosong." },
-          { status: 400 }
-        );
-      }
-      fileBuffer = buffer;
-      fileName = upload.name;
-    } else if (!isLinkSource && sourceType !== "soal") {
-      // Sumber "soal" membawa teks tempelan (soalText), bukan file —
-      // sudah divalidasi di atas, jadi tidak wajib upload file.
-      return NextResponse.json(
-        { error: "Unggah file dulu." },
-        { status: 400 }
-      );
-    }
 
     // Progress bawaan: tracker (SSE) + update status job.
     const jobProgress: NotesProcessorProgress = {
@@ -210,13 +270,9 @@ export async function POST(req: NextRequest) {
       userId,
       run: async (id) => {
         try {
-          const { note } = await processNoteForBackground(
+          const { note, warnings } = await processNoteForBackground(
             {
-              sourceType,
-              url,
-              soalText,
-              fileBuffer,
-              fileName,
+              sources,
               prefs,
               jobId: id,
               userId,
@@ -238,8 +294,11 @@ export async function POST(req: NextRequest) {
             try {
               await pushNotification(userId, {
                 type: "note_ready",
-                title: "Catatan selesai dibuat! 🎉",
-                message: `“${note.title}” sudah siap dipelajari.`,
+                title: "Catatan selesai dibuat!",
+                message:
+                  warnings && warnings.length > 0
+                    ? `“${note.title}” sudah siap, tapi ${warnings.length} sumber gagal diproses.`
+                    : `“${note.title}” sudah siap dipelajari.`,
                 link: `/dashboard/note/${note.id}`,
               });
             } catch (e) {
@@ -248,7 +307,7 @@ export async function POST(req: NextRequest) {
             // Web Push ke HP (butuh VAPID keys + subscription aktif di browser).
             try {
               await sendPushToUser(userId, {
-                title: "Catatan selesai dibuat! 🎉",
+                title: "Catatan selesai dibuat!",
                 body: `“${note.title}” sudah siap dipelajari.`,
                 url: `/dashboard/note/${note.id}`,
                 tag: `note-ready-${note.id}`,

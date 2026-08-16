@@ -539,7 +539,7 @@ export default function Composer({
         error?: string;
       } | null;
       if (!res.ok || !body?.ok) {
-        setMicError(body?.error ?? "Transkripsi gagal. Coba lagi ya 🙏");
+        setMicError(body?.error ?? "Transkripsi gagal. Coba lagi.");
         return;
       }
       setText((t) => {
@@ -549,7 +549,7 @@ export default function Composer({
       requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (e) {
       setMicError(
-        e instanceof Error ? e.message : "Transkripsi gagal. Coba lagi ya 🙏"
+        e instanceof Error ? e.message : "Transkripsi gagal. Coba lagi."
       );
     } finally {
       setTranscribing(false);

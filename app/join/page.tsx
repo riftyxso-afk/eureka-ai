@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Mic, PhoneCall, Loader2, CheckCircle2, Sparkles } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  Mic,
+  PhoneCall,
+  Rocket,
+  Sparkles,
+} from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import { useBeta } from "@/lib/useBeta";
@@ -58,14 +65,14 @@ export default function JoinBetaPage() {
         error?: string;
       } | null;
       if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Gagal join beta. Coba lagi ya 🙏");
+        setError(body?.error ?? "Gagal join beta. Coba lagi.");
         return;
       }
       setJustJoined(true);
       await refresh();
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Gagal join beta. Coba lagi ya 🙏"
+        e instanceof Error ? e.message : "Gagal join beta. Coba lagi."
       );
     } finally {
       setBusy(false);
@@ -81,8 +88,9 @@ export default function JoinBetaPage() {
           <span className="inline-flex items-center gap-1.5 rounded-clay-full bg-clay-primary/10 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-clay-primary">
             <Sparkles size={12} /> Program Beta Tester
           </span>
-          <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">
-            Gabung Beta Eureka.AI 🚀
+          <h1 className="mt-3 flex items-center justify-center gap-2 text-3xl font-extrabold sm:text-4xl">
+            Gabung Beta Eureka.AI
+            <Rocket size={30} className="shrink-0 text-clay-secondary" />
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-sm font-semibold text-clay-muted sm:text-base">
             Bantu kami menguji fitur baru &amp; dapatkan akses lebih awal. Sebagai
@@ -116,7 +124,7 @@ export default function JoinBetaPage() {
                   <CheckCircle2 size={28} />
                 </span>
                 <h2 className="mt-3 text-lg font-extrabold sm:text-xl">
-                  Kamu sudah beta tester! 🎉
+                  Kamu sudah beta tester!
                 </h2>
                 <p className="mt-1 text-sm font-semibold text-clay-muted">
                   Fitur Rekam Suara &amp; Panggilan AI sudah terbuka di halaman

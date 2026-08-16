@@ -4,7 +4,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { AtSign, CheckCircle2, Loader2, PartyPopper, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  AtSign,
+  BarChart3,
+  Bot,
+  Brain,
+  CheckCircle2,
+  Crown,
+  Lightbulb,
+  Loader2,
+  PartyPopper,
+  XCircle,
+} from "lucide-react";
 import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
@@ -20,8 +34,9 @@ import {
   normalizeUsername,
   usernameHint,
 } from "@/lib/onboardingContent";
-import { getSession } from "@/lib/auth";
+import { getSession, updateSessionName } from "@/lib/auth";
 import { getUserId } from "@/lib/identity";
+import { emojiToIcon } from "@/lib/emojiIcon";
 import { playCelebrationSound } from "@/lib/notifySound";
 
 type Phase = "form" | "loading" | "result";
@@ -199,6 +214,8 @@ export default function OnboardingPage() {
          if (payload?.user?.userNumber != null) {
            setUserNumber(Number(payload.user.userNumber));
          }
+         // Sinkronkan nama ke sesi lokal agar home/chat/sidebar konsisten.
+         updateSessionName(data.name);
          return true;
        } catch (e) {
          const msg = e instanceof Error ? e.message : "Gagal menyimpan profil.";
@@ -289,7 +306,7 @@ export default function OnboardingPage() {
     ) {
       playedNotifRef.current = true;
       try {
-        new Notification("Selamat datang di Eureka.AI! 🎉", {
+        new Notification("Selamat datang di Eureka.AI!", {
           body: `Kamu pengguna ke-${userNumber} yang bergabung.`,
         });
       } catch {
@@ -351,6 +368,8 @@ export default function OnboardingPage() {
         setSaveError(payload?.error ?? "Gagal menyelesaikan onboarding. Coba lagi.");
         return;
       }
+      // Sinkronkan nama ke sesi lokal agar home/chat/sidebar konsisten.
+      updateSessionName(data.name);
     } catch {
       setSaveError("Gagal menyimpan profil. Coba lagi.");
       return;
@@ -394,7 +413,12 @@ export default function OnboardingPage() {
               transition={{ duration: 0.3 }}
             >
               <CardClay className="mt-6">
-                <div className="text-5xl">{current.emoji}</div>
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
+                  {(() => {
+                    const StepIcon = emojiToIcon(current.emoji);
+                    return <StepIcon size={38} />;
+                  })()}
+                </div>
                 <h1 className="mt-4 text-3xl font-extrabold leading-tight">
                   {current.question}
                 </h1>
@@ -564,7 +588,7 @@ export default function OnboardingPage() {
                     onClick={() => setStep((s) => s - 1)}
                     className="shrink-0"
                   >
-                    ⬅ Kembali
+                    <ArrowLeft size={16} className="mr-2" /> Kembali
                   </ButtonClay>
                 ) : (
                   <div className="hidden sm:block" />
@@ -575,7 +599,7 @@ export default function OnboardingPage() {
                   fullWidth={step === 0}
                   className={step > 0 ? "flex-1" : ""}
                 >
-                  Lanjut ➜
+                  Lanjut <ArrowRight size={16} className="ml-2" />
                 </ButtonClay>
               </div>
             </motion.div>
@@ -593,8 +617,8 @@ export default function OnboardingPage() {
                 <div className="flex flex-col items-center py-6">
                   <div className="relative h-20 w-20">
                     <div className="absolute inset-0 animate-ping rounded-full bg-clay-primary/30" />
-                    <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-clay-primary text-3xl shadow-clay-btn">
-                      🤖
+                    <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-clay-primary text-white shadow-clay-btn">
+                      <Bot size={34} />
                     </div>
                   </div>
                   <AnimatePresence mode="wait">
@@ -638,12 +662,14 @@ export default function OnboardingPage() {
                   >
                     <PartyPopper size={22} className="shrink-0 text-clay-success" />
                     <p className="text-sm font-extrabold text-clay-dark">
-                      Kamu pengguna ke-{userNumber} di Eureka.AI! Selamat bergabung 🎊
+                      Kamu pengguna ke-{userNumber} di Eureka.AI! Selamat bergabung
                     </p>
                   </motion.div>
                 )}
                 <div className="text-center">
-                  <div className="text-6xl">🎉</div>
+                  <div className="flex justify-center">
+                    <PartyPopper size={52} className="text-clay-secondary" />
+                  </div>
                   <h1 className="mt-4 text-3xl font-extrabold sm:text-4xl">
                     Profil Selesai, {data.name.split(" ")[0]}!
                   </h1>
@@ -661,15 +687,15 @@ export default function OnboardingPage() {
                 </div>
 
                 {saveError && (
-                  <div className="mt-6 rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
-                    ⚠️ {saveError}
+                  <div className="mt-6 flex items-center gap-2 rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                    <AlertTriangle size={16} className="shrink-0" /> {saveError}
                   </div>
                 )}
 
                 {/* Tipe kepribadian belajar dari tes psikologi */}
                 <div className="mt-6 rounded-clay-md border-2 border-clay-secondary/40 bg-clay-secondary/5 p-5 text-center shadow-clay-sm">
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-clay-muted">
-                    🧠 Tipe Kepribadian Belajarmu
+                  <p className="flex items-center justify-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-clay-muted">
+                    <Brain size={14} className="text-clay-secondary" /> Tipe Kepribadian Belajarmu
                   </p>
                   <h2 className="mt-2 text-2xl font-extrabold text-clay-secondary">
                     {analysis?.psyLabel || DEFAULT_ANALYSIS.psyLabel}
@@ -681,8 +707,8 @@ export default function OnboardingPage() {
 
                 {/* Analisis pribadi dari AI */}
                 <div className="mt-6 rounded-clay-md border-2 border-clay-primary/30 bg-clay-primary/5 p-5 shadow-clay-sm">
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-clay-primary">
-                    📊 Hasil Analisis AI
+                  <p className="flex items-center justify-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-clay-primary">
+                    <BarChart3 size={14} /> Hasil Analisis AI
                   </p>
                   <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-dark">
                     {analysis?.learningStyle || DEFAULT_ANALYSIS.learningStyle}
@@ -690,27 +716,34 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="mt-6 flex flex-col gap-4">
-                  {(analysis?.recommendations ?? DEFAULT_ANALYSIS.recommendations).map((f) => (
-                    <div
-                      key={f.title}
-                      className="flex items-start gap-4 rounded-clay-md bg-clay-beige/70 p-5 shadow-clay-sm"
-                    >
-                      <span className="text-3xl">{f.icon}</span>
-                      <div>
-                        <h3 className="text-lg font-extrabold">{f.title}</h3>
-                        <p className="text-sm font-semibold text-clay-muted">
-                          {f.desc}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                  {(analysis?.recommendations ?? DEFAULT_ANALYSIS.recommendations).map(
+                    (f) => {
+                      const RecIcon = emojiToIcon(f.icon);
+                      return (
+                        <div
+                          key={f.title}
+                          className="flex items-start gap-4 rounded-clay-md bg-clay-beige/70 p-5 shadow-clay-sm"
+                        >
+                          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
+                            <RecIcon size={22} />
+                          </span>
+                          <div>
+                            <h3 className="text-lg font-extrabold">{f.title}</h3>
+                            <p className="text-sm font-semibold text-clay-muted">
+                              {f.desc}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+                  )}
                 </div>
 
                 {(analysis?.studyTips ?? DEFAULT_ANALYSIS.studyTips).length >
                   0 && (
                   <div className="mt-6 rounded-clay-md bg-clay-inputBg p-5 shadow-clay-inset">
-                    <p className="text-xs font-extrabold uppercase tracking-widest text-clay-muted">
-                      💡 Tips Belajarmu
+                    <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-clay-muted">
+                      <Lightbulb size={14} className="text-clay-secondary" /> Tips Belajarmu
                     </p>
                     <ul className="mt-2 space-y-2">
                       {(analysis?.studyTips ?? DEFAULT_ANALYSIS.studyTips).map(
@@ -745,7 +778,7 @@ export default function OnboardingPage() {
 
                 <div className="mt-6 flex flex-col gap-4">
                   <ButtonClay fullWidth onClick={() => choosePlan("pro")}>
-                    👑 Mulai Pro Sekarang
+                    <Crown size={18} className="mr-2" /> Mulai Pro Sekarang
                   </ButtonClay>
                   <ButtonClay
                     fullWidth

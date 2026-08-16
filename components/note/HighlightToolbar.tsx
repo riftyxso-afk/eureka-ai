@@ -105,7 +105,7 @@ export default function HighlightToolbar({
     })
       .then((res) => (res.ok ? onSaved?.() : undefined))
       .catch(() => {});
-    notify?.(`Diberi stabilo ${COLORS.find((c) => c.key === color)?.label}. ✨`);
+    notify?.(`Diberi stabilo ${COLORS.find((c) => c.key === color)?.label}.`);
     clear();
   };
 

@@ -151,7 +151,7 @@ export async function GET(
             encoder.encode(
               `event: error\ndata: ${JSON.stringify({
                 error:
-                  "Kamu sudah membuat 5 dokumen dalam 1 jam. Tunggu sebentar lalu coba lagi ya 🙏",
+                  "Kamu sudah membuat 5 dokumen dalam 1 jam. Tunggu sebentar lalu coba lagi ya.",
               })}\n\n`
             )
           );
@@ -164,7 +164,7 @@ export async function GET(
             encoder.encode(
               `event: error\ndata: ${JSON.stringify({
                 error:
-                  "Server sedang sibuk. Coba lagi dalam beberapa menit ya 🙏",
+                  "Server sedang sibuk. Coba lagi dalam beberapa menit ya.",
               })}\n\n`
             )
           );

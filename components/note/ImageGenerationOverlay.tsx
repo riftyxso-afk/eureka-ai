@@ -101,7 +101,7 @@ export function ImageGenerationOverlay({
   const generate = async (setAsPreparing: boolean) => {
     const userId = getUserId();
     if (!userId) {
-      setError("Login dulu untuk membuat gambar ya 🙏");
+      setError("Login dulu untuk membuat gambar ya.");
       setPhase("error");
       return;
     }
@@ -219,9 +219,9 @@ export function ImageGenerationOverlay({
                 <div className="min-w-0 text-left">
                   <h2 className="truncate text-sm font-extrabold text-white sm:text-base">
                     {phase === "done"
-                      ? "Gambarmu siap! 🎨"
+                      ? "Gambarmu siap!"
                       : phase === "error"
-                        ? "Ups, gagal 😢"
+                        ? "Ups, gagal"
                         : "Eureka Draw"}
                   </h2>
                   <p className="truncate text-[11px] font-bold text-white/60">
@@ -305,7 +305,7 @@ export function ImageGenerationOverlay({
                     })}
                   </div>
                   <p className="text-[11px] font-bold text-white/50">
-                    ±10-20 detik — kamu boleh tetap di halaman ini ya 😊
+                    ±10-20 detik — kamu boleh tetap di halaman ini ya
                   </p>
                 </div>
               ) : phase === "error" ? (

@@ -129,6 +129,7 @@ export async function listNotes(userId?: string): Promise<Note[]> {
       noteType: n.note_type ?? 'rangkuman',
       createdAt: n.created_at,
       updatedAt: n.updated_at,
+      pinned: n.pinned === true,
       chunks: [],
     }));
   } catch (error) {
@@ -142,7 +143,7 @@ export async function listNotes(userId?: string): Promise<Note[]> {
  */
 export async function updateNote(
   noteId: string,
-  patch: Partial<Pick<Note, "title" | "summary">>
+  patch: Partial<Pick<Note, "title" | "summary" | "pinned">>
 ): Promise<Note | null> {
   try {
     const { data, error } = await db()
@@ -199,6 +200,7 @@ export async function getNoteWithChunks(
         chapters: note.chapters ?? [],
         createdAt: note.created_at,
         updatedAt: note.updated_at,
+        pinned: note.pinned === true,
         chunks: chunks ?? [],
       } as Note,
       chunks: chunks ?? [],

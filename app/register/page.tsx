@@ -9,6 +9,7 @@ import {
   KeyRound,
   Loader2,
   Mail,
+  Rocket,
   User,
 } from "lucide-react";
 
@@ -218,8 +219,9 @@ export default function RegisterPage() {
         </Link>
 
         <CardClay className="!p-8 sm:!p-10">
-          <h1 className="text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
-            Daftar Gratis Sekarang 🚀
+          <h1 className="flex items-center justify-center gap-2 text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
+            Daftar Gratis Sekarang
+            <Rocket size={26} className="shrink-0 text-clay-secondary" />
           </h1>
           <p className="mt-2 text-center text-base font-semibold text-clay-muted">
             {step === "form"

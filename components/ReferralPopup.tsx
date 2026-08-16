@@ -77,9 +77,9 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
     if (!status) return;
     try {
       await navigator.clipboard.writeText(status.link);
-      setToast("Link referral disalin! 📋");
+      setToast("Link referral disalin!");
     } catch {
-      setToast("Gagal menyalin link 🙏");
+      setToast("Gagal menyalin link");
     }
   };
 
@@ -115,13 +115,13 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
         error?: string;
       } | null;
       if (!res.ok || !data?.ok) {
-        setToast(data?.error ?? "Gagal klaim reward 🙏");
+        setToast(data?.error ?? "Gagal klaim reward");
         return;
       }
-      setToast("🎉 Premium 30 hari berhasil diklaim!");
+      setToast("Premium 30 hari berhasil diklaim!");
       await load();
     } catch {
-      setToast("Gagal klaim reward 🙏");
+      setToast("Gagal klaim reward");
     } finally {
       setClaiming(false);
     }
@@ -154,11 +154,18 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
             {/* Header */}
             <div className="relative bg-gradient-to-br from-clay-primary via-clay-secondary to-amber-500 px-6 pb-7 pt-6 text-center">
               <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <span className="absolute left-4 top-3 text-2xl opacity-40">🎁</span>
-                <span className="absolute right-5 top-5 text-xl opacity-40">✨</span>
-                <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xl opacity-40">
-                  💜
-                </span>
+                <Gift
+                  size={22}
+                  className="absolute left-4 top-3 opacity-40"
+                />
+                <Sparkles
+                  size={20}
+                  className="absolute right-5 top-5 opacity-40"
+                />
+                <Sparkles
+                  size={20}
+                  className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-40"
+                />
               </div>
               <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/20 ring-4 ring-white/30">
                 <Gift size={26} className="text-white" />
@@ -198,7 +205,7 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
               ) : rewarded ? (
                 <div className="mt-4 flex items-center gap-2 rounded-clay-md border-2 border-clay-success/40 bg-clay-success/10 px-4 py-3 text-sm font-extrabold text-clay-success">
                   <CheckCircle2 size={18} className="shrink-0" />
-                  🎉 Premium 30 hari sudah aktif — terima kasih sudah mengajak
+                  Premium 30 hari sudah aktif — terima kasih sudah mengajak
                   teman!
                 </div>
               ) : canClaim ? (

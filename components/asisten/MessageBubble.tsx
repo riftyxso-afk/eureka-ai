@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Copy, RefreshCw } from "lucide-react";
+import { Check, Copy, RefreshCw, Zap } from "lucide-react";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
 import { copyText } from "@/lib/assistant/clipboard";
@@ -177,7 +177,8 @@ export default function MessageBubble({
         {/* Lama AI menjawab — hanya saat jawaban sudah lengkap */}
         {!isStreaming && !empty && duration !== null && duration >= 0 && (
           <span className="self-start pl-1 text-[10px] font-bold text-clay-muted/70">
-            ⚡ AI menjawab dalam {formatDuration(duration)}
+            <Zap size={13} className="-mt-0.5 mr-1 inline text-clay-primary" />
+            AI menjawab dalam {formatDuration(duration)}
           </span>
         )}
 

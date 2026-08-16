@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
   const rl = checkRateLimit(`img:${auth.userId}`, 8, 60_000);
   if (!rl.ok) {
     return Response.json(
-      { error: "Terlalu banyak permintaan. Tunggu sebentar ya 🙏" },
+      { error: "Terlalu banyak permintaan. Tunggu sebentar ya." },
       { status: 429 }
     );
   }
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     const dataUrl = await generateAiIllustration(illustrationPrompt);
     if (!dataUrl) {
       return Response.json(
-        { error: "Gagal membuat gambar. Coba lagi beberapa saat lagi 🙏" },
+        { error: "Gagal membuat gambar. Coba lagi beberapa saat lagi." },
         { status: 502 }
       );
     }

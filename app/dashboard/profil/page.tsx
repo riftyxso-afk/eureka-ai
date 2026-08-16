@@ -11,6 +11,7 @@ import {
   GraduationCap,
   LogOut,
   Mail,
+  PartyPopper,
   School,
   Share2,
   Trash2,
@@ -22,7 +23,7 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { getUserId, getUserName, setUserName } from "@/lib/identity";
-import { logoutUser } from "@/lib/auth";
+import { logoutUser, updateSessionName } from "@/lib/auth";
 import { fileToAvatarDataUrl, getAvatar, setAvatar } from "@/lib/avatar";
 import { PlanBadge } from "@/components/PlanBadge";
 
@@ -161,15 +162,16 @@ export default function ProfilPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      showToast("Nama tidak boleh kosong! ⚠️");
+      showToast("Nama tidak boleh kosong!");
       return;
     }
     const cleanUsername = form.username.trim().toLowerCase().replace(/^@+/, "");
     if (cleanUsername && !/^[a-z0-9_]{3,20}$/.test(cleanUsername)) {
-      showToast("Username hanya huruf kecil, angka, dan _ (3–20). ⚠️");
+      showToast("Username hanya huruf kecil, angka, dan _ (3–20).");
       return;
     }
     setUserName(form.name);
+    updateSessionName(form.name);
     update({ name: form.name.trim(), grade: form.grade });
     try {
       window.localStorage.setItem(SCHOOL_KEY, form.school.trim());
@@ -193,17 +195,17 @@ export default function ProfilPage() {
       });
       const payload = await res.json();
       if (!res.ok) {
-        showToast(payload?.error ?? "Gagal menyimpan profil. ⚠️");
+        showToast(payload?.error ?? "Gagal menyimpan profil.");
         return;
       }
       if (payload?.user?.userNumber != null) {
         setUserNumber(Number(payload.user.userNumber));
       }
     } catch {
-      showToast("Gagal menyimpan profil. ⚠️");
+      showToast("Gagal menyimpan profil.");
       return;
     }
-    showToast("Profil berhasil disimpan! ✅");
+    showToast("Profil berhasil disimpan!");
   };
 
   const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,16 +213,16 @@ export default function ProfilPage() {
     e.target.value = "";
     if (!file) return;
     if (file.size > 4 * 1024 * 1024) {
-      showToast("Foto maksimal 4 MB. ⚠️");
+      showToast("Foto maksimal 4 MB.");
       return;
     }
     try {
       const dataUrl = await fileToAvatarDataUrl(file);
       setAvatar(dataUrl);
       setAvatarState(dataUrl);
-      showToast("Foto profil diubah! ✅ Simpan untuk mengunci.");
+      showToast("Foto profil diubah! Simpan untuk mengunci.");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal memuat foto. ⚠️");
+      showToast(err instanceof Error ? err.message : "Gagal memuat foto.");
     }
   };
 
@@ -234,7 +236,7 @@ export default function ProfilPage() {
     if (!refStatus?.link) return;
     try {
       await navigator.clipboard.writeText(refStatus.link);
-      showToast("Link referral disalin! 📋");
+      showToast("Link referral disalin!");
     } catch {
       showToast("Gagal menyalin. Salin manual dari kotak di bawah.");
     }
@@ -288,7 +290,7 @@ export default function ProfilPage() {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span>🧑‍🎓</span>
+              <GraduationCap size={44} className="text-clay-primary" />
             )}
           </div>
           <button
@@ -358,8 +360,8 @@ export default function ProfilPage() {
               Program Referral
             </h2>
             {refStatus.rewarded ? (
-              <span className="rounded-clay-full bg-clay-success/15 px-4 py-1.5 text-xs font-extrabold text-clay-success">
-                🎉 Reward Premium sudah kamu dapatkan!
+              <span className="flex items-center gap-1.5 rounded-clay-full bg-clay-success/15 px-4 py-1.5 text-xs font-extrabold text-clay-success">
+                <PartyPopper size={14} /> Reward Premium sudah kamu dapatkan!
               </span>
             ) : (
               <span className="rounded-clay-full bg-clay-primary/10 px-4 py-1.5 text-xs font-extrabold text-clay-primary">
@@ -402,7 +404,7 @@ export default function ProfilPage() {
               </span>
               <span>
                 {refStatus.count >= refStatus.goal
-                  ? "Siap! Cek status premium kamu 🎉"
+                  ? "Siap! Cek status premium kamu"
                   : `Kurang ${Math.max(refStatus.goal - refStatus.count, 0)} lagi`}
               </span>
             </div>

@@ -89,7 +89,7 @@ export default function FeedbackSurveyModal({
       >
         <div className="mb-3 sm:mb-4 flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-extrabold text-clay-dark">
-            Bagaimana pengalamanmu dengan Eureka? 💚
+            Bagaimana pengalamanmu dengan Eureka?
           </h2>
           <button
             onClick={handleDismiss}
@@ -105,7 +105,7 @@ export default function FeedbackSurveyModal({
           <div className="space-y-3 py-6 text-center">
             <Heart size={40} className="mx-auto text-clay-primary" />
             <p className="text-sm font-extrabold text-clay-dark">
-              Terima kasih atas masukannya! 💚
+              Terima kasih atas masukannya!
             </p>
           </div>
         ) : (
@@ -171,7 +171,7 @@ export default function FeedbackSurveyModal({
               ) : rating === 0 ? (
                 "Pilih rating dulu ya!"
               ) : (
-                "Kirim Masukan 💚"
+                "Kirim Masukan"
               )}
             </button>
 

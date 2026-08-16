@@ -170,7 +170,7 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-            <p className="text-sm">Hai! Aku {template.name} 👋</p>
+            <p className="text-sm">Hai! Aku {template.name}</p>
             <p className="text-xs mt-2">Tanya aku apa saja tentang pelajaranmu!</p>
           </div>
         ) : (

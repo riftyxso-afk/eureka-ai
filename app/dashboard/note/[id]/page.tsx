@@ -10,11 +10,11 @@ import {
   BookOpen,
   Calendar,
   CheckCircle2,
+  BookOpenCheck,
   ClipboardCheck,
   FileQuestion,
   FileText,
   History,
-  ImagePlus,
   Layers,
   Map,
   MessageCircleQuestion,
@@ -34,7 +34,6 @@ import VersionModal from "@/components/note/VersionModal";
 import EditNoteModal from "@/components/note/EditNoteModal";
 import QuizModal from "@/components/note/QuizModal";
 import FlashcardModal from "@/components/note/FlashcardModal";
-import AddImageModal from "@/components/note/AddImageModal";
 import HighlightToolbar from "@/components/note/HighlightToolbar";
 import { NoteTOC } from "@/components/note/NoteTOC";
 import { NoteContent } from "@/components/note/NoteContent";
@@ -44,6 +43,7 @@ import { useRegenerateJob } from "@/lib/useRegenerateJob";
 import type { HighlightEntry } from "@/lib/highlights-store";
 import type { NoteImage } from "@/lib/note-images-store";
 import { getUserId, getUserName } from "@/lib/identity";
+import { emojiToIcon } from "@/lib/emojiIcon";
 
 interface Chapter {
   id: number;
@@ -91,6 +91,7 @@ function formatDate(iso: string): string {
 const ACTION_BUTTONS = [
   { icon: Layers, label: "Flashcards" },
   { icon: ClipboardCheck, label: "Kuis" },
+  { icon: BookOpenCheck, label: "Uji Pemahaman" },
   { icon: Map, label: "Mind Map" },
   { icon: FileText, label: "Dokumen" },
   { icon: Share2, label: "Bagikan" },
@@ -187,7 +188,6 @@ export default function NoteDetailPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
-  const [showAddImage, setShowAddImage] = useState(false);
   const [showPdfWorkflow, setShowPdfWorkflow] = useState(false);
   const [highlights, setHighlights] = useState<HighlightEntry[]>([]);
   const [images, setImages] = useState<NoteImage[]>([]);
@@ -271,7 +271,7 @@ export default function NoteDetailPage() {
       loadNote();
       setRegenNote(false);
       setConfirmRegen(false);
-      notify("Catatan berhasil ditulis ulang! ✨");
+      notify("Catatan berhasil ditulis ulang!");
     } else if (regenNote && regen.error) {
       setRegenNote(false);
       setConfirmRegen(false);
@@ -341,7 +341,7 @@ export default function NoteDetailPage() {
   };
 
   const generateAiHighlights = async () => {
-    notify("AI sedang menstabilo catatanmu... ✨");
+    notify("AI sedang menstabilo catatanmu...");
     try {
       const res = await apiFetch(`/api/notes/${params.id}/highlights/generate`, {
         method: "POST",
@@ -350,7 +350,7 @@ export default function NoteDetailPage() {
       if (!res.ok) throw new Error(data.error ?? "Gagal membuat stabilo AI.");
       notify(
         data.count > 0
-          ? `Stabilo AI diterapkan (${data.count} bagian)! ✨`
+          ? `Stabilo AI diterapkan (${data.count} bagian)!`
           : "Tidak ada bagian baru yang layak distabilo."
       );
       refreshHighlights();
@@ -383,7 +383,7 @@ export default function NoteDetailPage() {
     } catch {
       // abaikan
     }
-    notify(next ? "Disimpan ke bookmark! 🔖" : "Bookmark dihapus");
+    notify(next ? "Disimpan ke bookmark!" : "Bookmark dihapus");
   };
 
   // Bergabung via link undangan (?invite=TOKEN)
@@ -398,7 +398,7 @@ export default function NoteDetailPage() {
           body: JSON.stringify({ action: "join", token }),
         });
         if (res.ok) {
-          notify("Kamu bergabung sebagai kolaborator! 🎉");
+          notify("Kamu bergabung sebagai kolaborator!");
           router.replace(`/dashboard/note/${params.id}`);
         }
       } catch {
@@ -539,6 +539,10 @@ export default function NoteDetailPage() {
       setShowQuiz(true);
       return;
     }
+    if (label === "Uji Pemahaman") {
+      router.push(`/dashboard/note/${data.id}/uji-pemahaman`);
+      return;
+    }
     if (label === "Flashcards") {
       setShowFlashcards(true);
       return;
@@ -628,7 +632,7 @@ export default function NoteDetailPage() {
           </button>
           <button
             onClick={() =>
-              notify("Panggilan suara & video call segera hadir! 🚧")
+              notify("Panggilan suara & video call segera hadir!")
             }
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
@@ -742,13 +746,6 @@ export default function NoteDetailPage() {
               <Sparkles size={16} className="mr-2 text-clay-primary" />
               <span className="font-extrabold">Stabilo AI</span>
             </button>
-            <button
-              onClick={() => setShowAddImage(true)}
-              className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
-            >
-              <ImagePlus size={16} className="mr-2" />
-              <span className="font-extrabold">Gambar</span>
-            </button>
             {highlights.length > 0 && (
               <span className="shrink-0 text-xs font-bold text-clay-muted">
                 {highlights.length} bagian distabilo
@@ -847,7 +844,12 @@ export default function NoteDetailPage() {
             {data.noteType && NOTE_TYPE_BADGES[data.noteType] && (
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-clay-full bg-clay-primary/10 px-2.5 py-0.5 text-xs font-extrabold text-clay-primary">
-                  {NOTE_TYPE_BADGES[data.noteType].icon}{" "}
+                  {(() => {
+                    const TypeIcon = emojiToIcon(
+                      NOTE_TYPE_BADGES[data.noteType].icon
+                    );
+                    return <TypeIcon size={13} />;
+                  })()}
                   {NOTE_TYPE_BADGES[data.noteType].label}
                 </span>
               </div>
@@ -913,23 +915,6 @@ export default function NoteDetailPage() {
           onClose={() => setShowFlashcards(false)}
         />
       )}
-      {showAddImage && (
-        <AddImageModal
-          noteId={data.id}
-          chapters={chapters}
-          onClose={() => setShowAddImage(false)}
-          onAdded={() => {
-            notify("Gambar ditambahkan! 🖼️");
-            apiFetch(`/api/notes/${params.id}/images`)
-              .then((r) => (r.ok ? r.json() : null))
-              .then((d) => {
-                if (d) setImages(d.images ?? []);
-              })
-              .catch(() => {});
-          }}
-        />
-      )}
-
       {/* Konfirmasi tulis ulang seluruh catatan */}
       {confirmRegen && (
         <div
@@ -941,7 +926,7 @@ export default function NoteDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-extrabold text-clay-dark">
-              Tulis ulang seluruh catatan? ✨
+              Tulis ulang seluruh catatan?
             </h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-muted">
               AI akan menulis ulang semua bab dari{" "}

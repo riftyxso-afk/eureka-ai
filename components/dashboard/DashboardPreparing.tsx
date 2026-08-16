@@ -62,7 +62,7 @@ export function DashboardPreparing() {
         </div>
 
         <p className="mt-3 text-xs font-bold text-clay-muted">
-          Sebentar lagi, semuanya siap ✨
+          Sebentar lagi, semuanya siap
         </p>
       </motion.div>
     </motion.div>

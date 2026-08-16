@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, ExternalLink, Globe } from "lucide-react";
+import { emojiToIcon } from "@/lib/emojiIcon";
 import type { WebSearchItem, WebSearchStage } from "@/lib/assistant/types";
 
 /** Favicon dari Google (gratis, tanpa API key) — fallback ke ikon globe. */
@@ -132,7 +133,11 @@ export default function WebSearchPipeline({
                         : "text-clay-muted"
                   }`}
                 >
-                  {step.icon} {step.label}
+                  {(() => {
+                    const StepIcon = emojiToIcon(step.icon);
+                    return <StepIcon size={13} className="mr-1 inline" />;
+                  })()}
+                  {step.label}
                 </span>
                 {isActive && (
                   <span className="hidden text-[11px] font-bold text-clay-muted sm:inline">

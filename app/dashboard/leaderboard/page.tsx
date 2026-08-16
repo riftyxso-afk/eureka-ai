@@ -98,8 +98,8 @@ export default function LeaderboardPage() {
         <div className="mt-6 rounded-clay border-3 border-clay-primary bg-clay-primary/5 p-5 shadow-clay">
           <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl shadow-clay-inset">
-                {currentUser.avatar}
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-lg font-extrabold text-clay-primary shadow-clay-inset">
+                {currentUser.avatar || currentUser.name.charAt(0).toUpperCase()}
               </span>
               <div className="min-w-0">
                 <p className="truncate text-base font-extrabold text-clay-dark">
@@ -128,7 +128,7 @@ export default function LeaderboardPage() {
           </p>
         ) : displayEntries.length === 0 ? (
           <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
-            Belum ada teman di leaderboard. Tambahkan teman di tab Teman! 👋
+            Belum ada teman di leaderboard. Tambahkan teman di tab Teman!
           </p>
         ) : (
           displayEntries.map((entry) => {
@@ -147,8 +147,8 @@ export default function LeaderboardPage() {
                   <span className="flex w-8 shrink-0 items-center justify-center text-lg font-extrabold text-clay-dark">
                     {entry.rank}
                   </span>
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-clay-beige text-xl shadow-clay-inset">
-                    {entry.avatar}
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-clay-beige text-base font-extrabold text-clay-primary shadow-clay-inset">
+                    {entry.avatar || entry.name.charAt(0).toUpperCase()}
                   </span>
                   <p className="truncate text-base font-bold text-clay-dark">
                     {entry.name}

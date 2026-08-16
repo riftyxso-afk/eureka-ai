@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Loader2 } from "lucide-react";
+import { Check, Lightbulb, Loader2 } from "lucide-react";
 
 import type { QuizQuestion } from "@/lib/quizLiveClient";
 
@@ -34,7 +34,7 @@ export default function QuizTake({
       <div className="flex items-center justify-between">
         <div className="text-sm font-extrabold text-clay-dark">
           {submitted
-            ? `Skor: ${score}/${questions.length} 🎯`
+            ? `Skor: ${score}/${questions.length}`
             : `${answeredCount}/${questions.length} soal dijawab`}
         </div>
         {busy && (
@@ -92,8 +92,9 @@ export default function QuizTake({
               })}
             </div>
             {submitted && q.explanation && (
-              <p className="mt-2 rounded-xl bg-clay-beige px-3 py-2 text-xs font-medium text-clay-dark leading-relaxed">
-                💡 {q.explanation}
+              <p className="mt-2 flex items-start gap-2 rounded-xl bg-clay-beige px-3 py-2 text-xs font-medium text-clay-dark leading-relaxed">
+                <Lightbulb size={14} className="mt-0.5 shrink-0 text-clay-secondary" />
+                <span>{q.explanation}</span>
               </p>
             )}
           </div>
@@ -104,7 +105,7 @@ export default function QuizTake({
         <button
           onClick={() => {
             if (answeredCount < questions.length) {
-              notify("Jawab semua soal dulu ya! ⚠️");
+              notify("Jawab semua soal dulu ya!");
               return;
             }
             onSubmit();

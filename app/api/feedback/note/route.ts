@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     if (error) {
       if (isUniqueViolation(error)) {
         return NextResponse.json(
-          { error: "Survey sudah pernah diisi. Terima kasih! 💚" },
+          { error: "Survey sudah pernah diisi. Terima kasih!" },
           { status: 409 }
         );
       }

@@ -61,7 +61,7 @@ export default function UjianPage() {
 
   const handleAdd = async () => {
     if (!form.title.trim() || !form.date) {
-      notify("Isi nama ujian dan tanggalnya! ⚠️");
+      notify("Isi nama ujian dan tanggalnya!");
       return;
     }
     try {
@@ -81,7 +81,7 @@ export default function UjianPage() {
       if (!res.ok) throw new Error(payload.error ?? "Gagal menambah ujian.");
       setForm({ subject: "", title: "", date: "" });
       setShowForm(false);
-      notify("Ujian ditambahkan! ✅");
+      notify("Ujian ditambahkan!");
       loadExams();
     } catch (e) {
       notify(e instanceof Error ? e.message : "Gagal menambah ujian.");

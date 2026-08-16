@@ -15,10 +15,12 @@ import {
   Loader2,
   Music,
   PartyPopper,
+  Plus,
   RotateCcw,
   ServerOff,
   Square,
   SquarePlay,
+  Trash2,
   Upload,
   Video,
   X,
@@ -30,6 +32,7 @@ import InputClay from "@/components/ui/InputClay";
 import type { Note } from "@/lib/types";
 import type { Subject } from "@/lib/subjects";
 import { getUserId } from "@/lib/identity";
+import { emojiToIcon } from "@/lib/emojiIcon";
 import { playCompletionSound } from "@/lib/notifySound";
 import { ensurePushSetup } from "@/lib/push";
 import { addActiveJobId, removeActiveJobId } from "@/context/JobWatcherContext";
@@ -90,6 +93,29 @@ const SOURCES: SourceOption[] = [
     comingSoon: true,
   },
 ];
+
+/** Satu baris sumber yang dipilih user (maks 5). */
+interface SourceEntry {
+  id: string;
+  type: string;
+  file?: File | null;
+  link?: string;
+  soalText?: string;
+}
+
+const MAX_SOURCES = 5;
+
+function sourceLabel(type: string): string {
+  return SOURCES.find((s) => s.id === type)?.label ?? type;
+}
+
+function sourcePlaceholder(type: string): string {
+  return SOURCES.find((s) => s.id === type)?.placeholder ?? "";
+}
+
+function sourceAccept(type: string): string | undefined {
+  return SOURCES.find((s) => s.id === type)?.accept;
+}
 
 const STUDY_MODES = [
   { value: "ringkas", label: "Ringkas", desc: "Poin penting saja" },
@@ -168,35 +194,35 @@ const SUBJECT_COLORS = [
 ];
 
 const PROCESS_STEPS = [
-  "🧠 Menganalisis materi kamu...",
-  "📄 Mengekstrak konten teks...",
-  "✂️ Memecah menjadi potongan kecil...",
-  "🧲 Mengubah menjadi vektor (embedding)...",
-  "📦 Menyimpan ke knowledge base...",
+  "Menganalisis materi kamu...",
+  "Mengekstrak konten teks...",
+  "Memecah menjadi potongan kecil...",
+  "Mengubah menjadi vektor (embedding)...",
+  "Menyimpan ke knowledge base...",
 ];
 
 const PROCESS_STEPS_YOUTUBE = [
-  "🎬 Mengambil subtitle video...",
-  "✨ Merangkum subtitle dengan AI...",
-  "✂️ Memecah menjadi potongan kecil...",
-  "🧲 Mengubah menjadi vektor (embedding)...",
-  "📦 Menyimpan ke knowledge base...",
+  "Mengambil subtitle video...",
+  "Merangkum subtitle dengan AI...",
+  "Memecah menjadi potongan kecil...",
+  "Mengubah menjadi vektor (embedding)...",
+  "Menyimpan ke knowledge base...",
 ];
 
 const PROCESS_STEPS_WEB = [
-  "🌐 Membaca halaman web...",
-  "🖼️ Mengumpulkan gambar halaman...",
-  "✍️ Menulis bab satu per satu dengan AI...",
-  "🧲 Mengubah menjadi vektor (embedding)...",
-  "📦 Menyimpan ke knowledge base...",
+  "Membaca halaman web...",
+  "Mengumpulkan gambar halaman...",
+  "Menulis bab satu per satu dengan AI...",
+  "Mengubah menjadi vektor (embedding)...",
+  "Menyimpan ke knowledge base...",
 ];
 
 const PROCESS_STEPS_SOAL = [
-  "📋 Membaca soal/tugas...",
-  "✍️ Menjawab setiap soal dengan AI...",
-  "✂️ Memecah jawaban menjadi potongan kecil...",
-  "🧲 Mengubah menjadi vektor (embedding)...",
-  "📦 Menyimpan ke knowledge base...",
+  "Membaca soal/tugas...",
+  "Menjawab setiap soal dengan AI...",
+  "Memecah jawaban menjadi potongan kecil...",
+  "Mengubah menjadi vektor (embedding)...",
+  "Menyimpan ke knowledge base...",
 ];
 
 // Batas unggah: platform serverless membatasi body request (~4.5MB).
@@ -237,10 +263,7 @@ export const CreateNoteModal = ({
   onCreate,
 }: CreateNoteModalProps) => {
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
-  const [selectedSource, setSelectedSource] = useState("dokumen");
-  const [file, setFile] = useState<File | null>(null);
-  const [link, setLink] = useState("");
-  const [soalText, setSoalText] = useState("");
+  const [sources, setSources] = useState<SourceEntry[]>([]);
   const [translateToIndo, setTranslateToIndo] = useState(false);
   const [mataPelajaran, setMataPelajaran] = useState("");
   const [studyMode, setStudyMode] = useState<"ringkas" | "standar" | "lengkap">(
@@ -267,7 +290,7 @@ export const CreateNoteModal = ({
   const [createdNote, setCreatedNote] = useState<Note | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [stoppingJob, setStoppingJob] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressPercentRef = useRef(0);
@@ -330,31 +353,30 @@ export const CreateNoteModal = ({
     }
   };
 
-  const current = SOURCES.find((s) => s.id === selectedSource)!;
-  const isLinkSource = selectedSource === "youtube" || selectedSource === "web";
-  const isSoalSource = selectedSource === "soal";
+  const isLinkSource = (type: string) => type === "youtube" || type === "web";
+  const isSoalSource = (type: string) => type === "soal";
   const processSteps =
-    selectedSource === "soal"
+    sources.some((s) => s.type === "soal")
       ? PROCESS_STEPS_SOAL
-      : selectedSource === "youtube"
+      : sources.some((s) => s.type === "youtube")
         ? PROCESS_STEPS_YOUTUBE
-        : selectedSource === "web"
+        : sources.some((s) => s.type === "web")
           ? PROCESS_STEPS_WEB
           : PROCESS_STEPS;
-  const canSubmit =
-    !processing &&
-    Boolean(mataPelajaran) &&
-    (isLinkSource
-      ? link.trim().length > 5
-      : isSoalSource
-        ? soalText.trim().length >= 10
-        : Boolean(file));
+  const sourcesValid =
+    sources.length > 0 &&
+    sources.every((s) =>
+      isLinkSource(s.type)
+        ? (s.link ?? "").trim().length > 5
+        : isSoalSource(s.type)
+          ? (s.soalText ?? "").trim().length >= 10
+          : Boolean(s.file)
+    );
+  const canSubmit = !processing && Boolean(mataPelajaran) && sourcesValid;
 
   const reset = () => {
     setStep(1);
-    setFile(null);
-    setLink("");
-    setSoalText("");
+    setSources([]);
     setTranslateToIndo(false);
     setMataPelajaran("");
     setStudyMode("standar");
@@ -437,19 +459,40 @@ export const CreateNoteModal = ({
     router.push(`/dashboard/note/${note.id}`);
   };
 
-  const pickSource = (id: string) => {
+  /** Tambah satu sumber baru ke daftar (maks 5) lalu lanjut ke langkah isi. */
+  const addSource = (id: string) => {
     const src = SOURCES.find((s) => s.id === id);
     if (src?.comingSoon) {
-      setError("Sumber ini belum tersedia. Segera hadir! ✨");
+      setError("Sumber ini belum tersedia. Segera hadir!");
+      return;
+    }
+    if (sources.length >= MAX_SOURCES) {
+      setError(`Maksimal ${MAX_SOURCES} sumber per catatan.`);
       return;
     }
     setError(null);
-    setSelectedSource(id);
-    setFile(null);
-    setLink("");
-    setSoalText("");
+    setSources((prev) => [
+      ...prev,
+      {
+        id: `${id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        type: id,
+        file: null,
+        link: "",
+        soalText: "",
+      },
+    ]);
     setTranslateToIndo(false);
     setStep(2);
+  };
+
+  const removeSource = (id: string) => {
+    setSources((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const updateSource = (id: string, patch: Partial<SourceEntry>) => {
+    setSources((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...patch } : s))
+    );
   };
 
   /**
@@ -515,7 +558,21 @@ export const CreateNoteModal = ({
     doneHandledRef.current = false;
 
     const form = new FormData();
-    form.append("sourceType", selectedSource);
+    // Metadata semua sumber; file dikirim sebagai file0, file1, … sesuai indeks.
+    form.append(
+      "sources",
+      JSON.stringify(
+        sources.map((s) => ({
+          type: s.type,
+          ...(isLinkSource(s.type)
+            ? { url: (s.link ?? "").trim() }
+            : {}),
+          ...(isSoalSource(s.type)
+            ? { soalText: (s.soalText ?? "").trim() }
+            : {}),
+        }))
+      )
+    );
     form.append("mataPelajaran", mataPelajaran);
     form.append("studyMode", studyMode);
     form.append("generationMode", generationMode);
@@ -524,13 +581,13 @@ export const CreateNoteModal = ({
     form.append("chapterCount", String(chapterCount));
     form.append("noteType", noteType);
     form.append("userId", getUserId());
-    if (isSoalSource) {
-      form.append("soalText", soalText.trim());
+    if (sources.some((s) => isSoalSource(s.type))) {
       form.append("assignment", "1");
     }
     if (translateToIndo) form.append("translate", "1");
-    if (isLinkSource) form.append("url", link.trim());
-    else if (file) form.append("file", file);
+    sources.forEach((s, i) => {
+      if (s.file) form.append(`file${i}`, s.file);
+    });
 
     // Session ID untuk progress stream SSE
     const sessionId =
@@ -729,7 +786,7 @@ export const CreateNoteModal = ({
                     <PartyPopper size={36} className="text-white sm:w-11 sm:h-11" />
                   </motion.div>
                   <h2 className="mt-4 sm:mt-6 text-xl sm:text-2xl font-extrabold px-2">
-                    Catatan berhasil dibuat! 🎉
+                    Catatan berhasil dibuat!
                   </h2>
                   <p className="mt-2 line-clamp-2 max-w-md text-sm sm:text-base font-semibold text-clay-muted px-4">
                     &quot;{createdNote.title}&quot; sudah masuk ke dashboard kamu dan siap
@@ -808,7 +865,7 @@ export const CreateNoteModal = ({
                     <div>
                       <h2 className="text-xl sm:text-2xl font-extrabold">Buat Catatan Baru</h2>
                       <p className="mt-1 sm:mt-2 text-sm sm:text-base font-semibold text-clay-muted">
-                        Pilih sumber materi kamu
+                        Pilih sumber materi — kamu bisa gabung sampai 5 sumber
                       </p>
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -829,7 +886,7 @@ export const CreateNoteModal = ({
                     {SOURCES.map((s) => (
                       <button
                         key={s.id}
-                        onClick={() => pickSource(s.id)}
+                        onClick={() => addSource(s.id)}
                         data-tutorial-id={`source-card-${s.id}`}
                         className={`relative card-clay flex flex-col items-start gap-2 border-clay-shadow/40 p-4 sm:p-5 text-left transition-all duration-75 hover:-translate-y-0.5 hover:border-clay-primary active:translate-y-1 min-h-[88px] ${
                           s.comingSoon ? "opacity-70" : ""
@@ -900,10 +957,10 @@ export const CreateNoteModal = ({
                           </option>
                           {subjects.map((s) => (
                             <option key={s.id} value={s.name}>
-                              {s.emoji} {s.name}
+                              {s.name}
                             </option>
                           ))}
-                          <option value="__add__">➕ Tambah mata pelajaran baru...</option>
+                          <option value="__add__">Tambah mata pelajaran baru...</option>
                         </select>
                         <ChevronDown
                           size={18}
@@ -942,8 +999,8 @@ export const CreateNoteModal = ({
                       )}
                     </div>
 
-                    {/* Terjemahkan (web/youtube/dokumen) */}
-                    {!isSoalSource && (
+                    {/* Terjemahkan (web/youtube/dokumen) — hanya bila ada sumber non-soal */}
+                    {sources.some((s) => !isSoalSource(s.type)) && (
                       <div>
                         <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
                           TERJEMAHKAN KE BAHASA INDONESIA
@@ -1070,62 +1127,122 @@ export const CreateNoteModal = ({
                       </div>
                     </div>
 
-                    {/* Sumber materi */}
+                    {/* Sumber materi — daftar (maks 5) */}
                     <div>
-                      <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
-                        SUMBER MATERI ({current.label})
-                      </label>
-                      {isSoalSource ? (
-                        <textarea
-                          value={soalText}
-                          onChange={(e) => setSoalText(e.target.value)}
-                          placeholder={current.placeholder}
-                          rows={8}
-                          className="w-full resize-y rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-3 py-3 text-sm sm:px-5 sm:py-4 sm:text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[120px]"
-                        />
-                      ) : isLinkSource ? (
-                        <InputClay
-                          placeholder={current.placeholder}
-                          value={link}
-                          onChange={(e) => setLink(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && canSubmit) setStep(3);
-                          }}
-                        />
-                      ) : (
-                        <>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <label className="block text-xs sm:text-sm font-extrabold text-clay-dark">
+                          SUMBER MATERI ({sources.length}/{MAX_SOURCES})
+                        </label>
+                        {sources.length < MAX_SOURCES && (
                           <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className={`flex w-full items-center justify-center gap-3 rounded-clay-md border-3 border-dashed px-4 py-8 sm:px-5 sm:py-6 text-sm sm:text-base font-extrabold transition-all duration-75 active:translate-y-1 min-h-[88px] ${
-                              file
-                                ? "border-clay-primary bg-clay-primary/10 text-clay-primary"
-                                : "border-clay-shadow/60 text-clay-muted hover:border-clay-primary"
-                            }`}
+                            type="button"
+                            onClick={() => setStep(1)}
+                            className="flex items-center gap-1 rounded-clay-full border-2 border-clay-primary/40 bg-clay-primary/10 px-3 py-1 text-xs font-extrabold text-clay-primary transition-colors hover:bg-clay-primary/20"
                           >
-                            <Upload size={20} className="sm:block hidden" />
-                            <Upload size={24} className="sm:hidden block" />
-                            <span className="text-center">{file ? file.name : `Pilih file ${current.label}...`}</span>
+                            <Plus size={14} /> Tambah Sumber
                           </button>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept={current.accept}
-                            className="hidden"
-                            onChange={(e) => {
-                              const picked = e.target.files?.[0] ?? null;
-                              if (picked && picked.size > MAX_UPLOAD_BYTES) {
-                                setFile(null);
-                                setError(
-                                  `File terlalu besar (${formatBytes(picked.size)}). Maksimal ${formatBytes(MAX_UPLOAD_BYTES)} — unggah versi ringkas atau gunakan link YouTube/Web.`
-                                );
-                                e.target.value = "";
-                                return;
-                              }
-                              setFile(picked);
-                              setError(null);
-                            }}
-                          />
-                        </>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        {sources.map((src, idx) => {
+                          const srcLabel = sourceLabel(src.type);
+                          return (
+                            <div
+                              key={src.id}
+                              className="rounded-clay-md border-3 border-clay-shadow/40 bg-white p-3 sm:p-4"
+                            >
+                              <div className="mb-2 flex items-center justify-between gap-2">
+                                <span className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-clay-dark">
+                                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset text-[11px]">
+                                    {idx + 1}
+                                  </span>
+                                  {srcLabel}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeSource(src.id)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full text-clay-muted transition-colors hover:bg-red-50 hover:text-red-500"
+                                  aria-label={`Hapus ${srcLabel}`}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+
+                              {isSoalSource(src.type) ? (
+                                <textarea
+                                  value={src.soalText ?? ""}
+                                  onChange={(e) =>
+                                    updateSource(src.id, { soalText: e.target.value })
+                                  }
+                                  placeholder={sourcePlaceholder(src.type)}
+                                  rows={6}
+                                  className="w-full resize-y rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-3 py-3 text-sm sm:px-4 sm:text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[100px]"
+                                />
+                              ) : isLinkSource(src.type) ? (
+                                <InputClay
+                                  placeholder={sourcePlaceholder(src.type)}
+                                  value={src.link ?? ""}
+                                  onChange={(e) =>
+                                    updateSource(src.id, { link: e.target.value })
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && canSubmit) setStep(3);
+                                  }}
+                                />
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => fileInputRefs.current[idx]?.click()}
+                                    className={`flex w-full items-center justify-center gap-3 rounded-clay-md border-3 border-dashed px-4 py-5 sm:px-5 text-sm sm:text-base font-extrabold transition-all duration-75 active:translate-y-1 min-h-[64px] ${
+                                      src.file
+                                        ? "border-clay-primary bg-clay-primary/10 text-clay-primary"
+                                        : "border-clay-shadow/60 text-clay-muted hover:border-clay-primary"
+                                    }`}
+                                  >
+                                    <Upload size={20} className="sm:block hidden" />
+                                    <Upload size={24} className="sm:hidden block" />
+                                    <span className="text-center">
+                                      {src.file ? src.file.name : `Pilih file ${srcLabel}...`}
+                                    </span>
+                                  </button>
+                                  <input
+                                    ref={(el) => {
+                                      fileInputRefs.current[idx] = el;
+                                    }}
+                                    type="file"
+                                    accept={sourceAccept(src.type)}
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const picked = e.target.files?.[0] ?? null;
+                                      if (picked && picked.size > MAX_UPLOAD_BYTES) {
+                                        updateSource(src.id, { file: null });
+                                        setError(
+                                          `File terlalu besar (${formatBytes(picked.size)}). Maksimal ${formatBytes(MAX_UPLOAD_BYTES)} — unggah versi ringkas atau gunakan link YouTube/Web.`
+                                        );
+                                        e.target.value = "";
+                                        return;
+                                      }
+                                      updateSource(src.id, { file: picked });
+                                      setError(null);
+                                    }}
+                                  />
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {sources.length === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setStep(1)}
+                          className="flex w-full items-center justify-center gap-2 rounded-clay-md border-3 border-dashed border-clay-shadow/60 px-4 py-6 text-sm sm:text-base font-extrabold text-clay-muted transition-all duration-75 hover:border-clay-primary hover:text-clay-primary"
+                        >
+                          <Plus size={18} /> Pilih sumber materi
+                        </button>
                       )}
                     </div>
 
@@ -1185,6 +1302,7 @@ export const CreateNoteModal = ({
                   <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
                     {NOTE_TYPES.map((nt) => {
                       const active = noteType === nt.value;
+                      const TypeIcon = emojiToIcon(nt.icon);
                       return (
                         <button
                           key={nt.value}
@@ -1198,7 +1316,9 @@ export const CreateNoteModal = ({
                           }`}
                         >
                           <div className="flex items-start gap-3 sm:gap-4">
-                            <span className="text-2xl sm:text-3xl leading-none">{nt.icon}</span>
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-clay-primary">
+                              <TypeIcon size={20} />
+                            </span>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-base sm:text-lg font-extrabold">
@@ -1348,6 +1468,7 @@ export const CreateNoteModal = ({
                   <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
                     {GENERATION_MODES.map((mode) => {
                       const active = generationMode === mode.value;
+                      const ModeIcon = emojiToIcon(mode.icon);
                       return (
                         <button
                           key={mode.value}
@@ -1371,7 +1492,9 @@ export const CreateNoteModal = ({
                           }`}
                         >
                           <div className="flex items-start gap-3 sm:gap-4">
-                            <span className="text-2xl sm:text-3xl leading-none">{mode.icon}</span>
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-clay-primary">
+                              <ModeIcon size={20} />
+                            </span>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-base sm:text-lg font-extrabold">

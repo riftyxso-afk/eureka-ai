@@ -277,3 +277,150 @@
 .k-input::placeholder {
   color: #b9b6c7;
 }
+
+/* ────────────────────────────────────────────────────────────
+   MODE GELAP — area login (dashboard, home, chat, profil,
+   pricing, dll.). Class `.dark` dipasang di <html> oleh
+   context/ThemeContext.tsx. Halaman publik (landing, login,
+   register) tidak punya varian ini → tetap terang.
+   Strategi: override kelas utilitas clay dengan selector
+   `.dark .x` (spesifisitas lebih tinggi dari `.x` Tailwind).
+   ──────────────────────────────────────────────────────────── */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #1b1815;
+  color: #f1ece5;
+}
+
+/* Latar & permukaan */
+.dark .bg-clay-beige {
+  background-color: #1b1815;
+}
+.dark .bg-white {
+  background-color: #282320;
+}
+.dark .bg-clay-inputBg {
+  background-color: #332d27;
+}
+.dark .hover\:bg-clay-beige:hover {
+  background-color: #26211d;
+}
+.dark .hover\:bg-white:hover {
+  background-color: #332d27;
+}
+
+/* Teks */
+.dark .text-clay-dark {
+  color: #f1ece5;
+}
+.dark .text-clay-muted {
+  color: #a79e92;
+}
+
+/* Border & bayangan solid clay */
+.dark .border-clay-borderLight {
+  border-color: #4a423a;
+}
+.dark .border-clay-shadow {
+  border-color: #14110e;
+}
+.dark .shadow-clay {
+  box-shadow: 0 10px 0 #14110e, inset 0 -4px 0 #221e1a;
+}
+.dark .shadow-clay-sm {
+  box-shadow: 0 6px 0 #14110e, inset 0 -3px 0 #1f1b17;
+}
+.dark .shadow-clay-lg {
+  box-shadow: 0 14px 0 #0f0d0b, inset 0 -6px 0 #1f1b17;
+}
+.dark .shadow-clay-inset {
+  box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.45);
+}
+.dark .shadow-clay-btn {
+  box-shadow: 0 8px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
+}
+.dark .shadow-clay-btn-hover {
+  box-shadow: 0 10px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
+}
+.dark .shadow-clay-btn-active {
+  box-shadow: 0 4px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
+}
+
+/* Komponen bersama */
+.dark .card-clay {
+  background-color: #282320;
+  border-color: #38322c;
+  box-shadow: 0 10px 0 #14110e, inset 0 -4px 0 #221e1a;
+}
+.dark .input-clay {
+  background-color: #332d27;
+  color: #f1ece5;
+}
+.dark .btn-clay-primary {
+  border-color: #6d4fd6;
+  box-shadow: 0 8px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
+}
+.dark .btn-clay-primary:hover {
+  box-shadow: 0 10px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
+}
+.dark .btn-clay-primary:active {
+  box-shadow: 0 4px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
+}
+.dark .btn-clay-secondary,
+.dark .btn-clay-ghost {
+  background-color: #282320;
+}
+.dark .btn-clay-secondary {
+  border-color: #8b6ce8;
+  box-shadow: 0 6px 0 #14110e, inset 0 -3px 0 #1f1b17;
+}
+.dark .btn-clay-ghost {
+  border-color: #3d3730;
+  box-shadow: 0 6px 0 #14110e, inset 0 -3px 0 #1f1b17;
+}
+.dark .btn-clay-ghost:hover {
+  background-color: #332d27;
+}
+
+/* Kotak status/error berlatarb terang → tint gelap */
+.dark .bg-red-50 {
+  background-color: #3b1d1a;
+}
+.dark .bg-amber-50 {
+  background-color: #3a2f17;
+}
+.dark .bg-amber-100 {
+  background-color: #3a2f17;
+}
+.dark .bg-green-50 {
+  background-color: #16352a;
+}
+.dark .border-amber-300 {
+  border-color: #6b5620;
+}
+.dark .border-red-200,
+.dark .border-red-300 {
+  border-color: #6b2a25;
+}
+.dark .text-amber-700,
+.dark .text-amber-800,
+.dark .text-amber-900,
+.dark .text-amber-950 {
+  color: #f5d98a;
+}
+.dark .text-red-500,
+.dark .text-red-600 {
+  color: #f0a09b;
+}
+.dark .text-green-600 {
+  color: #7fd6a8;
+}
+
+/* Gradasi kartu "Rencana Belajar" (inline-style) — biarkan terang
+   sebagai kartu dekoratif; cukup samarkan di dark. */
+.dark .text-amber-950 {
+  color: #f5d98a;
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
-import { ChevronDown, ChevronRight, NotebookPen } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, NotebookPen } from "lucide-react";
 import {
   parseNoteContent,
   type ParsedContent as ParsedContentItem,
@@ -81,7 +81,8 @@ export const NoteContent = forwardRef<HTMLDivElement, NoteContentProps>(
                 </span>
                 {chapter.timestamp && (
                   <span className="mt-0.5 block text-xs font-bold text-clay-muted">
-                    🕐 {chapter.timestamp}
+                    <Clock size={13} className="mr-1 inline text-clay-muted" />
+                    {chapter.timestamp}
                   </span>
                 )}
               </span>

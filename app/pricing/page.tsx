@@ -1,8 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Crown, Loader2, Ticket, CheckCircle2, AlertTriangle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CreditCard,
+  Crown,
+  Gift,
+  History,
+  Loader2,
+  Ticket,
+  Zap,
+} from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import { useOnboarding } from "@/context/OnboardingContext";
@@ -12,12 +22,12 @@ import { getUserId } from "@/lib/identity";
 import { isLoggedIn, syncAuthSession } from "@/lib/auth";
 
 const PERKS = [
-  { icon: "♾️", text: "Sesi belajar & chat AI tak terbatas" },
-  { icon: "🔍", text: "Web search real-time saat bertanya" },
-  { icon: "🖼️", text: "Generate gambar AI (Eureka Draw)" },
-  { icon: "🃏", text: "Kuis & flashcards AI tanpa batas" },
-  { icon: "📚", text: "Generate catatan AI unlimited" },
-  { icon: "✨", text: "Prioritas fitur baru" },
+  "Sesi belajar & chat AI tak terbatas",
+  "Web search real-time saat bertanya",
+  "Generate gambar AI (Eureka Draw)",
+  "Kuis & flashcards AI tanpa batas",
+  "Generate catatan AI unlimited",
+  "Prioritas fitur baru",
 ];
 
 const TIERS = [
@@ -36,9 +46,49 @@ const TIER_LABEL: Record<string, string> = {
   trial: "Trial",
 };
 
+interface PaymentHistoryItem {
+  orderId: string;
+  amount: number;
+  tier: string;
+  status: string;
+  paidAt: string | null;
+  createdAt: string | null;
+}
+
+function formatRupiah(amount: number): string {
+  return `Rp ${amount.toLocaleString("id-ID")}`;
+}
+
 export default function PricingPage() {
   const { data } = useOnboarding();
   const { isPremium, tier, premiumUntil, loading, refresh } = usePremium();
+  const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Riwayat pembelian & status langganan — hanya untuk user yang login.
+  useEffect(() => {
+    if (!isLoggedIn()) return;
+    let cancelled = false;
+    (async () => {
+      setHistoryLoading(true);
+      try {
+        const res = await apiFetch(
+          `/api/payments/history?userId=${encodeURIComponent(getUserId())}`
+        );
+        const payload = await res.json().catch(() => null);
+        if (!cancelled && payload?.history) {
+          setHistory(payload.history as PaymentHistoryItem[]);
+        }
+      } catch {
+        // biarkan riwayat kosong
+      } finally {
+        if (!cancelled) setHistoryLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [discountCode, setDiscountCode] = useState("");
@@ -96,7 +146,7 @@ export default function PricingPage() {
       );
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Gagal memvalidasi kode. Coba lagi ya 🙏"
+        e instanceof Error ? e.message : "Gagal memvalidasi kode. Coba lagi."
       );
     } finally {
       setValidating(false);
@@ -136,7 +186,7 @@ export default function PricingPage() {
         error?: string;
       } | null;
       if (!res.ok || (!body?.link && !body?.activated)) {
-        setError(body?.error ?? "Gagal membuat pembayaran. Coba lagi ya 🙏");
+        setError(body?.error ?? "Gagal membuat pembayaran. Coba lagi.");
         return;
       }
       // Kode gratis 100% → sudah aktif langsung, tanpa diarahkan ke Pakasir.
@@ -148,7 +198,7 @@ export default function PricingPage() {
       window.location.href = body.link as string;
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Gagal membuat pembayaran. Coba lagi ya 🙏"
+        e instanceof Error ? e.message : "Gagal membuat pembayaran. Coba lagi."
       );
     } finally {
       setBusy(null);
@@ -182,13 +232,13 @@ export default function PricingPage() {
         error?: string;
       } | null;
       if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Gagal mengaktifkan trial. Coba lagi ya 🙏");
+        setError(body?.error ?? "Gagal mengaktifkan trial. Coba lagi.");
         return;
       }
       await refresh();
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Gagal mengaktifkan trial. Coba lagi ya 🙏"
+        e instanceof Error ? e.message : "Gagal mengaktifkan trial. Coba lagi."
       );
     } finally {
       setClaimingTrial(false);
@@ -214,7 +264,7 @@ export default function PricingPage() {
         error?: string;
       } | null;
       if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Gagal membatalkan langganan. Coba lagi ya 🙏");
+        setError(body?.error ?? "Gagal membatalkan langganan. Coba lagi.");
         setConfirmCancel(false);
         return;
       }
@@ -222,7 +272,7 @@ export default function PricingPage() {
       await refresh();
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Gagal membatalkan langganan. Coba lagi ya 🙏"
+        e instanceof Error ? e.message : "Gagal membatalkan langganan. Coba lagi."
       );
       setConfirmCancel(false);
     } finally {
@@ -288,8 +338,14 @@ export default function PricingPage() {
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-clay-secondary shadow-clay-thumb">
             <Crown size={36} className="text-white" />
           </div>
-          <h1 className="mt-5 text-3xl font-extrabold">
-            {isPremium ? "Kamu Sudah Pro! 👑" : "Tingkatkan ke Pro"}
+          <h1 className="mt-5 flex items-center justify-center gap-2 text-3xl font-extrabold">
+            {isPremium ? (
+              <>
+                Kamu Sudah Pro! <Crown size={26} className="text-clay-secondary" />
+              </>
+            ) : (
+              "Tingkatkan ke Pro"
+            )}
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-base font-semibold text-clay-muted">
             Harga Eureka.AI — AI Tutor Socratic untuk pelajar Indonesia. Mulai
@@ -330,7 +386,7 @@ export default function PricingPage() {
           <div className="mt-8 flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
             <div className="w-full max-w-md rounded-clay-md bg-clay-beige/70 px-6 py-5 text-left shadow-clay-sm">
               <p className="text-sm font-bold text-clay-muted">
-                Status langgananmu aktif 🎉
+                Status langgananmu aktif
               </p>
               <p className="mt-1 text-sm font-semibold text-clay-dark">
                 {tier === "trial"
@@ -350,7 +406,7 @@ export default function PricingPage() {
                     Ke Pakasir…
                   </span>
                 ) : (
-                  "Top Up Pro (Perpanjang 30 Hari) 👑"
+                  "Top Up Pro (Perpanjang 30 Hari)"
                 )}
               </ButtonClay>
               <ButtonClay
@@ -391,8 +447,8 @@ export default function PricingPage() {
               <div className="rounded-clay-md border-2 border-dashed border-clay-primary/40 bg-clay-primary/5 px-5 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-base font-extrabold text-clay-primary">
-                      🎁 Coba Gratis 7 Hari
+                    <p className="flex items-center gap-2 text-base font-extrabold text-clay-primary">
+                      <Gift size={18} /> Coba Gratis 7 Hari
                     </p>
                     <p className="mt-1 text-xs font-semibold text-clay-muted">
                       Semua fitur Pro tanpa bayar. Sekali seumur hidup, tanpa
@@ -431,7 +487,7 @@ export default function PricingPage() {
                       <p className="text-base font-extrabold">{t.name}</p>
                       {appliedCode?.free && (
                         <span className="rounded-full bg-green-500 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                          Gratis 100% 🎉
+                          Gratis 100%
                         </span>
                       )}
                     </div>
@@ -483,7 +539,7 @@ export default function PricingPage() {
                           Ke Pakasir…
                         </span>
                       ) : appliedCode?.free ? (
-                        "Klaim Gratis 🎉"
+                        "Klaim Gratis"
                       ) : (
                         `Pilih ${t.name}`
                       )}
@@ -532,8 +588,8 @@ export default function PricingPage() {
                   kode sebelum memilih paket.
                 </p>
                 {appliedCode?.free && appliedCode.remainingUses !== null && (
-                  <p className="mt-1.5 text-[11px] font-extrabold text-green-600">
-                    ⚡ Sisa kuota {appliedCode.remainingUses} dari 10 orang.
+                  <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-extrabold text-green-600">
+                    <Zap size={12} /> Sisa kuota {appliedCode.remainingUses} dari 10 orang.
                   </p>
                 )}
               </div>
@@ -541,25 +597,28 @@ export default function PricingPage() {
 
             {/* KANAN: benefit */}
             <div className="rounded-clay-md border-2 border-clay-borderLight bg-white p-6 shadow-clay-sm">
-              <p className="text-lg font-extrabold text-clay-dark">
-                Semua yang kamu dapat 👑
+              <p className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
+                Semua yang kamu dapat <Crown size={20} className="text-clay-secondary" />
               </p>
               <ul className="mt-4 flex flex-col gap-3">
-                {PERKS.map((p) => (
-                  <li key={p.text} className="flex items-start gap-3">
+                {PERKS.map((perk) => (
+                  <li key={perk} className="flex items-start gap-3">
                     <CheckCircle2
                       size={18}
                       className="mt-0.5 shrink-0 text-clay-success"
                     />
                     <span className="text-sm font-bold text-clay-dark">
-                      {p.text}
+                      {perk}
                     </span>
                   </li>
                 ))}
               </ul>
-              <div className="mt-6 rounded-clay-md bg-clay-beige/60 px-4 py-3 text-xs font-semibold text-clay-muted">
-                💳 Pembayaran aman via <b>Pakasir</b> — QRIS, e-wallet, VA.
-                Status premium aktif otomatis setelah pembayaran terverifikasi.
+              <div className="mt-6 flex items-start gap-2 rounded-clay-md bg-clay-beige/60 px-4 py-3 text-xs font-semibold text-clay-muted">
+                <CreditCard size={15} className="mt-0.5 shrink-0" />
+                <span>
+                  Pembayaran aman via <b>Pakasir</b> — QRIS, e-wallet, VA.
+                  Status premium aktif otomatis setelah pembayaran terverifikasi.
+                </span>
               </div>
               <Link href="/dashboard" className="mt-4 block">
                 <ButtonClay fullWidth variant="secondary">
@@ -567,6 +626,61 @@ export default function PricingPage() {
                 </ButtonClay>
               </Link>
             </div>
+          </div>
+        )}
+
+        {/* ── Riwayat Pembelian (semua status: premium & non-premium) ── */}
+        {isLoggedIn() && (
+          <div className="mt-8 border-t-2 border-clay-shadow/30 pt-6">
+            <h2 className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
+              <History size={20} className="text-clay-primary" />
+              Riwayat Pembelian
+            </h2>
+            {historyLoading ? (
+              <p className="mt-3 flex items-center gap-2 text-sm font-bold text-clay-muted">
+                <Loader2 size={14} className="animate-spin" />
+                Memuat riwayat...
+              </p>
+            ) : history.length === 0 ? (
+              <p className="mt-3 text-sm font-semibold text-clay-muted">
+                Belum ada pembelian.
+              </p>
+            ) : (
+              <ul className="mt-4 flex flex-col gap-2.5">
+                {history.map((h) => (
+                  <li
+                    key={h.orderId}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-clay-md bg-clay-beige/70 px-4 py-3 text-sm shadow-clay-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-extrabold text-clay-dark">
+                        {h.orderId}
+                      </p>
+                      <p className="text-xs font-bold text-clay-muted">
+                        {formatDate(h.paidAt ?? h.createdAt)}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-extrabold text-clay-dark">
+                        {formatRupiah(h.amount)}
+                      </span>
+                      <span className="rounded-clay-full bg-clay-primary/10 px-3 py-1 text-xs font-extrabold text-clay-primary">
+                        {h.tier}
+                      </span>
+                      <span
+                        className={`rounded-clay-full px-3 py-1 text-xs font-extrabold ${
+                          h.status === "paid"
+                            ? "bg-clay-success/15 text-clay-success"
+                            : "bg-clay-muted/10 text-clay-muted"
+                        }`}
+                      >
+                        {h.status === "paid" ? "Lunas" : "Belum dibayar"}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </CardClay>

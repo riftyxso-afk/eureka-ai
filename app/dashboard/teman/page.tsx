@@ -135,9 +135,9 @@ export default function FriendsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Gagal menambah teman.");
       if (data.relation === "friend") {
-        notify(`${targetName} sekarang temanmu! 🎉`);
+        notify(`${targetName} sekarang temanmu!`);
       } else {
-        notify(`Permintaan pertemanan dikirim ke ${targetName} ✉️`);
+        notify(`Permintaan pertemanan dikirim ke ${targetName}`);
       }
       setQuery("");
       setResults([]);
@@ -158,7 +158,7 @@ export default function FriendsPage() {
         body: JSON.stringify({ action, userId, fromId, name: userName }),
       });
       notify(
-        action === "accept" ? `${name} diterima sebagai teman! 🎉` : `Permintaan ${name} ditolak.`
+        action === "accept" ? `${name} diterima sebagai teman!` : `Permintaan ${name} ditolak.`
       );
       await loadAll();
     } catch {
@@ -347,7 +347,7 @@ export default function FriendsPage() {
         </h2>
         {friends.length === 0 ? (
           <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
-            Belum ada teman. Cari dan undang temanmu di atas! 👋
+            Belum ada teman. Cari dan undang temanmu di atas!
           </p>
         ) : (
           <ul className="space-y-2">

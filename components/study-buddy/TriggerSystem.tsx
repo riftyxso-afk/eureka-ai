@@ -44,7 +44,7 @@ export default function TriggerSystem({ onTrigger }: TriggerSystemProps) {
 
     pomodoroTimerRef.current = setInterval(() => {
       const messages = [
-        'Waktunya istirahat sebentar! Sudah belajar ' + storage.settings.timings.pomodoroMinutes + ' menit nih 😊',
+        'Waktunya istirahat sebentar! Sudah belajar ' + storage.settings.timings.pomodoroMinutes + ' menit nih',
         'Bagus! Kamu sudah fokus ' + storage.settings.timings.pomodoroMinutes + ' menit. Mau istirahat dulu?',
         'Pomodoro selesai! Gimana? Butuh bantuan dengan materi yang baru dipelajari?',
       ];

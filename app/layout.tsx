@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { JobWatcherProvider } from "@/context/JobWatcherContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import LevelUpOverlay from "@/components/dashboard/LevelUpOverlay";
 import PremiumSuccessPopup from "@/components/PremiumSuccessPopup";
 
@@ -79,15 +80,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <body className="antialiased">
-        <JobWatcherProvider>
-          <OnboardingProvider>
-            {children}
-            <LevelUpOverlay />
-            <PremiumSuccessPopup />
-          </OnboardingProvider>
-        </JobWatcherProvider>
+        {/* Anti-FOUC: terapkan class .dark sebelum paint berdasarkan
+            preferensi tersimpan / sistem (lihat context/ThemeContext.tsx). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("eureka_theme");var d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark");}catch(e){}})();`,
+          }}
+        />
+        <ThemeProvider>
+          <JobWatcherProvider>
+            <OnboardingProvider>
+              {children}
+              <LevelUpOverlay />
+              <PremiumSuccessPopup />
+            </OnboardingProvider>
+          </JobWatcherProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

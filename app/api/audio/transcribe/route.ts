@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const rl = checkRateLimit(`transcribe:${auth.userId}`, 20, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
-        { error: "Terlalu sering merekam. Tunggu sebentar ya 🙏" },
+        { error: "Terlalu sering merekam. Tunggu sebentar ya." },
         { status: 429 }
       );
     }

@@ -97,7 +97,7 @@ export default function ChapterNotepadPage() {
     if (regen.running) return;
     if (regen.percent >= 100) {
       loadChapter();
-      notify("Bab berhasil ditulis ulang! ✨");
+      notify("Bab berhasil ditulis ulang!");
       setConfirmRegen(false);
     } else if (regen.error) {
       notify(`Gagal menulis ulang: ${regen.error}`);
@@ -339,7 +339,7 @@ export default function ChapterNotepadPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-extrabold text-clay-dark">
-              Tulis ulang bab ini? ✨
+              Tulis ulang bab ini?
             </h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-muted">
               AI akan menulis ulang bab{" "}

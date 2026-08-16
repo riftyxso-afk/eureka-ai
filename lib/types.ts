@@ -87,4 +87,6 @@ export interface Note {
   noteType?: string;
   /** Pemilik catatan (UUID users). */
   user_id?: string;
+  /** Tersemat (pin) — tampil paling atas di dashboard. */
+  pinned?: boolean;
 }

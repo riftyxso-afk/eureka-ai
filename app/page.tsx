@@ -7,12 +7,15 @@ import {
   BookOpen,
   Brain,
   Check,
+  CreditCard,
   Crown,
   FileText,
   Flame,
+  MessageCircle,
   MessageCircleQuestion,
   Rocket,
   Sparkles,
+  SquarePlay,
   Trophy,
   Upload,
   Users,
@@ -284,8 +287,8 @@ export default function LandingPage() {
             <div className="relative mx-auto mt-16 max-w-3xl">
               <div className="k-card rotate-[-2deg] text-left shadow-[0_18px_50px_rgba(19,16,43,0.12)]">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#7B42F5]/15 text-xl">
-                    🎬
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#7B42F5]/15 text-[#7B42F5]">
+                    <SquarePlay size={22} />
                   </span>
                   <div>
                     <p className="font-extrabold text-[#13102B]">
@@ -310,16 +313,18 @@ export default function LandingPage() {
               </div>
               <div className="k-card-accent absolute -bottom-8 -left-3 hidden rotate-[-5deg] !p-5 text-left shadow-[0_14px_40px_rgba(123,66,245,0.25)] sm:block">
                 <p className="text-sm font-extrabold text-[#13102B]">
-                  💬 Eureka: “Kalau kamu lari 5 km dalam 30 menit, berapa
+                  <MessageCircle size={15} className="-mt-0.5 mr-1.5 inline text-[#7B42F5]" />
+                  Eureka: “Kalau kamu lari 5 km dalam 30 menit, berapa
                   kecepatan rata-ratamu?”
                 </p>
                 <p className="mt-2 text-xs font-bold text-[#B9B6C7]">
-                  🤔 Siswa: “10 km/jam… Ooooh, itu turunan!”
+                  <MessageCircleQuestion size={14} className="-mt-0.5 mr-1.5 inline" />
+                  Siswa: “10 km/jam… Ooooh, itu turunan!”
                 </p>
               </div>
               <div className="k-card absolute -right-3 -top-6 hidden rotate-[4deg] !p-4 shadow-[0_14px_40px_rgba(19,16,43,0.14)] sm:block">
-                <p className="text-xs font-extrabold text-[#7B42F5]">
-                  🔥 Streak 7 hari
+                <p className="flex items-center gap-1.5 text-xs font-extrabold text-[#7B42F5]">
+                  <Flame size={14} /> Streak 7 hari
                 </p>
                 <p className="text-sm font-extrabold text-[#13102B]">
                   Level 3 · 245 XP
@@ -599,9 +604,9 @@ export default function LandingPage() {
                 </Link>
               </div>
             </div>
-            <p className="mt-8 text-center text-sm font-bold text-[#B9B6C7]">
-              💳 Pembayaran aman via Pakasir — QRIS, e-wallet, VA. Aktif otomatis
-              setelah terverifikasi.
+            <p className="mt-8 flex items-center justify-center gap-1.5 text-center text-sm font-bold text-[#B9B6C7]">
+              <CreditCard size={15} /> Pembayaran aman via Pakasir — QRIS,
+              e-wallet, VA. Aktif otomatis setelah terverifikasi.
             </p>
           </div>
         </section>

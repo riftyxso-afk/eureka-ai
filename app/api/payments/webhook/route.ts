@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
 
     if (!candidates || candidates.length !== 1) {
       console.error(
-        `[webhook] ⚠️ ORDER TERBAYAR TIDAK TERCATAT: order ${orderId} (Rp ${amount}) ` +
+        `[webhook] ORDER TERBAYAR TIDAK TERCATAT: order ${orderId} (Rp ${amount}) ` +
           `status=completed terverifikasi, tapi fallback ambigu (${candidates?.length ?? 0} kandidat). ` +
           "Perlu review manual & aktivasi manual!"
       );

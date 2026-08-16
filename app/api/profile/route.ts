@@ -241,6 +241,24 @@ export async function PUT(req: NextRequest) {
       throw error;
     }
 
+    // Sinkronkan nama ke metadata Supabase Auth (best-effort) supaya
+    // syncAuthSession() di client membaca nama terbaru setelah refresh.
+    if (typeof patch.name === "string") {
+      try {
+        const finalName = patch.name as string;
+        const { data: existing } = await db().auth.admin.getUserById(userId);
+        const meta = existing?.user?.user_metadata ?? {};
+        await db().auth.admin.updateUserById(userId, {
+          user_metadata: { ...meta, name: finalName },
+        });
+      } catch (metaErr) {
+        console.warn(
+          "[api/profile] sinkron nama ke metadata Supabase gagal (best-effort):",
+          metaErr
+        );
+      }
+    }
+
     return NextResponse.json({ user: toPayload(data as ProfileRow) });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal menyimpan profil.";

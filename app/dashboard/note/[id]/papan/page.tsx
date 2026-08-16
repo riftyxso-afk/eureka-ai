@@ -284,7 +284,7 @@ export default function WhiteboardPage() {
       });
       clearedAtRef.current = Date.now();
       setStrokes([]);
-      notify("Papan dibersihkan 🧹");
+      notify("Papan dibersihkan");
     } catch {
       notify("Gagal membersihkan papan.");
     }
@@ -295,7 +295,7 @@ export default function WhiteboardPage() {
       await navigator.clipboard.writeText(
         `${window.location.origin}/dashboard/note/${params.id}/papan`
       );
-      notify("Link papan tulis disalin! 🔗");
+      notify("Link papan tulis disalin!");
     } catch {
       notify("Gagal menyalin link.");
     }
@@ -304,8 +304,8 @@ export default function WhiteboardPage() {
   const handleCall = (type: "vc" | "audio") => {
     notify(
       type === "vc"
-        ? "Video call segera hadir! 🚧"
-        : "Panggilan suara segera hadir! 🚧"
+        ? "Video call segera hadir!"
+        : "Panggilan suara segera hadir!"
     );
   };
 

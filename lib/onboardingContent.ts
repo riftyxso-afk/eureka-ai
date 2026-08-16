@@ -227,12 +227,12 @@ export function usernameHint(username: string): string | null {
 }
 
 export const LOADING_TEXTS: string[] = [
-  "🔍 Menganalisis profil kognitifmu...",
-  "🧩 Memetakan hasil tes kepribadian belajarmu...",
-  "🧠 Menentukan tipe kepribadian belajar khas kamu...",
-  "🎯 Mengidentifikasi gaya belajarmu yang paling efektif...",
-  "🤖 Menyusun strategi tutor Socratic yang personal...",
-  "⚙️ Mengaktifkan Agentic Engine untuk kebutuhanmu...",
-  "📝 Menyimpan profil & @username kamu ke cloud...",
-  "✨ Siap!",
+  "Menganalisis profil kognitifmu...",
+  "Memetakan hasil tes kepribadian belajarmu...",
+  "Menentukan tipe kepribadian belajar khas kamu...",
+  "Mengidentifikasi gaya belajarmu yang paling efektif...",
+  "Menyusun strategi tutor Socratic yang personal...",
+  "Mengaktifkan Agentic Engine untuk kebutuhanmu...",
+  "Menyimpan profil & @username kamu ke cloud...",
+  "Siap!",
 ];

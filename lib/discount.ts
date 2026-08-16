@@ -91,7 +91,7 @@ export async function applyDiscount(
       ok: true,
       code,
       finalAmount: 500,
-      label: "Gratis 100% 🎉",
+      label: "Gratis 100%",
       free: true,
     };
   }

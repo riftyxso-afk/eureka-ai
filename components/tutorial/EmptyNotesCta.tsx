@@ -51,7 +51,7 @@ export default function EmptyNotesCta({ notesCount }: EmptyNotesCtaProps) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-extrabold leading-snug text-clay-dark sm:text-base">
-              Hmm, kamu belum punya catatan nih 😅
+              Hmm, kamu belum punya catatan nih
             </p>
             <p className="mt-1 text-[13px] font-semibold leading-relaxed text-clay-muted sm:text-sm">
               Mau aku bantu bikin catatan pertamamu? Aku tunjukkan caranya —
@@ -62,7 +62,7 @@ export default function EmptyNotesCta({ notesCount }: EmptyNotesCtaProps) {
                 onClick={() => void startTutorial()}
                 className="inline-flex min-h-[40px] items-center gap-1.5 rounded-clay-md bg-clay-primary px-4 py-2 text-xs font-extrabold text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:text-sm"
               >
-                Ya, bantu aku 🚀
+                Ya, bantu aku
               </button>
               <button
                 onClick={dismiss}

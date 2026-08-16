@@ -34,6 +34,7 @@ import { getUserName } from "@/lib/identity";
 import { usePremium } from "@/lib/usePremium";
 import { PlanBadge } from "@/components/PlanBadge";
 import { ReferralPopup } from "@/components/ReferralPopup";
+import { useTheme } from "@/context/ThemeContext";
 
 interface MenuItem {
   id: string;
@@ -70,8 +71,8 @@ const menuItems: MenuItem[] = [
 export const Sidebar = () => {
   const pathname = usePathname();
   const { isPremium } = usePremium();
+  const { resolved: themeResolved, toggle: toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [referralOpen, setReferralOpen] = useState(false);
@@ -191,7 +192,7 @@ export const Sidebar = () => {
 
       <div className="mt-1 flex flex-col gap-1 border-t-2 border-clay-shadow/30 pt-1">
         <button
-          onClick={() => showToast("Fitur segera hadir! 🚧")}
+          onClick={() => showToast("Fitur semat catatan segera hadir")}
           className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4]"
         >
           <Pin size={15} />
@@ -199,17 +200,17 @@ export const Sidebar = () => {
         </button>
         <button
           onClick={() => {
-            setIsDarkMode((d) => !d);
+            toggleTheme();
             showToast(
-              isDarkMode
-                ? "Mode terang diaktifkan ☀️"
-                : "Mode gelap diaktifkan 🌙"
+              themeResolved === "dark"
+                ? "Mode terang diaktifkan"
+                : "Mode gelap diaktifkan"
             );
           }}
           className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4]"
         >
-          {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
-          {isDarkMode ? "Mode Terang" : "Mode Gelap"}
+          {themeResolved === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          {themeResolved === "dark" ? "Mode Terang" : "Mode Gelap"}
         </button>
         <button
           onClick={handleLogout}

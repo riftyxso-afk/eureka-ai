@@ -4,7 +4,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, LayoutDashboard, Plus, Sparkles } from "lucide-react";
+import {
+  BookOpen,
+  Brain,
+  CalendarDays,
+  ChevronRight,
+  FileText,
+  Layers,
+  LayoutDashboard,
+  Moon,
+  PenLine,
+  Plus,
+  Sparkles,
+  Sun,
+  Sunset,
+  Target,
+  Trophy,
+  type LucideIcon,
+} from "lucide-react";
 import TutorialHost from "@/components/tutorial/TutorialHost";
 import EmptyNotesCta from "@/components/tutorial/EmptyNotesCta";
 import { apiFetch } from "@/lib/apiClient";
@@ -24,7 +41,7 @@ import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
 
 interface FeatureChip {
-  emoji: string;
+  icon: LucideIcon;
   title: string;
   desc: string;
   /** Chat: klik → langsung kirim prompt ke AI. */
@@ -35,58 +52,58 @@ interface FeatureChip {
 
 const FEATURES: FeatureChip[] = [
   {
-    emoji: "📚",
+    icon: BookOpen,
     title: "Ringkas Materi",
     desc: "Ringkas catatan belajarmu",
     prompt: "Ringkas materi pelajaran yang sedang saya pelajari berdasarkan catatan saya.",
   },
   {
-    emoji: "🧠",
+    icon: Brain,
     title: "Jelaskan Analogi",
     desc: "Konsep sulit jadi gampang",
     prompt: "Jelaskan konsep yang sedang saya pelajari dengan analogi sederhana yang mudah dipahami.",
   },
   {
-    emoji: "🎯",
+    icon: Target,
     title: "Rencana Belajar",
     desc: "Siapkan jadwal ujian",
     prompt: "Buatkan rencana belajar mingguan untuk persiapan ujian saya.",
   },
   {
-    emoji: "✍️",
+    icon: PenLine,
     title: "Bantu Soal",
     desc: "Langkah demi langkah",
     prompt: "Bantu saya mengerjakan soal latihan berikut langkah demi langkah.",
   },
   {
-    emoji: "🃏",
+    icon: Layers,
     title: "Flashcards",
     desc: "Buat kartu hafalan dari catatan",
     prompt: "Buatkan kartu hafalan (flashcards) dari catatan saya untuk dihafal.",
   },
   {
-    emoji: "📝",
+    icon: FileText,
     title: "Kuis Latihan",
     desc: "Latihan pilihan ganda",
     prompt: "Buatkan kuis latihan pilihan ganda dari materi yang sedang saya pelajari.",
   },
   {
-    emoji: "🗓️",
+    icon: CalendarDays,
     title: "Jadwal Belajar",
     desc: "Kelola jadwal & rutinitas",
     href: "/dashboard/jadwal",
   },
   {
-    emoji: "🏆",
+    icon: Trophy,
     title: "Leaderboard",
     desc: "Lihat peringkat belajarmu",
     href: "/dashboard/leaderboard",
   },
 ];
 
-function greetingText(): { emoji: string; text: string } {
+function greetingText(): { icon: LucideIcon; text: string } {
   const h = new Date().getHours();
-  const emoji = h < 6 ? "🌙" : h < 12 ? "🌤️" : h < 17 ? "☀️" : h < 21 ? "🌅" : "🌙";
+  const icon = h < 6 ? Moon : h < 12 ? Sun : h < 17 ? Sun : h < 21 ? Sunset : Moon;
   const part =
     h < 6
       ? "Selamat malam"
@@ -97,7 +114,7 @@ function greetingText(): { emoji: string; text: string } {
           : h < 21
             ? "Selamat sore"
             : "Selamat malam";
-  return { emoji, text: part };
+  return { icon, text: part };
 }
 
 export default function HomePage() {
@@ -277,8 +294,9 @@ export default function HomePage() {
             <span className="inline-flex items-center gap-1.5 rounded-clay-full border-3 border-clay-secondary/30 bg-clay-secondary/10 px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide text-clay-secondary">
               <Sparkles size={13} /> Asisten Belajar Eureka
             </span>
-            <h1 className="mt-5 text-[27px] font-extrabold text-clay-dark sm:text-4xl">
-              {greeting.emoji} Halo, {name}!
+            <h1 className="mt-5 flex items-center justify-center gap-2 text-[27px] font-extrabold text-clay-dark sm:text-4xl">
+              <greeting.icon size={28} className="shrink-0 text-clay-primary" />
+              Halo, {name}!
             </h1>
             <p className="mt-3 max-w-md text-base font-semibold leading-relaxed text-clay-muted">
               Tanyakan apa saja — Eureka menjawab berdasarkan catatan, bab,
@@ -291,8 +309,8 @@ export default function HomePage() {
               {FEATURES.map((f) => {
                 const card = (
                   <span className="flex h-full w-full items-start gap-3 rounded-clay-md border-2 border-clay-borderLight bg-clay-beige/50 p-3.5 text-left shadow-clay-sm transition-all duration-75 group-hover:-translate-y-1 group-hover:border-clay-primary/50 group-hover:bg-white group-hover:shadow-[0_5px_0_#D1C4B4]">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-lg">
-                      {f.emoji}
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-clay-primary">
+                      <f.icon size={18} />
                     </span>
                     <span className="min-w-0">
                       <span className="flex items-center gap-1 text-[13px] font-extrabold text-clay-dark group-hover:text-clay-primary">

@@ -2,14 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSubjects, addSubject } from "@/lib/subjects-store";
 import { listNotes } from "@/lib/rag/store";
+import { getUserIdFromAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = String(req.nextUrl.searchParams.get("userId") ?? "").trim();
+    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Autentikasi diperlukan." },
+        { status: 401 }
+      );
+    }
     const [subjects, notes] = await Promise.all([
-      getSubjects(),
+      getSubjects(userId),
       listNotes(userId || undefined),
     ]);
     // totalNotes dihitung live dari catatan yang subject-nya sama
@@ -27,12 +34,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Autentikasi diperlukan." },
+        { status: 401 }
+      );
+    }
     const body = await req.json();
-    const subject = await addSubject({
-      name: String(body?.name ?? ""),
-      emoji: body?.emoji ? String(body.emoji) : undefined,
-      color: body?.color ? String(body.color) : undefined,
-    });
+    const subject = await addSubject(
+      {
+        name: String(body?.name ?? ""),
+        emoji: body?.emoji ? String(body.emoji) : undefined,
+        color: body?.color ? String(body.color) : undefined,
+      },
+      userId
+    );
     return NextResponse.json({ subject }, { status: 201 });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal menambah mata pelajaran.";

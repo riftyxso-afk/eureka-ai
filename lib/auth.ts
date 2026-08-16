@@ -88,6 +88,23 @@ export function getSession(): AuthSession | null {
   return safeGet<AuthSession>(SESSION_KEY);
 }
 
+/**
+ * Perbarui nama di sesi cache + identity (dipakai setelah ganti nama di
+ * halaman profil/onboarding) agar semua halaman langsung konsisten tanpa
+ * perlu login ulang. Best-effort: bila sesi belum ada, cukup set identity.
+ */
+export function updateSessionName(name: string) {
+  const clean = name.trim().slice(0, 60);
+  const session = getSession();
+  if (session) {
+    safeSet(SESSION_KEY, {
+      ...session,
+      name: clean || session.name,
+    });
+  }
+  if (clean) setUserName(clean);
+}
+
 export function getCurrentUser(): AuthUser | null {
   const session = getSession();
   if (!session) return null;

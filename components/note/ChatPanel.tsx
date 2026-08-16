@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
-import { CornerUpLeft, MessageCircle, Send, X } from "lucide-react";
+import { CornerUpLeft, MessageCircle, Send, Sparkles, X } from "lucide-react";
 import { getUserId, getUserName } from "@/lib/identity";
 import { postProgress } from "@/lib/levelUp";
 
@@ -230,7 +230,7 @@ export default function ChatPanel({
           action: "push",
           userId: friend.id,
           type: "mention",
-          title: "Kamu disebut dalam diskusi 💬",
+          title: "Kamu disebut dalam diskusi",
           message: `${userName} menyebutmu di catatan: "${content.slice(0, 60)}"`,
           link: `/dashboard/note/${noteId}`,
         }),
@@ -273,7 +273,7 @@ export default function ChatPanel({
       >
         {messages.length === 0 ? (
           <p className="rounded-xl sm:rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4 sm:p-5 text-center text-xs sm:text-sm font-semibold text-clay-muted">
-            Belum ada diskusi. Mulai chat untuk belajar bareng! 💬
+            Belum ada diskusi. Mulai chat untuk belajar bareng!
           </p>
         ) : (
           messages.map((m) => {
@@ -292,7 +292,8 @@ export default function ChatPanel({
                 <div className={`max-w-[80%] sm:max-w-[75%] min-w-0 ${mine ? "text-right" : ""}`}>
                   {m.isAI && (
                     <span className="mb-0.5 inline-block rounded-full bg-violet-100 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold text-violet-700">
-                      ✨ AI
+                      <Sparkles size={13} className="mr-1 text-clay-primary" />
+                      AI
                     </span>
                   )}
                   <div className="mb-0.5 flex items-baseline gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold text-clay-muted">

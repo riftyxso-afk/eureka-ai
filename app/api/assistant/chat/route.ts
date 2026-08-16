@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
 
   if (!checkRateLimit(userId)) {
     return respondJson(
-      { error: "Terlalu banyak permintaan. Tunggu sebentar ya 🙏" },
+      { error: "Terlalu banyak permintaan. Tunggu sebentar ya." },
       429
     );
   }
@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
     return respondJson(
       {
         error:
-          "Kamu sudah mengirim banyak pesan dalam 1 jam. Tunggu sebentar lalu lanjutkan ya 🙏",
+          "Kamu sudah mengirim banyak pesan dalam 1 jam. Tunggu sebentar lalu lanjutkan ya.",
       },
       429
     );

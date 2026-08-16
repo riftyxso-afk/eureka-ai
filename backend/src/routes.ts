@@ -92,13 +92,15 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const paymentsValidateCode = await import(
     "@/app/api/payments/validate-code/route"
   );
+  const paymentsHistory = await import("@/app/api/payments/history/route");
   mount(app, "/api/payments/checkout", paymentsCheckout);
   mount(app, "/api/payments/webhook", paymentsWebhook);
   mount(app, "/api/payments/status", paymentsStatus);
   mount(app, "/api/payments/trial", paymentsTrial);
   mount(app, "/api/payments/cancel", paymentsCancel);
   mount(app, "/api/payments/validate-code", paymentsValidateCode);
-  count += 6;
+  mount(app, "/api/payments/history", paymentsHistory);
+  count += 7;
 
   // ─── Profile ───────────────────────────────────────────
   const profile = await import("@/app/api/profile/route");
@@ -218,6 +220,18 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const notesImages = await import("@/app/api/notes/[id]/images/route");
   const notesPresence = await import("@/app/api/notes/[id]/presence/route");
   const notesQuiz = await import("@/app/api/notes/[id]/quiz/route");
+  const notesComprehension = await import(
+    "@/app/api/notes/[id]/comprehension/route"
+  );
+  const notesComprehensionGrade = await import(
+    "@/app/api/notes/[id]/comprehension/grade/route"
+  );
+  const notesComprehensionUpload = await import(
+    "@/app/api/notes/[id]/comprehension/upload/route"
+  );
+  const notesComprehensionStream = await import(
+    "@/app/api/notes/[id]/comprehension/stream/route"
+  );
   const notesRegenerate = await import("@/app/api/notes/[id]/regenerate/route");
   const notesVersions = await import("@/app/api/notes/[id]/versions/route");
 
@@ -233,9 +247,13 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/notes/:id/images", notesImages);
   mount(app, "/api/notes/:id/presence", notesPresence);
   mount(app, "/api/notes/:id/quiz", notesQuiz);
+  mount(app, "/api/notes/:id/comprehension", notesComprehension);
+  mount(app, "/api/notes/:id/comprehension/grade", notesComprehensionGrade);
+  mount(app, "/api/notes/:id/comprehension/upload", notesComprehensionUpload);
+  mount(app, "/api/notes/:id/comprehension/stream", notesComprehensionStream);
   mount(app, "/api/notes/:id/regenerate", notesRegenerate);
   mount(app, "/api/notes/:id/versions", notesVersions);
-  count += 13;
+  count += 17;
 
   // ─── Notes (Chapter sub-routes) ────────────────────────
   const notesBab = await import("@/app/api/notes/[id]/bab/[chapterId]/route");

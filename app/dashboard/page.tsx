@@ -5,12 +5,16 @@ import { AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import {
+  AlertTriangle,
   Clock,
   FileQuestion,
   FileText,
   Flame,
+  Hand,
+  Medal,
   Origami,
   Plus,
+  Rocket,
   Search,
   Trophy,
   X,
@@ -188,6 +192,8 @@ export default function DashboardPage() {
     if (subject) setSearchQuery(subject);
   }, []);
 
+  // Catatan tersemat (pin) selalu tampil paling atas; di dalam grup,
+  // filter "terbaru" mengurutkan createdAt desc, selainnya urutan API.
   const filteredNotes = useMemo(() => {
     let list = notes;
     if (searchQuery.trim()) {
@@ -198,11 +204,34 @@ export default function DashboardPage() {
           n.subject.toLowerCase().includes(q)
       );
     }
-    if (activeFilter === "terbaru") {
-      list = [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    }
-    return list;
+    return [...list].sort((a, b) => {
+      const pa = a.pinned === true ? 0 : 1;
+      const pb = b.pinned === true ? 0 : 1;
+      if (pa !== pb) return pa - pb;
+      return activeFilter === "terbaru"
+        ? b.createdAt.localeCompare(a.createdAt)
+        : 0;
+    });
   }, [notes, searchQuery, activeFilter]);
+
+  // Toggle semat (pin) catatan — optimistic, rollback bila gagal.
+  const togglePin = async (id: string, pinned: boolean) => {
+    setNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, pinned } : n))
+    );
+    try {
+      const res = await apiFetch(`/api/notes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned }),
+      });
+      if (!res.ok) throw new Error("Gagal menyimpan pin.");
+    } catch {
+      setNotes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, pinned: !pinned } : n))
+      );
+    }
+  };
 
   const handleCreate = (note: Note) => {
     setNotes((prev) => [note, ...prev]);
@@ -222,9 +251,11 @@ export default function DashboardPage() {
         {!bannerHidden && (
           <Reveal delay={0}>
           <div className="mb-4 flex items-center gap-2 rounded-clay-md border-2 border-amber-300 bg-amber-50 px-3 py-2 shadow-clay-sm">
-            <span className="text-sm" aria-hidden="true">
-              ⚠️
-            </span>
+            <AlertTriangle
+              size={16}
+              className="shrink-0 text-amber-600"
+              aria-hidden="true"
+            />
             <p className="flex-1 text-xs font-bold text-amber-800 sm:text-sm">
               Versi pengembangan — sebagian fitur mungkin belum berfungsi optimal.
             </p>
@@ -242,8 +273,9 @@ export default function DashboardPage() {
         <Reveal delay={0.05}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold sm:text-3xl">
-              {getGreeting()}, {userName.split(" ")[0]}! 👋
+            <h1 className="flex items-center gap-1.5 text-2xl font-extrabold sm:text-3xl">
+              {getGreeting()}, {userName.split(" ")[0]}!
+              <Hand size={22} className="shrink-0 text-clay-primary" />
             </h1>
             <p className="mt-1 text-sm font-semibold text-clay-muted sm:text-base">
               Siap belajar hari ini?
@@ -253,7 +285,7 @@ export default function DashboardPage() {
             <NotificationBell />
             <Link href="/home">
               <ButtonClay className="min-h-[44px] px-5 py-2 text-sm">
-                🚀 Mulai Belajar
+                <Rocket size={16} className="mr-2" /> Mulai Belajar
               </ButtonClay>
             </Link>
           </div>
@@ -285,8 +317,8 @@ export default function DashboardPage() {
         <CardClay className="mt-4 !p-4 sm:!p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-lg sm:h-12 sm:w-12 sm:text-xl">
-                🏅
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-clay-primary sm:h-12 sm:w-12">
+                <Medal size={22} className="sm:size-[26px]" />
               </span>
               <div>
                 <p className="text-base font-extrabold leading-tight sm:text-lg">
@@ -431,6 +463,8 @@ export default function DashboardPage() {
                     title={note.title}
                     subject={note.subject}
                     updatedAt={formatUpdatedAt(note.createdAt)}
+                    pinned={note.pinned === true}
+                    onTogglePin={(id, pinned) => void togglePin(id, pinned)}
                   />
                 ))}
               </div>

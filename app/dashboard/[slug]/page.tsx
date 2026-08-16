@@ -2,34 +2,35 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Construction, FileText, Flame, BookOpen, Trophy, User, type LucideIcon } from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 
-const LABELS: Record<string, { title: string; desc: string; emoji: string }> = {
+const LABELS: Record<string, { title: string; desc: string; icon: LucideIcon }> = {
   ujian: {
     title: "Ujian",
     desc: "Kelola jadwal ujian dan latihan soalmu di sini.",
-    emoji: "📝",
+    icon: FileText,
   },
   "mata-pelajaran": {
     title: "Mata Pelajaran",
     desc: "Jelajahi semua mata pelajaran dan topik yang tersedia.",
-    emoji: "📚",
+    icon: BookOpen,
   },
   streaks: {
     title: "Streaks",
     desc: "Pertahankan ritme belajarmu setiap hari.",
-    emoji: "🔥",
+    icon: Flame,
   },
   leaderboard: {
     title: "Leaderboard",
     desc: "Lihat posisimu di antara teman-teman belajar.",
-    emoji: "🏆",
+    icon: Trophy,
   },
   profil: {
     title: "Profil",
     desc: "Kelola data dirimu dan pengaturan akun.",
-    emoji: "👤",
+    icon: User,
   },
 };
 
@@ -39,13 +40,15 @@ export default function DashboardSlugPage() {
   const meta = LABELS[slug] ?? {
     title: slug,
     desc: "Halaman ini sedang disiapkan.",
-    emoji: "🚧",
+    icon: Construction,
   };
 
   return (
     <div className="flex items-center justify-center py-16">
       <CardClay className="flex w-full max-w-lg flex-col items-center py-14 text-center">
-        <div className="text-6xl">{meta.emoji}</div>
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
+          <meta.icon size={38} />
+        </div>
         <h1 className="mt-4 text-3xl font-extrabold">{meta.title}</h1>
         <p className="mt-2 max-w-sm text-base font-semibold text-clay-muted">
           {meta.desc}

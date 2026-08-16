@@ -4,6 +4,8 @@
  */
 const ID_KEY = "eureka_user_id";
 const NAME_KEY = "eureka_user_name";
+/** Kunci sesi auth (lihat lib/auth.ts) — dibaca langsung untuk menghindari circular import. */
+const SESSION_KEY = "eureka_session";
 
 function safeGet(key: string): string | null {
   if (typeof window === "undefined") return null;
@@ -42,7 +44,20 @@ export function getUserId(): string {
 }
 
 export function getUserName(): string {
-  return safeGet(NAME_KEY) || "Riftyxso";
+  // Sumber utama: nama dari sesi auth (eureka_session) — cache yang
+  // disinkronkan dari database saat login/sync/updateSessionName.
+  try {
+    const raw = safeGet(SESSION_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { name?: unknown } | null;
+      const name = typeof parsed?.name === "string" ? parsed.name.trim() : "";
+      if (name) return name;
+    }
+  } catch {
+    // abaikan — lanjut ke fallback
+  }
+  // Fallback: nama identity lama, lalu nama generik (bukan nama pengembang).
+  return safeGet(NAME_KEY) || "Pengguna";
 }
 
 export function setUserName(name: string) {

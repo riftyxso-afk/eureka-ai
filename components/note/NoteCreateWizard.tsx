@@ -10,6 +10,7 @@ import {
   FileText,
   Layers,
   ListChecks,
+  Rocket,
   Sparkles,
   X,
   Zap,
@@ -146,7 +147,7 @@ export function NoteCreateWizardPanel({
               <Sparkles size={11} /> Sebelum membuat
             </span>
             <h2 className="mt-1.5 text-[15px] font-extrabold leading-snug text-clay-dark sm:text-base">
-              Aku bantu atur catatanmu dulu 😊
+              Aku bantu atur catatanmu dulu
             </h2>
             <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-clay-muted">
               Topik: “{prompt.slice(0, 100)}
@@ -463,7 +464,7 @@ export function NoteCreateWizardPanel({
             }}
             className="inline-flex min-h-[40px] items-center gap-1.5 rounded-clay-md bg-clay-primary px-5 py-2 text-sm font-extrabold text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
           >
-            <Sparkles size={15} /> Mulai Buat 🚀
+            <Sparkles size={15} /> Mulai Buat <Rocket size={15} />
           </button>
         )}
       </div>

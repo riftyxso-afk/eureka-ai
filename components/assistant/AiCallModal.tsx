@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Mic, PhoneOff, X } from "lucide-react";
+import { GraduationCap, Loader2, Mic, PhoneOff, X } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 
@@ -146,7 +146,7 @@ export default function AiCallModal({
       setTranscript(t.trim());
     };
     rec.onerror = () => {
-      setError("Tidak mendengar suara. Coba lagi ya 🙏");
+      setError("Tidak mendengar suara. Coba lagi.");
       setPhase("idle");
     };
     rec.onend = () => {
@@ -161,7 +161,7 @@ export default function AiCallModal({
     try {
       rec.start();
     } catch {
-      setError("Input suara gagal dimulai. Coba lagi ya 🙏");
+      setError("Input suara gagal dimulai. Coba lagi.");
       setPhase("idle");
     }
   }, []);
@@ -205,7 +205,7 @@ export default function AiCallModal({
         error?: string;
       } | null;
       if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Gagal memanggil AI. Coba lagi ya 🙏");
+        setError(body?.error ?? "Gagal memanggil AI. Coba lagi.");
         setPhase("idle");
         return;
       }
@@ -214,7 +214,7 @@ export default function AiCallModal({
       await speak(answer);
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Gagal memanggil AI. Coba lagi ya 🙏"
+        e instanceof Error ? e.message : "Gagal memanggil AI. Coba lagi."
       );
       setPhase("idle");
     }
@@ -317,7 +317,7 @@ export default function AiCallModal({
               {phase === "thinking" ? (
                 <Loader2 size={28} className="animate-spin text-amber-500" />
               ) : (
-                <span className="align-middle leading-none">🎓</span>
+                <GraduationCap size={18} className="align-middle text-clay-primary" />
               )}
             </div>
 

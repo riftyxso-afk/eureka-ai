@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const rl = checkRateLimit(`trial:${auth.userId}`, 5, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
-        { error: "Terlalu sering mencoba. Tunggu sebentar ya 🙏" },
+        { error: "Terlalu sering mencoba. Tunggu sebentar ya." },
         { status: 429 }
       );
     }

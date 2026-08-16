@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Loader2, RotateCw, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  Loader2,
+  RotateCw,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { getUserId } from "@/lib/identity";
 import { postProgress } from "@/lib/levelUp";
 
@@ -96,7 +104,8 @@ export default function ChatFlashcardModal({
       >
         <div className="mb-3 sm:mb-4 flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-extrabold text-clay-dark">
-            Flashcards dari Percakapan 🃏
+            <Layers size={18} className="mr-2 text-clay-primary" />
+            Flashcards dari Percakapan
           </h2>
           <button
             onClick={onClose}
@@ -111,7 +120,7 @@ export default function ChatFlashcardModal({
           <div className="space-y-3 sm:space-y-4">
             <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
               Ubah materi percakapanmu menjadi kartu hafalan untuk belajar
-              cepat! 🃏
+              cepat!
             </p>
             <button
               onClick={generate}
@@ -124,7 +133,10 @@ export default function ChatFlashcardModal({
                   Membuat kartu...
                 </>
               ) : (
-                "✨ Buat Flashcards"
+                <>
+                  <Sparkles size={18} className="mr-2" />
+                  Buat Flashcards
+                </>
               )}
             </button>
             {error && (

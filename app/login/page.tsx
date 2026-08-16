@@ -4,14 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   Eye,
   EyeOff,
+  Hand,
   KeyRound,
   Loader2,
+  Lock,
   LogIn,
   Mail,
-  Lock,
-  ArrowLeft,
 } from "lucide-react";
 
 import ButtonClay from "@/components/ui/ButtonClay";
@@ -220,7 +221,8 @@ export default function LoginPage() {
 
         <CardClay className="!p-8 sm:!p-10">
           <h1 className="text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
-            Selamat Datang Kembali! 👋
+            Selamat Datang Kembali!
+            <Hand size={26} className="ml-2 inline text-clay-primary" />
           </h1>
           <p className="mt-2 text-center text-base font-semibold text-clay-muted">
             Masuk dan lanjutkan momen Eureka-mu
@@ -361,7 +363,7 @@ export default function LoginPage() {
             <form onSubmit={handleSendOtp} className="mt-6 space-y-5">
               <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
                 Masukkan email — kami kirim kode 6 digit yang berlaku beberapa
-                menit. Tidak perlu kata sandi! 🔑
+                menit. Tidak perlu kata sandi!
               </p>
               <div>
                 <label className="mb-2 block text-sm font-extrabold text-clay-dark">

@@ -10,12 +10,14 @@ import {
   Sparkles,
   Target,
   Trash2,
+  Trophy,
 } from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
+import { emojiToIcon } from "@/lib/emojiIcon";
 import {
   MISSION_TEMPLATES,
   addMission,
@@ -56,7 +58,7 @@ export default function MisiPage() {
     const cur = Number(currentValue.replace(",", "."));
     const tgt = Number(targetValue.replace(",", "."));
     if (!Number.isFinite(tgt) || tgt <= 0) {
-      notify("Isi nilai target dengan benar ⚠️");
+      notify("Isi nilai target dengan benar");
       return;
     }
     const mission = addMission({
@@ -72,7 +74,7 @@ export default function MisiPage() {
     setTargetValue("");
     setDeadline("");
     reload();
-    notify("Misi dibuat! 🎯");
+    notify("Misi dibuat!");
     void requestGuide(mission.id);
   };
 
@@ -109,7 +111,7 @@ export default function MisiPage() {
   const completeMission = (id: string) => {
     updateMission(id, { status: "done" });
     reload();
-    notify("Misi selesai — hebat! 🎉");
+    notify("Misi selesai — hebat!");
   };
 
   const active = missions.filter((m) => m.status === "active");
@@ -137,6 +139,7 @@ export default function MisiPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {MISSION_TEMPLATES.map((t) => {
               const activeTpl = template === t.type;
+              const Icon = emojiToIcon(t.icon);
               return (
                 <button
                   key={t.type}
@@ -148,7 +151,9 @@ export default function MisiPage() {
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    <span className="text-xl">{t.icon}</span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
+                      <Icon size={16} />
+                    </span>
                     <span className="text-sm font-extrabold text-clay-dark">
                       {t.title}
                     </span>
@@ -238,12 +243,15 @@ export default function MisiPage() {
       <div className="mt-4 space-y-4">
         {active.map((m) => {
           const progress = missionProgress(m);
+          const Icon = emojiToIcon(
+            MISSION_TEMPLATES.find((t) => t.type === m.type)?.icon
+          );
           return (
             <CardClay key={m.id} className="!p-4 sm:!p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
-                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-lg">
-                    {MISSION_TEMPLATES.find((t) => t.type === m.type)?.icon ?? "🎯"}
+                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
+                    <Icon size={18} />
                   </span>
                   <div className="min-w-0">
                     <p className="text-base font-extrabold text-clay-dark">
@@ -351,22 +359,28 @@ export default function MisiPage() {
 
       {done.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-lg font-extrabold sm:text-xl">Misi Selesai 🏆</h2>
+          <h2 className="flex items-center gap-2 text-lg font-extrabold sm:text-xl">
+            Misi Selesai <Trophy size={20} className="text-clay-primary" />
+          </h2>
           <div className="mt-3 space-y-2">
-            {done.map((m) => (
+            {done.map((m) => {
+              const Icon = emojiToIcon(
+                MISSION_TEMPLATES.find((t) => t.type === m.type)?.icon
+              );
+              return (
               <div
                 key={m.id}
                 className="card-clay flex items-center gap-3 !p-4 opacity-70"
               >
-                <span className="text-xl">
-                  {MISSION_TEMPLATES.find((t) => t.type === m.type)?.icon ?? "🏆"}
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
+                  <Icon size={17} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-extrabold text-clay-dark">
                     {missionTypeLabel(m.type)}
                   </p>
                   <p className="text-xs font-bold text-clay-muted">
-                    Target {m.targetValue} {m.unit} — selesai 🎉
+                    Target {m.targetValue} {m.unit} — selesai
                   </p>
                 </div>
                 <button
@@ -380,7 +394,8 @@ export default function MisiPage() {
                   <Trash2 size={15} />
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { Copy, Loader2, RefreshCw, Trophy, Users } from "lucide-react";
+import {
+  Copy,
+  Loader2,
+  RefreshCw,
+  Rocket,
+  Trophy,
+  Users,
+} from "lucide-react";
 
 import QuizTake from "@/components/quiz/QuizTake";
 import {
@@ -241,7 +248,7 @@ export default function QuizPage() {
         // abaikan
       }
       setPhase("leaderboard");
-      notify(`Skormu: ${res.score}/${res.total} 🎯`);
+      notify(`Skormu: ${res.score}/${res.total}`);
     } catch (e) {
       notify(e instanceof Error ? e.message : "Gagal mengirim jawaban.");
     } finally {
@@ -370,7 +377,7 @@ export default function QuizPage() {
             </h1>
             <p className="text-[11px] font-bold text-clay-muted">
               {room.status === "lobby" && "Belum dimulai — tunggu host"}
-              {room.status === "live" && "Sedang berlangsung ⚡"}
+              {room.status === "live" && "Sedang berlangsung"}
               {room.status === "ended" && "Ruang selesai"}
               {" · "}
               {realtimeConnected ? "realtime aktif" : "memuat..."}
@@ -428,7 +435,9 @@ export default function QuizPage() {
                     Memulai...
                   </>
                 ) : (
-                  "🚀 Mulai Kuis"
+                  <>
+                    <Rocket size={16} className="mr-2" /> Mulai Kuis
+                  </>
                 )}
               </button>
             ) : (

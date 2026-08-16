@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Square, X } from "lucide-react";
+import { Crown, Square, X } from "lucide-react";
 import { apiFetch, apiEventSource } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
@@ -102,16 +102,25 @@ export function NoteProgressOverlay({
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const form = new FormData();
-    form.append(
-      "sourceType",
-      intent.isYoutube ? "youtube" : intent.url ? "web" : "dokumen"
-    );
     if (intent.url) {
-      form.append("url", intent.url);
+      // Sumber link (YouTube/web) — format multi-sumber.
+      form.append(
+        "sources",
+        JSON.stringify([
+          {
+            type: intent.isYoutube ? "youtube" : "web",
+            url: intent.url,
+          },
+        ])
+      );
     } else {
       // Tanpa URL: buat file teks dari topik prompt → AI menyusun catatan.
       form.append(
-        "file",
+        "sources",
+        JSON.stringify([{ type: "dokumen", fileName: "catatan.txt" }])
+      );
+      form.append(
+        "file0",
         new File([intent.topic || prompt], "catatan.txt", {
           type: "text/plain",
         })
@@ -249,7 +258,7 @@ export function NoteProgressOverlay({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-extrabold text-clay-dark">
-                  {error ? "Ups, gagal 😢" : "Membuat catatanmu…"}
+                  {error ? "Ups, gagal" : "Membuat catatanmu…"}
                 </h2>
                 <p className="mt-1 text-xs font-bold text-clay-muted">
                   Eureka sedang menyusun materi —
@@ -305,7 +314,8 @@ export function NoteProgressOverlay({
                 href={upgradeUrl}
                 className="btn-clay-primary mt-4 block w-full !py-2.5 text-center text-sm"
               >
-                👑 Upgrade ke Pro
+                <Crown size={16} className="mr-2" />
+                Upgrade ke Pro
               </a>
             )}
             {error && (

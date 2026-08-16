@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Loader2, RotateCw, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  Loader2,
+  RotateCw,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { getUserId } from "@/lib/identity";
 import { postProgress } from "@/lib/levelUp";
 
@@ -89,7 +97,7 @@ export default function FlashcardModal({
         {!cards && !generating && (
           <div className="space-y-3 sm:space-y-4">
             <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
-              Ubah materi catatan menjadi kartu hafalan untuk belajar cepat! 🃏
+              Ubah materi catatan menjadi kartu hafalan untuk belajar cepat!
             </p>
             <button
               onClick={generate}
@@ -102,7 +110,10 @@ export default function FlashcardModal({
                   Membuat kartu...
                 </>
               ) : (
-                "✨ Buat Flashcards"
+                <>
+                  <Sparkles size={18} className="mr-2" />
+                  Buat Flashcards
+                </>
               )}
             </button>
             {error && (
@@ -206,7 +217,7 @@ export default function FlashcardModal({
                 onClick={() => {
                   if (index === cards!.length - 1) {
                     setIndex(0);
-                    notify("Selesai! Ulangi dari awal 🔁");
+                    notify("Selesai! Ulangi dari awal");
                     void postProgress({
                       action: "cards_review_all",
                       userId: getUserId(),

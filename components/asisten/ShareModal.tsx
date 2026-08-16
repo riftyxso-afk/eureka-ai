@@ -144,7 +144,7 @@ export default function ShareModal({
               </div>
               {copied && (
                 <p className="mt-1.5 text-right text-[11px] font-bold text-green-600">
-                  Link tersalin! 🔗
+                  Link tersalin!
                 </p>
               )}
             </div>

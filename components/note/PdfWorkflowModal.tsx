@@ -171,7 +171,7 @@ export function PdfWorkflowModal({
           setSavedFilename(data.filename ?? "");
           setStatus("done");
           downloadPdf(data.base64, data.filename ?? "");
-          notify("Dokumen PDF selesai! 📄");
+          notify("Dokumen PDF selesai!");
         }
       } catch {
         setErrorMsg("Respons selesai tidak valid.");

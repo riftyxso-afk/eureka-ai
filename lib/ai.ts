@@ -267,6 +267,11 @@ export interface AiChatOptions {
   temperature?: number;
   /** Kecepatan jawaban (fast/normal/deep) — default "normal". */
   speedMode?: AiSpeedMode;
+  /**
+   * Gambar lampiran → dikirim sebagai image_url (vision) bila model
+   * mendukungnya. Bila provider menolak gambar, dicoba ulang tanpa gambar.
+   */
+  visionImage?: { dataUrl: string; filename: string } | null;
 }
 
 /** Ekstrak objek JSON dari teks AI (toleran terhadap ```markdown fence & trailing comma). */
@@ -352,7 +357,18 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
     max_tokens: options.maxTokens ?? 2048,
     messages: [
       ...(options.system ? [{ role: "system", content: options.system }] : []),
-      { role: "user", content: options.user },
+      {
+        role: "user",
+        content: options.visionImage
+          ? [
+              { type: "text", text: options.user },
+              {
+                type: "image_url",
+                image_url: { url: options.visionImage.dataUrl },
+              },
+            ]
+          : options.user,
+      },
     ],
   };
 

@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Plus,
   Trash2,
+  type LucideIcon,
 } from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
@@ -78,7 +79,7 @@ export default function JadwalPage() {
   const submitEntry = () => {
     const name = subject.trim();
     if (!name) {
-      notify("Nama mata pelajaran tidak boleh kosong ⚠️");
+      notify("Nama mata pelajaran tidak boleh kosong");
       return;
     }
     addScheduleEntry({
@@ -92,13 +93,13 @@ export default function JadwalPage() {
     setRoom("");
     setShowForm(false);
     reload();
-    notify("Jadwal ditambahkan ✅");
+    notify("Jadwal ditambahkan");
   };
 
   const submitTask = () => {
     const title = taskTitle.trim();
     if (!title) {
-      notify("Nama tugas tidak boleh kosong ⚠️");
+      notify("Nama tugas tidak boleh kosong");
       return;
     }
     addTask({
@@ -111,7 +112,7 @@ export default function JadwalPage() {
     setTaskDue("");
     setShowTaskForm(false);
     reload();
-    notify("Tugas ditambahkan ✅");
+    notify("Tugas ditambahkan");
   };
 
   const pending = tasks.filter((t) => !t.done).length;
@@ -137,19 +138,20 @@ export default function JadwalPage() {
       <div className="mt-5 flex gap-2">
         {(
           [
-            { id: "jadwal", label: "📅 Jadwal Mapel" },
-            { id: "tugas", label: `📋 Tugas${pending > 0 ? ` (${pending})` : ""}` },
-          ] as { id: Tab; label: string }[]
+            { id: "jadwal", label: "Jadwal Mapel", icon: CalendarDays },
+            { id: "tugas", label: `Tugas${pending > 0 ? ` (${pending})` : ""}`, icon: ClipboardList },
+          ] as { id: Tab; label: string; icon: LucideIcon }[]
         ).map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`min-h-[44px] shrink-0 rounded-clay-full border-3 px-4 text-xs font-extrabold transition-all duration-75 active:translate-y-0.5 sm:min-h-[40px] sm:px-4 sm:text-sm ${
+            className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-clay-full border-3 px-4 text-xs font-extrabold transition-all duration-75 active:translate-y-0.5 sm:min-h-[40px] sm:px-4 sm:text-sm ${
               tab === t.id
                 ? "border-clay-primary bg-clay-primary text-white shadow-clay-sm"
                 : "border-clay-shadow/50 bg-white text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
             }`}
           >
+            <t.icon size={15} />
             {t.label}
           </button>
         ))}

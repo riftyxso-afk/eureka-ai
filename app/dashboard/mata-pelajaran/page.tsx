@@ -7,6 +7,7 @@ import { BookOpen, Plus, Trash2, X } from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
+import { emojiToIcon } from "@/lib/emojiIcon";
 import type { Subject } from "@/lib/subjects";
 
 const ADD_COLORS = ["#8B5CF6", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#EC4899", "#14B8A6"];
@@ -140,17 +141,19 @@ export default function MataPelajaranPage() {
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {subjects.map((subject) => (
+          {subjects.map((subject) => {
+            const SubjectIcon = emojiToIcon(subject.emoji);
+            return (
             <div
               key={subject.id}
               className="card-clay flex flex-col gap-4 !p-6 transition-all duration-75 hover:-translate-y-0.5 hover:shadow-[0_12px_0_#C1B4A4]"
             >
               <div className="flex items-start justify-between">
                 <div
-                  className="flex h-16 w-16 items-center justify-center rounded-full text-3xl shadow-clay-inset"
-                  style={{ backgroundColor: `${subject.color}26` }}
+                  className="flex h-16 w-16 items-center justify-center rounded-full shadow-clay-inset"
+                  style={{ backgroundColor: `${subject.color}26`, color: subject.color }}
                 >
-                  {subject.emoji}
+                  <SubjectIcon size={28} />
                 </div>
                 <button
                   onClick={() => handleDelete(subject)}
@@ -184,7 +187,8 @@ export default function MataPelajaranPage() {
                 Lihat Catatan
               </Link>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

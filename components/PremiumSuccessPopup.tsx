@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Crown, PartyPopper, X } from "lucide-react";
+import { Crown, PartyPopper, Rocket, Sparkles, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
@@ -144,17 +144,15 @@ function PremiumSuccessPopupInner() {
               {/* Header gradient emas */}
               <div className="relative bg-gradient-to-br from-clay-primary via-clay-secondary to-amber-500 px-6 pb-8 pt-7 text-center">
                 <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                  <span className="absolute left-4 top-4 text-2xl opacity-50">✨</span>
-                  <span className="absolute right-5 top-6 text-xl opacity-40">🎉</span>
-                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-2xl opacity-40">
-                    🎊
-                  </span>
+                  <Sparkles className="absolute left-4 top-4 text-white/60" size={20} />
+                  <PartyPopper className="absolute right-5 top-6 text-white/50" size={18} />
+                  <PartyPopper className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/50" size={20} />
                 </div>
                 <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20 ring-4 ring-white/30">
                   <Crown size={30} className="text-white" />
                 </div>
-                <h2 className="relative mt-3 text-2xl font-extrabold text-white drop-shadow">
-                  Selamat! Kamu Berhasil Berlangganan 👑
+                <h2 className="relative mt-3 flex items-center justify-center gap-2 text-2xl font-extrabold text-white drop-shadow">
+                  Selamat! Kamu Berhasil Berlangganan
                 </h2>
                 <p className="relative mt-1 text-sm font-bold text-white/90">
                   Paket Pro Eureka.AI sekarang aktif untuk akunmu
@@ -184,10 +182,10 @@ function PremiumSuccessPopupInner() {
                   onClick={handleClose}
                   className="btn-clay-primary mt-5 w-full py-3 text-base font-extrabold"
                 >
-                  Mulai Belajar! 🚀
+                  <Rocket size={18} className="mr-2" /> Mulai Belajar!
                 </button>
                 <p className="mt-3 text-center text-[11px] font-semibold text-clay-muted">
-                  Selamat menikmati pengalaman belajar tanpa batas 💜
+                  Selamat menikmati pengalaman belajar tanpa batas
                 </p>
               </div>
 

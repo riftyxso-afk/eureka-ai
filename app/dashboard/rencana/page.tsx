@@ -117,7 +117,7 @@ export default function RencanaPage() {
   const createItem = () => {
     const clean = title.trim();
     if (clean.length < 3) {
-      notify("Isi nama aktivitas belajar dulu ✍️");
+      notify("Isi nama aktivitas belajar dulu");
       return;
     }
     addPlanItem({
@@ -131,7 +131,7 @@ export default function RencanaPage() {
     setTime("");
     setSubject("");
     reload();
-    notify("Ditambahkan ke rencana! 🗒️");
+    notify("Ditambahkan ke rencana!");
   };
 
   const todayIndex = new Date().getDay(); // 0=Min .. 6=Sab → geser ke Senin

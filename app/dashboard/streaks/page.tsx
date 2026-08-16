@@ -7,8 +7,13 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
+  Crown,
   Flame,
+  Star,
+  Target,
   TrendingUp,
+  Trophy,
+  type LucideIcon,
 } from "lucide-react";
 import { getUserId } from "@/lib/identity";
 
@@ -24,12 +29,12 @@ interface ActivityEntry {
   label: string;
 }
 
-const MILESTONE_DEFS: { day: number; label: string }[] = [
-  { day: 3, label: "🔥 Mulai Konsisten" },
-  { day: 7, label: "⭐ Pekan Pertama" },
-  { day: 14, label: "🎯 Dua Pekan" },
-  { day: 30, label: "🏆 Sebulan Penuh" },
-  { day: 100, label: "👑 Legenda" },
+const MILESTONE_DEFS: { day: number; label: string; icon: LucideIcon }[] = [
+  { day: 3, label: "Mulai Konsisten", icon: Flame },
+  { day: 7, label: "Pekan Pertama", icon: Star },
+  { day: 14, label: "Dua Pekan", icon: Target },
+  { day: 30, label: "Sebulan Penuh", icon: Trophy },
+  { day: 100, label: "Legenda", icon: Crown },
 ];
 
 function formatDate(iso: string): string {
@@ -92,11 +97,14 @@ export default function StreaksPage() {
     return () => clearInterval(timer);
   }, [loadStats]);
 
-  const milestones: Milestone[] = MILESTONE_DEFS.map((m) => ({
-    day: m.day,
-    label: m.label,
-    achieved: stats.currentStreak >= m.day,
-  }));
+  const milestones: (Milestone & { icon: LucideIcon })[] = MILESTONE_DEFS.map(
+    (m) => ({
+      day: m.day,
+      label: m.label,
+      icon: m.icon,
+      achieved: stats.currentStreak >= m.day,
+    })
+  );
 
   const cards = [
     { icon: TrendingUp, label: "Total XP", value: stats.totalXP },
@@ -160,7 +168,8 @@ export default function StreaksPage() {
               <Clock size={22} className="shrink-0 text-clay-muted" />
             )}
             <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-              <span className="truncate text-base font-bold text-clay-dark">
+              <span className="flex items-center gap-2 truncate text-base font-bold text-clay-dark">
+                <m.icon size={16} className="shrink-0 text-clay-primary" />
                 {m.label}
               </span>
               <span className="shrink-0 rounded-clay-full bg-clay-inputBg px-3 py-1 text-xs font-extrabold text-clay-muted shadow-clay-inset">
@@ -176,7 +185,7 @@ export default function StreaksPage() {
       <div className="card-clay mt-4 !p-2">
         {stats.recentActivity.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm font-semibold text-clay-muted">
-            Belum ada aktivitas. Mulai belajar untuk mengumpulkan XP! 🚀
+            Belum ada aktivitas. Mulai belajar untuk mengumpulkan XP!
           </p>
         ) : (
           stats.recentActivity.map((a, i) => (

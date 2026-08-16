@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         name: c.name,
         xp: stats.xp,
         level: levelFromXP(stats.xp),
-        avatar: "🧑‍🎓",
+        avatar: "",
         rank: 0,
       });
     }

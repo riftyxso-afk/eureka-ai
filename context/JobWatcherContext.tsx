@@ -73,7 +73,7 @@ export function notifyBrowserNoteReady(noteId: string, noteTitle: string): void 
     return;
   }
   try {
-    const n = new Notification("Catatan selesai dibuat! 🎉", {
+    const n = new Notification("Catatan selesai dibuat!", {
       body: `“${noteTitle}” sudah siap dipelajari.`,
       tag: `note-ready-${noteId}`,
       icon: "/logo.png",
@@ -221,7 +221,7 @@ export function JobWatcherProvider({
             const noteTitle = job.noteTitle ?? "Catatan kamu";
             playCompletionSound();
             showToast({
-              title: "Catatan selesai dibuat! 🎉",
+              title: "Catatan selesai dibuat!",
               message: `“${noteTitle}” sudah siap dipelajari.`,
               variant: "success",
               link: noteId ? `/dashboard/note/${noteId}` : undefined,

@@ -64,7 +64,7 @@ export default function InviteModal({
 
   const handleInvite = async () => {
     if (!name.trim()) {
-      notify("Nama teman tidak boleh kosong! ⚠️");
+      notify("Nama teman tidak boleh kosong!");
       return;
     }
     setSending(true);
@@ -79,15 +79,15 @@ export default function InviteModal({
         setName("");
         setInviteLink(data.inviteLink);
         notify(
-          `${name.trim()} diundang sebagai ${role === "editor" ? "Editor" : "Viewer"} ✅`
+          `${name.trim()} diundang sebagai ${role === "editor" ? "Editor" : "Viewer"}`
         );
         await refresh();
       } else {
         const err = await res.json().catch(() => ({}));
-        notify(err.error ?? "Gagal mengundang ⚠️");
+        notify(err.error ?? "Gagal mengundang");
       }
     } catch {
-      notify("Gagal mengundang ⚠️");
+      notify("Gagal mengundang");
     } finally {
       setSending(false);
     }
@@ -97,7 +97,7 @@ export default function InviteModal({
     try {
       const full = `${window.location.origin}${inviteLink}`;
       await navigator.clipboard.writeText(full);
-      notify("Link undangan disalin! 🔗");
+      notify("Link undangan disalin!");
     } catch {
       notify("Gagal menyalin link.");
     }
@@ -112,7 +112,7 @@ export default function InviteModal({
       });
       await refresh();
     } catch {
-      notify("Gagal menghapus kolaborator ⚠️");
+      notify("Gagal menghapus kolaborator");
     }
   };
 
@@ -158,8 +158,8 @@ export default function InviteModal({
             <div className="flex gap-2">
               {(
                 [
-                  { key: "editor", label: "Editor ✏️" },
-                  { key: "viewer", label: "Viewer 👀" },
+                  { key: "editor", label: "Editor" },
+                  { key: "viewer", label: "Viewer" },
                 ] as const
               ).map((r) => (
                 <button
@@ -227,7 +227,7 @@ export default function InviteModal({
                 await navigator.clipboard.writeText(
                   `${window.location.origin}/dashboard/note/${noteId}/papan`
                 );
-                notify("Link papan tulis disalin! 🔗");
+                notify("Link papan tulis disalin!");
               } catch {
                 notify("Gagal menyalin link.");
               }

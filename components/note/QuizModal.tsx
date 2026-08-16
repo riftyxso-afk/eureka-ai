@@ -4,7 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/apiClient";
 import { motion } from "framer-motion";
-import { Check, Copy, Link2, Loader2, Radio, RefreshCw, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Lightbulb,
+  Link2,
+  Loader2,
+  Radio,
+  RefreshCw,
+  Rocket,
+  Sparkles,
+  X,
+} from "lucide-react";
 import {
   buildQuizUrl,
   createQuizRoom,
@@ -201,7 +212,10 @@ export default function QuizModal({
                   Membuat soal...
                 </>
               ) : (
-                "✨ Buat Kuis dari Catatan"
+                <>
+                  <Sparkles size={18} className="mr-2" />
+                  Buat Kuis dari Catatan
+                </>
               )}
             </button>
             {error && (
@@ -266,7 +280,7 @@ export default function QuizModal({
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-clay-dark">
                 {submitted
-                  ? `Skor: ${score}/${questions.length} 🎯`
+                  ? `Skor: ${score}/${questions.length}`
                   : `${questions.length} soal`}
               </div>
               <button
@@ -330,8 +344,9 @@ export default function QuizModal({
                     })}
                   </div>
                   {submitted && q.explanation && (
-                    <p className="mt-2 rounded-xl bg-clay-beige px-3 py-2 text-xs font-medium text-clay-dark leading-relaxed">
-                      💡 {q.explanation}
+                    <p className="mt-2 flex items-start gap-2 rounded-xl bg-clay-beige px-3 py-2 text-xs font-medium text-clay-dark leading-relaxed">
+                      <Lightbulb size={14} className="mt-0.5 shrink-0 text-clay-secondary" />
+                      <span>{q.explanation}</span>
                     </p>
                   )}
                 </div>
@@ -342,7 +357,7 @@ export default function QuizModal({
               <button
                 onClick={() => {
                   if (Object.keys(answers).length < questions.length) {
-                    notify("Jawab semua soal dulu ya! ⚠️");
+                    notify("Jawab semua soal dulu ya!");
                     return;
                   }
                   setSubmitted(true);
@@ -447,7 +462,7 @@ export default function QuizModal({
                       onClick={() => router.push(`/quiz/${roomToken}`)}
                       className="btn-clay-primary w-full !min-h-[46px]"
                     >
-                      🚀 Buka Ruang & Mulai
+                      <Rocket size={18} className="mr-2" /> Buka Ruang & Mulai
                     </button>
                   </div>
                 )}

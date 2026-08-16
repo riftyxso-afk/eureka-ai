@@ -1,18 +1,13 @@
 /**
  * Penyimpanan mata pelajaran — Supabase.
  * Tabel: subjects. Total catatan per pelajaran dihitung live dari vector store.
+ *
+ * MATA PELAJARAN PER-USER: semua fungsi menerima userId dan memfilter ke
+ * data milik user tersebut. Akun baru mulai dengan daftar kosong (tanpa
+ * seed global) — lihat supabase_patch_015_user_subjects.sql.
  */
 import { db } from "./supabase/admin";
 import type { Subject } from "@/lib/subjects";
-
-const DEFAULT_SUBJECTS: Subject[] = [
-  { id: "s-mtk", name: "Matematika", emoji: "🧮", color: "#8B5CF6", progress: 75 },
-  { id: "s-fis", name: "Fisika", emoji: "⚡", color: "#F59E0B", progress: 60 },
-  { id: "s-kim", name: "Kimia", emoji: "🧪", color: "#10B981", progress: 45 },
-  { id: "s-bio", name: "Biologi", emoji: "🧬", color: "#3B82F6", progress: 30 },
-  { id: "s-eko", name: "Ekonomi", emoji: "📊", color: "#EF4444", progress: 20 },
-  { id: "s-sej", name: "Sejarah", emoji: "📜", color: "#8B5CF6", progress: 10 },
-];
 
 function mapRow(row: any): Subject {
   return {
@@ -24,27 +19,24 @@ function mapRow(row: any): Subject {
   };
 }
 
-export async function getSubjects(): Promise<Subject[]> {
-  try {
-    const client = db();
-    const { data, error } = await client
-      .from("subjects")
-      .select("*")
-      .order("name");
+export async function getSubjects(userId: string): Promise<Subject[]> {
+  if (!userId) return [];
+  const client = db();
+  const { data, error } = await client
+    .from("subjects")
+    .select("*")
+    .eq("user_id", userId)
+    .order("name");
 
-    if (error) throw error;
-    const rows = data ?? [];
-    return rows.length > 0 ? rows.map(mapRow) : DEFAULT_SUBJECTS;
-  } catch {
-    return DEFAULT_SUBJECTS;
-  }
+  if (error) throw error;
+  return (data ?? []).map(mapRow);
 }
 
-export async function addSubject(input: {
-  name: string;
-  emoji?: string;
-  color?: string;
-}): Promise<Subject> {
+export async function addSubject(
+  input: { name: string; emoji?: string; color?: string },
+  userId: string
+): Promise<Subject> {
+  if (!userId) throw new Error("Autentikasi diperlukan.");
   const client = db();
   const name = input.name.trim();
   if (!name) throw new Error("Nama mata pelajaran tidak boleh kosong.");
@@ -52,6 +44,7 @@ export async function addSubject(input: {
   const { data: existing } = await client
     .from("subjects")
     .select("id")
+    .eq("user_id", userId)
     .ilike("name", name)
     .maybeSingle();
   if (existing) throw new Error(`"${name}" sudah ada di daftar.`);
@@ -72,6 +65,7 @@ export async function addSubject(input: {
       icon: subject.emoji,
       color: subject.color,
       progress: 0,
+      user_id: userId,
     })
     .select()
     .single();
@@ -80,8 +74,14 @@ export async function addSubject(input: {
   return mapRow(data);
 }
 
-export async function deleteSubject(id: string): Promise<void> {
+export async function deleteSubject(id: string, userId: string): Promise<void> {
+  if (!userId) throw new Error("Autentikasi diperlukan.");
   const client = db();
-  const { error } = await client.from("subjects").delete().eq("id", id);
+  // Hanya hapus bila subjek benar-benar milik user ini.
+  const { error } = await client
+    .from("subjects")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
   if (error) throw error;
 }

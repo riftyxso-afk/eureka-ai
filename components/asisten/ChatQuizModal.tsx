@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import { motion } from "framer-motion";
-import { Check, Loader2, RefreshCw, X } from "lucide-react";
+import {
+  Check,
+  FileText,
+  Lightbulb,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { getUserId } from "@/lib/identity";
 
 interface QuizQuestion {
@@ -90,8 +98,8 @@ export default function ChatQuizModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 sm:mb-4 flex items-center justify-between">
-          <h2 className="text-base sm:text-lg font-extrabold text-clay-dark">
-            Kuis dari Percakapan 📝
+          <h2 className="flex items-center gap-2 text-base sm:text-lg font-extrabold text-clay-dark">
+            <FileText size={18} className="text-clay-primary" /> Kuis dari Percakapan
           </h2>
           <button
             onClick={onClose}
@@ -135,7 +143,10 @@ export default function ChatQuizModal({
                   Membuat soal...
                 </>
               ) : (
-                "✨ Buat Kuis dari Percakapan"
+                <>
+                  <Sparkles size={18} className="mr-2" />
+                  Buat Kuis dari Percakapan
+                </>
               )}
             </button>
             {error && (
@@ -200,7 +211,7 @@ export default function ChatQuizModal({
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-clay-dark">
                 {submitted
-                  ? `Skor: ${score}/${questions.length} 🎯`
+                  ? `Skor: ${score}/${questions.length}`
                   : `${questions.length} soal`}
               </div>
               <button
@@ -269,8 +280,9 @@ export default function ChatQuizModal({
                     })}
                   </div>
                   {submitted && q.explanation && (
-                    <p className="mt-2 rounded-xl bg-clay-beige px-3 py-2 text-xs font-medium text-clay-dark leading-relaxed">
-                      💡 {q.explanation}
+                    <p className="mt-2 flex items-start gap-2 rounded-xl bg-clay-beige px-3 py-2 text-xs font-medium text-clay-dark leading-relaxed">
+                      <Lightbulb size={14} className="mt-0.5 shrink-0 text-clay-secondary" />
+                      <span>{q.explanation}</span>
                     </p>
                   )}
                 </div>

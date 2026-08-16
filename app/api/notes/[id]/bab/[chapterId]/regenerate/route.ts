@@ -69,7 +69,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Kamu sudah menulis ulang bab terlalu sering dalam 1 jam. Tunggu sebentar ya 🙏",
+            "Kamu sudah menulis ulang bab terlalu sering dalam 1 jam. Tunggu sebentar ya.",
         },
         {
           status: 429,
@@ -83,8 +83,8 @@ export async function POST(
     if (!cap.ok) {
       const busy =
         cap.reason === "global"
-          ? "Server sedang sibuk. Coba lagi dalam beberapa menit ya 🙏"
-          : "Kamu masih punya catatan yang sedang diproses. Tunggu sampai selesai ya 🙏";
+          ? "Server sedang sibuk. Coba lagi dalam beberapa menit ya."
+          : "Kamu masih punya catatan yang sedang diproses. Tunggu sampai selesai ya.";
       return NextResponse.json({ error: busy }, { status: 429 });
     }
 

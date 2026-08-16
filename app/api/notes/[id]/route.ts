@@ -38,20 +38,32 @@ export async function PATCH(
     const body = (await req.json().catch(() => null)) as {
       title?: string;
       summary?: string;
+      /** Toggle semat (pin) catatan. */
+      pinned?: boolean;
     } | null;
 
-    const title = String(body?.title ?? "").trim().slice(0, 200);
-    if (!title) {
+    // Judul hanya wajib bila body mengubah judul; pin boleh dikirim sendiri.
+    const hasTitle = typeof body?.title === "string";
+    const hasPinned = typeof body?.pinned === "boolean";
+    if (!hasTitle && !hasPinned) {
+      return NextResponse.json(
+        { error: "Tidak ada field yang diubah." },
+        { status: 400 }
+      );
+    }
+    const title = hasTitle ? String(body!.title).trim().slice(0, 200) : undefined;
+    if (hasTitle && !title) {
       return NextResponse.json(
         { error: "Judul tidak boleh kosong." },
         { status: 400 }
       );
     }
     const updated = await updateNote(id, {
-      title,
+      ...(title !== undefined ? { title } : {}),
       summary: body?.summary !== undefined
         ? String(body.summary).slice(0, 1200)
         : undefined,
+      ...(hasPinned ? { pinned: body!.pinned === true } : {}),
     });
     if (!updated) {
       return NextResponse.json(

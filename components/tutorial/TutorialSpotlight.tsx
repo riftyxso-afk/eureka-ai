@@ -148,7 +148,7 @@ export default function TutorialSpotlight({
               >
                 <PartyPopper size={30} className="text-white" />
               </motion.div>
-              <h3 className="mt-4 text-xl font-extrabold">Kamu siap! 🎉</h3>
+              <h3 className="mt-4 text-xl font-extrabold">Kamu siap!</h3>
               <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-muted">
                 Sekarang kamu tahu caranya. Pilih sumber materi dan buat
                 catatan pertamamu — AI akan membantumu.
@@ -157,7 +157,7 @@ export default function TutorialSpotlight({
                 onClick={onComplete}
                 className="mt-5 min-h-[44px] w-full rounded-clay-md bg-clay-primary px-5 py-2.5 text-sm font-extrabold text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
               >
-                Selesai — Mulai Belajar ✨
+                Selesai — Mulai Belajar
               </button>
             </motion.div>
           ) : rect && current ? (

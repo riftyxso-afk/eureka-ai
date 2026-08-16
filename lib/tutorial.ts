@@ -25,17 +25,17 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     targetId: "dashboard-nav",
     title: "Langkah 1 dari 3",
-    text: "Kamu belum punya catatan nih 😅 Yuk mulai dari Dashboard — klik tombol Dashboard di atas 👆",
+    text: "Kamu belum punya catatan nih. Yuk mulai dari Dashboard — klik tombol Dashboard di atas.",
   },
   {
     targetId: "create-note-btn",
     title: "Langkah 2 dari 3",
-    text: "Klik tombol ➕ (Buat Catatan Baru) di pojok kanan bawah untuk membuat catatan pertamamu ✨",
+    text: "Klik tombol Buat Catatan Baru di pojok kanan bawah untuk membuat catatan pertamamu.",
   },
   {
     targetId: "source-card-dokumen",
     title: "Langkah 3 dari 3",
-    text: "Pilih sumber materimu — misal Dokumen, Soal/Tugas, atau Web. AI akan menyusun catatanmu 📥",
+    text: "Pilih sumber materimu — misal Dokumen, Soal/Tugas, atau Web. AI akan menyusun catatanmu.",
   },
 ];
 

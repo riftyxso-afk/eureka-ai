@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
         await pushNotification(fromId, {
           type: "friend_accepted",
           title: "Permintaan diterima",
-          message: `${accepter.name} menerima permintaan pertemananmu 🎉`,
+          message: `${accepter.name} menerima permintaan pertemananmu`,
           link: "/dashboard/teman",
         });
       }

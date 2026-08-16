@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { deleteSubject } from "@/lib/subjects-store";
+import { getUserIdFromAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Autentikasi diperlukan." },
+        { status: 401 }
+      );
+    }
     const { id } = await params;
-    await deleteSubject(id);
+    await deleteSubject(id, userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal menghapus mata pelajaran.";

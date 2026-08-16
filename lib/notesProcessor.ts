@@ -76,18 +76,50 @@ function resolvePrefs(prefs: NotePrefs): NotePrefs {
   };
 }
 
-export interface NotesProcessorInput {
-  sourceType: string;
-  url: string;
-  /** Teks soal yang ditempel user (sourceType "soal"). */
+export type NoteSourceType =
+  | "dokumen"
+  | "youtube"
+  | "web"
+  | "soal"
+  | "audio"
+  | "video";
+
+/** Satu sumber materi untuk pembuatan catatan (maks 5 per catatan). */
+export interface NoteSource {
+  type: NoteSourceType;
+  url?: string;
+  /** Teks soal yang ditempel user (type "soal"). */
   soalText?: string;
   fileBuffer?: Buffer;
   fileName?: string;
+}
+
+export interface NotesProcessorInput {
+  /** Sumber materi — 1 sampai 5, bebas campur jenis. */
+  sources: NoteSource[];
   prefs: NotePrefs;
   /** Job background — dipakai untuk cek pembatalan di antara fase. */
   jobId?: string;
   /** Pemilik catatan (UUID users) — wajib agar sesuai FK notes.user_id. */
   userId?: string;
+}
+
+/** Label ramah user per jenis sumber. */
+export const SOURCE_LABEL: Record<NoteSourceType, string> = {
+  dokumen: "Dokumen",
+  youtube: "YouTube",
+  audio: "Audio",
+  video: "Video",
+  web: "Web",
+  soal: "Soal/Tugas",
+};
+
+/** Hasil ekstraksi satu sumber. */
+interface ExtractedSource {
+  text: string;
+  title?: string;
+  segments?: TranscriptSegment[];
+  sourceUrl?: string;
 }
 
 export interface NotesProcessorProgress {
@@ -99,16 +131,104 @@ export interface NotesProcessorProgress {
 export interface NotesProcessorResult {
   note: Note;
   preview: string;
+  /** Sumber yang gagal diekstrak tapi tidak menggagalkan proses (dilewati). */
+  warnings?: string[];
 }
 
-const SUBJECT_BY_SOURCE: Record<string, string> = {
-  dokumen: "Dokumen",
-  youtube: "YouTube",
-  audio: "Audio",
-  video: "Video",
-  web: "Web",
-  soal: "Soal/Tugas",
-};
+const SUBJECT_BY_SOURCE: Record<string, string> = SOURCE_LABEL;
+
+/**
+ * Ekstrak semua sumber; sumber yang gagal dilewati (dikumpulkan) selama
+ * masih ada sumber lain yang berhasil — bila SEMUA gagal, lempar error
+ * dengan detail sumber mana yang gagal dan alasannya.
+ */
+async function extractAllSources(
+  sources: NoteSource[],
+  report: NotesProcessorProgress["report"]
+): Promise<{
+  extracted: ExtractedSource;
+  webImages: WebImage[];
+  failures: { label: string; error: string }[];
+}> {
+  const parts: string[] = [];
+  const results: ExtractedSource[] = [];
+  const failures: { label: string; error: string }[] = [];
+  let webImages: WebImage[] = [];
+
+  const total = Math.max(sources.length, 1);
+  for (let i = 0; i < sources.length; i++) {
+    const src = sources[i];
+    const label =
+      src.fileName || src.url || SOURCE_LABEL[src.type] || "Sumber";
+    report("extract", 2 + (i / total) * 11, `Membaca ${label}...`);
+    try {
+      let res: ExtractedSource;
+      if (src.type === "soal") {
+        const soal = (src.soalText ?? "").trim();
+        if (soal.length < 10) {
+          throw new Error(
+            "Soal terlalu pendek. Tempel soal/tugas dengan lengkap."
+          );
+        }
+        res = { text: soal, title: "Soal/Tugas" };
+      } else if (src.type === "youtube") {
+        res = await scrapeYoutubeTranscript(src.url ?? "");
+      } else if (src.type === "web") {
+        const scraped = await scrapeWebUrl(src.url ?? "");
+        webImages.push(...scraped.images);
+        res = {
+          text: scraped.text,
+          title: scraped.title,
+          sourceUrl: src.url,
+        };
+      } else if (src.fileBuffer && src.fileBuffer.length > 0) {
+        if (src.type === "dokumen") {
+          res = await extractTextFromFile(
+            src.fileBuffer,
+            src.fileName ?? "file"
+          );
+        } else {
+          res = await transcribeAudioVideo(
+            src.fileBuffer,
+            src.fileName ?? "file"
+          );
+        }
+      } else {
+        throw new Error("Unggah file dulu.");
+      }
+      results.push(res);
+      parts.push(`[${i + 1}. ${label}]\n${res.text}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Gagal diproses.";
+      failures.push({ label, error: msg });
+      console.warn(`[notesProcessor] Sumber gagal: ${label} — ${msg}`);
+    }
+  }
+
+  if (parts.length === 0) {
+    const detail = failures
+      .map((f) => `${f.label}: ${f.error}`)
+      .join("; ");
+    throw new Error(
+      failures.length > 0
+        ? `Semua sumber gagal diproses. ${detail}`
+        : "Tidak ada materi yang bisa diproses."
+    );
+  }
+
+  const first = results[0];
+  return {
+    extracted: {
+      text: parts.join("\n\n---\n\n"),
+      title: first?.title,
+      // Segmen subtitle hanya bermakna bila satu-satunya sumber adalah YouTube.
+      segments: sources.length === 1 ? first?.segments : undefined,
+      sourceUrl: first?.sourceUrl,
+    },
+    webImages,
+    failures,
+  };
+}
 
 /**
  * Jalankan seluruh fase pembuatan catatan. Progress dikirim lewat objek
@@ -119,58 +239,19 @@ export async function processNoteForBackground(
   progress: NotesProcessorProgress
 ): Promise<NotesProcessorResult> {
   const { report, advance, done } = progress;
-  const { sourceType } = input;
+  const sources = input.sources ?? [];
+  if (sources.length === 0) {
+    throw new Error("Minimal satu sumber diperlukan.");
+  }
   const isFast = input.prefs.generationMode === "cepat";
   const prefs = resolvePrefs(input.prefs);
 
-  // FASE 1: Ekstraksi (0-15%)
-  let extracted: {
-    text: string;
-    title?: string;
-    segments?: TranscriptSegment[];
-    sourceUrl?: string;
-  };
-  let webImages: WebImage[] = [];
-
+  // FASE 1: Ekstraksi (0-15%) — semua sumber diekstrak & digabung.
   report("extract", 2, "Menyiapkan materi...");
-  if (sourceType === "soal") {
-    report("extract", 8, "Membaca soal dari teks yang ditempel...");
-    const soal = (input.soalText ?? "").trim();
-    if (soal.length < 10) {
-      throw new Error("Soal terlalu pendek. Tempel soal/tugas dengan lengkap.");
-    }
-    extracted = {
-      text: soal,
-      title: "Soal/Tugas",
-    };
-    report("extract", 13, "Soal siap dijawab AI.");
-  } else if (sourceType === "youtube") {
-    report("extract", 6, "Mengambil subtitle video dari YouTube...");
-    extracted = await scrapeYoutubeTranscript(input.url);
-    report("extract", 13, "Subtitle berhasil diambil.");
-  } else if (sourceType === "web") {
-    report("extract", 6, "Membaca halaman web...");
-    const scraped = await scrapeWebUrl(input.url);
-    extracted = {
-      text: scraped.text,
-      title: scraped.title,
-      sourceUrl: input.url,
-    };
-    webImages = scraped.images;
-    report("extract", 13, "Halaman web berhasil dibaca.");
-  } else if (input.fileBuffer && input.fileBuffer.length > 0) {
-    if (sourceType === "dokumen") {
-      report("extract", 6, "Mengurai isi dokumen...");
-      extracted = await extractTextFromFile(input.fileBuffer, input.fileName ?? "file");
-    } else {
-      report("extract", 6, "Mentranskripsikan audio/video (Whisper)...");
-      extracted = await transcribeAudioVideo(input.fileBuffer, input.fileName ?? "file");
-    }
-    report("extract", 13, "Ekstraksi teks selesai.");
-  } else {
-    throw new Error("Unggah file dulu.");
-  }
-
+  const { extracted, webImages, failures } = await extractAllSources(
+    sources,
+    report
+  );
   report("extract", 15, "Materi siap diproses.");
 
   const noteId = randomUUID();
@@ -185,7 +266,12 @@ export async function processNoteForBackground(
   let keyPoints: string[] | undefined;
   let title = extracted.title ?? "";
 
-  if (sourceType === "youtube") {
+  // Jalur khusus hanya dipakai untuk SATU sumber (perilaku lama dipertahankan);
+  // multi-sumber memakai jalur generik bab+ringkasan terhadap teks gabungan.
+  const singleSource = sources.length === 1 ? sources[0] : null;
+  const sourceType = singleSource?.type ?? sources[0]?.type ?? "dokumen";
+
+  if (singleSource?.type === "youtube") {
     advance("chapters", 0.05, "Merangkum video dengan AI...");
     const processed = await processYouTubeSubtitle(
       extracted.text,
@@ -203,7 +289,7 @@ export async function processNoteForBackground(
     if (processed.title && processed.title !== "Ringkasan Video") {
       title = processed.title;
     }
-  } else if (sourceType === "web") {
+  } else if (singleSource?.type === "web") {
     advance("chapters", 0.05, "Menyusun catatan dari halaman web...");
     const processed = await processWebPageToChapters(
       extracted.text,
@@ -219,7 +305,7 @@ export async function processNoteForBackground(
     keyPoints = processed.keyPoints;
     title = processed.title || (extracted.title ?? "");
   } else if (
-    sourceType === "dokumen" &&
+    singleSource?.type === "dokumen" &&
     !prefs.assignment &&
     extracted.text.length > 40000
   ) {
@@ -281,7 +367,7 @@ export async function processNoteForBackground(
 
   // Unduh gambar yang dipilih AI dari halaman web → simpan ke local agar
   // tampil stabil di catatan. Gagal tidak menggagalkan proses.
-  if (sourceType === "web" && !isFast) {
+  if (singleSource?.type === "web" && !isFast) {
     try {
       note.chapters = await downloadWebImages(note.id, note.chapters ?? []);
       chapters = note.chapters;
@@ -293,7 +379,7 @@ export async function processNoteForBackground(
   // Enrich pasca-rangkum (selain sumber web yang gambarnya dari halaman itu sendiri):
   // cari materi terkait via Firecrawl → validasi, tambah poin penting, dan sisipkan
   // gambar yang relevan ke bab — semuanya otomatis. Gagal tidak menggagalkan proses.
-  if (sourceType !== "web" && !isFast) {
+  if (singleSource?.type !== "web" && !isFast) {
     try {
       advance("enrichment", 0.03, "Mencari materi pendukung...");
       const enriched = await enrichNoteWithFirecrawl(note);
@@ -444,5 +530,9 @@ export async function processNoteForBackground(
   return {
     note,
     preview: chunks[0].slice(0, 240),
+    warnings:
+      failures.length > 0
+        ? failures.map((f) => `${f.label}: ${f.error}`)
+        : undefined,
   };
 }

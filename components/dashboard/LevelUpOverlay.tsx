@@ -103,7 +103,7 @@ export default function LevelUpOverlay() {
                   Level {pending.level}!
                 </motion.p>
                 <p className="mt-2 text-sm font-bold text-clay-muted">
-                  Streak-mu makin membara. Lanjutkan! 🔥
+                  Streak-mu makin membara. Lanjutkan!
                 </p>
               </motion.div>
             </motion.div>

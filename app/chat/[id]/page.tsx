@@ -35,7 +35,15 @@ import TutorialHost from "@/components/tutorial/TutorialHost";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
-import { Check, Copy, LayoutDashboard, Plus, Share2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Crown,
+  Hand,
+  LayoutDashboard,
+  Plus,
+  Share2,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function ChatPage() {
@@ -311,8 +319,9 @@ export default function ChatPage() {
             <div className="py-14 text-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="Eureka" className="mx-auto h-16 w-16 object-contain" />
-              <h2 className="mt-4 text-lg font-extrabold text-clay-dark sm:text-xl">
-                Halo! 👋 Ada yang mau ditanya atau dipelajari?
+              <h2 className="mt-4 flex items-center justify-center gap-2 text-lg font-extrabold text-clay-dark sm:text-xl">
+                Halo! <Hand size={22} className="shrink-0 text-clay-primary" /> Ada
+                yang mau ditanya atau dipelajari?
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-relaxed text-clay-muted">
                 Eureka bisa meringkas catatanmu, menjelaskan bab yang sulit,
@@ -367,7 +376,9 @@ export default function ChatPage() {
                     href={chat.streaming.upgradeUrl}
                     className="block w-full rounded-clay-md border-3 border-clay-borderLight bg-clay-primary px-5 py-3 text-center text-sm font-extrabold text-white shadow-clay-btn transition-all hover:brightness-110 active:translate-y-0.5"
                   >
-                    👑 Upgrade ke Pro untuk lanjut
+                    <span className="inline-flex items-center gap-1.5">
+                      <Crown size={16} /> Upgrade ke Pro untuk lanjut
+                    </span>
                   </Link>
                 </div>
               )}
