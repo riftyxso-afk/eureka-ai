@@ -2,6 +2,7 @@
 
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { MoveHorizontal } from "lucide-react";
+import CodeBlock from "@/components/note/CodeBlock";
 import {
   renderInlineText,
   type ParsedContent as ParsedContentItem,
@@ -129,6 +130,23 @@ export function ParsedContent({ items, highlights = [] }: ParsedContentProps) {
               >
                 {renderInlineText(item.content, highlights)}
               </h3>
+            );
+          case "heading4":
+            return (
+              <h4
+                key={index}
+                className="mt-3 mb-1.5 text-base font-bold text-clay-dark"
+              >
+                {renderInlineText(item.content, highlights)}
+              </h4>
+            );
+          case "code":
+            return (
+              <CodeBlock
+                key={index}
+                code={item.content.code}
+                language={item.content.language}
+              />
             );
           case "paragraph":
             return (

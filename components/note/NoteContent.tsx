@@ -38,7 +38,8 @@ function previewText(items: ParsedContentItem[]): string {
       item.type === "bullet" ||
       item.type === "heading1" ||
       item.type === "heading2" ||
-      item.type === "heading3"
+      item.type === "heading3" ||
+      item.type === "heading4"
     ) {
       parts.push(item.content);
     }

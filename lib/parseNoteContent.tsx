@@ -20,9 +20,11 @@ export type ParsedContent =
   | { type: "heading1"; content: string }
   | { type: "heading2"; content: string }
   | { type: "heading3"; content: string }
+  | { type: "heading4"; content: string }
   | { type: "paragraph"; content: string }
   | { type: "bullet"; content: string }
   | { type: "quote"; content: string }
+  | { type: "code"; content: { language: string; code: string } }
   | { type: "image"; content: ImageContent }
   | { type: "table"; content: TableContent }
   | { type: "mindmap"; content: string };
@@ -31,25 +33,37 @@ const TABLE_SEPARATOR = /^[\s|:\-]+$/;
 const IMAGE_LINE_RE = /^!\[([^\]]*)\]\(([^)\s]+)\)$/;
 
 /**
- * Bersihkan markdown artifacts yang tidak diinginkan dari output AI
+ * Bersihkan markdown artifacts yang tidak diinginkan dari output AI.
+ * Baris di dalam code fence (```lang … ```) TIDAK disentuh agar kode utuh.
  */
 function cleanupMarkdown(text: string): string {
-  return text
-    // Hapus baris yang hanya berisi tanda * atau ** 
-    .replace(/^\s*\*+\s*$/gm, '')
-    // Hapus multiple blank lines menjadi max 2 newlines
-    .replace(/\n{3,}/g, '\n\n')
-    // Bersihkan trailing asterisks di akhir line (kecuali yang part of formatting)
-    .replace(/([^*])\*+\s*$/gm, '$1')
-    // Perbaiki **Rumus:** atau **teks:** menjadi **Rumus:** (keep the colon)
-    // Tapi hapus bold dari single character atau formula symbols
-    .replace(/\*\*([a-zA-Z])\*\*/g, '$1')  // **c** -> c
-    .replace(/\*\*([=²³⁰¹⁴⁵⁶⁷⁸⁹]+)\*\*/g, '$1')  // **²** -> ²
-    // Trim whitespace di setiap line
-    .split('\n')
-    .map(line => line.trimEnd())
-    .join('\n')
-    .trim();
+  const rawLines = text.split("\n");
+  const out: string[] = [];
+  let inFence = false;
+  for (const rawLine of rawLines) {
+    const trimmed = rawLine.trim();
+    if (/^```/.test(trimmed)) {
+      inFence = !inFence;
+      out.push(rawLine);
+      continue;
+    }
+    if (inFence) {
+      // Kode di dalam fence dibiarkan mentah — jangan ubah apa pun.
+      out.push(rawLine);
+      continue;
+    }
+    let line = rawLine;
+    // Hapus baris yang hanya berisi tanda * atau **
+    if (/^\s*\*+\s*$/.test(line)) line = "";
+    // Hapus bold dari single character atau formula symbols
+    line = line
+      .replace(/\*\*([a-zA-Z])\*\*/g, "$1") // **c** -> c
+      .replace(/\*\*([=²³⁰¹⁴⁵⁶⁷⁸⁹]+)\*\*/g, "$1") // **²** -> ²
+      .trimEnd();
+    out.push(line);
+  }
+  const joined = out.join("\n").replace(/\n{3,}/g, "\n\n");
+  return joined.trim();
 }
 
 export function parseNoteContent(rawText: string): ParsedContent[] {
@@ -62,6 +76,10 @@ export function parseNoteContent(rawText: string): ParsedContent[] {
     const line = lines[i].trim();
     if (!line) continue;
 
+    if (line.startsWith("#### ")) {
+      result.push({ type: "heading4", content: line.replace(/^####\s+/, "") });
+      continue;
+    }
     if (line.startsWith("### ")) {
       result.push({ type: "heading3", content: line.replace(/^###\s+/, "") });
       continue;
@@ -99,6 +117,28 @@ export function parseNoteContent(rawText: string): ParsedContent[] {
         result.push({ type: "mindmap", content: mindmapContent });
         continue;
       }
+    }
+
+    // Code fence generik ```lang … ``` (selain mermaid/mindmap di atas)
+    if (line.startsWith("```") && !line.startsWith("```mermaid") && !line.startsWith("```mindmap")) {
+      const lang = line.slice(3).trim().split(/\s+/)[0] ?? "";
+      const codeLines: string[] = [];
+      let j = i + 1;
+      while (j < lines.length && !lines[j].trim().startsWith("```")) {
+        codeLines.push(lines[j]);
+        j++;
+      }
+      i = j; // Lewati baris penutup ```
+      if (codeLines.length > 0) {
+        result.push({
+          type: "code",
+          content: {
+            language: lang,
+            code: codeLines.join("\n").replace(/\n+$/, ""),
+          },
+        });
+      }
+      continue;
     }
 
     if (/^[•\-*]\s+/.test(line) || /^\d+[.)]\s+/.test(line)) {
@@ -206,14 +246,7 @@ function renderMarkup(text: string) {
       }
     }
     if (/^\*\*[^*]+\*\*$/.test(part)) {
-      return (
-        <mark
-          key={i}
-          className="rounded-md bg-clay-secondary/20 px-1 py-0.5 font-bold text-clay-dark"
-        >
-          {part.slice(2, -2)}
-        </mark>
-      );
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
     }
     if (/^\*[^*]+\*$/.test(part)) {
       return (

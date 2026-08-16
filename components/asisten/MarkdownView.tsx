@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { normalizeMathDelimiters } from "@/lib/mathText";
+import CodeBlock from "@/components/note/CodeBlock";
 
 interface MarkdownViewProps {
   content: string;
@@ -42,11 +43,10 @@ export default function MarkdownView({ content, className = "" }: MarkdownViewPr
             const isBlock = /language-/.test(codeClass ?? "");
             if (isBlock) {
               return (
-                <pre className="my-3 overflow-x-auto rounded-clay-md bg-[#2D2A24] p-4 text-[13.5px] leading-relaxed text-white shadow-clay-inset">
-                  <code className={codeClass} {...props}>
-                    {children}
-                  </code>
-                </pre>
+                <CodeBlock
+                  code={String(children ?? "").replace(/\n$/, "")}
+                  className={codeClass}
+                />
               );
             }
             return (

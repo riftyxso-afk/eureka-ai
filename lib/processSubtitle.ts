@@ -259,11 +259,12 @@ async function chaptersWithAI(
         .join("\n")
     : "";
 
-  const prompt = `Berikut adalah transkrip/subtitle dari video YouTube:
+  const prompt = `Berikut adalah materi belajar mentah (bisa berupa subtitle video, isi dokumen, artikel web, atau gabungan beberapa sumber — tiap sumber diawali label [nomor. nama sumber]):
 
 ${text.slice(0, 24000)}
 
-Tolong bagi teks ini menjadi chapter yang logis berdasarkan topik yang dibahas.
+Tolong RINGKAS materi ini menjadi chapter yang logis berdasarkan topik yang dibahas.
+Hilangkan label sumber, kata pengisi, dan bagian yang berulang — tulis ulang dengan bahasa yang rapi, jelas, dan mudah dipahami (bukan menyalin mentah).
 Berikan judul singkat dan menarik untuk setiap chapter (maksimal 8 kata, bahasa Indonesia).
 
 ${buildModeRules(prefs)}
@@ -290,7 +291,7 @@ Output HANYA JSON array, tanpa teks lain:
   const chapters = await aiChatJson<NoteChapter[]>(
     {
       system:
-        "Kamu adalah asisten yang mengubah transkrip video menjadi bab-bab terstruktur. Selalu jawab dengan JSON array yang valid, tanpa markdown atau teks tambahan.",
+        "Kamu adalah asisten yang mengubah materi belajar mentah menjadi bab-bab terstruktur yang rapi dan ringkas. Jangan menyalin mentah — rangkum dan tulis ulang dengan jelas. Selalu jawab dengan JSON array yang valid, tanpa markdown atau teks tambahan.",
       user: prompt,
       json: true,
       maxTokens: 12000,

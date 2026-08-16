@@ -424,3 +424,71 @@
 .dark .text-amber-950 {
   color: #f5d98a;
 }
+
+/* ═══ Syntax highlighting (highlight.js) — tema Material Palenight ═══ */
+.eureka-code {
+  direction: ltr;
+  text-align: left;
+}
+.eureka-hljs .hljs-comment,
+.eureka-hljs .hljs-quote {
+  color: #7a7f8c;
+  font-style: italic;
+}
+.eureka-hljs .hljs-keyword,
+.eureka-hljs .hljs-selector-tag,
+.eureka-hljs .hljs-doctag,
+.eureka-hljs .hljs-template-tag {
+  color: #c792ea;
+}
+.eureka-hljs .hljs-string,
+.eureka-hljs .hljs-subst,
+.eureka-hljs .hljs-addition {
+  color: #c3e88d;
+}
+.eureka-hljs .hljs-number,
+.eureka-hljs .hljs-literal,
+.eureka-hljs .hljs-symbol,
+.eureka-hljs .hljs-bullet,
+.eureka-hljs .hljs-link {
+  color: #f78c6c;
+}
+.eureka-hljs .hljs-title,
+.eureka-hljs .hljs-title.function_,
+.eureka-hljs .hljs-section,
+.eureka-hljs .hljs-function .hljs-title {
+  color: #82aaff;
+}
+.eureka-hljs .hljs-attr,
+.eureka-hljs .hljs-attribute,
+.eureka-hljs .hljs-variable,
+.eureka-hljs .hljs-variable.language_,
+.eureka-hljs .hljs-property,
+.eureka-hljs .hljs-params,
+.eureka-hljs .hljs-name,
+.eureka-hljs .hljs-tag {
+  color: #f07178;
+}
+.eureka-hljs .hljs-built_in,
+.eureka-hljs .hljs-type,
+.eureka-hljs .hljs-class .hljs-title,
+.eureka-hljs .hljs-meta,
+.eureka-hljs .hljs-selector-class,
+.eureka-hljs .hljs-selector-id {
+  color: #ffcb6b;
+}
+.eureka-hljs .hljs-operator,
+.eureka-hljs .hljs-punctuation,
+.eureka-hljs .hljs-regexp,
+.eureka-hljs .hljs-selector-pseudo {
+  color: #89ddff;
+}
+.eureka-hljs .hljs-deletion {
+  color: #ff5370;
+}
+.eureka-hljs .hljs-emphasis {
+  font-style: italic;
+}
+.eureka-hljs .hljs-strong {
+  font-weight: 700;
+}
