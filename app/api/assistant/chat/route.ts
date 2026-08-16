@@ -287,29 +287,49 @@ export async function POST(req: NextRequest) {
   // kurang informasi inti, balas JSON pertanyaan pilihan ganda (maks 3) dan
   // JANGAN simpan pesan ke riwayat — jawaban user dikirim ulang sebagai
   // `clarifications` pada request berikutnya.
+  //
+  // Anti-loop: klarifikasi boleh muncul SETIAP prompt ambigu, tapi dibatasi
+  // agar tidak berulang selamanya — (1) maksimal 2× per sesi, (2) pertanyaan
+  // yang SUDAH pernah ditanyakan di sesi ini TIDAK diulang (filter hasil AI),
+  // (3) jawaban user (`clarifications`) & tombol skip membuat server langsung
+  // menjawab tanpa menilai ulang (lihat hasClarifications/clarificationsSkipped).
+  const MAX_CLARIFICATIONS_PER_SESSION = 2;
   if (!hasClarifications && !clarificationsSkipped && !webSearch && !attachment) {
     try {
-      // Konteks percakapan terakhir — agar pertanyaan klarifikasi RELEVAN
-      // dengan topik yang sedang dibahas, bukan generik/melenceng.
+      // Konteks percakapan terakhir + jumlah klarifikasi yang sudah terjadi
+      // di sesi ini (dari pesan user yang berisi Q/A) + daftar pertanyaan
+      // yang sudah pernah ditanyakan (agar tidak diulang).
       let recentHistory: string[] = [];
-      let historyCount = 0;
+      let priorClarificationCount = 0;
+      const askedQuestions: string[] = [];
       try {
         const history = await getMessages(sessionId, userId);
-        historyCount = history.length;
         recentHistory = history
           .slice(-8)
           .map((m) => `${m.role === "assistant" ? "AI" : "User"}: ${m.content}`)
           .map((s) => s.slice(0, 300));
+        // Pesan user yang pernah menjawab klarifikasi berformat
+        // "Q: ...\nA: ..." — hitung jumlahnya & kumpulkan pertanyaannya.
+        for (const m of history) {
+          if (m.role !== "user") continue;
+          if (m.content.includes("Q:") && m.content.includes("A:")) {
+            priorClarificationCount++;
+            const qa = m.content.split(/\n/);
+            for (const line of qa) {
+              const mm = /^Q:\s*(.+)$/.exec(line.trim());
+              if (mm && mm[1].trim()) {
+                askedQuestions.push(mm[1].trim().slice(0, 120));
+              }
+            }
+          }
+        }
       } catch {
         // abaikan — klarifikasi tetap jalan tanpa konteks
       }
 
-      // Klarifikasi HANYA untuk pesan PERTAMA sesi. Setelah ada riwayat,
-      // AI punya konteks percakapan → langsung jawab. Kalau tidak, follow-up
-      // pendek ("terus gimana?", "jelasin lagi") selalu dinilai ambigu →
-      // klarifikasi muncul berulang dengan pertanyaan yang sama (loop).
-      if (historyCount > 0) {
-        // sudah ada percakapan — jangan klarifikasi, langsung jawab di bawah
+      if (priorClarificationCount >= MAX_CLARIFICATIONS_PER_SESSION) {
+        // Sudah cukup sering klarifikasi di sesi ini — langsung jawab saja
+        // (prompt ambigu berikutnya tetap dijawab dengan konteks yang ada).
       } else {
       // Konteks CATATAN user — agar penilai paham isi/topik catatan dan
       // TIDAK bertanya hal di luar materi. Misal prompt "ringkas semua
@@ -369,6 +389,9 @@ export async function POST(req: NextRequest) {
             .slice(0, 4)
             .map((o) => String(o).trim().slice(0, 120)),
         }))
+        // Jangan ulangi pertanyaan yang sudah pernah ditanyakan di sesi ini
+        // (hasil AI sering mengulang pertanyaan yang sama untuk prompt mirip).
+        .filter((q) => !askedQuestions.includes(q.question))
         .slice(0, 3);
       if (judged?.needs === true && questions.length > 0) {
         return respondJson({ clarification: questions }, 200);
