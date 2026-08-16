@@ -276,6 +276,19 @@ export async function POST(req: NextRequest) {
   // `clarifications` pada request berikutnya.
   if (!hasClarifications && !webSearch && !attachment) {
     try {
+      // Konteks percakapan terakhir — agar pertanyaan klarifikasi RELEVAN
+      // dengan topik yang sedang dibahas, bukan generik/melenceng.
+      let recentHistory: string[] = [];
+      try {
+        const history = await getMessages(sessionId, userId);
+        recentHistory = history
+          .slice(-8)
+          .map((m) => `${m.role === "assistant" ? "AI" : "User"}: ${m.content}`)
+          .map((s) => s.slice(0, 300));
+      } catch {
+        // abaikan — klarifikasi tetap jalan tanpa konteks
+      }
+
       const judged = await aiChatJson<{
         needs: boolean;
         questions?: { q?: unknown; options?: unknown[] }[];
@@ -283,11 +296,7 @@ export async function POST(req: NextRequest) {
         {
           system:
             "Kamu menilai apakah prompt pengguna ambigu sehingga butuh klarifikasi singkat sebelum dijawab. Jawab HANYA JSON, tanpa teks lain.",
-          user: `Prompt pengguna: "${question.slice(0, 800)}"
-
-Nilai apakah prompt kurang informasi inti (mis. topik/jenjang/tujuan/jumlah/format/lingkup) sehingga jawabanmu berisiko meleset. Bila YA, buat 1-4 pertanyaan klarifikasi pilihan ganda dalam bahasa Indonesia yang singkat dan relevan (tiap pertanyaan 2-4 opsi). Bila TIDAK (sudah jelas), needs=false dan questions kosong.
-
-Output JSON: {"needs": true/false, "questions": [{"q": "...", "options": ["A", "B", "C"]}]}`,
+          user: `Percakapan terakhir (konteks topik yang sedang dibahas):\n${recentHistory.length > 0 ? recentHistory.join("\n") : "(belum ada — ini pesan pertama)"}\n\nPrompt pengguna saat ini: "${question.slice(0, 800)}"\r\n\r\nNilai apakah prompt kurang informasi inti sehingga jawabanmu berisiko meleset. Bila YA, buat 1-4 pertanyaan klarifikasi pilihan ganda dalam bahasa Indonesia yang singkat dan RELEVAN dengan TOPIK yang sedang dibahas di percakapan (tiap pertanyaan 2-4 opsi). Bila TIDAK (sudah jelas), needs=false dan questions kosong.\r\n\r\nATURAN PENTING:\r\n- Pertanyaan WAJIB berkaitan dengan topik yang sedang dibahas — JANGAN tanya hal generik di luar topik (mis. jangan tanya "jenjang sekolah apa?" saat topiknya rumus fisika).\r\n- Hanya tanyakan informasi yang benar-benar hilang dan diperlukan untuk menjawab prompt spesifik ini (mis. jenjang/kedalaman/format/lingkup dalam topik itu).\r\n- Maksimal 4 pertanyaan; kalau bisa 1-2 saja, lebih baik.\r\n\r\nOutput JSON: {"needs": true/false, "questions": [{"q": "...", "options": ["A", "B", "C"]}]}`,
           json: true,
           maxTokens: 400,
           temperature: 0.2,
