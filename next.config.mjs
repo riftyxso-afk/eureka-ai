@@ -8,7 +8,7 @@ const isDev = process.env.NODE_ENV === "development";
 // untuk aplikasi ini — dicatat sebagai keputusan di change security-hardening).
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""};
+  script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
   font-src 'self' data: https://fonts.gstatic.com;
@@ -17,6 +17,7 @@ const cspHeader = `
   object-src 'none';
   base-uri 'self';
   form-action 'self';
+  frame-src https://challenges.cloudflare.com;
   frame-ancestors 'none';
   ${isDev ? "" : "upgrade-insecure-requests;"}
 `;
