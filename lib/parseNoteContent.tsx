@@ -189,7 +189,7 @@ export function parseNoteContent(rawText: string): ParsedContent[] {
 /** Render teks inline: **teks** → <mark> highlight, *teks* → <em>. */
 export function renderInlineText(
   text: string,
-  highlights: { text: string; color: string }[] = []
+  highlights: { text: string; color?: string; animate?: boolean }[] = []
 ) {
   const segments =
     highlights.length > 0
@@ -198,7 +198,10 @@ export function renderInlineText(
   return segments.map((seg, i) => {
     if (seg.color) {
       return (
-        <span key={i} className={`hl-${seg.color}`}>
+        <span
+          key={i}
+          className={`hl-${seg.color}${seg.animate ? " hl-ai-adding" : ""}`}
+        >
           {seg.text}
         </span>
       );
@@ -307,35 +310,83 @@ function renderMarkup(text: string) {
 
 /**
  * Pecah teks menjadi segmen; bagian yang cocok dengan highlight tersimpan
- * ditandai warna (paling panjang dicocokkan lebih dulu, case-insensitive).
+ * ditandai warna. Semua posisi match ditemukan DI TEKS ASLI (bukan sisa teks
+ * yang menyusut), sehingga highlight di posisi mana pun tetap dirender —
+ * highlight di kiri match pertama tidak lagi hilang.
+ *
+ * Saat highlight saling menumpuk (mis. stabilo manual pendek di dalam stabilo
+ * AI yang lebih panjang), interval yang dicakup banyak highlight memakai warna
+ * yang PALING SPESIFIK (terpendek) — stabilo manual kuning/pink tetap tampil,
+ * tidak pernah dibuang karena tertutup stabilo panjang. Hasil diurutkan posisi.
  */
 export function splitHighlightMatches(
   text: string,
-  highlights: { text: string; color: string }[]
-): { text: string; color?: string }[] {
-  const sorted = [...highlights]
-    .map((h) => ({ ...h, needle: h.text.trim() }))
-    .filter((h) => h.needle.length > 0)
-    .sort((a, b) => b.needle.length - a.needle.length);
+  highlights: { text: string; color?: string; animate?: boolean }[]
+): { text: string; color?: string; animate?: boolean }[] {
+  const lowerText = text.toLowerCase();
+  const matches: {
+    start: number;
+    end: number;
+    color: string;
+    animate?: boolean;
+    priority: number;
+  }[] = [];
 
-  let rest = text;
-  const segments: { text: string; color?: string }[] = [];
-
-  for (const h of sorted) {
-    const lowerRest = rest.toLowerCase();
-    const lowerNeedle = h.needle.toLowerCase();
-    const matchIdx = lowerRest.indexOf(lowerNeedle);
-    if (matchIdx < 0) continue;
-    if (matchIdx > 0) {
-      segments.push({ text: rest.slice(0, matchIdx) });
+  for (const h of highlights) {
+    const needle = h.text.trim();
+    if (!needle || !h.color) continue;
+    const lowerNeedle = needle.toLowerCase();
+    let idx = lowerText.indexOf(lowerNeedle);
+    while (idx >= 0) {
+      matches.push({
+        start: idx,
+        end: idx + needle.length,
+        color: h.color,
+        animate: h.animate,
+        priority: needle.length,
+      });
+      idx = lowerText.indexOf(lowerNeedle, idx + 1);
     }
-    segments.push({
-      text: rest.slice(matchIdx, matchIdx + h.needle.length),
-      color: h.color,
-    });
-    rest = rest.slice(matchIdx + h.needle.length);
   }
 
-  if (rest.length > 0) segments.push({ text: rest });
+  if (matches.length === 0) return [{ text }];
+
+  // Titik batas semua highlight → bagi teks menjadi interval kecil.
+  const points = new Set<number>([0, text.length]);
+  for (const m of matches) {
+    points.add(m.start);
+    points.add(m.end);
+  }
+  const sortedPoints = [...points].sort((a, b) => a - b);
+
+  const raw: { text: string; color?: string; animate?: boolean }[] = [];
+  for (let i = 0; i < sortedPoints.length - 1; i++) {
+    const s = sortedPoints[i];
+    const e = sortedPoints[i + 1];
+    if (e <= s) continue;
+    // Pilih highlight paling spesifik (terpendek) yang mencakup interval ini.
+    let best: (typeof matches)[0] | null = null;
+    for (const m of matches) {
+      if (m.start <= s && m.end >= e) {
+        if (!best || m.priority < best.priority) best = m;
+      }
+    }
+    raw.push(
+      best
+        ? { text: text.slice(s, e), color: best.color, animate: best.animate }
+        : { text: text.slice(s, e) }
+    );
+  }
+
+  // Gabungkan interval bertetangga dengan warna & status animasi yang sama.
+  const segments: { text: string; color?: string; animate?: boolean }[] = [];
+  for (const seg of raw) {
+    const last = segments[segments.length - 1];
+    if (last && last.color === seg.color && !!last.animate === !!seg.animate) {
+      last.text += seg.text;
+    } else {
+      segments.push({ ...seg });
+    }
+  }
   return segments.length > 0 ? segments : [{ text }];
 }

@@ -147,10 +147,24 @@ export function selectHighlights(
  * Hasilkan stabilo untuk semua bab sebuah catatan.
  * Mengganti stabilo AI lama (regenerasi), menyimpan yang baru, dan
  * mengembalikan jumlah highlight yang berhasil disimpan.
+ *
+ * `onEvent` (opsional): dipanggil realtime selama proses berjalan —
+ * "status" saat AI menganalisis/menyimpan, "highlight" setiap kali satu
+ * stabilo berhasil disimpan (untuk UI loading realtime di poin/teks).
  */
+export type AiHighlightEvent =
+  | { type: "status"; message: string; chapterId?: number }
+  | { type: "highlight"; chapterId: number; text: string; color: HighlightColor };
+
+/** Jeda antar event realtime — supaya stabilo terisi satu per satu per bab. */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const PACING_MS = 450; // antar highlight dalam satu bab
+const BAB_PACING_MS = 600; // jeda setelah status bab (biar scroll & animasi terlihat)
+
 export async function generateHighlightsForChapters(
   noteId: string,
-  chapters: NoteChapter[]
+  chapters: NoteChapter[],
+  onEvent?: (ev: AiHighlightEvent) => void
 ): Promise<number> {
   if (!hasAiKey()) {
     throw new Error(
@@ -169,6 +183,8 @@ export async function generateHighlightsForChapters(
   if (!chapterList.trim()) {
     throw new Error("Catatan tidak memiliki isi bab untuk distabilo.");
   }
+
+  onEvent?.({ type: "status", message: "AI sedang membaca bab-bab catatan..." });
 
   const candidates = await aiChatJson<HighlightCandidate[]>(
     {
@@ -221,16 +237,49 @@ Output HANYA JSON array, tanpa teks lain:
   // (lihat selectHighlights). Menyimpan teks PERSIS hasil pencocokan.
   const chosen = selectHighlights(candidates, chapters);
 
-  let saved = 0;
+  // Kelompokkan per bab agar status "Menstabilo bab N..." akurat per bab.
+  const byChapter = new Map<number, ResolvedHighlight[]>();
   for (const item of chosen) {
-    const entry = await addHighlight({
-      noteId,
-      chapterId: item.chapterId,
-      text: item.text,
-      color: item.color,
-      userId: AI_USER_ID,
+    const list = byChapter.get(item.chapterId) ?? [];
+    list.push(item);
+    byChapter.set(item.chapterId, list);
+  }
+  // Isi stabilo dari bab 1 → bab 2 → ... (urutan naik, bukan acak).
+  const chapterIds = [...byChapter.keys()].sort((a, b) => a - b);
+
+  onEvent?.({ type: "status", message: "Menstabilo bagian penting..." });
+
+  let saved = 0;
+  for (const chapterId of chapterIds) {
+    const items = byChapter.get(chapterId) ?? [];
+    const chapter = chapters.find((c) => c.id === chapterId);
+    onEvent?.({
+      type: "status",
+      message: `Menstabilo bab ${chapterId}${chapter?.title ? ` — ${chapter.title}` : ""}...`,
+      chapterId,
     });
-    if (entry) saved++;
+    // Jeda singkat biar scroll ke bab terlihat dulu, lalu highlight berjalan.
+    if (onEvent) await sleep(BAB_PACING_MS);
+    for (const item of items) {
+      const entry = await addHighlight({
+        noteId,
+        chapterId: item.chapterId,
+        text: item.text,
+        color: item.color,
+        userId: AI_USER_ID,
+      });
+      if (entry) {
+        saved++;
+        onEvent?.({
+          type: "highlight",
+          chapterId: item.chapterId,
+          text: item.text,
+          color: item.color,
+        });
+        // Jeda antar highlight — efek "satu per satu" saat streaming.
+        if (onEvent) await sleep(PACING_MS);
+      }
+    }
   }
 
   return saved;

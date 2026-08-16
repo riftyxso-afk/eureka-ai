@@ -209,6 +209,10 @@ export default function NoteDetailPage() {
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenNote, setRegenNote] = useState(false);
   const regen = useRegenerateJob();
+  // Stabilo AI realtime: status proses + teks yang baru saja distabilo (shimmer).
+  const [aiHighlighting, setAiHighlighting] = useState(false);
+  const [aiHighlightStatus, setAiHighlightStatus] = useState("");
+  const [animKeys, setAnimKeys] = useState<Set<string>>(new Set());
 
   const notify = useCallback((msg: string) => {
     setToast(msg);
@@ -336,33 +340,142 @@ export default function NoteDetailPage() {
     }
   };
 
+  /**
+   * Muat ulang highlight dari server. Highlight yang BARU (belum ada di state
+   * saat ini) diberi animasi slide — dipakai saat stabilo manual disimpan lewat
+   * toolbar maupun saat kolaborator menambahkan stabilo.
+   */
   const refreshHighlights = () => {
     apiFetch(`/api/notes/${params.id}/highlights`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d) setHighlights(d.highlights ?? []);
+        if (!d) return;
+        const next: HighlightEntry[] = d.highlights ?? [];
+        const prevKeys = new Set(
+          highlights.map((h) => flashKey(h.chapterId, h.text))
+        );
+        for (const h of next) {
+          if (!prevKeys.has(flashKey(h.chapterId, h.text))) {
+            flashHighlight(h.chapterId, h.text);
+          }
+        }
+        setHighlights(next);
       })
       .catch(() => {});
   };
 
+  const flashKey = (chapterId: number, text: string) =>
+    `${chapterId}::${text.toLowerCase()}`;
+
+  /** Tandai teks yang baru distabilo dengan shimmer, lalu hilang setelah 1,4 dtk. */
+  const flashHighlight = (chapterId: number, text: string) => {
+    const key = flashKey(chapterId, text);
+    setAnimKeys((prev) => new Set(prev).add(key));
+    setTimeout(() => {
+      setAnimKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }, 1400);
+  };
+
+  /**
+   * Stabilo AI — baca SSE stream dari route generate. Setiap event "highlight"
+   * langsung ditambahkan ke state (tampil realtime di poin/teks dengan shimmer),
+   * dan status progres tampil di bilah kecil dekat tombol.
+   */
   const generateAiHighlights = async () => {
-    notify("AI sedang menstabilo catatanmu...");
+    setAiHighlighting(true);
+    setAiHighlightStatus("Menyiapkan AI...");
+    let received = 0;
     try {
       const res = await apiFetch(`/api/notes/${params.id}/highlights/generate`, {
         method: "POST",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Gagal membuat stabilo AI.");
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Gagal membuat stabilo AI.");
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() ?? "";
+        for (const block of blocks) {
+          const line = block
+            .split(/\r?\n/)
+            .find((l) => l.startsWith("data: "));
+          if (!line) continue;
+          let ev: {
+            type?: string;
+            message?: string;
+            chapterId?: number;
+            text?: string;
+            color?: string;
+            count?: number;
+            error?: string;
+          };
+          try {
+            ev = JSON.parse(line.slice(6));
+          } catch {
+            continue;
+          }
+          if (ev.type === "status") {
+            setAiHighlightStatus(ev.message ?? "");
+            // Otomatis buka & geser ke bab yang sedang diisi stabilo.
+            if (ev.chapterId != null) {
+              scrollToChapter(ev.chapterId);
+            }
+          } else if (ev.type === "highlight") {
+            if (ev.chapterId == null || !ev.text || !ev.color) continue;
+            received++;
+            flashHighlight(ev.chapterId, ev.text);
+            setHighlights((prev) => {
+              const dup = prev.some(
+                (h) =>
+                  h.chapterId === ev.chapterId &&
+                  h.text.toLowerCase() === ev.text!.toLowerCase()
+              );
+              if (dup) return prev;
+              return [
+                ...prev,
+                {
+                  id: `ai-${received}-${Date.now()}`,
+                  noteId: params.id,
+                  chapterId: ev.chapterId!,
+                  text: ev.text!,
+                  color: ev.color as HighlightEntry["color"],
+                  userId: "ai",
+                  createdAt: new Date().toISOString(),
+                },
+              ];
+            });
+          } else if (ev.type === "error") {
+            throw new Error(ev.error ?? "Gagal membuat stabilo AI.");
+          } else if (ev.type === "done") {
+            received = ev.count ?? received;
+          }
+        }
+      }
       notify(
-        data.count > 0
-          ? `Stabilo AI diterapkan (${data.count} bagian)!`
+        received > 0
+          ? `Stabilo AI diterapkan (${received} bagian)!`
           : "Tidak ada bagian baru yang layak distabilo."
       );
-      refreshHighlights();
     } catch (e) {
       notify(
         e instanceof Error ? `Gagal: ${e.message}` : "Gagal membuat stabilo AI."
       );
+    } finally {
+      setAiHighlighting(false);
+      setAiHighlightStatus("");
+      // Highlight AI sudah ditambahkan realtime via SSE — tidak perlu reload.
     }
   };
 
@@ -770,17 +883,34 @@ export default function NoteDetailPage() {
             ))}
             <button
               onClick={generateAiHighlights}
+              disabled={aiHighlighting}
               className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
             >
-              <Sparkles size={16} className="mr-2 text-clay-primary" />
-              <span className="font-extrabold">Stabilo AI</span>
+              {aiHighlighting ? (
+                <Loader2 size={16} className="mr-2 animate-spin text-clay-primary" />
+              ) : (
+                <Sparkles size={16} className="mr-2 text-clay-primary" />
+              )}
+              <span className="font-extrabold">
+                {aiHighlighting ? "Menstabilo..." : "Stabilo AI"}
+              </span>
             </button>
-            {highlights.length > 0 && (
+            {highlights.length > 0 && !aiHighlighting && (
               <span className="shrink-0 text-xs font-bold text-clay-muted">
                 {highlights.length} bagian distabilo
               </span>
             )}
           </div>
+
+          {/* Status realtime stabilo AI */}
+          {aiHighlighting && (
+            <div className="card-clay mt-4 flex items-center gap-3 !p-4">
+              <Loader2 size={18} className="animate-spin text-clay-primary" />
+              <p className="min-w-0 flex-1 text-sm font-extrabold text-clay-dark">
+                {aiHighlightStatus || "AI sedang menstabilo catatanmu..."}
+              </p>
+            </div>
+          )}
 
           {/* Stabilo (highlighter) */}
           <HighlightToolbar
@@ -813,9 +943,12 @@ export default function NoteDetailPage() {
                       <NoteContent
                         chapter={chapter}
                         onOpenNotepad={openNotepad}
-                        highlights={highlights.filter(
-                          (h) => h.chapterId === chapter.id
-                        )}
+                        highlights={highlights
+                          .filter((h) => h.chapterId === chapter.id)
+                          .map((h) => ({
+                            ...h,
+                            animate: animKeys.has(flashKey(h.chapterId, h.text)),
+                          }))}
                         collapsed={collapsed}
                         onToggle={() => toggleChapter(chapter.id)}
                         ref={(el) => {

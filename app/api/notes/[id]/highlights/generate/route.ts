@@ -1,35 +1,84 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-import { generateHighlightsForChapters } from "@/lib/ai-highlights";
+import {
+  generateHighlightsForChapters,
+  type AiHighlightEvent,
+} from "@/lib/ai-highlights";
 import { getNoteWithChunks } from "@/lib/rag/store";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-/** Generate (atau regenerasi) stabilo AI untuk sebuah catatan. */
+const encoder = new TextEncoder();
+
+function sse(data: unknown): Uint8Array {
+  return encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+/**
+ * Generate (atau regenerasi) stabilo AI untuk sebuah catatan.
+ *
+ * SSE stream — klien menerima event realtime:
+ *   - { type: "status", message }        → progres (menganalisis / per bab)
+ *   - { type: "highlight", chapterId, text, color } → satu stabilo tersimpan
+ *   - { type: "done", count }            → selesai
+ *   - { type: "error", error }           → gagal
+ */
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
-    const data = await getNoteWithChunks(id);
-    if (!data) {
-      return NextResponse.json({ error: "Catatan tidak ditemukan." }, { status: 404 });
-    }
-    const chapters = data.note.chapters ?? [];
-    if (chapters.length === 0) {
-      return NextResponse.json(
-        { error: "Catatan belum memiliki bab." },
-        { status: 422 }
-      );
-    }
-    const count = await generateHighlightsForChapters(id, chapters);
-    return NextResponse.json({ count });
-  } catch (e) {
-    const msg =
-      e instanceof Error ? e.message : "Gagal membuat stabilo AI.";
-    console.error("[api/notes/[id]/highlights/generate]", e);
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (ev: unknown) => {
+        try {
+          controller.enqueue(sse(ev));
+        } catch {
+          // klien menutup koneksi — hentikan
+        }
+      };
+
+      try {
+        const { id } = await params;
+        const data = await getNoteWithChunks(id);
+        if (!data) {
+          send({ type: "error", error: "Catatan tidak ditemukan." });
+          controller.close();
+          return;
+        }
+        const chapters = data.note.chapters ?? [];
+        if (chapters.length === 0) {
+          send({ type: "error", error: "Catatan belum memiliki bab." });
+          controller.close();
+          return;
+        }
+        const count = await generateHighlightsForChapters(
+          id,
+          chapters,
+          (ev: AiHighlightEvent) => send(ev)
+        );
+        send({ type: "done", count });
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Gagal membuat stabilo AI.";
+        console.error("[api/notes/[id]/highlights/generate]", e);
+        send({ type: "error", error: msg });
+      } finally {
+        try {
+          controller.close();
+        } catch {
+          // sudah tertutup
+        }
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

@@ -95,6 +95,32 @@
     border-radius: 4px;
   }
 
+  /* Stabilo yang baru diterapkan — animasi slide halus dari kiri ke kanan
+     (seperti stabilo digesek di atas kertas). ::after mewarisi warna stabilo
+     dan meluncur masuk dari kiri, menyingkap warna sedikit demi sedikit. */
+  .hl-ai-adding {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hl-ai-adding::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: inherit;
+    transform: translateX(-101%);
+    animation: highlight-slide 0.5s cubic-bezier(0.25, 0.8, 0.35, 1) forwards;
+  }
+
+  @keyframes highlight-slide {
+    0% {
+      transform: translateX(-101%);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+
   /* Shimmer animation untuk progress bar */
   @keyframes shimmer {
     0% {
