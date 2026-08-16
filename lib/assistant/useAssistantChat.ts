@@ -203,6 +203,7 @@ export function useAssistantChat(options: {
           sources: [],
           model: null,
           createdAt: nowIso,
+          attachmentName: input.attachment?.filename ?? null,
         },
         {
           id: "stream-" + nowIso,

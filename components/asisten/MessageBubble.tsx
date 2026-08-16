@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Copy, RefreshCw, Zap } from "lucide-react";
+import { BookMarked, Check, Copy, Paperclip, RefreshCw, Zap } from "lucide-react";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
 import { copyText } from "@/lib/assistant/clipboard";
@@ -116,6 +116,23 @@ export default function MessageBubble({
             <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed">
               {message.content}
             </p>
+            {/* Indikasi lampiran: catatan @ & dokumen yang ikut terkirim */}
+            {(message.mentions.length > 0 || message.attachmentName) && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {message.mentions.length > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-clay-full bg-white/20 px-2 py-0.5 text-[10.5px] font-extrabold">
+                    <BookMarked size={11} />
+                    {message.mentions.length} catatan
+                  </span>
+                )}
+                {message.attachmentName && (
+                  <span className="inline-flex items-center gap-1 rounded-clay-full bg-white/20 px-2 py-0.5 text-[10.5px] font-extrabold">
+                    <Paperclip size={11} />
+                    {message.attachmentName.slice(0, 40)}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

@@ -31,12 +31,13 @@ export type AiProvider = "aimurah" | "openai" | "openagentic";
 
 /**
  * Kecepatan jawaban AI yang bisa dipilih user di composer (/home & /chat):
- * - "fast"   → Kilat: model ringan dari Juan Router (agnes-2.0-flash,
- *             deepseek-v4-flash, mistral-large, gemini-3.5-flash-lite)
- * - "normal" → Seimbang: OpenAgentic (claude-sonnet-4.5-thinking,
- *             claude-sonnet-4.5, deepseek-v4-flash) + Juan Router fallback
- * - "deep"   → Mendalam: model besar dari Juan Router (gpt-5.6-luna,
- *             deepseek-v4-pro, grok-4.5, qwen3.7-plus)
+ * - "fast"   → Kilat: model ringan dari Juan Router (gemini-3.6-flash,
+ *             gemini-3.5-flash, gemini-3.7-flash-low, deepseek-v4-flash,
+ *             laguna-s-2.1, mistral-large, gemma-4-31b-it)
+ * - "normal" → Seimbang: Juan Router (deepseek-v4-pro, gemini-3.7-flash-high,
+ *             grok-4.5, MiniMax-M2.7-highspeed, minimax-m3)
+ * - "deep"   → Mendalam: model besar dari Juan Router (gpt-5.6-terra,
+ *             gpt-5.6-sol, grok-4.6, qwen3.8-max, kimi-k2.7)
  *
  * Pilihan dikirim dari klien → route chat → aiChat/aiChatStream. Bila satu
  * model error (mis. tidak tersedia / 400 / 404), otomatis coba model
@@ -44,23 +45,34 @@ export type AiProvider = "aimurah" | "openai" | "openagentic";
  */
 export type AiSpeedMode = "fast" | "normal" | "deep";
 
-/** Daftar model per mode — urut = prioritas. */
+/** Daftar model per mode — urut = prioritas (model hidup di depan). */
 export const SPEED_MODEL_LISTS: Record<AiSpeedMode, string[]> = {
   // Kilat — Juan Router
   fast: [
-    "agnes-2.0-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.7-flash-low",
     "deepseek-v4-flash",
+    "laguna-s-2.1",
     "mistral-large",
-    "gemini-3.5-flash-lite",
+    "gemma-4-31b-it",
   ],
-  // Seimbang — OpenAgentic utama, Juan Router fallback
+  // Seimbang — Juan Router
   normal: [
-    "claude-sonnet-4.5-thinking",
-    "claude-sonnet-4.5",
-    "deepseek-v4-flash",
+    "deepseek-v4-pro",
+    "gemini-3.7-flash-high",
+    "grok-4.5",
+    "MiniMax-M2.7-highspeed",
+    "minimax-m3",
   ],
   // Mendalam — Juan Router
-  deep: ["gpt-5.6-luna", "deepseek-v4-pro", "grok-4.5", "qwen3.7-plus"],
+  deep: [
+    "gpt-5.6-terra",
+    "gpt-5.6-sol",
+    "grok-4.6",
+    "qwen3.8-max",
+    "kimi-k2.7",
+  ],
 };
 
 export const SPEED_LABELS: Record<AiSpeedMode, string> = {
@@ -231,21 +243,15 @@ function getProviderChain(speedMode: AiSpeedMode = "normal"): ProviderConfig[] {
     return chain;
   }
 
-  // Seimbang (normal): OpenAgentic 3 model → Juan Router (gpt-5.6-luna +
-  // deepseek-v4-flash — model yang terbukti hidup) → OpenRouter.
+  // Seimbang (normal): Juan Router daftar model seimbang → OpenRouter.
+  // (Provider utama OpenAgentic dipakai untuk kecepatan default bila
+  // dikonfigurasi; daftar normal diambil dari SPEED_MODEL_LISTS.)
   const main = getProviderConfig();
-  if (main) {
-    const models =
-      main.name === "OpenAgentic"
-        ? SPEED_MODEL_LISTS.normal
-        : [main.defaultModel];
-    pushProvider(main.baseURL, main.apiKey, main.name, models);
+  if (main && main.name !== "OpenAgentic") {
+    pushProvider(main.baseURL, main.apiKey, main.name, [main.defaultModel]);
   }
   if (juanKey) {
-    pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", [
-      "gpt-5.6-luna",
-      JUANROUTER_MODEL,
-    ]);
+    pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", SPEED_MODEL_LISTS.normal);
   }
   if (openRouterKey) {
     pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [OPENROUTER_MODEL]);
@@ -298,6 +304,69 @@ export function extractJsonObject<T = Record<string, unknown>>(
         : e;
     }
   }
+}
+
+/**
+ * Ekstrak teks jawaban dari respons Chat Completions — baik JSON biasa,
+ * JSON dengan sisa SSE, maupun respons SSE murni (beberapa gateway seperti
+ * Juan Router memaksa format `data: {...}` walau diminta stream:false).
+ * Mengembalikan string kosong bila tidak ada konten yang bisa dibaca.
+ */
+export function extractContentFromResponse(resText: string): string {
+  // Kasus 1: JSON biasa (choices[0].message.content) — standar.
+  try {
+    const parsed = JSON.parse(resText) as {
+      choices?: { message?: { content?: unknown } }[];
+    };
+    const c = parsed?.choices?.[0]?.message?.content;
+    if (typeof c === "string" && c.trim().length > 0) return c;
+  } catch {
+    // bukan JSON murni — lanjut ke kasus berikutnya
+  }
+
+  // Kasus 2: respons SSE (stream) — gabungkan choices[].delta.content.
+  // Dipakai untuk gateway yang mengirim stream walau request non-stream.
+  const sseParts: string[] = [];
+  let hasSse = false;
+  for (const line of resText.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === "[DONE]") {
+      if (payload) hasSse = true;
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(payload) as {
+        choices?: { delta?: { content?: unknown }; message?: { content?: unknown } }[];
+      };
+      const delta = parsed?.choices?.[0]?.delta?.content;
+      const message = parsed?.choices?.[0]?.message?.content;
+      const part = typeof delta === "string" ? delta : typeof message === "string" ? message : "";
+      if (part.length > 0) {
+        sseParts.push(part);
+        hasSse = true;
+      }
+    } catch {
+      // baris SSE rusak — abaikan
+    }
+  }
+  if (hasSse && sseParts.length > 0) {
+    return sseParts.join("");
+  }
+
+  // Kasus 3: JSON mengambang di dalam teks (markdown/komentar model).
+  try {
+    const obj = extractJsonObject<{
+      choices?: { message?: { content?: unknown } }[];
+    }>(resText);
+    const c = obj?.choices?.[0]?.message?.content;
+    if (typeof c === "string" && c.trim().length > 0) return c;
+  } catch {
+    // tidak ada JSON valid
+  }
+
+  return "";
 }
 
 /**
@@ -430,18 +499,42 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
 
       // Sebagian gateway (mis. OpenAgentic) menambahkan sisa SSE seperti
       // "data: [DONE]" setelah body JSON → parse manual agar tidak gagal.
+      // Beberapa gateway lain (mis. Juan Router) memaksa format SSE walau
+      // diminta stream:false → parse baris `data:` dan gabungkan tokennya.
       const resText = await res.text();
-      let data: Record<string, unknown>;
-      try {
-        data = JSON.parse(resText) as Record<string, unknown>;
-      } catch {
-        data = extractJsonObject(resText) as Record<string, unknown>;
+      let content = extractContentFromResponse(resText);
+
+      // Model tertentu (deepseek-v4-pro, kimi-k2.7, MiniMax, qwen3.8-max di
+      // Juan Router) TIDAK mengembalikan konten saat stream:false — hanya
+      // chunk usage + [DONE]. Bila respons berformat SSE tapi kosong, retry
+      // sekali dengan stream:true lalu gabungkan delta.content.
+      if ((!content || !content.trim()) && resText.includes("data:")) {
+        console.warn(
+          `[AI] ${provider.model} kosong saat stream:false → retry stream:true`
+        );
+        try {
+          const streamBody = { ...body, stream: true };
+          const sres = await fetch(`${provider.baseURL}/chat/completions`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${provider.apiKey}`,
+              "Content-Type": "application/json",
+              ...(provider.name === "OpenRouter"
+                ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
+                : {}),
+            },
+            body: JSON.stringify(streamBody),
+            signal: AbortSignal.timeout(60_000),
+          });
+          if (sres.ok) {
+            const streamText = await sres.text();
+            content = extractContentFromResponse(streamText);
+          }
+        } catch (e) {
+          console.warn(`[AI] Retry stream ${provider.model} gagal:`, e);
+        }
       }
-      const firstChoice = Array.isArray(data?.choices)
-        ? (data.choices[0] as Record<string, unknown> | undefined)
-        : undefined;
-      const messageObj = firstChoice?.message as Record<string, unknown> | undefined;
-      const content = messageObj?.content;
+
       if (typeof content !== "string" || content.trim().length === 0) {
         console.error('[AI Error] Empty response from API');
         throw new Error("AI mengembalikan respons kosong.");

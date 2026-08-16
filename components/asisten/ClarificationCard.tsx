@@ -11,7 +11,7 @@ interface ClarificationCardProps {
 }
 
 /**
- * Kartu klarifikasi prompt ambigu — maksimal 4 pertanyaan pilihan ganda.
+ * Kartu klarifikasi prompt ambigu — maksimal 3 pertanyaan pilihan ganda.
  * User memilih satu opsi per pertanyaan lalu Lanjutkan, atau langsung jawab.
  */
 export default function ClarificationCard({

@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
     : [];
   const webSearch = raw?.webSearch === true;
 
-  // Jawaban klarifikasi dari pengguna (maks 4, tiap pasangan pertanyaan+jawaban).
+  // Jawaban klarifikasi dari pengguna (maks 3, tiap pasangan pertanyaan+jawaban).
   // Setiap item membawa teks pertanyaan (`question`) agar bisa disuntikkan
   // ke prompt dalam format Q/A yang natural.
   const clarifications = Array.isArray(raw?.clarifications)
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
           answer: String(c?.answer ?? "").trim().slice(0, 200),
         }))
         .filter((c) => c.id && c.answer)
-        .slice(0, 4)
+        .slice(0, 3)
     : [];
   const hasClarifications = clarifications.length > 0;
   // Pertanyaan efektif: prompt asli + jawaban klarifikasi sebagai konteks,
@@ -271,7 +271,7 @@ export async function POST(req: NextRequest) {
 
   // ── Klarifikasi prompt ambigu ────────────────────────────────────────
   // Sebelum streaming, nilai prompt dengan panggilan AI ringan. Bila prompt
-  // kurang informasi inti, balas JSON pertanyaan pilihan ganda (maks 4) dan
+  // kurang informasi inti, balas JSON pertanyaan pilihan ganda (maks 3) dan
   // JANGAN simpan pesan ke riwayat — jawaban user dikirim ulang sebagai
   // `clarifications` pada request berikutnya.
   if (!hasClarifications && !webSearch && !attachment) {
@@ -296,7 +296,7 @@ export async function POST(req: NextRequest) {
         {
           system:
             "Kamu menilai apakah prompt pengguna ambigu sehingga butuh klarifikasi singkat sebelum dijawab. Jawab HANYA JSON, tanpa teks lain.",
-          user: `Percakapan terakhir (konteks topik yang sedang dibahas):\n${recentHistory.length > 0 ? recentHistory.join("\n") : "(belum ada — ini pesan pertama)"}\n\nPrompt pengguna saat ini: "${question.slice(0, 800)}"\r\n\r\nNilai apakah prompt kurang informasi inti sehingga jawabanmu berisiko meleset. Bila YA, buat 1-4 pertanyaan klarifikasi pilihan ganda dalam bahasa Indonesia yang singkat dan RELEVAN dengan TOPIK yang sedang dibahas di percakapan (tiap pertanyaan 2-4 opsi). Bila TIDAK (sudah jelas), needs=false dan questions kosong.\r\n\r\nATURAN PENTING:\r\n- Pertanyaan WAJIB berkaitan dengan topik yang sedang dibahas — JANGAN tanya hal generik di luar topik (mis. jangan tanya "jenjang sekolah apa?" saat topiknya rumus fisika).\r\n- Hanya tanyakan informasi yang benar-benar hilang dan diperlukan untuk menjawab prompt spesifik ini (mis. jenjang/kedalaman/format/lingkup dalam topik itu).\r\n- Maksimal 4 pertanyaan; kalau bisa 1-2 saja, lebih baik.\r\n\r\nOutput JSON: {"needs": true/false, "questions": [{"q": "...", "options": ["A", "B", "C"]}]}`,
+          user: `Percakapan terakhir (konteks topik yang sedang dibahas):\n${recentHistory.length > 0 ? recentHistory.join("\n") : "(belum ada — ini pesan pertama)"}\n\nPrompt pengguna saat ini: "${question.slice(0, 800)}"\r\n\r\nNilai apakah prompt kurang informasi inti sehingga jawabanmu berisiko meleset. Bila YA, buat 1-3 pertanyaan klarifikasi pilihan ganda dalam bahasa Indonesia yang singkat dan RELEVAN dengan TOPIK yang sedang dibahas di percakapan (tiap pertanyaan 2-4 opsi). Bila TIDAK (sudah jelas), needs=false dan questions kosong.\r\n\r\nATURAN PENTING:\r\n- Pertanyaan WAJIB berkaitan dengan topik yang sedang dibahas — JANGAN tanya hal generik di luar topik (mis. jangan tanya "jenjang sekolah apa?" saat topiknya rumus fisika).\r\n- Hanya tanyakan informasi yang benar-benar hilang dan diperlukan untuk menjawab prompt spesifik ini (mis. jenjang/kedalaman/format/lingkup dalam topik itu).\r\n- MAKSIMAL 3 pertanyaan; kalau bisa 1 saja, lebih baik.\r\n\r\nOutput JSON: {"needs": true/false, "questions": [{"q": "...", "options": ["A", "B", "C"]}]}`,
           json: true,
           maxTokens: 400,
           temperature: 0.2,
@@ -324,7 +324,7 @@ export async function POST(req: NextRequest) {
             .slice(0, 4)
             .map((o) => String(o).trim().slice(0, 120)),
         }))
-        .slice(0, 4);
+        .slice(0, 3);
       if (judged?.needs === true && questions.length > 0) {
         return respondJson({ clarification: questions }, 200);
       }

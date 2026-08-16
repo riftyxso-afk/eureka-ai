@@ -53,6 +53,8 @@ export interface AssistantChatMessage {
   sources: AssistantSource[];
   model: string | null;
   createdAt: string;
+  /** Nama file lampiran (hanya untuk pesan user optimis — tidak disimpan server). */
+  attachmentName?: string | null;
 }
 
 export interface AssistantChatSession {
