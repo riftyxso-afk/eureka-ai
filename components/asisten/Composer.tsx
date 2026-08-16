@@ -681,11 +681,11 @@ export default function Composer({
                 {isBeta && (
                   <button
                     onClick={toggleMic}
-                    className={`flex items-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
+                    className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
                       recording
                         ? "animate-pulse bg-red-500 text-white"
                         : "bg-clay-primary/10 text-clay-primary"
-                    } ${compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs"}`}
+                    } ${compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"}`}
                     title={
                       recording
                         ? "Rekam — klik untuk berhenti"
@@ -696,12 +696,12 @@ export default function Composer({
                     aria-label="Rekam suara"
                   >
                     {transcribing ? (
-                      <Loader2 size={compact ? 12 : 14} className="animate-spin" />
+                      <Loader2 size={compact ? 14 : 16} className="animate-spin" />
                     ) : (
-                      <Mic size={compact ? 13 : 14} />
+                      <Mic size={compact ? 14 : 16} />
                     )}
                     {!compact && (
-                      <span className="hidden sm:inline">
+                      <span className="hidden whitespace-nowrap leading-none sm:inline">
                         {recording ? "Berhenti" : transcribing ? "Memproses" : "Rekam"}
                       </span>
                     )}
@@ -724,13 +724,13 @@ export default function Composer({
                 {isBeta && onCall && (
                   <button
                     onClick={onCall}
-                    className={`flex items-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
-                      compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+                    className={`flex items-center justify-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
+                      compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"
                     }`}
                     title="Panggilan suara AI — tahan untuk bicara"
                   >
-                    <PhoneCall size={compact ? 13 : 14} />
-                    {!compact && <span className="hidden sm:inline">Call AI</span>}
+                    <PhoneCall size={compact ? 14 : 16} />
+                    {!compact && <span className="hidden whitespace-nowrap leading-none sm:inline">Call AI</span>}
                   </button>
                 )}
                 <button
@@ -753,26 +753,26 @@ export default function Composer({
                       }
                     }
                   }}
-                  className={`flex items-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
-                    compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+                  className={`flex items-center justify-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
+                    compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"
                   }`}
                   title="Lampirkan catatan (@)"
                 >
-                  <AtSign size={compact ? 12 : 14} />
+                  <AtSign size={compact ? 14 : 16} />
                   {/* Compact (halaman /home): cukup ikon saja — hindari @ ganda. */}
                   {!compact && (
-                    <span className="hidden sm:inline">Catatan</span>
+                    <span className="hidden whitespace-nowrap leading-none sm:inline">Catatan</span>
                   )}
                 </button>
 
                 {/* Tool: pencarian web */}
                 <button
                   onClick={() => setWebSearch((v) => !v)}
-                  className={`flex items-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
+                  className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
                     webSearch
                       ? "bg-clay-primary text-white shadow-[0_3px_0_#8a5a2b]"
                       : "bg-clay-primary/10 text-clay-primary"
-                  } ${compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs"}`}
+                  } ${compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"}`}
                   title={
                     webSearch
                       ? "Pencarian web aktif — klik untuk matikan"
@@ -781,9 +781,9 @@ export default function Composer({
                   aria-pressed={webSearch}
                   data-testid="asisten-websearch"
                 >
-                  <Globe size={compact ? 13 : 14} />
+                  <Globe size={compact ? 14 : 16} />
                   {!compact && (
-                    <span className="hidden sm:inline">
+                    <span className="hidden whitespace-nowrap leading-none sm:inline">
                       {webSearch ? "Web: ON" : "Web"}
                     </span>
                   )}
@@ -792,14 +792,14 @@ export default function Composer({
                 {/* Tool: upload gambar/dokumen */}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className={`flex items-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
-                    compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+                  className={`flex items-center justify-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
+                    compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"
                   }`}
                   title="Lampirkan gambar atau dokumen (PDF, Word, PPT, Excel, TXT…)"
                   data-testid="asisten-upload"
                 >
-                  <Paperclip size={compact ? 13 : 14} />
-                  {!compact && <span className="hidden sm:inline">File</span>}
+                  <Paperclip size={compact ? 14 : 16} />
+                  {!compact && <span className="hidden whitespace-nowrap leading-none sm:inline">File</span>}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -815,7 +815,8 @@ export default function Composer({
                     Enter kirim · Shift+Enter baris baru · / perintah
                   </span>
                 )}
-              </div>              <div className="flex items-center gap-1.5 sm:gap-2">
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 {/* Pilihan kecepatan jawaban AI — di samping kiri tombol kirim */}
                 <div className="relative" ref={speedRef}>
                   {(() => {
@@ -826,13 +827,13 @@ export default function Composer({
                         aria-label={`Kecepatan AI: ${cur.label}`}
                         aria-pressed={speedOpen}
                         title={`Kecepatan AI: ${cur.label} — ${cur.desc}`}
-                        className={`flex items-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${cur.active} ${
-                          compact ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-xs"
+                        className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${cur.active} ${
+                          compact ? "!min-h-[32px] !px-2 text-[10px]" : "!min-h-[38px] !px-2.5 text-[11px]"
                         }`}
                       >
-                        <cur.icon size={compact ? 12 : 13} />
-                        <span className="hidden sm:inline">{cur.label}</span>
-                        <ChevronDown size={11} />
+                        <cur.icon size={compact ? 14 : 16} />
+                        <span className="hidden whitespace-nowrap leading-none sm:inline">{cur.label}</span>
+                        <ChevronDown size={10} />
                       </button>
                     );
                   })()}
@@ -891,20 +892,21 @@ export default function Composer({
                 {sending ? (
                   <button
                     onClick={onStop}
-                    className={`btn-clay-primary ${compact ? "!min-h-[34px] !px-3 !py-1.5 text-xs" : "!min-h-[44px] !px-4 !py-2.5"}`}
+                    className={`btn-clay-primary inline-flex items-center justify-center gap-1 ${compact ? "!min-h-[32px] !px-3 text-[10px]" : "!min-h-[38px] !px-4 text-[11px]"}`}
                     aria-label="Hentikan"
                     data-testid="asisten-stop"
                   >
-                    <Square size={compact ? 13 : 16} className="mr-1 fill-current" /> Stop
+                    <Square size={compact ? 13 : 15} className="fill-current" />
+                    {!compact && <span className="whitespace-nowrap leading-none">Stop</span>}
                   </button>
                 ) : (
                   <button
                     onClick={submit}
                     disabled={!canSend}
-                    className={`btn-clay-primary ${
+                    className={`btn-clay-primary inline-flex items-center justify-center ${
                       compact
-                        ? "!min-h-[34px] !min-w-[34px] !px-2.5 !py-1.5"
-                        : "!min-h-[44px] !min-w-[44px] !px-4 !py-2.5"
+                        ? "!min-h-[32px] !min-w-[32px] !px-2.5"
+                        : "!min-h-[38px] !min-w-[38px] !px-4"
                     }`}
                     aria-label="Kirim"
                     data-testid="asisten-send"

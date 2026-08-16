@@ -98,6 +98,51 @@ export async function getNotesByIds(
   });
 }
 
+/** Konten lengkap catatan yang disebut user (@) — isi bab ikut serta. */
+export interface NoteContent {
+  id: string;
+  title: string;
+  chapters: { id: number; title: string; content: string }[];
+}
+
+/**
+ * Ambil ISI lengkap catatan berdasarkan id (hanya milik user) — dipakai
+ * saat user menandai catatan dengan "@" agar isinya ikut di prompt,
+ * bukan hanya judul/ringkasan.
+ */
+export async function getNotesContentByIds(
+  userId: string,
+  noteIds: string[]
+): Promise<NoteContent[]> {
+  if (noteIds.length === 0) return [];
+  const { data, error } = await db()
+    .from("notes")
+    .select("id, title, chapters")
+    .eq("user_id", userId)
+    .in("id", noteIds);
+
+  if (error) {
+    console.warn("[assistant/context] getNotesContentByIds:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((n: Record<string, unknown>) => {
+    const chapters = Array.isArray(n.chapters) ? n.chapters : [];
+    return {
+      id: String(n.id),
+      title: String(n.title ?? "Tanpa judul"),
+      chapters: chapters.map((c, i) => {
+        const ch = c as Record<string, unknown>;
+        return {
+          id: Number(ch.id ?? i + 1),
+          title: String(ch.title ?? ""),
+          content: String(ch.content ?? ""),
+        };
+      }),
+    };
+  });
+}
+
 /** Ringkasan progres belajar user (XP, level, streak, kartu, ujian). */
 export async function buildProgressSummary(userId: string): Promise<string> {
   try {

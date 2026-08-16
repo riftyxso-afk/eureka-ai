@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Pin, PinOff } from "lucide-react";
+import { FileText, Pin, PinOff, Trash2 } from "lucide-react";
 
 interface NoteItemProps {
   id: string;
@@ -10,6 +10,7 @@ interface NoteItemProps {
   updatedAt: string;
   pinned?: boolean;
   onTogglePin?: (id: string, pinned: boolean) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const NoteItem = ({
@@ -19,6 +20,7 @@ export const NoteItem = ({
   updatedAt,
   pinned = false,
   onTogglePin,
+  onDelete,
 }: NoteItemProps) => {
   return (
     <Link href={`/dashboard/note/${id}`} className="block h-full">
@@ -54,6 +56,21 @@ export const NoteItem = ({
             }`}
           >
             {pinned ? <Pin size={14} /> : <PinOff size={14} />}
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            aria-label="Hapus catatan"
+            title="Hapus catatan"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete(id);
+            }}
+            className="absolute right-2.5 top-[4.5rem] flex h-8 w-8 items-center justify-center rounded-full text-clay-muted opacity-0 transition-colors hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+          >
+            <Trash2 size={14} />
           </button>
         )}
       </div>

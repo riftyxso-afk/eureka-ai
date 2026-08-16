@@ -32,16 +32,16 @@ export default function SettingsPage() {
 
   if (!settings) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex min-h-screen items-center justify-center bg-clay-beige dark:bg-[#171526]">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-clay-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-clay-beige dark:bg-[#171526]">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+      <div className="border-b-2 border-clay-shadow/20 bg-white/70 backdrop-blur-sm dark:bg-[#221F33]">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
             <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
@@ -53,17 +53,17 @@ export default function SettingsPage() {
                 <ArrowLeft className="w-6 h-6 sm:w-5 sm:h-5" />
               </Link>
               <div className="flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-clay-dark sm:text-3xl dark:text-white">
                   Pengaturan Study Buddy
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-clay-muted sm:mt-1 sm:text-sm">
                   Atur teman belajar interaktifmu
                 </p>
               </div>
             </div>
             <button
               onClick={handleSave}
-              className="flex items-center justify-center gap-2 px-4 sm:px-4 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity w-full sm:w-auto touch-manipulation min-h-[44px]"
+              className="btn-clay-primary flex w-full items-center justify-center gap-2 rounded-clay-md px-4 py-3 text-sm font-extrabold min-h-[44px] sm:w-auto sm:py-2"
             >
               {isSaved ? (
                 <>
@@ -84,20 +84,20 @@ export default function SettingsPage() {
       {/* Content */}
       <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
         {/* Enable/Disable */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 sm:p-6">
+        <div className="card-clay rounded-clay border-2 border-clay-shadow/40 p-3 sm:p-6 dark:bg-[#221F33]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
             <div className="flex-1">
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-base font-extrabold text-clay-dark sm:text-lg dark:text-white">
                 Aktifkan Study Buddy
               </h2>
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="mt-1 text-xs font-semibold text-clay-muted sm:text-sm">
                 Teman belajar interaktif yang membantu kamu fokus dan memahami materi
               </p>
             </div>
             <button
               onClick={() => setSettings({ ...settings, enabled: !settings.enabled })}
               className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
-                settings.enabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
+                settings.enabled ? 'bg-clay-primary' : 'bg-clay-shadow/40 dark:bg-[#3A3650]'
               }`}
             >
               <span
@@ -110,8 +110,8 @@ export default function SettingsPage() {
         </div>
 
         {/* Character Selection */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
+        <div className="card-clay rounded-clay border-2 border-clay-shadow/40 p-3 sm:p-6 dark:bg-[#221F33]">
+          <h2 className="mb-3 text-base font-extrabold text-clay-dark sm:mb-4 sm:text-lg dark:text-white">
             Pilih Karakter
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
@@ -121,8 +121,8 @@ export default function SettingsPage() {
                 onClick={() => setSettings({ ...settings, character: id as BuddyCharacter })}
                 className={`p-3 sm:p-4 rounded-xl border-2 transition-all hover:scale-105 touch-manipulation min-h-[120px] sm:min-h-[140px] ${
                   settings.character === id
-                    ? 'border-primary bg-primary/5'
-                    : 'border-gray-200 dark:border-gray-800 hover:border-primary/50'
+                    ? 'border-clay-primary bg-clay-primary/10'
+                    : 'border-clay-shadow/40 hover:border-clay-primary/50 dark:border-white/10'
                 }`}
               >
                 <div className="flex flex-col items-center gap-2">
@@ -134,10 +134,10 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
+                    <p className="text-sm font-extrabold text-clay-dark sm:text-base dark:text-white">
                       {template.name}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                    <p className="line-clamp-2 text-xs font-semibold text-clay-muted">
                       {template.personality}
                     </p>
                   </div>
@@ -148,16 +148,16 @@ export default function SettingsPage() {
         </div>
 
         {/* Trigger Settings */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
+        <div className="card-clay rounded-clay border-2 border-clay-shadow/40 p-3 sm:p-6 dark:bg-[#221F33]">
+          <h2 className="mb-3 text-base font-extrabold text-clay-dark sm:mb-4 sm:text-lg dark:text-white">
             Kapan Buddy Muncul
           </h2>
           <div className="space-y-3 sm:space-y-4">
             {/* Pomodoro */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
               <div className="flex-1">
-                <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">Pomodoro Timer</p>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-bold text-clay-dark sm:text-base dark:text-white">Pomodoro Timer</p>
+                <p className="text-xs font-semibold text-clay-muted sm:text-sm">
                   Ingatkan istirahat setiap {settings.timings.pomodoroMinutes} menit
                 </p>
               </div>
@@ -169,7 +169,7 @@ export default function SettingsPage() {
                   })
                 }
                 className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
-                  settings.triggers.pomodoro ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
+                  settings.triggers.pomodoro ? 'bg-clay-primary' : 'bg-clay-shadow/40 dark:bg-[#3A3650]'
                 }`}
               >
                 <span
@@ -183,8 +183,8 @@ export default function SettingsPage() {
             {/* Chapter Done */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
               <div className="flex-1">
-                <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">Selesai Bab</p>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-bold text-clay-dark sm:text-base dark:text-white">Selesai Bab</p>
+                <p className="text-xs font-semibold text-clay-muted sm:text-sm">
                   Review setelah menyelesaikan satu bab
                 </p>
               </div>
@@ -196,7 +196,7 @@ export default function SettingsPage() {
                   })
                 }
                 className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
-                  settings.triggers.chapterDone ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
+                  settings.triggers.chapterDone ? 'bg-clay-primary' : 'bg-clay-shadow/40 dark:bg-[#3A3650]'
                 }`}
               >
                 <span
@@ -210,8 +210,8 @@ export default function SettingsPage() {
             {/* Idle Detection */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
               <div className="flex-1">
-                <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">Deteksi Idle</p>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-bold text-clay-dark sm:text-base dark:text-white">Deteksi Idle</p>
+                <p className="text-xs font-semibold text-clay-muted sm:text-sm">
                   Tanya kalau kamu stuck lebih dari {settings.timings.idleSeconds} detik
                 </p>
               </div>
@@ -223,7 +223,7 @@ export default function SettingsPage() {
                   })
                 }
                 className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
-                  settings.triggers.idle ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
+                  settings.triggers.idle ? 'bg-clay-primary' : 'bg-clay-shadow/40 dark:bg-[#3A3650]'
                 }`}
               >
                 <span
@@ -237,8 +237,8 @@ export default function SettingsPage() {
             {/* Random Engagement */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
               <div className="flex-1">
-                <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">Engagement Acak</p>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-bold text-clay-dark sm:text-base dark:text-white">Engagement Acak</p>
+                <p className="text-xs font-semibold text-clay-muted sm:text-sm">
                   Buddy menyapa secara random untuk tetap engaged
                 </p>
               </div>
@@ -250,7 +250,7 @@ export default function SettingsPage() {
                   })
                 }
                 className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
-                  settings.triggers.random ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
+                  settings.triggers.random ? 'bg-clay-primary' : 'bg-clay-shadow/40 dark:bg-[#3A3650]'
                 }`}
               >
                 <span
@@ -264,8 +264,8 @@ export default function SettingsPage() {
             {/* Quiz Reminder */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
               <div className="flex-1">
-                <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">Reminder Quiz</p>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-bold text-clay-dark sm:text-base dark:text-white">Reminder Quiz</p>
+                <p className="text-xs font-semibold text-clay-muted sm:text-sm">
                   Ingatkan untuk latihan soal
                 </p>
               </div>
@@ -277,7 +277,7 @@ export default function SettingsPage() {
                   })
                 }
                 className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
-                  settings.triggers.quizReminder ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
+                  settings.triggers.quizReminder ? 'bg-clay-primary' : 'bg-clay-shadow/40 dark:bg-[#3A3650]'
                 }`}
               >
                 <span
@@ -291,13 +291,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Timing Settings */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
+        <div className="card-clay rounded-clay border-2 border-clay-shadow/40 p-3 sm:p-6 dark:bg-[#221F33]">
+          <h2 className="mb-3 text-base font-extrabold text-clay-dark sm:mb-4 sm:text-lg dark:text-white">
             Pengaturan Waktu
           </h2>
           <div className="space-y-3 sm:space-y-4">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="mb-2 block text-xs font-extrabold text-clay-dark sm:text-sm dark:text-white">
                 Durasi Pomodoro (menit)
               </label>
               <input
@@ -311,12 +311,12 @@ export default function SettingsPage() {
                     timings: { ...settings.timings, pomodoroMinutes: parseInt(e.target.value) },
                   })
                 }
-                className="w-full px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary text-base touch-manipulation"
+                className="w-full rounded-clay-md border-2 border-clay-shadow/40 bg-clay-inputBg px-3 py-2 text-sm font-bold text-clay-dark shadow-clay-inset outline-none transition-colors focus:border-clay-primary sm:px-4 dark:bg-[#2B2840] dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="mb-2 block text-xs font-extrabold text-clay-dark sm:text-sm dark:text-white">
                 Deteksi Idle (detik)
               </label>
               <input
@@ -330,12 +330,12 @@ export default function SettingsPage() {
                     timings: { ...settings.timings, idleSeconds: parseInt(e.target.value) },
                   })
                 }
-                className="w-full px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary text-base touch-manipulation"
+                className="w-full rounded-clay-md border-2 border-clay-shadow/40 bg-clay-inputBg px-3 py-2 text-sm font-bold text-clay-dark shadow-clay-inset outline-none transition-colors focus:border-clay-primary sm:px-4 dark:bg-[#2B2840] dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="mb-2 block text-xs font-extrabold text-clay-dark sm:text-sm dark:text-white">
                 Cooldown antar notifikasi (menit)
               </label>
               <input
@@ -349,25 +349,25 @@ export default function SettingsPage() {
                     timings: { ...settings.timings, cooldownMinutes: parseInt(e.target.value) },
                   })
                 }
-                className="w-full px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary text-base touch-manipulation"
+                className="w-full rounded-clay-md border-2 border-clay-shadow/40 bg-clay-inputBg px-3 py-2 text-sm font-bold text-clay-dark shadow-clay-inset outline-none transition-colors focus:border-clay-primary sm:px-4 dark:bg-[#2B2840] dark:text-white"
               />
             </div>
           </div>
         </div>
 
         {/* Animations */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 sm:p-6">
+        <div className="card-clay rounded-clay border-2 border-clay-shadow/40 p-3 sm:p-6 dark:bg-[#221F33]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
             <div className="flex-1">
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Animasi</h2>
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <h2 className="text-base font-extrabold text-clay-dark sm:text-lg dark:text-white">Animasi</h2>
+              <p className="mt-1 text-xs font-semibold text-clay-muted sm:text-sm">
                 Aktifkan animasi pixel art
               </p>
             </div>
             <button
               onClick={() => setSettings({ ...settings, animations: !settings.animations })}
               className={`relative inline-flex h-8 w-14 sm:h-6 sm:w-11 items-center rounded-full transition-colors touch-manipulation flex-shrink-0 ${
-                settings.animations ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
+                settings.animations ? 'bg-clay-primary' : 'bg-clay-shadow/40 dark:bg-[#3A3650]'
               }`}
             >
               <span

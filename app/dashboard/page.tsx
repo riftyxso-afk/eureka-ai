@@ -238,6 +238,22 @@ export default function DashboardPage() {
     setIsModalOpen(false);
   };
 
+  // Hapus catatan dari kartu dashboard (konfirmasi + hapus permanen).
+  const deleteNote = async (id: string) => {
+    if (!window.confirm("Yakin ingin menghapus catatan ini? Tindakan ini tidak bisa dibatalkan.")) return;
+    try {
+      const res = await apiFetch(`/api/notes/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        alert(d?.error ?? "Gagal menghapus catatan.");
+        return;
+      }
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+    } catch {
+      alert("Gagal menghapus catatan. Coba lagi ya.");
+    }
+  };
+
   const chips: { id: "semua" | "terbaru"; label: string }[] = [
     { id: "semua", label: "Semua Subjek" },
     { id: "terbaru", label: "Terbaru" },
@@ -465,6 +481,7 @@ export default function DashboardPage() {
                     updatedAt={formatUpdatedAt(note.createdAt)}
                     pinned={note.pinned === true}
                     onTogglePin={(id, pinned) => void togglePin(id, pinned)}
+                    onDelete={(id) => void deleteNote(id)}
                   />
                 ))}
               </div>

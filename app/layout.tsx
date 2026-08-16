@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { JobWatcherProvider } from "@/context/JobWatcherContext";
@@ -83,8 +84,12 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <body className="antialiased">
         {/* Anti-FOUC: terapkan class .dark sebelum paint berdasarkan
-            preferensi tersimpan / sistem (lihat context/ThemeContext.tsx). */}
-        <script
+            preferensi tersimpan / sistem (lihat context/ThemeContext.tsx).
+            next/script beforeInteractive → dirender di <head> sebelum
+            hydration (tanpa warning script-in-component React). */}
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem("eureka_theme");var d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark");}catch(e){}})();`,
           }}

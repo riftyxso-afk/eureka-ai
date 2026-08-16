@@ -17,6 +17,8 @@ import {
   Menu,
   Moon,
   Origami,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pin,
   Settings,
   Share2,
@@ -85,6 +87,27 @@ export const Sidebar = () => {
     }
   });
 
+  // Sidebar desktop: mode collapse/expand tersimpan per perangkat (localStorage).
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      setCollapsed(window.localStorage.getItem("eureka_sidebar_collapsed") === "1");
+    } catch {
+      // localStorage tidak tersedia — default terbuka.
+    }
+  }, []);
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem("eureka_sidebar_collapsed", next ? "1" : "0");
+      } catch {
+        // abaikan
+      }
+      return next;
+    });
+  };
+
   // Segarkan foto profil setelah kembali dari halaman profil (storage event).
   useEffect(() => {
     const sync = () => setAvatarState(getAvatar());
@@ -121,40 +144,59 @@ export const Sidebar = () => {
     window.location.href = "/login";
   };
 
-  const brand = (      <Link href="/dashboard" className="block border-b-[3px] border-clay-borderLight pb-4">
-        <span className="flex items-center gap-2">
-          <img
-            src="/logo.png"
-            alt="Logo Eureka.AI"
-            className="h-9 w-9 object-contain"
-          />
+  const brand = (
+    <Link
+      href="/dashboard"
+      title={collapsed ? "Eureka.AI" : undefined}
+      className="block border-b-[3px] border-clay-borderLight pb-4"
+    >
+      <span className={`flex items-center ${collapsed ? "justify-center" : "gap-2"}`}>
+        <img
+          src="/logo.png"
+          alt="Logo Eureka.AI"
+          className="h-9 w-9 object-contain"
+        />
+        {!collapsed && (
           <span className="text-2xl font-extrabold text-clay-primary">
             Eureka<span className="text-clay-dark">.AI</span>
           </span>
-        </span>
-      </Link>
+        )}
+      </span>
+    </Link>
   );
 
   const navBody = (onNavigate?: () => void) => (
     <>
-      <div className="mb-1 flex items-center gap-2 rounded-clay-md bg-clay-beige/70 px-3 py-2 shadow-clay-inset">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-clay-primary/20 text-sm shadow-clay-sm">
-          {avatar ? (
-            <img src={avatar} alt="Foto profil" className="h-full w-full object-cover" />
-          ) : (
-            <span>{getUserName().charAt(0).toUpperCase()}</span>
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <Link
-            href="/dashboard/profil"
-            className="block truncate text-xs font-extrabold text-clay-dark hover:text-clay-primary"
-            onClick={onNavigate}
-          >
-            {getUserName().split(" ")[0]}
-          </Link>
-          <PlanBadge size="sm" className="mt-1" />
-        </div>
+      <div
+        className={`mb-1 flex items-center rounded-clay-md bg-clay-beige/70 py-2 shadow-clay-inset ${
+          collapsed ? "justify-center px-1" : "gap-2 px-3"
+        }`}
+      >
+        <Link
+          href="/dashboard/profil"
+          title={collapsed ? getUserName() : undefined}
+          className="flex items-center"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-clay-primary/20 text-sm shadow-clay-sm">
+            {avatar ? (
+              <img src={avatar} alt="Foto profil" className="h-full w-full object-cover" />
+            ) : (
+              <span>{getUserName().charAt(0).toUpperCase()}</span>
+            )}
+          </span>
+        </Link>
+        {!collapsed && (
+          <div className="min-w-0 flex-1">
+            <Link
+              href="/dashboard/profil"
+              className="block truncate text-xs font-extrabold text-clay-dark hover:text-clay-primary"
+              onClick={onNavigate}
+            >
+              {getUserName().split(" ")[0]}
+            </Link>
+            <PlanBadge size="sm" className="mt-1" />
+          </div>
+        )}
       </div>
 
       <nav className="flex flex-col gap-1">
@@ -166,6 +208,7 @@ export const Sidebar = () => {
             href={item.href}
             active={pathname === item.href}
             onClick={onNavigate}
+            collapsed={collapsed}
           />
         ))}
       </nav>
@@ -177,26 +220,33 @@ export const Sidebar = () => {
           href="/pricing"
           variant="pro"
           onClick={onNavigate}
+          collapsed={collapsed}
         />
       </div>
 
       <div className="mt-1 flex flex-col gap-1 border-t-2 border-clay-shadow/30 pt-1">
         <button
           onClick={() => setReferralOpen(true)}
-          className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-clay-primary hover:shadow-[0_4px_0_#D1C4B4]"
+          title={collapsed ? "Bagikan Link (Referral)" : undefined}
+          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-clay-primary hover:shadow-[0_4px_0_#D1C4B4] ${
+            collapsed ? "justify-center px-1" : "gap-3 px-4"
+          }`}
         >
           <Share2 size={15} />
-          Bagikan Link (Referral)
+          {!collapsed && "Bagikan Link (Referral)"}
         </button>
       </div>
 
       <div className="mt-1 flex flex-col gap-1 border-t-2 border-clay-shadow/30 pt-1">
         <button
           onClick={() => showToast("Fitur semat catatan segera hadir")}
-          className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4]"
+          title={collapsed ? "Sematkan" : undefined}
+          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4] ${
+            collapsed ? "justify-center px-1" : "gap-3 px-4"
+          }`}
         >
           <Pin size={15} />
-          Sematkan
+          {!collapsed && "Sematkan"}
         </button>
         <button
           onClick={() => {
@@ -207,17 +257,21 @@ export const Sidebar = () => {
                 : "Mode gelap diaktifkan"
             );
           }}
-          className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4]"
+          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4] ${
+            collapsed ? "justify-center px-1" : "gap-3 px-4"
+          }`}
         >
           {themeResolved === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-          {themeResolved === "dark" ? "Mode Terang" : "Mode Gelap"}
+          {!collapsed && (themeResolved === "dark" ? "Mode Terang" : "Mode Gelap")}
         </button>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 rounded-clay-md px-4 py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-red-500 hover:shadow-[0_4px_0_#D1C4B4]"
+          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-red-500 hover:shadow-[0_4px_0_#D1C4B4] ${
+            collapsed ? "justify-center px-1" : "gap-3 px-4"
+          }`}
         >
           <LogOut size={15} />
-          Keluar
+          {!collapsed && "Keluar"}
         </button>
       </div>
     </>
@@ -233,9 +287,28 @@ export const Sidebar = () => {
         <Menu size={22} />
       </button>
 
-      <div className="sticky top-0 hidden h-screen w-[220px] shrink-0 items-center lg:flex">
-        <aside className="flex max-h-full w-full -translate-y-10 flex-col gap-2 overflow-y-auto rounded-clay bg-white p-3 shadow-clay-sm">
-          {brand}
+      <div
+        className={`sticky top-0 hidden h-screen shrink-0 items-center transition-[width] duration-200 lg:flex ${
+          collapsed ? "w-[76px]" : "w-[220px]"
+        }`}
+      >
+        <aside
+          className={`flex max-h-full w-full -translate-y-10 flex-col gap-2 overflow-y-auto rounded-clay bg-white shadow-clay-sm ${
+            collapsed ? "p-2" : "p-3"
+          }`}
+        >
+          <div className="relative">
+            {brand}
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+              title={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+              className="absolute -right-1.5 top-0 flex h-7 w-7 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset transition-colors hover:bg-clay-primary hover:text-white"
+            >
+              {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
+            </button>
+          </div>
           {navBody()}
         </aside>
       </div>

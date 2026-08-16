@@ -17,6 +17,7 @@ import { ImageGenerationOverlay } from "@/components/note/ImageGenerationOverlay
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import MessageBubble from "@/components/asisten/MessageBubble";
+import ClarificationCard from "@/components/asisten/ClarificationCard";
 import ChatSkeleton from "@/components/asisten/ChatSkeleton";
 import ShareModal from "@/components/asisten/ShareModal";
 import ChatQuizModal from "@/components/asisten/ChatQuizModal";
@@ -354,6 +355,13 @@ export default function ChatPage() {
                   </div>
                 );
               })}
+              {chat.clarification && chat.clarification.length > 0 && (
+                <ClarificationCard
+                  questions={chat.clarification}
+                  onAnswer={(a) => void chat.answerClarification(a)}
+                  onSkip={() => void chat.skipClarification()}
+                />
+              )}
               {chat.hasError && (
                 <MessageBubble
                   message={{

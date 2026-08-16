@@ -58,6 +58,11 @@ export interface ChatMessage {
   role: 'user' | 'buddy';
   content: string;
   timestamp: number;
+  /** "question" = bubble interaktif dengan tombol opsi jawaban. */
+  type?: 'text' | 'question';
+  options?: string[];
+  questionId?: string;
+  quizId?: string;
 }
 
 export interface BuddyStorage {

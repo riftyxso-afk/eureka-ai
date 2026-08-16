@@ -163,14 +163,36 @@ function formatRag(hits: RagHit[]): string {
     .join("\n\n---\n\n");
 }
 
-/** Buat prompt user: pertanyaan + petunjuk sumber yang disebut. */
+/** Konten lengkap catatan yang disebut user — isi bab ikut di prompt. */
+export interface MentionedNoteContent {
+  id: string;
+  title: string;
+  chapters: { id: number; title: string; content: string }[];
+}
+
+/**
+ * Buat prompt user: pertanyaan + isi catatan/dokumen yang dilampirkan.
+ * Konten lampiran disuntikkan langsung ke prompt user (bukan hanya system
+ * prompt) agar AI selalu membacanya, apa pun hasil RAG.
+ */
 export function buildUserPrompt(input: {
   question: string;
   mentions: string[];
   noteTitleById: Map<string, string>;
+  /** Isi lengkap catatan yang disebut (@) — bab ikut serta. */
+  mentionedNoteContents?: MentionedNoteContent[];
+  /** Dokumen lampiran (tool paperclip) — teks terekstrak. */
+  attachedDocument?: AttachedDocument | null;
 }): string {
-  const { question, mentions, noteTitleById } = input;
+  const {
+    question,
+    mentions,
+    noteTitleById,
+    mentionedNoteContents = [],
+    attachedDocument = null,
+  } = input;
   const lines: string[] = [question];
+
   if (mentions.length > 0) {
     const labels = mentions
       .map((id) => noteTitleById.get(id))
@@ -183,5 +205,36 @@ export function buildUserPrompt(input: {
       );
     }
   }
+
+  // Isi penuh catatan yang disebut — AI membacanya langsung di prompt user.
+  for (const note of mentionedNoteContents) {
+    lines.push(
+      "",
+      `===== ISI CATATAN: "${note.title}" =====`
+    );
+    if (note.chapters.length === 0) {
+      lines.push("(Catatan ini belum memiliki isi.)");
+    } else {
+      for (const ch of note.chapters) {
+        const body = ch.content.slice(0, 4000);
+        lines.push(
+          `--- ${ch.title || `Bab ${ch.id}`} ---`,
+          body || "(bab kosong)"
+        );
+      }
+    }
+    lines.push(`===== AKHIR CATATAN: "${note.title}" =====`);
+  }
+
+  // Dokumen lampiran — teks terekstrak ikut di prompt user.
+  if (attachedDocument && attachedDocument.text.trim()) {
+    lines.push(
+      "",
+      `===== ISI DOKUMEN LAMPIRAN: "${attachedDocument.filename}" =====`,
+      attachedDocument.text.slice(0, 12000),
+      `===== AKHIR DOKUMEN =====`
+    );
+  }
+
   return lines.join("\n");
 }

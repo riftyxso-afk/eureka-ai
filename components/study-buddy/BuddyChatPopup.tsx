@@ -1,17 +1,27 @@
 /**
- * Chat Popup untuk Study Buddy
- * AI-powered conversation dengan OpenAgentic
+ * Chat Popup untuk Study Buddy — interaktif:
+ * - Saat pertama aktif (riwayat kosong), buddy bertanya konteks belajar
+ *   lewat pertanyaan pilihan ganda (ask_context).
+ * - Bubble "question" menampilkan tombol opsi yang bisa diketuk.
+ * - Tombol Kuis → kuis percakapan 5 soal dengan penilaian langsung.
+ * - Tampilan konsisten tema clay (terang/gelap).
  */
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Send, Loader2, Trash2 } from 'lucide-react';
+import { X, Send, Loader2, Trash2, Sparkles, Check } from 'lucide-react';
 import type { BuddyCharacter, BuddyState, ChatMessage } from '@/lib/study-buddy/buddyTypes';
 import { getBuddyStorage, addChatMessage, clearChatHistory } from '@/lib/study-buddy/buddyStorage';
 import { BUDDY_TEMPLATES } from '@/lib/study-buddy/buddyTemplates';
 import { apiFetch } from '@/lib/apiClient';
+
+interface BuddyQuestion {
+  id: string;
+  question: string;
+  options: string[];
+}
 
 interface BuddyChatPopupProps {
   character: BuddyCharacter;
@@ -20,101 +30,240 @@ interface BuddyChatPopupProps {
   onStateChange: (state: BuddyState) => void;
 }
 
-export default function BuddyChatPopup({ character, initialMessage, onClose, onStateChange }: BuddyChatPopupProps) {
+export default function BuddyChatPopup({
+  character,
+  initialMessage,
+  onClose,
+  onStateChange,
+}: BuddyChatPopupProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [askedContext, setAskedContext] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const quizIdRef = useRef<string | null>(null);
   const template = BUDDY_TEMPLATES[character];
 
-  // Load chat history
+  const pushMessage = useCallback((msg: ChatMessage) => {
+    setMessages((prev) => [...prev, msg]);
+    addChatMessage(msg);
+  }, []);
+
+  // Load chat history + auto tanya konteks saat riwayat kosong.
   useEffect(() => {
     const storage = getBuddyStorage();
     setMessages(storage.chatHistory);
 
-    // Add initial proactive message if provided
-    if (initialMessage && storage.chatHistory.length === 0) {
-      const buddyMessage: ChatMessage = {
-        role: 'buddy',
-        content: initialMessage,
-        timestamp: Date.now(),
-      };
-      setMessages([buddyMessage]);
-      addChatMessage(buddyMessage);
-    }
-  }, [initialMessage]);
+    const start = async () => {
+      if (storage.chatHistory.length > 0) return;
+      if (initialMessage) {
+        pushMessage({
+          role: 'buddy',
+          content: initialMessage,
+          timestamp: Date.now(),
+        });
+      }
+      setIsLoading(true);
+      onStateChange('thinking');
+      try {
+        const res = await apiFetch('/api/study-buddy/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ character, intent: 'ask_context' }),
+        });
+        const data = await res.json();
+        if (data.reply) {
+          pushMessage({
+            role: 'buddy',
+            content: data.reply,
+            timestamp: Date.now(),
+          });
+        }
+        if (Array.isArray(data.questions) && data.questions.length > 0) {
+          for (const q of data.questions as BuddyQuestion[]) {
+            pushMessage({
+              role: 'buddy',
+              type: 'question',
+              content: q.question,
+              options: q.options,
+              questionId: q.id,
+              timestamp: Date.now(),
+            });
+          }
+          setAskedContext(true);
+        }
+      } catch {
+        // Gagal ask_context — popup tetap bisa dipakai.
+      } finally {
+        setIsLoading(false);
+        onStateChange('idle');
+      }
+    };
+    void start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character, initialMessage]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll ke bawah.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
-
-    const userMessage: ChatMessage = {
-      role: 'user',
-      content: inputValue.trim(),
-      timestamp: Date.now(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    addChatMessage(userMessage);
+    const text = inputValue.trim();
+    pushMessage({ role: 'user', content: text, timestamp: Date.now() });
     setInputValue('');
     setIsLoading(true);
     onStateChange('thinking');
 
     try {
-      // Call AI API
-      const response = await apiFetch('/api/study-buddy/chat', {
+      const wantQuiz = /(^|\s)(kuis|quiz)(\s|$)/i.test(text);
+      const res = await apiFetch('/api/study-buddy/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           character,
-          message: userMessage.content,
-          history: messages.slice(-5), // Last 5 messages for context
+          message: text,
+          history: messages.slice(-5),
+          intent: wantQuiz ? 'quiz' : 'chat',
         }),
       });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
 
-      if (!response.ok) throw new Error('Failed to get response');
-
-      const data = await response.json();
-      
-      const buddyMessage: ChatMessage = {
-        role: 'buddy',
-        content: data.reply,
-        timestamp: Date.now(),
-      };
-
-      setMessages((prev) => [...prev, buddyMessage]);
-      addChatMessage(buddyMessage);
+      if (data.reply) {
+        pushMessage({ role: 'buddy', content: data.reply, timestamp: Date.now() });
+      }
+      if (data.quizId) quizIdRef.current = data.quizId;
+      if (Array.isArray(data.questions) && data.questions.length > 0) {
+        for (const q of data.questions as BuddyQuestion[]) {
+          pushMessage({
+            role: 'buddy',
+            type: 'question',
+            content: q.question,
+            options: q.options,
+            questionId: q.id,
+            quizId: data.quizId ?? undefined,
+            timestamp: Date.now(),
+          });
+        }
+      }
       onStateChange('talking');
-      
-      // Return to idle after 2 seconds
       setTimeout(() => onStateChange('idle'), 2000);
-    } catch (error) {
-      console.error('Chat error:', error);
-      const errorMessage: ChatMessage = {
+    } catch {
+      pushMessage({
         role: 'buddy',
         content: 'Maaf, aku sedang mengalami masalah. Coba lagi nanti ya!',
         timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      });
       onStateChange('confused');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Jawab bubble question (konteks atau kuis).
+  const handleAnswer = async (msg: ChatMessage, option: string) => {
+    if (isLoading) return;
+    pushMessage({ role: 'user', content: option, timestamp: Date.now() });
+    setIsLoading(true);
+    onStateChange('thinking');
+
+    try {
+      const isQuiz = Boolean(msg.quizId && quizIdRef.current);
+      const res = await apiFetch('/api/study-buddy/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          character,
+          intent: isQuiz ? 'quiz' : 'ask_context',
+          action: 'answer',
+          questionId: msg.questionId,
+          answer: option,
+          quizId: isQuiz ? msg.quizId : undefined,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+
+      if (data.reply) {
+        pushMessage({ role: 'buddy', content: data.reply, timestamp: Date.now() });
+      }
+      if (data.next) {
+        pushMessage({
+          role: 'buddy',
+          type: 'question',
+          content: data.next.question,
+          options: data.next.options,
+          questionId: data.next.id,
+          quizId: msg.quizId ?? undefined,
+          timestamp: Date.now(),
+        });
+      }
+      onStateChange('talking');
+      setTimeout(() => onStateChange('idle'), 2000);
+    } catch {
+      pushMessage({
+        role: 'buddy',
+        content: 'Maaf, terjadi kesalahan. Coba lagi ya!',
+        timestamp: Date.now(),
+      });
+      onStateChange('confused');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const startQuiz = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    onStateChange('thinking');
+    try {
+      const res = await apiFetch('/api/study-buddy/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ character, intent: 'quiz' }),
+      });
+      const data = await res.json();
+      if (data.reply) {
+        pushMessage({ role: 'buddy', content: data.reply, timestamp: Date.now() });
+      }
+      if (data.quizId) quizIdRef.current = data.quizId;
+      if (Array.isArray(data.questions) && data.questions.length > 0) {
+        for (const q of data.questions as BuddyQuestion[]) {
+          pushMessage({
+            role: 'buddy',
+            type: 'question',
+            content: q.question,
+            options: q.options,
+            questionId: q.id,
+            quizId: data.quizId ?? undefined,
+            timestamp: Date.now(),
+          });
+        }
+      }
+    } catch {
+      pushMessage({
+        role: 'buddy',
+        content: 'Aku belum bisa buat kuis sekarang. Coba lagi nanti ya!',
+        timestamp: Date.now(),
+      });
+    } finally {
+      setIsLoading(false);
+      onStateChange('idle');
+    }
+  };
+
   const handleClearHistory = () => {
     clearChatHistory();
     setMessages([]);
+    quizIdRef.current = null;
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   };
 
@@ -123,18 +272,18 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
       initial={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
       animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
-      className="fixed inset-x-4 bottom-28 sm:inset-x-auto sm:bottom-32 sm:right-6 sm:left-auto z-50 w-auto sm:w-96 max-h-[70dvh] sm:h-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
+      className="fixed inset-x-4 bottom-28 z-50 flex max-h-[70dvh] w-auto flex-col overflow-hidden rounded-clay-md border-2 border-clay-shadow/40 bg-white shadow-clay-lg sm:inset-x-auto sm:bottom-32 sm:right-6 sm:left-auto sm:h-[500px] sm:w-96 dark:border-clay-shadow/30 dark:bg-[#221F33]"
     >
-      {/* Header - Mobile Responsive */}
-      <div 
-        className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"
+      {/* Header */}
+      <div
+        className="flex items-center justify-between border-b border-clay-shadow/20 px-3 py-2.5 dark:border-white/10 sm:px-4 sm:py-3"
         style={{
-          background: `linear-gradient(135deg, ${template.colors.primary}15, ${template.colors.primary}05)`,
+          background: `linear-gradient(135deg, ${template.colors.primary}22, ${template.colors.primary}08)`,
         }}
       >
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div 
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg font-bold text-white flex-shrink-0"
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base font-bold text-white shadow-clay-btn sm:h-10 sm:w-10 sm:text-lg"
             style={{ backgroundColor: template.colors.primary }}
           >
             {character === 'fox' && '🦊'}
@@ -143,35 +292,51 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
             {character === 'bear' && '🐻'}
           </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate">{template.name}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{template.personality}</p>
+            <h3 className="truncate text-sm font-extrabold text-clay-dark sm:text-base dark:text-white">
+              {template.name}
+            </h3>
+            <p className="truncate text-xs font-semibold text-clay-muted">
+              {template.personality}
+            </p>
           </div>
         </div>
-        <div className="flex gap-0.5 sm:gap-1 flex-shrink-0">
+        <div className="flex shrink-0 gap-0.5 sm:gap-1">
+          <button
+            onClick={() => void startQuiz()}
+            className="flex h-10 w-10 items-center justify-center rounded-clay-md text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-primary sm:h-9 sm:w-9"
+            title="Mulai kuis"
+            aria-label="Mulai kuis"
+          >
+            <Sparkles className="h-4 w-4" />
+          </button>
           <button
             onClick={handleClearHistory}
-            className="flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
-            title="Clear chat"
-            aria-label="Clear chat history"
+            className="flex h-10 w-10 items-center justify-center rounded-clay-md text-clay-muted transition-colors hover:bg-clay-beige hover:text-red-500 sm:h-9 sm:w-9"
+            title="Bersihkan chat"
+            aria-label="Bersihkan chat"
           >
-            <Trash2 className="w-4 h-4 text-gray-500" />
+            <Trash2 className="h-4 w-4" />
           </button>
           <button
             onClick={onClose}
-            className="flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
-            aria-label="Close chat"
+            className="flex h-10 w-10 items-center justify-center rounded-clay-md text-clay-muted transition-colors hover:bg-clay-beige sm:h-9 sm:w-9"
+            aria-label="Tutup chat"
           >
-            <X className="w-4 h-4 text-gray-500" />
+            <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      {/* Messages - Mobile Responsive */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
+      {/* Messages */}
+      <div className="flex-1 space-y-2 overflow-y-auto overscroll-contain p-3 sm:space-y-3 sm:p-4">
         {messages.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-            <p className="text-sm">Hai! Aku {template.name}</p>
-            <p className="text-xs mt-2">Tanya aku apa saja tentang pelajaranmu!</p>
+          <div className="mt-8 text-center">
+            <p className="text-sm font-extrabold text-clay-dark dark:text-white">
+              Hai! Aku {template.name}
+            </p>
+            <p className="mt-2 text-xs font-semibold text-clay-muted">
+              Tanya aku apa saja tentang pelajaranmu!
+            </p>
           </div>
         ) : (
           messages.map((msg, idx) => (
@@ -179,30 +344,52 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
               key={idx}
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div
-                className={`max-w-[85%] sm:max-w-[80%] px-3 sm:px-4 py-2 rounded-2xl ${
-                  msg.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                }`}
-              >
-                <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-              </div>
+              {msg.type === 'question' ? (
+                <div className="max-w-[90%] rounded-clay-md border-2 border-clay-primary/30 bg-clay-primary/5 p-3 shadow-clay-sm sm:max-w-[85%]">
+                  <p className="text-xs font-extrabold text-clay-dark sm:text-sm dark:text-white">
+                    {msg.content}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(msg.options ?? []).map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => void handleAnswer(msg, opt)}
+                        className="flex items-center gap-1 rounded-clay-full border-2 border-clay-shadow/40 bg-white px-2.5 py-1.5 text-[11px] font-extrabold text-clay-dark transition-all duration-75 hover:border-clay-primary hover:text-clay-primary disabled:opacity-50 sm:text-xs dark:bg-[#2B2840] dark:text-white"
+                      >
+                        <Check size={11} className="text-clay-primary" />
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className={`max-w-[85%] whitespace-pre-wrap break-words rounded-clay-md px-3 py-2 text-xs font-semibold leading-relaxed sm:max-w-[80%] sm:px-4 sm:py-2.5 sm:text-sm ${
+                    msg.role === 'user'
+                      ? 'rounded-br-[6px] bg-clay-primary text-white shadow-clay-btn'
+                      : 'rounded-bl-[6px] bg-clay-beige text-clay-dark shadow-clay-sm dark:bg-[#2B2840] dark:text-white'
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              )}
             </div>
           ))
         )}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-2xl">
-              <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+            <div className="rounded-clay-md bg-clay-beige px-4 py-2 shadow-clay-sm dark:bg-[#2B2840]">
+              <Loader2 className="h-4 w-4 animate-spin text-clay-primary" />
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input - Mobile Responsive */}
-      <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-800">
+      {/* Input */}
+      <div className="border-t border-clay-shadow/20 p-3 dark:border-white/10 sm:p-4">
         <div className="flex gap-2">
           <input
             type="text"
@@ -211,17 +398,20 @@ export default function BuddyChatPopup({ character, initialMessage, onClose, onS
             onKeyPress={handleKeyPress}
             placeholder="Ketik pesan..."
             disabled={isLoading}
-            className="flex-1 px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 touch-manipulation"
+            className="min-w-0 flex-1 rounded-clay-full border-2 border-clay-shadow/40 bg-clay-inputBg px-3 py-2 text-xs font-semibold text-clay-dark shadow-clay-inset outline-none transition-colors focus:border-clay-primary disabled:opacity-50 sm:px-4 sm:text-sm dark:bg-[#2B2840] dark:text-white"
           />
           <button
-            onClick={handleSend}
+            onClick={() => void handleSend()}
             disabled={!inputValue.trim() || isLoading}
-            className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex-shrink-0"
-            aria-label="Send message"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-clay-primary text-white shadow-clay-btn transition-all hover:brightness-110 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:w-10"
+            aria-label="Kirim pesan"
           >
-            <Send className="w-4 h-4" />
+            <Send className="h-4 w-4" />
           </button>
         </div>
+        <p className="mt-1.5 text-center text-[10px] font-bold text-clay-muted">
+          Ketik "kuis" atau tap ✨ untuk kuis percakapan
+        </p>
       </div>
     </motion.div>
   );

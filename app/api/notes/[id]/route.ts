@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getNoteWithChunks, updateNote } from "@/lib/rag/store";
+import {
+  deleteNote,
+  getNoteWithChunks,
+  updateNote,
+} from "@/lib/rag/store";
+import { getUserIdFromAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -75,6 +80,45 @@ export async function PATCH(
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal memperbarui catatan.";
     console.error("[api/notes/[id]] PATCH", e);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    // Hanya pemilik yang bisa menghapus — identitas dari token sesi.
+    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Autentikasi diperlukan. Silakan masuk ulang." },
+        { status: 401 }
+      );
+    }
+
+    const found = await getNoteWithChunks(id);
+    if (!found) {
+      return NextResponse.json(
+        { error: "Catatan tidak ditemukan." },
+        { status: 404 }
+      );
+    }
+    if (found.note.user_id !== userId) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Kamu bukan pemilik catatan ini." },
+        { status: 403 }
+      );
+    }
+
+    await deleteNote(id);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Gagal menghapus catatan.";
+    console.error("[api/notes/[id]] DELETE", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

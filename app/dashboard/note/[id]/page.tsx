@@ -16,6 +16,7 @@ import {
   FileText,
   History,
   Layers,
+  Loader2,
   Map,
   MessageCircleQuestion,
   PenTool,
@@ -30,6 +31,7 @@ import {
 import ChatPanel from "@/components/note/ChatPanel";
 import { PdfWorkflowModal } from "@/components/note/PdfWorkflowModal";
 import InviteModal from "@/components/note/InviteModal";
+import ShareNoteModal from "@/components/note/ShareNoteModal";
 import VersionModal from "@/components/note/VersionModal";
 import EditNoteModal from "@/components/note/EditNoteModal";
 import QuizModal from "@/components/note/QuizModal";
@@ -184,8 +186,11 @@ export default function NoteDetailPage() {
   const [note, setNote] = useState<NoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
+  const [showShareNote, setShowShareNote] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showPdfWorkflow, setShowPdfWorkflow] = useState(false);
@@ -548,7 +553,7 @@ export default function NoteDetailPage() {
       return;
     }
     if (label === "Bagikan") {
-      setShowInvite(true);
+      setShowShareNote(true);
       return;
     }
     if (label === "Dokumen") {
@@ -558,6 +563,23 @@ export default function NoteDetailPage() {
       return;
     }
     alert(`Fitur ${label} segera hadir!`);
+  };
+
+  const deleteNoteNow = async () => {
+    setDeleting(true);
+    try {
+      const res = await apiFetch(`/api/notes/${data.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        notify(d?.error ?? "Gagal menghapus catatan.");
+        setDeleting(false);
+        return;
+      }
+      router.push("/dashboard");
+    } catch {
+      notify("Gagal menghapus catatan. Coba lagi ya.");
+      setDeleting(false);
+    }
   };
 
   return (
@@ -640,11 +662,18 @@ export default function NoteDetailPage() {
             Panggilan
           </button>
           <button
-            onClick={() => setShowInvite(true)}
+            onClick={() => setShowShareNote(true)}
             className="btn-clay-primary shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <Share2 size={16} className="mr-2" />
             Bagikan
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm !text-red-500 hover:!bg-red-50"
+          >
+            <Trash2 size={16} className="mr-2" />
+            Hapus
           </button>
         </div>
       </div>
@@ -873,6 +902,17 @@ export default function NoteDetailPage() {
           onClose={() => setShowInvite(false)}
         />
       )}
+      {showShareNote && (
+        <ShareNoteModal
+          noteId={data.id}
+          notify={notify}
+          onClose={() => setShowShareNote(false)}
+          onOpenCollaborators={() => {
+            setShowShareNote(false);
+            setShowInvite(true);
+          }}
+        />
+      )}
       {showVersions && (
         <VersionModal
           noteId={data.id}
@@ -892,6 +932,57 @@ export default function NoteDetailPage() {
           onSaved={() => loadNote()}
         />
       )}
+      {/* Konfirmasi hapus catatan (permanen) */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 px-4 backdrop-blur-[2px]"
+          onClick={() => !deleting && setShowDeleteConfirm(false)}
+        >
+          <div
+            className="card-clay w-full max-w-sm rounded-clay p-5 shadow-clay-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-500">
+                <Trash2 size={20} />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-base font-extrabold text-clay-dark">
+                  Hapus catatan ini?
+                </h3>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-clay-muted">
+                  "{data.title}" akan dihapus permanen beserta semua bab, gambar,
+                  kuis, dan kartu hafalannya. Tindakan ini tidak bisa dibatalkan.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={deleteNoteNow}
+                className="btn-clay-primary !min-h-[44px] !px-4 text-sm !bg-red-500 !shadow-[0_6px_0_#B91C1C] hover:!bg-red-600"
+              >
+                {deleting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                {deleting ? "Menghapus..." : "Hapus Permanen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showQuiz && (
         <QuizModal
           noteId={data.id}

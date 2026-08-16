@@ -23,12 +23,20 @@ import type {
   WebSearchStage,
 } from "@/lib/assistant/types";
 
+/** Pertanyaan klarifikasi pilihan ganda dari server (prompt ambigu). */
+export interface ClarificationQuestion {
+  id: string;
+  question: string;
+  options: string[];
+}
+
 export type AssistantStreamEvent =
   | { type: "meta"; mode?: string; model?: string }
   | { type: "token"; text: string }
   | { type: "sources"; sources: AssistantSource[] }
   | { type: "pipeline"; stage: WebSearchStage }
   | { type: "web"; results: WebSearchItem[] }
+  | { type: "clarification"; questions: ClarificationQuestion[] }
   | { type: "done" }
   | { type: "error"; message: string; upgradeUrl?: string };
 
@@ -37,6 +45,8 @@ export interface AssistantChatInput extends ChatToolOptions {
   userId: string;
   question: string;
   mentions?: string[];
+  /** Jawaban klarifikasi dari pengguna — disuntikkan server ke konteks. */
+  clarifications?: { id: string; question?: string; answer: string }[];
 }
 
 /**
@@ -54,6 +64,7 @@ export function buildAssistantChatBody(
     webSearch: input.webSearch === true,
     attachment: input.attachment ?? null,
     speedMode: input.speedMode ?? "normal",
+    clarifications: input.clarifications ?? [],
   };
 }
 
@@ -77,6 +88,19 @@ export async function streamAssistantChat(
       body: JSON.stringify(buildAssistantChatBody(input)),
       signal: controller.signal,
     });
+
+    // Prompt ambigu → server membalas JSON { clarification } (bukan SSE).
+    // Pesan user TIDAK disimpan; klien menampilkan kartu pertanyaan.
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json") && res.ok) {
+      const data = (await res.json().catch(() => null)) as {
+        clarification?: ClarificationQuestion[];
+      } | null;
+      if (data?.clarification && Array.isArray(data.clarification)) {
+        onEvent({ type: "clarification", questions: data.clarification });
+        return;
+      }
+    }
 
     if (!res.ok || !res.body) {
       let message = `Server error ${res.status}`;

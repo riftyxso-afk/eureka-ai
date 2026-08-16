@@ -1,6 +1,12 @@
 import { NextRequest } from "next/server";
 
-import { aiChatStream, hasAiKey, type AiSpeedMode } from "@/lib/ai";
+import {
+  aiChatJson,
+  aiChatStream,
+  extractJsonObject,
+  hasAiKey,
+  type AiSpeedMode,
+} from "@/lib/ai";
 import { cleanSearchQuery, searchWeb } from "@/lib/firecrawl";
 import { checkRateLimit as checkHourlyRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { extractTextFromFile } from "@/lib/rag/extract";
@@ -14,6 +20,7 @@ import {
 import {
   buildUserContext,
   getNotesByIds,
+  getNotesContentByIds,
   searchUserNotes,
   toAssistantSources,
 } from "@/lib/assistant/context";
@@ -129,6 +136,7 @@ export async function POST(req: NextRequest) {
     webSearch?: unknown;
     attachment?: unknown;
     speedMode?: unknown;
+    clarifications?: unknown;
   } | null;
 
   const rawSessionId = String(raw?.sessionId ?? "").trim();
@@ -144,6 +152,34 @@ export async function POST(req: NextRequest) {
       ].slice(0, 5)
     : [];
   const webSearch = raw?.webSearch === true;
+
+  // Jawaban klarifikasi dari pengguna (maks 4, tiap pasangan pertanyaan+jawaban).
+  // Setiap item membawa teks pertanyaan (`question`) agar bisa disuntikkan
+  // ke prompt dalam format Q/A yang natural.
+  const clarifications = Array.isArray(raw?.clarifications)
+    ? (raw.clarifications as {
+        id?: unknown;
+        question?: unknown;
+        answer?: unknown;
+      }[])
+        .map((c) => ({
+          id: String(c?.id ?? "").trim().slice(0, 60),
+          question: String(c?.question ?? "").trim().slice(0, 300),
+          answer: String(c?.answer ?? "").trim().slice(0, 200),
+        }))
+        .filter((c) => c.id && c.answer)
+        .slice(0, 4)
+    : [];
+  const hasClarifications = clarifications.length > 0;
+  // Pertanyaan efektif: prompt asli + jawaban klarifikasi sebagai konteks,
+  // dalam format Q/A agar AI menjawab sesuai pilihan user.
+  const effectiveQuestion = hasClarifications
+    ? `${question}\n\nKonteks tambahan dari jawaban pengguna (jadikan jawaban sesuai informasi ini):\n${clarifications
+        .map(
+          (c) => `Q: ${c.question || c.id}\nA: ${c.answer}`
+        )
+        .join("\n")}`
+    : question;
 
   // Kecepatan jawaban AI yang dipilih user (fast/normal/deep).
   const speedModeRaw = String(raw?.speedMode ?? "").trim();
@@ -231,6 +267,61 @@ export async function POST(req: NextRequest) {
       { error: "API key AI belum diatur di .env.local." },
       400
     );
+  }
+
+  // ── Klarifikasi prompt ambigu ────────────────────────────────────────
+  // Sebelum streaming, nilai prompt dengan panggilan AI ringan. Bila prompt
+  // kurang informasi inti, balas JSON pertanyaan pilihan ganda (maks 4) dan
+  // JANGAN simpan pesan ke riwayat — jawaban user dikirim ulang sebagai
+  // `clarifications` pada request berikutnya.
+  if (!hasClarifications && !webSearch && !attachment) {
+    try {
+      const judged = await aiChatJson<{
+        needs: boolean;
+        questions?: { q?: unknown; options?: unknown[] }[];
+      }>(
+        {
+          system:
+            "Kamu menilai apakah prompt pengguna ambigu sehingga butuh klarifikasi singkat sebelum dijawab. Jawab HANYA JSON, tanpa teks lain.",
+          user: `Prompt pengguna: "${question.slice(0, 800)}"
+
+Nilai apakah prompt kurang informasi inti (mis. topik/jenjang/tujuan/jumlah/format/lingkup) sehingga jawabanmu berisiko meleset. Bila YA, buat 1-4 pertanyaan klarifikasi pilihan ganda dalam bahasa Indonesia yang singkat dan relevan (tiap pertanyaan 2-4 opsi). Bila TIDAK (sudah jelas), needs=false dan questions kosong.
+
+Output JSON: {"needs": true/false, "questions": [{"q": "...", "options": ["A", "B", "C"]}]}`,
+          json: true,
+          maxTokens: 400,
+          temperature: 0.2,
+        },
+        (raw) =>
+          extractJsonObject<{
+            needs: boolean;
+            questions?: { q?: unknown; options?: unknown[] }[];
+          }>(raw)
+      );
+      const questions = (
+        Array.isArray(judged?.questions) ? judged.questions : []
+      )
+        .filter(
+          (x): x is { q: unknown; options: unknown[] } =>
+            !!x &&
+            typeof x.q === "string" &&
+            Array.isArray(x.options) &&
+            x.options.length >= 2
+        )
+        .map((x, i) => ({
+          id: `q${i + 1}`,
+          question: String(x.q).trim().slice(0, 300),
+          options: x.options
+            .slice(0, 4)
+            .map((o) => String(o).trim().slice(0, 120)),
+        }))
+        .slice(0, 4);
+      if (judged?.needs === true && questions.length > 0) {
+        return respondJson({ clarification: questions }, 200);
+      }
+    } catch (e) {
+      console.warn("[api/assistant/chat] klarifikasi gagal, lanjut normal:", e);
+    }
   }
 
   // Bangun aliran SSE
@@ -356,10 +447,18 @@ export async function POST(req: NextRequest) {
           webResults,
           attachedDocument,
         });
+        // Isi lengkap catatan yang disebut (@) — disuntikkan ke prompt user
+        // agar AI selalu membacanya (tidak bergantung pada hasil RAG).
+        const mentionedNoteContents =
+          mentions.length > 0
+            ? await getNotesContentByIds(userId, mentions).catch(() => [])
+            : [];
         const userPrompt = buildUserPrompt({
-          question,
+          question: effectiveQuestion,
           mentions,
           noteTitleById,
+          mentionedNoteContents,
+          attachedDocument,
         });
 
         // 6) Stream dari AI

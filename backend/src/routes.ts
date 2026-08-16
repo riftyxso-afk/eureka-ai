@@ -234,6 +234,8 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   );
   const notesRegenerate = await import("@/app/api/notes/[id]/regenerate/route");
   const notesVersions = await import("@/app/api/notes/[id]/versions/route");
+  const notesShare = await import("@/app/api/notes/[id]/share/route");
+  const shareNotePublic = await import("@/app/api/share/note/[token]/route");
 
   mount(app, "/api/notes/:id/pdf", notesPdf);
   mount(app, "/api/notes/:id/pdf/stream", notesPdfStream);
@@ -253,6 +255,8 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/notes/:id/comprehension/stream", notesComprehensionStream);
   mount(app, "/api/notes/:id/regenerate", notesRegenerate);
   mount(app, "/api/notes/:id/versions", notesVersions);
+  mount(app, "/api/notes/:id/share", notesShare);
+  mount(app, "/api/share/note/:token", shareNotePublic);
   count += 17;
 
   // ─── Notes (Chapter sub-routes) ────────────────────────

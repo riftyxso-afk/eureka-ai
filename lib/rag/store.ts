@@ -196,6 +196,7 @@ export async function getNoteWithChunks(
         title: note.title,
         summary: note.summary,
         subject: note.subject,
+        user_id: note.user_id ?? null,
         noteType: note.note_type ?? 'rangkuman',
         chapters: note.chapters ?? [],
         createdAt: note.created_at,

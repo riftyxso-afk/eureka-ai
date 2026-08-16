@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
-import { streamAssistantChat } from "@/lib/assistant-stream";
+import {
+  streamAssistantChat,
+  type ClarificationQuestion,
+} from "@/lib/assistant-stream";
 import type {
   AssistantChatMessage,
   AssistantChatSession,
@@ -16,6 +19,8 @@ import type {
 export interface ChatSendInput extends ChatToolOptions {
   question: string;
   mentions: string[];
+  /** Jawaban klarifikasi (saat prompt ambigu) — disuntikkan server. */
+  clarifications?: { id: string; question?: string; answer: string }[];
 }
 
 export interface StreamingState {
@@ -60,6 +65,12 @@ export interface UseAssistantChatResult {
   handleRetry: () => void;
   renameSession: (id: string, title: string) => Promise<void>;
   deleteSession: (id: string) => Promise<AssistantChatSession[]>;
+  /** Pertanyaan klarifikasi aktif (prompt ambigu) — null bila tidak ada. */
+  clarification: ClarificationQuestion[] | null;
+  /** Kirim ulang prompt dengan jawaban klarifikasi. */
+  answerClarification: (answers: { id: string; answer: string }[]) => Promise<void>;
+  /** Lewati klarifikasi — langsung jawab dengan prompt apa adanya. */
+  skipClarification: () => Promise<void>;
 }
 
 /**
@@ -94,6 +105,10 @@ export function useAssistantChat(options: {
   const stoppedRef = useRef(false);
   const sendingRef = useRef(false);
   const lastSendRef = useRef<ChatSendInput | null>(null);
+  const [clarification, setClarification] = useState<ClarificationQuestion[] | null>(null);
+  // Input & sesi yang sedang menunggu jawaban klarifikasi (untuk kirim ulang).
+  const pendingInputRef = useRef<ChatSendInput | null>(null);
+  const pendingSessionRef = useRef<string | null>(null);
 
   const refreshSessions = useCallback(async () => {
     const userId = getUserId();
@@ -173,6 +188,7 @@ export function useAssistantChat(options: {
       setSending(true);
       sendingRef.current = true;
       setStreaming(newStreaming());
+      setClarification(null);
 
       // Optimis: tampilkan pesan user + placeholder asisten
       const nowIso = new Date().toISOString();
@@ -237,6 +253,20 @@ export function useAssistantChat(options: {
               error: ev.message,
               upgradeUrl: ev.upgradeUrl ?? null,
             }));
+          } else if (ev.type === "clarification") {
+            // Prompt ambigu: tampilkan kartu pertanyaan. Pesan optimis user +
+            // placeholder dihapus (belum disimpan server), input disimpan untuk
+            // dikirim ulang setelah user menjawab.
+            pendingInputRef.current = input;
+            pendingSessionRef.current = targetSessionId;
+            setClarification(ev.questions);
+            setMessages((prev) =>
+              prev.filter(
+                (m) => !m.id.startsWith("local-") && !m.id.startsWith("stream-")
+              )
+            );
+            setSending(false);
+            sendingRef.current = false;
           }
         }
       );
@@ -318,6 +348,29 @@ export function useAssistantChat(options: {
     }
   }, [sessionId, sendTo]);
 
+  // Kirim ulang prompt yang tadi ambigu dengan jawaban klarifikasi user.
+  const answerClarification = useCallback(
+    async (answers: { id: string; question?: string; answer: string }[]) => {
+      const input = pendingInputRef.current;
+      const target = pendingSessionRef.current;
+      pendingInputRef.current = null;
+      pendingSessionRef.current = null;
+      if (!input || !target) return;
+      await sendTo(target, { ...input, clarifications: answers });
+    },
+    [sendTo]
+  );
+
+  // Lewati klarifikasi: kirim ulang tanpa jawaban (server tetap menjawab).
+  const skipClarification = useCallback(async () => {
+    const input = pendingInputRef.current;
+    const target = pendingSessionRef.current;
+    pendingInputRef.current = null;
+    pendingSessionRef.current = null;
+    if (!input || !target) return;
+    await sendTo(target, { ...input, clarifications: [] });
+  }, [sendTo]);
+
   const renameSession = useCallback(
     async (id: string, title: string) => {
       const res = await apiFetch(
@@ -384,5 +437,8 @@ export function useAssistantChat(options: {
     handleRetry,
     renameSession,
     deleteSession,
+    clarification,
+    answerClarification,
+    skipClarification,
   };
 }
