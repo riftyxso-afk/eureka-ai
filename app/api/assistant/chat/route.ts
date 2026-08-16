@@ -21,6 +21,7 @@ import {
   buildUserContext,
   getNotesByIds,
   getNotesContentByIds,
+  listNotesMeta,
   searchUserNotes,
   toAssistantSources,
 } from "@/lib/assistant/context";
@@ -137,6 +138,8 @@ export async function POST(req: NextRequest) {
     attachment?: unknown;
     speedMode?: unknown;
     clarifications?: unknown;
+    /** User memilih "Langsung jawab saja" — lewati klarifikasi tanpa menilai ulang. */
+    clarificationsSkipped?: unknown;
   } | null;
 
   const rawSessionId = String(raw?.sessionId ?? "").trim();
@@ -171,6 +174,9 @@ export async function POST(req: NextRequest) {
         .slice(0, 3)
     : [];
   const hasClarifications = clarifications.length > 0;
+  // User menekan "Langsung jawab saja" — jangan tanya klarifikasi lagi
+  // (kalau tidak, AI menilai ulang prompt yang sama → loop klarifikasi).
+  const clarificationsSkipped = raw?.clarificationsSkipped === true;
   // Pertanyaan efektif: prompt asli + jawaban klarifikasi sebagai konteks,
   // dalam format Q/A agar AI menjawab sesuai pilihan user.
   const effectiveQuestion = hasClarifications
@@ -179,6 +185,13 @@ export async function POST(req: NextRequest) {
           (c) => `Q: ${c.question || c.id}\nA: ${c.answer}`
         )
         .join("\n")}`
+    : question;
+
+  // Konten pesan user yang disimpan ke riwayat: pakai prompt efektif (prompt
+  // asli + jawaban QnA) bila ada klarifikasi, agar bubble/riwayat menampilkan
+  // Q/A yang dijawab user — bukan hanya prompt polos.
+  const storedUserContent = hasClarifications
+    ? effectiveQuestion
     : question;
 
   // Kecepatan jawaban AI yang dipilih user (fast/normal/deep).
@@ -274,19 +287,51 @@ export async function POST(req: NextRequest) {
   // kurang informasi inti, balas JSON pertanyaan pilihan ganda (maks 3) dan
   // JANGAN simpan pesan ke riwayat — jawaban user dikirim ulang sebagai
   // `clarifications` pada request berikutnya.
-  if (!hasClarifications && !webSearch && !attachment) {
+  if (!hasClarifications && !clarificationsSkipped && !webSearch && !attachment) {
     try {
       // Konteks percakapan terakhir — agar pertanyaan klarifikasi RELEVAN
       // dengan topik yang sedang dibahas, bukan generik/melenceng.
       let recentHistory: string[] = [];
+      let historyCount = 0;
       try {
         const history = await getMessages(sessionId, userId);
+        historyCount = history.length;
         recentHistory = history
           .slice(-8)
           .map((m) => `${m.role === "assistant" ? "AI" : "User"}: ${m.content}`)
           .map((s) => s.slice(0, 300));
       } catch {
         // abaikan — klarifikasi tetap jalan tanpa konteks
+      }
+
+      // Klarifikasi HANYA untuk pesan PERTAMA sesi. Setelah ada riwayat,
+      // AI punya konteks percakapan → langsung jawab. Kalau tidak, follow-up
+      // pendek ("terus gimana?", "jelasin lagi") selalu dinilai ambigu →
+      // klarifikasi muncul berulang dengan pertanyaan yang sama (loop).
+      if (historyCount > 0) {
+        // sudah ada percakapan — jangan klarifikasi, langsung jawab di bawah
+      } else {
+      // Konteks CATATAN user — agar penilai paham isi/topik catatan dan
+      // TIDAK bertanya hal di luar materi. Misal prompt "ringkas semua
+      // catatan saya" sudah jelas → needs=false (jangan tanya yang lain).
+      let notesContext = "(user belum punya catatan)";
+      try {
+        const metas = await listNotesMeta(userId);
+        if (metas.length > 0) {
+          notesContext = metas
+            .slice(0, 20)
+            .map(
+              (n) =>
+                `- "${n.title}"${n.subject ? ` (${n.subject})` : ""}${
+                  n.chapterTitles.length > 0
+                    ? ` — bab: ${n.chapterTitles.slice(0, 8).join("; ")}`
+                    : ""
+                }${n.summary ? `\n  Ringkasan: ${n.summary.slice(0, 200)}` : ""}`
+            )
+            .join("\n");
+        }
+      } catch {
+        // abaikan — klarifikasi tetap jalan tanpa konteks catatan
       }
 
       const judged = await aiChatJson<{
@@ -296,7 +341,7 @@ export async function POST(req: NextRequest) {
         {
           system:
             "Kamu menilai apakah prompt pengguna ambigu sehingga butuh klarifikasi singkat sebelum dijawab. Jawab HANYA JSON, tanpa teks lain.",
-          user: `Percakapan terakhir (konteks topik yang sedang dibahas):\n${recentHistory.length > 0 ? recentHistory.join("\n") : "(belum ada — ini pesan pertama)"}\n\nPrompt pengguna saat ini: "${question.slice(0, 800)}"\r\n\r\nNilai apakah prompt kurang informasi inti sehingga jawabanmu berisiko meleset. Bila YA, buat 1-3 pertanyaan klarifikasi pilihan ganda dalam bahasa Indonesia yang singkat dan RELEVAN dengan TOPIK yang sedang dibahas di percakapan (tiap pertanyaan 2-4 opsi). Bila TIDAK (sudah jelas), needs=false dan questions kosong.\r\n\r\nATURAN PENTING:\r\n- Pertanyaan WAJIB berkaitan dengan topik yang sedang dibahas — JANGAN tanya hal generik di luar topik (mis. jangan tanya "jenjang sekolah apa?" saat topiknya rumus fisika).\r\n- Hanya tanyakan informasi yang benar-benar hilang dan diperlukan untuk menjawab prompt spesifik ini (mis. jenjang/kedalaman/format/lingkup dalam topik itu).\r\n- MAKSIMAL 3 pertanyaan; kalau bisa 1 saja, lebih baik.\r\n\r\nOutput JSON: {"needs": true/false, "questions": [{"q": "...", "options": ["A", "B", "C"]}]}`,
+          user: `Percakapan terakhir (konteks topik yang sedang dibahas):\n${recentHistory.length > 0 ? recentHistory.join("\n") : "(belum ada — ini pesan pertama)"}\n\n=== CATATAN MILIK USER (topik materi yang bisa dibahas) ===\n${notesContext}\n\nPrompt pengguna saat ini: "${question.slice(0, 800)}"\r\n\r\nNilai apakah prompt kurang informasi inti sehingga jawabanmu berisiko meleset. Bila YA, buat 1-3 pertanyaan klarifikasi pilihan ganda dalam bahasa Indonesia yang singkat dan RELEVAN dengan TOPIK yang sedang dibahas (tiap pertanyaan 2-4 opsi). Bila TIDAK (sudah jelas), needs=false dan questions kosong.\r\n\r\nATURAN PENTING:\r\n- Pertanyaan WAJIB berkaitan dengan TOPIK MATERI/CATATAN user yang sedang dibahas — JANGAN tanya hal generik di luar materi (mis. jangan tanya "jenjang sekolah apa?", "mapel favorit apa?", atau "kamu suka belajar apa?").\r\n- Prompt seperti "ringkas semua catatan saya", "buat kuis dari catatan", "jelaskan bab yang sulit" SUDAH JELAS → needs=false, jangan tanya apa pun (AI bisa memilih catatan/bab sendiri dari daftar di atas).\r\n- Hanya tanyakan informasi yang benar-benar hilang dan diperlukan untuk menjawab prompt spesifik ini (mis. jumlah soal, format jawaban, atau pilihan catatan bila benar-benar ambigu dan tidak bisa diputuskan dari daftar).\r\n- MAKSIMAL 3 pertanyaan; kalau bisa 1 saja, lebih baik.\r\n\r\nOutput JSON: {"needs": true/false, "questions": [{"q": "...", "options": ["A", "B", "C"]}]}`,
           json: true,
           maxTokens: 400,
           temperature: 0.2,
@@ -328,6 +373,7 @@ export async function POST(req: NextRequest) {
       if (judged?.needs === true && questions.length > 0) {
         return respondJson({ clarification: questions }, 200);
       }
+      }
     } catch (e) {
       console.warn("[api/assistant/chat] klarifikasi gagal, lanjut normal:", e);
     }
@@ -358,14 +404,17 @@ export async function POST(req: NextRequest) {
         // Simpan pesan user (idempotent: retry dari pertanyaan yang sama
         // tidak menggandakan pesan; riwayat terakhir yang sama juga dibuang).
         const pending = await lastUnansweredUserMessage(sessionId);
-        const isRetry = pending !== null && pending.content === question;
+        const isRetry =
+          pending !== null &&
+          (pending.content === question ||
+            pending.content === effectiveQuestion);
         const history = isRetry && prior.length > 0 ? prior.slice(0, -1) : prior;
 
         if (!isRetry) {
           await appendMessage({
             sessionId,
             role: "user",
-            content: question,
+            content: storedUserContent,
             mentions,
           });
         }

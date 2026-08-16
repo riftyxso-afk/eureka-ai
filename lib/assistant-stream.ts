@@ -47,6 +47,11 @@ export interface AssistantChatInput extends ChatToolOptions {
   mentions?: string[];
   /** Jawaban klarifikasi dari pengguna — disuntikkan server ke konteks. */
   clarifications?: { id: string; question?: string; answer: string }[];
+  /**
+   * User memilih "Langsung jawab saja" — server TIDAK menilai ulang
+   * prompt untuk klarifikasi (cegah loop klarifikasi berulang).
+   */
+  clarificationsSkipped?: boolean;
 }
 
 /**
@@ -65,6 +70,7 @@ export function buildAssistantChatBody(
     attachment: input.attachment ?? null,
     speedMode: input.speedMode ?? "normal",
     clarifications: input.clarifications ?? [],
+    clarificationsSkipped: input.clarificationsSkipped === true,
   };
 }
 

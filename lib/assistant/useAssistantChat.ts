@@ -21,6 +21,8 @@ export interface ChatSendInput extends ChatToolOptions {
   mentions: string[];
   /** Jawaban klarifikasi (saat prompt ambigu) — disuntikkan server. */
   clarifications?: { id: string; question?: string; answer: string }[];
+  /** User memilih "Langsung jawab saja" — lewati klarifikasi tanpa menilai ulang. */
+  clarificationsSkipped?: boolean;
 }
 
 export interface StreamingState {
@@ -34,6 +36,20 @@ export interface StreamingState {
   webStage: WebSearchStage | null;
   /** Hasil pencarian web yang ditampilkan dengan logo situs. */
   webResults: WebSearchItem[];
+}
+
+/**
+ * Konten pesan user yang tampil di bubble: prompt asli + jawaban QnA
+ * (format Q/A) bila user menjawab klarifikasi — konsisten dengan yang
+ * disimpan server (effectiveQuestion).
+ */
+function buildStoredQuestion(input: ChatSendInput): string {
+  const answers = input.clarifications ?? [];
+  if (answers.length === 0) return input.question;
+  const qa = answers
+    .map((c) => `Q: ${c.question || c.id}\nA: ${c.answer}`)
+    .join("\n");
+  return `${input.question}\n\nKonteks tambahan dari jawaban pengguna (jadikan jawaban sesuai informasi ini):\n${qa}`;
 }
 
 function newStreaming(): StreamingState {
@@ -198,7 +214,7 @@ export function useAssistantChat(options: {
           id: "local-" + nowIso,
           sessionId: targetSessionId,
           role: "user",
-          content: input.question,
+          content: buildStoredQuestion(input),
           mentions: input.mentions,
           sources: [],
           model: null,
@@ -226,6 +242,8 @@ export function useAssistantChat(options: {
           webSearch: input.webSearch,
           attachment: input.attachment,
           speedMode: input.speedMode,
+          clarifications: input.clarifications,
+          clarificationsSkipped: input.clarificationsSkipped,
         },
         (ev) => {
           if (ev.type === "token") {
@@ -362,14 +380,15 @@ export function useAssistantChat(options: {
     [sendTo]
   );
 
-  // Lewati klarifikasi: kirim ulang tanpa jawaban (server tetap menjawab).
+  // Lewati klarifikasi: kirim ulang dengan penanda skip — server TIDAK
+  // menilai ulang prompt (cegah loop klarifikasi), langsung menjawab.
   const skipClarification = useCallback(async () => {
     const input = pendingInputRef.current;
     const target = pendingSessionRef.current;
     pendingInputRef.current = null;
     pendingSessionRef.current = null;
     if (!input || !target) return;
-    await sendTo(target, { ...input, clarifications: [] });
+    await sendTo(target, { ...input, clarifications: [], clarificationsSkipped: true });
   }, [sendTo]);
 
   const renameSession = useCallback(

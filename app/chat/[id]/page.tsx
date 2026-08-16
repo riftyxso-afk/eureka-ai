@@ -316,7 +316,9 @@ export default function ChatPage() {
         >
           {chat.loading && chat.messages.length === 0 ? (
             <ChatSkeleton />
-          ) : chat.renderedMessages.length === 0 ? (
+          ) : chat.renderedMessages.length === 0 &&
+            !(chat.clarification && chat.clarification.length > 0) &&
+            !chat.hasError ? (
             <div className="py-14 text-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="Eureka" className="mx-auto h-16 w-16 object-contain" />
