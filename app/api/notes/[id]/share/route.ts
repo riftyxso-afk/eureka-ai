@@ -63,8 +63,16 @@ export async function POST(
       }
     }
 
-    const origin = new URL(req.url).origin;
-    return NextResponse.json({ token, url: `${origin}/share/note/${token}` });
+    // Link publik harus mengarah ke FRONTEND (Vercel), bukan ke domain API
+    // backend (req.url origin = api-eureka.web.id / localhost:3001 saat request
+    // diproses backend Hono). Pakai NEXT_PUBLIC_SITE_URL dengan fallback
+    // hardcoded — pola sama seperti app/api/referral/route.ts.
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.eureka-ai.web.id";
+    return NextResponse.json({
+      token,
+      url: `${siteUrl.replace(/\/+$/, "")}/share/note/${token}`,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal membuat link share.";
     console.error("[api/notes/[id]/share]", e);

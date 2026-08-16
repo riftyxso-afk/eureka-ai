@@ -53,7 +53,11 @@ export async function POST(
       session.title,
       messages
     );
-    const url = new URL(`/share/${share.token}`, req.url).toString();
+    // Link publik harus mengarah ke FRONTEND, bukan origin request (yang di
+    // backend Hono = domain API). Pakai NEXT_PUBLIC_SITE_URL + fallback.
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.eureka-ai.web.id";
+    const url = `${siteUrl.replace(/\/+$/, "")}/share/${share.token}`;
     return NextResponse.json({ token: share.token, url });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal membuat link share.";

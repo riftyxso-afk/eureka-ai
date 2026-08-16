@@ -10,10 +10,21 @@ import { addHighlight, removeAiHighlights, type HighlightColor } from "./highlig
 import type { NoteChapter } from "./types";
 
 const AI_USER_ID = "ai";
-const MAX_PER_CHAPTER = 4;
-const MAX_TOTAL = 24;
+const MAX_PER_CHAPTER = 3;
+const MAX_TOTAL = 15;
+// Batas panjang segmen stabilo — enforce di kode (bukan hanya prompt) agar
+// stabilo tetap berupa frasa/kalimat singkat, bukan paragraf utuh.
+const MIN_TEXT_LENGTH = 6;
+const MAX_TEXT_LENGTH = 120;
 
 export interface HighlightCandidate {
+  chapterId: number;
+  text: string;
+  color: HighlightColor;
+}
+
+/** Hasil resolusi kandidat → teks persis yang cocok di konten bab. */
+interface ResolvedHighlight {
   chapterId: number;
   text: string;
   color: HighlightColor;
@@ -24,8 +35,9 @@ function normalize(text: string): string {
 }
 
 /**
- * Cari potongan teks persis di dalam konten bab (case-insensitive).
- * Kalau tidak cocok, coba potongan yang dipotong jadi kalimat pertama.
+ * Cari potongan teks persis di dalam konten bab (case-insensitive, spasi
+ * dinormalisasi). TIDAK ada fallback kata kunci — kandidat yang tidak cocok
+ * persis diabaikan agar stabilo tidak muncul di kalimat lain yang mirip.
  */
 function findExactInContent(text: string, content: string): string | null {
   const needle = normalize(text);
@@ -33,24 +45,102 @@ function findExactInContent(text: string, content: string): string | null {
   if (!needle) return null;
   const idx = haystack.toLowerCase().indexOf(needle.toLowerCase());
   if (idx >= 0) return haystack.slice(idx, idx + needle.length);
-
-  // Coba kecocokan per kalimat: cari kalimat yang mengandung mayoritas kata kunci
-  const keywords = needle.split(/\s+/).filter((w) => w.length > 2);
-  if (keywords.length < 3) return null;
-  const sentences = haystack.split(/(?<=[.!?])\s+/);
-  let best: { sentence: string; score: number } | null = null;
-  for (const sentence of sentences) {
-    const lower = sentence.toLowerCase();
-    let score = 0;
-    for (const kw of keywords) {
-      if (lower.includes(kw.toLowerCase())) score++;
-    }
-    if (!best || score > best.score) best = { sentence, score };
-  }
-  if (best && best.score >= Math.max(2, Math.ceil(keywords.length / 2))) {
-    return best.sentence;
-  }
   return null;
+}
+
+/**
+ * Pilih kandidat stabilo final dari daftar kandidat hasil AI:
+ * 1. Cocokkan persis ke konten bab (findExactInContent) — kandidat yang tidak
+ *    cocok dibuang.
+ * 2. Buang yang di luar batas panjang (MIN/MAX_TEXT_LENGTH) — ukur dari teks
+ *    persis hasil pencocokan, bukan panjang usulan AI.
+ * 3. Anti-overlap per bab: kandidat yang lebih panjang diprioritaskan; kandidat
+ *    yang terkandung dalam / mengandung highlight yang sudah dipilih pada bab
+ *    yang sama dibuang (tidak ada sorotan bertumpuk).
+ * 4. Kepadatan: maks MAX_PER_CHAPTER per bab & MAX_TOTAL per catatan, dengan
+ *    distribusi merata antar-bab (bab yang kuotanya penuh dilewati, sisanya
+ *    tetap diproses sampai total tercapai).
+ *
+ * Fungsi murni (tanpa DB) — mudah diuji.
+ */
+export function selectHighlights(
+  candidates: HighlightCandidate[],
+  chapters: NoteChapter[]
+): ResolvedHighlight[] {
+  // Langkah 1 & 2: cocokkan persis + batas panjang.
+  const resolved: ResolvedHighlight[] = [];
+  for (const candidate of candidates) {
+    const chapter = chapters.find((ch) => ch.id === candidate.chapterId);
+    if (!chapter) continue;
+    const exact = findExactInContent(candidate.text, chapter.content);
+    if (!exact) continue;
+    if (exact.length < MIN_TEXT_LENGTH || exact.length > MAX_TEXT_LENGTH) {
+      continue;
+    }
+    resolved.push({
+      chapterId: candidate.chapterId,
+      text: exact,
+      color: candidate.color,
+    });
+  }
+
+  // Kelompokkan per bab, urutkan dari yang terpanjang (prioritas anti-overlap).
+  const byChapter = new Map<number, ResolvedHighlight[]>();
+  for (const r of resolved) {
+    const list = byChapter.get(r.chapterId) ?? [];
+    list.push(r);
+    byChapter.set(r.chapterId, list);
+  }
+  for (const list of byChapter.values()) {
+    list.sort((a, b) => b.text.length - a.text.length);
+  }
+
+  // Langkah 3 & 4: pilih per bab dengan anti-overlap & kuota, round-robin
+  // antar-bab agar distribusi merata.
+  const chosen: ResolvedHighlight[] = [];
+  const chosenTextByChapter = new Map<number, string[]>();
+  const countByChapter = new Map<number, number>();
+
+  // Sampai total tercapai, ambil 1 kandidat dari tiap bab yang masih punya
+  // kuota, bergantian (round-robin).
+  const chapterIds = [...byChapter.keys()];
+  let cursor = 0;
+  let progressed = true;
+  while (chosen.length < MAX_TOTAL && progressed) {
+    progressed = false;
+    for (let k = 0; k < chapterIds.length; k++) {
+      if (chosen.length >= MAX_TOTAL) break;
+      const cid = chapterIds[(cursor + k) % chapterIds.length];
+      const list = byChapter.get(cid) ?? [];
+      if ((countByChapter.get(cid) ?? 0) >= MAX_PER_CHAPTER) continue;
+      const taken = chosenTextByChapter.get(cid) ?? [];
+      // Ambil kandidat terpanjang yang belum dipilih & tidak overlap.
+      let picked: ResolvedHighlight | null = null;
+      for (const cand of list) {
+        const norm = normalize(cand.text);
+        const overlaps = taken.some(
+          (t) => t.includes(norm) || norm.includes(t)
+        );
+        if (!overlaps) {
+          picked = cand;
+          break;
+        }
+      }
+      if (picked) {
+        chosen.push(picked);
+        chosenTextByChapter.set(cid, [...taken, normalize(picked.text)]);
+        countByChapter.set(cid, (countByChapter.get(cid) ?? 0) + 1);
+        byChapter.set(
+          cid,
+          list.filter((c) => c !== picked)
+        );
+        progressed = true;
+      }
+    }
+    cursor++;
+  }
+
+  return chosen;
 }
 
 /**
@@ -88,11 +178,11 @@ export async function generateHighlightsForChapters(
 
 ${chapterList}
 
-Pilih bagian-bagian PENTING untuk diberi stabilo (maksimal 4 per bab, total maksimal 20):
-- "text": potongan teks yang PERSIS ada di konten (boleh 1 kalimat utuh atau frasa kunci, 8-60 karakter). JANGAN membuat/mengubah kata.
+Pilih bagian-bagian PENTING untuk diberi stabilo (maksimal 3 per bab, total maksimal 15):
+- "text": potongan teks yang PERSIS ada di konten — SALIN PERSIS apa adanya dari teks di atas, JANGAN parafrase, JANGAN mengubah/menambah/mengurangi kata. Boleh 1 kalimat utuh atau frasa kunci, panjang 6-120 karakter (idealnya 8-60).
 - "chapterId": nomor bab tempat teks itu berasal.
 - "color": "yellow" untuk poin penting/inti, "pink" untuk definisi/istilah/kunci, "blue" untuk contoh/data/fakta.
-Prioritaskan kalimat yang berisi gagasan utama, bukan contoh bertele-tele.
+Prioritaskan kalimat yang berisi gagasan utama, bukan contoh bertele-tele. JANGAN menstabilo judul bab/heading.
 
 Output HANYA JSON array, tanpa teks lain:
 [{"chapterId": 1, "text": "potongan teks persis", "color": "yellow"}, ...]`,
@@ -127,31 +217,20 @@ Output HANYA JSON array, tanpa teks lain:
 
   await removeAiHighlights(noteId);
 
-  const perChapter = new Map<number, number>();
+  // Pilih kandidat final: cocok persis, batas panjang, anti-overlap, kepadatan
+  // (lihat selectHighlights). Menyimpan teks PERSIS hasil pencocokan.
+  const chosen = selectHighlights(candidates, chapters);
+
   let saved = 0;
-  for (const candidate of candidates) {
-    const chapter = chapters.find((ch) => ch.id === candidate.chapterId);
-    if (!chapter) continue;
-    if ((perChapter.get(candidate.chapterId) ?? 0) >= MAX_PER_CHAPTER) continue;
-    if (saved >= MAX_TOTAL) break;
-
-    const exact = findExactInContent(candidate.text, chapter.content);
-    if (!exact) continue;
-
+  for (const item of chosen) {
     const entry = await addHighlight({
       noteId,
-      chapterId: candidate.chapterId,
-      text: exact,
-      color: candidate.color,
+      chapterId: item.chapterId,
+      text: item.text,
+      color: item.color,
       userId: AI_USER_ID,
     });
-    if (entry) {
-      perChapter.set(
-        candidate.chapterId,
-        (perChapter.get(candidate.chapterId) ?? 0) + 1
-      );
-      saved++;
-    }
+    if (entry) saved++;
   }
 
   return saved;
