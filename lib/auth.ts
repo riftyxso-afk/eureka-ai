@@ -84,6 +84,20 @@ export function isLoggedIn(): boolean {
   return getSession() !== null;
 }
 
+/**
+ * Tujuan redirect setelah login yang AMAN — hormati query ?next= (hanya
+ * path lokal, cegah open redirect). Dipakai halaman kampanye seperti
+ * /launch dan /join agar user kembali otomatis setelah masuk.
+ */
+export function getSafeNext(defaultPath = "/home"): string {
+  if (typeof window === "undefined") return defaultPath;
+  const next = new URLSearchParams(window.location.search).get("next") ?? "";
+  if (next.startsWith("/") && !next.startsWith("//") && !next.includes(":")) {
+    return next;
+  }
+  return defaultPath;
+}
+
 export function getSession(): AuthSession | null {
   return safeGet<AuthSession>(SESSION_KEY);
 }
@@ -395,19 +409,31 @@ export async function verifyOtpLogin(
  * Browser dialihkan ke Google, lalu kembali ke /auth/callback.
  * Provider Google harus diaktifkan di Supabase Dashboard (lihat SUPABASE_SETUP_GUIDE.md).
  */
-export async function signInWithGoogle(ref?: string): Promise<void> {
+export async function signInWithGoogle(ref?: string, next?: string): Promise<void> {
   if (!isSupabaseConfigured() || !supabase) {
     throw new Error(
       "Supabase belum dikonfigurasi. Isi kunci asli di .env.local lalu jalankan supabase_schema.sql."
     );
   }
   const cleanRef = String(ref ?? "").trim().slice(0, 32);
+  const cleanNext = String(next ?? "").trim();
+  // Hanya path lokal yang aman dibawa pulang lewat callback.
+  const safeNext =
+    cleanNext.startsWith("/") &&
+    !cleanNext.startsWith("//") &&
+    !cleanNext.includes(":")
+      ? cleanNext
+      : "";
+  const qs = [
+    cleanRef ? `ref=${encodeURIComponent(cleanRef)}` : "",
+    safeNext ? `next=${encodeURIComponent(safeNext)}` : "",
+  ]
+    .filter(Boolean)
+    .join("&");
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback${
-        cleanRef ? `?ref=${encodeURIComponent(cleanRef)}` : ""
-      }`,
+      redirectTo: `${window.location.origin}/auth/callback${qs ? `?${qs}` : ""}`,
       // Selalu tampilkan pemilih akun Google supaya user bisa ganti akun.
       queryParams: { prompt: "select_account" },
     },

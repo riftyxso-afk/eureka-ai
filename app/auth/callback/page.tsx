@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import {
   finishGoogleOAuth,
+  getSafeNext,
   needsOnboarding,
   registerFriendsIdentity,
 } from "@/lib/auth";
@@ -64,7 +65,7 @@ export default function AuthCallbackPage() {
         }
       }
 
-      redirect(needOnboarding ? "/onboarding" : "/home");
+      redirect(needOnboarding ? "/onboarding" : getSafeNext());
       return true;
     };
 

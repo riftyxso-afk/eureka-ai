@@ -21,6 +21,7 @@ import TurnstileCaptcha from "@/components/ui/TurnstileCaptcha";
 import { isTurnstileClientConfigured } from "@/lib/captcha";
 import { PageLoader } from "@/components/ui/PageLoader";
 import {
+  getSafeNext,
   isLoggedIn,
   needsOnboarding,
   registerFriendsIdentity,
@@ -87,7 +88,7 @@ export default function RegisterPage() {
     if (isLoggedIn()) {
       (async () => {
         const needOnboarding = await needsOnboarding().catch(() => false);
-        router.replace(needOnboarding ? "/onboarding" : "/home");
+        router.replace(needOnboarding ? "/onboarding" : getSafeNext());
       })();
       return;
     }
@@ -197,7 +198,7 @@ export default function RegisterPage() {
     setError(null);
     setGoogleBusy(true);
     try {
-      await signInWithGoogle(refCode || undefined);
+      await signInWithGoogle(refCode || undefined, getSafeNext());
       // Browser sedang dialihkan ke Google; jika kembali, reset state.
       setGoogleBusy(false);
     } catch (e) {
