@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -23,6 +23,12 @@ import {
 } from "lucide-react";
 
 import { isLoggedIn } from "@/lib/auth";
+import { apiFetch } from "@/lib/apiClient";
+import { getUserId } from "@/lib/identity";
+import {
+  ReviewSection,
+  type ReviewData,
+} from "@/components/landing/ReviewSection";
 
 const SITE_URL = "https://www.eureka-ai.web.id";
 
@@ -128,10 +134,23 @@ const AI_MODELS = [
 
 export default function LandingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [reviewData, setReviewData] = useState<ReviewData | null>(null);
+
+  const loadReviews = useCallback(async () => {
+    const userId = getUserId();
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    try {
+      const res = await apiFetch(`/api/reviews${qs}`);
+      if (res.ok) setReviewData((await res.json()) as ReviewData);
+    } catch {
+      // biarkan null — seksi ulasan tidak tampil
+    }
+  }, []);
 
   useEffect(() => {
     setLoggedIn(isLoggedIn());
-  }, []);
+    loadReviews();
+  }, [loadReviews]);
 
   // Data terstruktur untuk mesin pencari & AI generatif: Organization +
   // WebSite + SoftwareApplication + FAQ (FAQPage). Dirender di dalam SSR
@@ -179,6 +198,31 @@ export default function LandingPage() {
         },
         description:
           "AI Tutor Socratic untuk pelajar Indonesia: ubah video, artikel & PDF jadi catatan otomatis, tanya apa saja per bab, kerjakan kuis & kartu hafalan, dan belajar bersama teman.",
+        // aggregateRating & review hanya diisi dengan data NYATA dari
+        // tabel reviews (tidak pernah dipalsukan) — lihat ReviewSection.
+        ...(reviewData?.stats && reviewData.stats.count > 0
+          ? {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: String(reviewData.stats.average ?? 0),
+                bestRating: "5",
+                worstRating: "1",
+                reviewCount: reviewData.stats.count,
+              },
+              review: (reviewData.reviews ?? []).slice(0, 3).map((r) => ({
+                "@type": "Review",
+                author: { "@type": "Person", name: r.authorName },
+                datePublished: r.createdAt.slice(0, 10),
+                reviewRating: {
+                  "@type": "Rating",
+                  ratingValue: String(r.rating),
+                  bestRating: "5",
+                },
+                ...(r.title ? { name: r.title } : {}),
+                ...(r.content ? { reviewBody: r.content } : {}),
+              })),
+            }
+          : {}),
       },
       {
         "@type": "FAQPage",
@@ -646,6 +690,13 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* ── Ulasan Pengguna (bukti sosial nyata → JSON-LD) ── */}
+        <ReviewSection
+          data={reviewData}
+          loggedIn={loggedIn}
+          onRefresh={loadReviews}
+        />
 
         {/* ── CTA Akhir ─────────────────────────────────────── */}
         <section className="border-t-2 border-[#E5E5E5] px-4 pb-24 pt-4 sm:px-6">

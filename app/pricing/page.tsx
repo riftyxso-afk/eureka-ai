@@ -18,6 +18,7 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { usePremium } from "@/lib/usePremium";
 import { apiFetch } from "@/lib/apiClient";
+import type { ProductReview, ReviewStats } from "@/lib/reviews-store";
 import { getUserId } from "@/lib/identity";
 import { isLoggedIn, syncAuthSession } from "@/lib/auth";
 
@@ -64,6 +65,11 @@ export default function PricingPage() {
   const { isPremium, tier, premiumUntil, loading, refresh } = usePremium();
   const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  // Ulasan nyata → JSON-LD Product (aggregateRating & review).
+  const [reviewData, setReviewData] = useState<{
+    reviews: ProductReview[];
+    stats: ReviewStats;
+  } | null>(null);
 
   // Riwayat pembelian & status langganan — hanya untuk user yang login.
   useEffect(() => {
@@ -89,6 +95,29 @@ export default function PricingPage() {
       cancelled = true;
     };
   }, []);
+
+  // Ulasan publik — hanya untuk JSON-LD Product (data nyata, tidak dipalsukan).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch("/api/reviews");
+        const payload = await res.json().catch(() => null);
+        if (!cancelled && payload?.stats) {
+          setReviewData({
+            reviews: payload.reviews ?? [],
+            stats: payload.stats,
+          });
+        }
+      } catch {
+        // biarkan null — rating tidak ditambahkan ke JSON-LD
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [discountCode, setDiscountCode] = useState("");
@@ -329,6 +358,29 @@ export default function PricingPage() {
                 },
               ],
             },
+            ...(reviewData?.stats && reviewData.stats.count > 0
+              ? {
+                  aggregateRating: {
+                    "@type": "AggregateRating",
+                    ratingValue: String(reviewData.stats.average ?? 0),
+                    bestRating: "5",
+                    worstRating: "1",
+                    reviewCount: reviewData.stats.count,
+                  },
+                  review: reviewData.reviews.slice(0, 3).map((r) => ({
+                    "@type": "Review",
+                    author: { "@type": "Person", name: r.authorName },
+                    datePublished: r.createdAt.slice(0, 10),
+                    reviewRating: {
+                      "@type": "Rating",
+                      ratingValue: String(r.rating),
+                      bestRating: "5",
+                    },
+                    ...(r.title ? { name: r.title } : {}),
+                    ...(r.content ? { reviewBody: r.content } : {}),
+                  })),
+                }
+              : {}),
           }),
         }}
       />

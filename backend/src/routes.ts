@@ -138,6 +138,11 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/progress", progress);
   count++;
 
+  // ─── Reviews (ulasan produk → JSON-LD aggregateRating) ──
+  const reviews = await import("@/app/api/reviews/route");
+  mount(app, "/api/reviews", reviews);
+  count++;
+
   // ─── Study Buddy ───────────────────────────────────────
   const studyBuddyChat = await import("@/app/api/study-buddy/chat/route");
   mount(app, "/api/study-buddy/chat", studyBuddyChat);
