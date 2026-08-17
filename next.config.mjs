@@ -17,7 +17,7 @@ const cspHeader = `
   object-src 'none';
   base-uri 'self';
   form-action 'self';
-  frame-src https://challenges.cloudflare.com;
+  frame-src https://challenges.cloudflare.com https://drive.google.com;
   frame-ancestors 'none';
   ${isDev ? "" : "upgrade-insecure-requests;"}
 `;

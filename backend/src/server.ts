@@ -83,6 +83,7 @@ app.use(
       "Authorization",
       "x-session-id",
       "x-requested-with",
+      "x-locale",
     ],
     exposeHeaders: ["content-type"],
     credentials: true,
