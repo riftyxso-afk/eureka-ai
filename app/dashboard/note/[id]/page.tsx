@@ -844,7 +844,7 @@ export default function NoteDetailPage() {
             <h2 className="mb-2 text-xs font-extrabold uppercase tracking-wider text-clay-muted">
               Ringkasan
             </h2>
-            <p className="text-[17px] font-semibold leading-6 text-clay-dark">
+            <p className="break-words text-[17px] font-semibold leading-6 text-clay-dark">
               {data.summary}
             </p>
           </div>
@@ -865,7 +865,7 @@ export default function NoteDetailPage() {
                       size={16}
                       className="mt-0.5 shrink-0 text-clay-primary"
                     />
-                    <span>{point}</span>
+                    <span className="min-w-0 flex-1 break-words">{point}</span>
                   </li>
                 ))}
               </ul>

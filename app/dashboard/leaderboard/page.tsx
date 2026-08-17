@@ -161,10 +161,10 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3">
                   {isTop3 && TOP3_STYLE[entry.rank - 1].icon}
-                  <span className="text-xs font-extrabold text-clay-muted sm:text-sm">
+                  <span className="whitespace-nowrap text-xs font-extrabold text-clay-muted sm:text-sm">
                     Level {entry.level}
                   </span>
-                  <span className="text-sm font-extrabold text-clay-primary sm:text-base">
+                  <span className="whitespace-nowrap text-sm font-extrabold text-clay-primary sm:text-base">
                     {formatXP(entry.xp)} XP
                   </span>
                 </div>

@@ -232,7 +232,7 @@ function renderLink(text: string, label: string, url: string) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="font-bold text-clay-primary underline underline-offset-2 hover:text-clay-dark"
+      className="break-words font-bold text-clay-primary underline underline-offset-2 hover:text-clay-dark"
     >
       {label}
     </a>

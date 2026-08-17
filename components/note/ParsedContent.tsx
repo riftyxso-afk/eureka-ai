@@ -58,7 +58,7 @@ function TableBlock({
               {headers.map((h, i) => (
                 <th
                   key={i}
-                  className="border border-clay-primary/30 px-4 py-3 text-left text-sm font-extrabold"
+                  className="break-words border border-clay-primary/30 px-4 py-3 text-left text-sm font-extrabold"
                 >
                   {renderInlineText(h, highlights)}
                 </th>
@@ -78,7 +78,7 @@ function TableBlock({
                 {row.map((cell, j) => (
                   <td
                     key={j}
-                    className="border border-clay-shadow/20 px-4 py-3 text-sm font-medium text-clay-dark"
+                    className="break-words border border-clay-shadow/20 px-4 py-3 text-sm font-medium text-clay-dark"
                   >
                     {renderInlineText(cell, highlights)}
                   </td>
@@ -108,7 +108,7 @@ export function ParsedContent({ items, highlights = [] }: ParsedContentProps) {
             return (
               <h1
                 key={index}
-                className="mt-6 mb-4 text-2xl font-extrabold text-clay-dark sm:text-3xl"
+                className="mt-6 mb-4 break-words text-2xl font-extrabold text-clay-dark sm:text-3xl"
               >
                 {renderInlineText(item.content, highlights)}
               </h1>
@@ -117,7 +117,7 @@ export function ParsedContent({ items, highlights = [] }: ParsedContentProps) {
             return (
               <h2
                 key={index}
-                className="mt-6 mb-3 border-b-2 border-clay-shadow/20 pb-2 text-xl font-bold text-clay-dark sm:text-2xl"
+                className="mt-6 mb-3 break-words border-b-2 border-clay-shadow/20 pb-2 text-xl font-bold text-clay-dark sm:text-2xl"
               >
                 {renderInlineText(item.content, highlights)}
               </h2>
@@ -126,7 +126,7 @@ export function ParsedContent({ items, highlights = [] }: ParsedContentProps) {
             return (
               <h3
                 key={index}
-                className="mt-4 mb-2 text-lg font-bold text-clay-dark sm:text-xl"
+                className="mt-4 mb-2 break-words text-lg font-bold text-clay-dark sm:text-xl"
               >
                 {renderInlineText(item.content, highlights)}
               </h3>
@@ -135,7 +135,7 @@ export function ParsedContent({ items, highlights = [] }: ParsedContentProps) {
             return (
               <h4
                 key={index}
-                className="mt-3 mb-1.5 text-base font-bold text-clay-dark"
+                className="mt-3 mb-1.5 break-words text-base font-bold text-clay-dark"
               >
                 {renderInlineText(item.content, highlights)}
               </h4>
@@ -152,7 +152,7 @@ export function ParsedContent({ items, highlights = [] }: ParsedContentProps) {
             return (
               <p
                 key={index}
-                className="mb-4 text-base font-medium leading-relaxed text-clay-dark"
+                className="mb-4 break-words text-base font-medium leading-relaxed text-clay-dark"
               >
                 {renderInlineText(item.content, highlights)}
               </p>
@@ -166,7 +166,9 @@ export function ParsedContent({ items, highlights = [] }: ParsedContentProps) {
                 <span className="mt-0.5 text-lg font-extrabold leading-none text-clay-primary">
                   •
                 </span>
-                <span>{renderInlineText(item.content, highlights)}</span>
+                <span className="min-w-0 flex-1 break-words">
+                  {renderInlineText(item.content, highlights)}
+                </span>
               </div>
             );
           case "quote":
@@ -175,7 +177,7 @@ export function ParsedContent({ items, highlights = [] }: ParsedContentProps) {
                 key={index}
                 className="mb-4 rounded-clay-md border-l-4 border-clay-primary bg-clay-beige p-4"
               >
-                <p className="text-base font-medium italic text-clay-dark">
+                <p className="break-words text-base font-medium italic text-clay-dark">
                   “{renderInlineText(item.content, highlights)}”
                 </p>
               </blockquote>

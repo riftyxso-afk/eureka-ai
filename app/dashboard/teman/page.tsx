@@ -202,7 +202,7 @@ export default function FriendsPage() {
         <div className="truncate text-sm font-extrabold text-clay-dark">
           {name}
         </div>
-        <div className="text-xs font-semibold text-clay-muted">{sub}</div>
+        <div className="truncate text-xs font-semibold text-clay-muted">{sub}</div>
       </div>
       {busy ? (
         <Loader2 size={18} className="animate-spin text-clay-primary" />
@@ -259,7 +259,7 @@ export default function FriendsPage() {
                 ) : r.relation === "none" || r.relation === "incoming" ? (
                   <button
                     onClick={() => addFriend(r.name)}
-                    className="btn-clay-primary !min-h-[44px] !px-3 text-xs"
+                    className="btn-clay-primary whitespace-nowrap !min-h-[44px] !px-3 text-xs"
                   >
                     <UserPlus size={14} className="mr-1" />
                     {r.relation === "incoming" ? "Terima" : "Tambah"}
@@ -302,14 +302,14 @@ export default function FriendsPage() {
                 <>
                   <button
                     onClick={() => respondRequest("accept", r.id, r.name)}
-                    className="btn-clay-primary !min-h-[44px] !px-3 text-xs"
+                    className="btn-clay-primary whitespace-nowrap !min-h-[44px] !px-3 text-xs"
                   >
                     <Check size={14} className="mr-1" />
                     Terima
                   </button>
                   <button
                     onClick={() => respondRequest("decline", r.id, r.name)}
-                    className="btn-clay-ghost !min-h-[44px] !px-3 text-xs"
+                    className="btn-clay-ghost whitespace-nowrap !min-h-[44px] !px-3 text-xs"
                   >
                     <X size={14} className="mr-1" />
                     Tolak
