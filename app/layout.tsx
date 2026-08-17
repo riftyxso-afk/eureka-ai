@@ -1,6 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Nunito } from "next/font/google";
 import "./globals.css";
+
+// Font self-hosted (next/font) — tanpa request render-blocking ke
+// fonts.googleapis.com (PageSpeed mobile: hemat ±2 detik LCP).
+const nunito = Nunito({
+  subsets: ["latin"],
+  variable: "--font-nunito",
+});
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { JobWatcherProvider } from "@/context/JobWatcherContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -82,7 +90,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className="antialiased">
+      <body className={`${nunito.variable} antialiased`}>
         {/* Anti-FOUC: terapkan class .dark sebelum paint berdasarkan
             preferensi tersimpan / sistem (lihat context/ThemeContext.tsx).
             next/script beforeInteractive → dirender di <head> sebelum

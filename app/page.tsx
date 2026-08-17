@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
@@ -249,10 +250,12 @@ export default function LandingPage() {
       <header className="sticky top-0 z-40 border-b-2 border-[#E5E5E5] bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Link href="/" className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/logo.png"
               alt="Logo Eureka.AI — AI Tutor Socratic"
+              width={40}
+              height={40}
+              priority
               className="h-10 w-10 object-contain"
             />
             <span className="text-xl font-extrabold tracking-tight text-[#13102B]">
@@ -731,10 +734,11 @@ export default function LandingPage() {
       <footer className="border-t-2 border-[#E5E5E5] py-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 sm:flex-row sm:px-6">
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/logo.png"
               alt="Logo Eureka.AI"
+              width={32}
+              height={32}
               className="h-8 w-8 object-contain"
             />
             <span className="text-lg font-extrabold text-[#13102B]">

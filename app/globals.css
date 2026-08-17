@@ -1,5 +1,6 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap");
-@import "katex/dist/katex.min.css";
+/* Font Nunito self-hosted via next/font (app/layout.tsx) — tanpa @import
+   render-blocking ke Google Fonts. CSS katex diimpor hanya di komponen yang
+   merender math (components/note/ParsedContent.tsx & asisten/MarkdownView.tsx). */
 
 @tailwind base;
 @tailwind components;
@@ -158,8 +159,8 @@
    "sticker" dengan border tegas + shadow tajam ke bawah.
    ──────────────────────────────────────────────────────────── */
 .k-landing {
-  font-family: "SN Pro", "Inter", "Nunito", system-ui, -apple-system,
-    "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-nunito), "SN Pro", "Inter", system-ui,
+    -apple-system, "Segoe UI", Roboto, sans-serif;
   background: #ffffff;
   color: #13102b;
 }

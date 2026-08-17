@@ -13,8 +13,10 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Nunito", "sans-serif"],
-        display: ["'Fredoka One'", "Poppins", "sans-serif"],
+        // Self-hosted via next/font (lihat app/layout.tsx) — tanpa request
+        // render-blocking ke Google Fonts di runtime.
+        sans: ["var(--font-nunito)", "Nunito", "sans-serif"],
+        display: ["var(--font-nunito)", "Nunito", "sans-serif"],
       },
       colors: {
         clay: {

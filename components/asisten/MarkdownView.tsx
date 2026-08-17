@@ -3,6 +3,9 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+// CSS katex dimuat di komponen ini (bukan global) — hanya halaman yang
+// menampilkan math yang mengunduhnya.
+import "katex/dist/katex.min.css";
 import rehypeKatex from "rehype-katex";
 import { normalizeMathDelimiters } from "@/lib/mathText";
 import CodeBlock from "@/components/note/CodeBlock";

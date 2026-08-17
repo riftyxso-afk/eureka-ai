@@ -1,5 +1,8 @@
 "use client";
 
+// CSS katex dimuat di sini (bukan global) — hanya halaman catatan yang
+// merender math yang mengunduhnya; landing tidak terbebani CSS ini.
+import "katex/dist/katex.min.css";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { MoveHorizontal } from "lucide-react";
 import CodeBlock from "@/components/note/CodeBlock";
