@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { generateQuiz } from "@/lib/studyTools";
+import { languageFromRequest } from "@/lib/locale";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -48,7 +49,8 @@ export async function POST(
       id,
       found.note.title,
       chapters,
-      count
+      count,
+      languageFromRequest(req)
     );
     if (questions.length === 0) {
       return NextResponse.json(

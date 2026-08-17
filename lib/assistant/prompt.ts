@@ -32,6 +32,8 @@ export function buildSystemPrompt(input: {
   webResults?: WebSearchResult[];
   /** Dokumen yang dilampirkan user (tool paperclip). */
   attachedDocument?: AttachedDocument | null;
+  /** Bahasa jawaban AI: "Bahasa Indonesia" | "English" (dari locale user). */
+  language?: string;
 }): string {
   const {
     context,
@@ -40,7 +42,13 @@ export function buildSystemPrompt(input: {
     ragSkipped,
     webResults = [],
     attachedDocument = null,
+    language = "Bahasa Indonesia",
   } = input;
+
+  const languageRule =
+    language === "English"
+      ? "- Always respond in warm, clear, well-structured English (use markdown: headings, lists, bold when needed). Keep the Socratic, encouraging Eureka tone."
+      : "- Selalu dalam Bahasa Indonesia yang hangat, jelas, dan terstruktur (pakai markdown: heading, list, tebal bila perlu).";
 
   const lines: string[] = [
     `Kamu adalah ${ASSISTANT_NAME}, asisten belajar pribadi dari Eureka.AI.`,
@@ -48,7 +56,7 @@ export function buildSystemPrompt(input: {
     "Gunakan data itu untuk memberi jawaban yang PERSONAL dan RELEVAN, bukan jawaban generik.",
     "",
     "ATURAN MENJAWAB:",
-    "- Selalu dalam Bahasa Indonesia yang hangat, jelas, dan terstruktur (pakai markdown: heading, list, tebal bila perlu).",
+    languageRule,
     "- Jika pertanyaan berkaitan dengan MATERI user, jawab UTAMA dari potongan materi yang diberikan. Sebut sumbernya, contoh: *(Sumber: Catatan \"Turunan Fungsi\", Bab 1)*.",
     "- Jika jawaban tidak ada di materi, akui dengan jujur, lalu tawarkan bantuan: buat catatan baru, carikan cara lain, atau arahkan ke bagian lain.",
     "- Jika user bertanya tentang progres/XP/streak/ujian mereka, gunakan data progres di bawah.",

@@ -36,6 +36,7 @@ import { pushNotification } from "@/lib/notifications-store";
 import { sendPushToUser } from "@/lib/push-send";
 import { recordActivity } from "@/lib/progress-store";
 import { clampChapterCount } from "@/lib/prompts/noteGeneration";
+import { languageFromRequest } from "@/lib/locale";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -234,7 +235,9 @@ export async function POST(req: NextRequest) {
     const prefs: NotePrefs = {
       studyMode: String(form.get("studyMode") ?? "standar") as NotePrefs["studyMode"],
       gayaPenulisan: String(form.get("gayaPenulisan") ?? "Ramah & Santai"),
-      bahasa: String(form.get("bahasa") ?? "Bahasa Indonesia"),
+      // Bahasa AI mengikuti locale user (header x-locale dari geo IP /
+      // pemilih bahasa), kecuali wizard mengirim preferensi eksplisit.
+      bahasa: String(form.get("bahasa")?.toString().trim() || languageFromRequest(req)),
       chapterCount: clampChapterCount(form.get("chapterCount") ?? undefined),
       generationMode: String(form.get("generationMode") ?? "lengkap") as NotePrefs["generationMode"],
       assignment: form.get("assignment") === "1" || form.get("assignment") === "true",

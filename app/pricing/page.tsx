@@ -21,22 +21,12 @@ import { apiFetch } from "@/lib/apiClient";
 import type { ProductReview, ReviewStats } from "@/lib/reviews-store";
 import { getUserId } from "@/lib/identity";
 import { isLoggedIn, syncAuthSession } from "@/lib/auth";
-
-const PERKS = [
-  "Sesi belajar & chat AI tak terbatas",
-  "Web search real-time saat bertanya",
-  "Generate gambar AI (Eureka Draw)",
-  "Kuis & flashcards AI tanpa batas",
-  "Generate catatan AI unlimited",
-  "Prioritas fitur baru",
-];
+import { useI18n } from "@/context/LocaleContext";
 
 const TIERS = [
   {
     id: "normal" as const,
-    name: "Pro Bulanan",
     price: 59000,
-    note: "Harga normal",
     highlight: false,
   },
 ];
@@ -61,6 +51,9 @@ function formatRupiah(amount: number): string {
 }
 
 export default function PricingPage() {
+  const { dict, locale } = useI18n();
+  const p = dict.pricing;
+  const PERKS = p.perks;
   const { data } = useOnboarding();
   const { isPremium, tier, premiumUntil, loading, refresh } = usePremium();
   const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
@@ -159,7 +152,7 @@ export default function PricingPage() {
         remainingUses?: number | null;
       } | null;
       if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Kode tidak valid.");
+        setError(body?.error ?? p.errInvalidCode);
         return;
       }
       setAppliedCode({
@@ -174,9 +167,7 @@ export default function PricingPage() {
         setTimeout(() => setPriceCrossed(true), 150)
       );
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Gagal memvalidasi kode. Coba lagi."
-      );
+      setError(e instanceof Error ? e.message : p.errValidate);
     } finally {
       setValidating(false);
     }
@@ -190,14 +181,14 @@ export default function PricingPage() {
       // server dan membuat status tidak konsisten antar perangkat.
       await syncAuthSession().catch(() => undefined);
       if (!isLoggedIn()) {
-        setError("Silakan masuk dulu untuk berlangganan.");
+        setError(p.errLoginFirst);
         setBusy(null);
         window.location.href = "/login";
         return;
       }
       const userId = getUserId();
       if (!userId) {
-        setError("Silakan masuk dulu untuk berlangganan.");
+        setError(p.errLoginFirst);
         return;
       }
       const res = await apiFetch("/api/payments/checkout", {
@@ -215,7 +206,7 @@ export default function PricingPage() {
         error?: string;
       } | null;
       if (!res.ok || (!body?.link && !body?.activated)) {
-        setError(body?.error ?? "Gagal membuat pembayaran. Coba lagi.");
+        setError(body?.error ?? p.errPayment);
         return;
       }
       // Kode gratis 100% → sudah aktif langsung, tanpa diarahkan ke Pakasir.
@@ -226,9 +217,7 @@ export default function PricingPage() {
       // Redirect ke halaman pembayaran Pakasir.
       window.location.href = body.link as string;
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Gagal membuat pembayaran. Coba lagi."
-      );
+      setError(e instanceof Error ? e.message : p.errPayment);
     } finally {
       setBusy(null);
     }
@@ -241,14 +230,14 @@ export default function PricingPage() {
       // Wajib akun asli (sync sesi) — trial dicatat per akun di server.
       await syncAuthSession().catch(() => undefined);
       if (!isLoggedIn()) {
-        setError("Silakan masuk dulu untuk mencoba trial.");
+        setError(p.errLoginTrial);
         setClaimingTrial(false);
         window.location.href = "/login";
         return;
       }
       const userId = getUserId();
       if (!userId) {
-        setError("Silakan masuk dulu untuk mencoba trial.");
+        setError(p.errLoginTrial);
         return;
       }
       const res = await apiFetch("/api/payments/trial", {
@@ -261,14 +250,12 @@ export default function PricingPage() {
         error?: string;
       } | null;
       if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Gagal mengaktifkan trial. Coba lagi.");
+        setError(body?.error ?? p.errTrial);
         return;
       }
       await refresh();
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Gagal mengaktifkan trial. Coba lagi."
-      );
+      setError(e instanceof Error ? e.message : p.errTrial);
     } finally {
       setClaimingTrial(false);
     }
@@ -280,7 +267,7 @@ export default function PricingPage() {
     try {
       const userId = getUserId();
       if (!userId) {
-        setError("Silakan masuk dulu.");
+        setError(p.errLoginCancel);
         return;
       }
       const res = await apiFetch("/api/payments/cancel", {
@@ -293,16 +280,14 @@ export default function PricingPage() {
         error?: string;
       } | null;
       if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Gagal membatalkan langganan. Coba lagi.");
+        setError(body?.error ?? p.errCancel);
         setConfirmCancel(false);
         return;
       }
       setConfirmCancel(false);
       await refresh();
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Gagal membatalkan langganan. Coba lagi."
-      );
+      setError(e instanceof Error ? e.message : p.errCancel);
       setConfirmCancel(false);
     } finally {
       setCancelling(false);
@@ -312,7 +297,7 @@ export default function PricingPage() {
   const formatDate = (iso: string | null) => {
     if (!iso) return "";
     try {
-      return new Date(iso).toLocaleDateString("id-ID", {
+      return new Date(iso).toLocaleDateString(locale === "en" ? "en-US" : "id-ID", {
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -321,6 +306,7 @@ export default function PricingPage() {
       return "";
     }
   };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-clay-beige px-4 py-10">
@@ -393,26 +379,25 @@ export default function PricingPage() {
           <h1 className="mt-5 flex items-center justify-center gap-2 text-3xl font-extrabold">
             {isPremium ? (
               <>
-                Kamu Sudah Pro! <Crown size={26} className="text-clay-secondary" />
+                {p.alreadyPro} <Crown size={26} className="text-clay-secondary" />
               </>
             ) : (
-              "Tingkatkan ke Pro"
+              p.upgrade
             )}
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-base font-semibold text-clay-muted">
-            Harga Eureka.AI — AI Tutor Socratic untuk pelajar Indonesia. Mulai
-            gratis selamanya, upgrade Pro untuk belajar tanpa batas.
+            {p.subtitle}
           </p>
           <p className="mx-auto mt-1 max-w-xl text-base font-semibold text-clay-muted">
             {isPremium ? (
               <>
-                Langganan aktif —{" "}
+                {p.activeUntil}{" "}
                 <span className="font-extrabold text-clay-primary">
                   {TIER_LABEL[tier ?? ""] ?? "Pro"}
                 </span>
                 {premiumUntil && (
                   <>
-                    {" "}hingga{" "}
+                    {" "}{p.until}{" "}
                     <span className="font-extrabold">
                       {formatDate(premiumUntil)}
                     </span>
@@ -422,8 +407,7 @@ export default function PricingPage() {
               </>
             ) : (
               <>
-                {data.name ? `Halo, ${data.name.split(" ")[0]}! ` : ""}Dapatkan
-                pengalaman belajar tanpa batas.
+                {data.name ? `${p.hello}, ${data.name.split(" ")[0]}! ` : ""}{p.getUnlimited}
               </>
             )}
           </p>
@@ -438,12 +422,10 @@ export default function PricingPage() {
           <div className="mt-8 flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
             <div className="w-full max-w-md rounded-clay-md bg-clay-beige/70 px-6 py-5 text-left shadow-clay-sm">
               <p className="text-sm font-bold text-clay-muted">
-                Status langgananmu aktif
+                {p.statusActive}
               </p>
               <p className="mt-1 text-sm font-semibold text-clay-dark">
-                {tier === "trial"
-                  ? "Kamu sedang dalam masa trial gratis. Semua fitur Pro terbuka!"
-                  : "Semua fitur Pro sudah terbuka. Terima kasih sudah berlangganan!"}
+                {tier === "trial" ? p.trialActiveDesc : p.proActiveDesc}
               </p>
             </div>
             <div className="flex w-full max-w-md flex-col gap-3">
@@ -455,10 +437,10 @@ export default function PricingPage() {
                 {busy === "normal" ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 size={16} className="animate-spin" />
-                    Ke Pakasir…
+                    {p.toPakar}
                   </span>
                 ) : (
-                  "Top Up Pro (Perpanjang 30 Hari)"
+                  p.topUp
                 )}
               </ButtonClay>
               <ButtonClay
@@ -466,10 +448,10 @@ export default function PricingPage() {
                 variant="secondary"
                 onClick={() => void refresh()}
               >
-                Muat ulang status
+                {p.refreshStatus}
               </ButtonClay>
               <Link href="/home">
-                <ButtonClay fullWidth>Kembali ke Home</ButtonClay>
+                <ButtonClay fullWidth>{p.backHome}</ButtonClay>
               </Link>
               {tier !== "trial" && (
                 <button
@@ -479,7 +461,7 @@ export default function PricingPage() {
                   }}
                   className="rounded-clay-md px-5 py-2.5 text-sm font-extrabold text-red-500 transition-colors hover:bg-red-50"
                 >
-                  Batalkan Langganan
+                  {p.cancelSubscription}
                 </button>
               )}
             </div>
@@ -500,11 +482,10 @@ export default function PricingPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 text-base font-extrabold text-clay-primary">
-                      <Gift size={18} /> Coba Gratis 7 Hari
+                      <Gift size={18} /> {p.freeTrial7}
                     </p>
                     <p className="mt-1 text-xs font-semibold text-clay-muted">
-                      Semua fitur Pro tanpa bayar. Sekali seumur hidup, tanpa
-                      kartu kredit.
+                      {p.trialDesc}
                     </p>
                   </div>
                   <ButtonClay
@@ -515,10 +496,10 @@ export default function PricingPage() {
                     {claimingTrial ? (
                       <span className="flex items-center gap-2">
                         <Loader2 size={16} className="animate-spin" />
-                        Mengaktifkan…
+                        {p.activating}
                       </span>
                     ) : (
-                      "Klaim Trial Gratis"
+                      p.claimTrial
                     )}
                   </ButtonClay>
                 </div>
@@ -536,10 +517,10 @@ export default function PricingPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <p className="text-base font-extrabold">{t.name}</p>
+                      <p className="text-base font-extrabold">{p.proMonthly}</p>
                       {appliedCode?.free && (
                         <span className="rounded-full bg-green-500 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                          Gratis 100%
+                          {p.free100}
                         </span>
                       )}
                     </div>
@@ -577,7 +558,7 @@ export default function PricingPage() {
                       )}
                     </div>
                     <p className="mt-1 text-xs font-semibold text-clay-muted">
-                      {appliedCode?.free ? appliedCode.label : t.note}
+                      {appliedCode?.free ? appliedCode.label : p.normalPrice}
                     </p>
                     <ButtonClay
                       fullWidth
@@ -588,12 +569,12 @@ export default function PricingPage() {
                       {busy === t.id ? (
                         <span className="flex items-center justify-center gap-2">
                           <Loader2 size={16} className="animate-spin" />
-                          Ke Pakasir…
+                          {p.toPakar}
                         </span>
                       ) : appliedCode?.free ? (
-                        "Klaim Gratis"
+                        p.claimFree
                       ) : (
-                        `Pilih ${t.name}`
+                        `${p.choose} ${p.proMonthly}`
                       )}
                     </ButtonClay>
                   </div>
@@ -604,7 +585,7 @@ export default function PricingPage() {
               <div className="rounded-clay-md bg-clay-beige/70 px-5 py-4 text-left shadow-clay-sm">
                 <label className="flex items-center gap-2 text-sm font-extrabold text-clay-dark">
                   <Ticket size={16} className="text-clay-primary" />
-                  Punya kode diskon?
+                  {p.haveCode}
                 </label>
                 <div className="mt-2 flex gap-2">
                   <input
@@ -620,7 +601,7 @@ export default function PricingPage() {
                         void applyCode();
                       }
                     }}
-                    placeholder="MASUKKAN KODE (mis. GRATIS100)"
+                    placeholder={p.codePlaceholder}
                     className="w-full rounded-clay-md border-2 border-clay-borderLight bg-white px-3 py-2 text-sm font-bold uppercase text-clay-dark outline-none focus:border-clay-primary"
                   />
                   <button
@@ -631,17 +612,16 @@ export default function PricingPage() {
                     {validating ? (
                       <Loader2 size={16} className="animate-spin" />
                     ) : (
-                      "Pakai"
+                      p.use
                     )}
                   </button>
                 </div>
                 <p className="mt-2 text-[11px] font-semibold text-clay-muted">
-                  Tekan <b>Enter</b> atau tombol <b>Pakai</b> untuk menerapkan
-                  kode sebelum memilih paket.
+                  {p.codeHint.replace("{n}", "")}
                 </p>
                 {appliedCode?.free && appliedCode.remainingUses !== null && (
                   <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-extrabold text-green-600">
-                    <Zap size={12} /> Sisa kuota {appliedCode.remainingUses} dari 10 orang.
+                    <Zap size={12} /> {p.remainingQuota.replace("{n}", String(appliedCode.remainingUses))}
                   </p>
                 )}
               </div>
@@ -650,7 +630,7 @@ export default function PricingPage() {
             {/* KANAN: benefit */}
             <div className="rounded-clay-md border-2 border-clay-borderLight bg-white p-6 shadow-clay-sm">
               <p className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
-                Semua yang kamu dapat <Crown size={20} className="text-clay-secondary" />
+                {p.everything} <Crown size={20} className="text-clay-secondary" />
               </p>
               <ul className="mt-4 flex flex-col gap-3">
                 {PERKS.map((perk) => (
@@ -667,14 +647,11 @@ export default function PricingPage() {
               </ul>
               <div className="mt-6 flex items-start gap-2 rounded-clay-md bg-clay-beige/60 px-4 py-3 text-xs font-semibold text-clay-muted">
                 <CreditCard size={15} className="mt-0.5 shrink-0" />
-                <span>
-                  Pembayaran aman via <b>Pakasir</b> — QRIS, e-wallet, VA.
-                  Status premium aktif otomatis setelah pembayaran terverifikasi.
-                </span>
+                <span>{p.payNote}</span>
               </div>
               <Link href="/dashboard" className="mt-4 block">
                 <ButtonClay fullWidth variant="secondary">
-                  Nanti aja
+                  {p.later}
                 </ButtonClay>
               </Link>
             </div>
@@ -686,16 +663,16 @@ export default function PricingPage() {
           <div className="mt-8 border-t-2 border-clay-shadow/30 pt-6">
             <h2 className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
               <History size={20} className="text-clay-primary" />
-              Riwayat Pembelian
+              {p.purchaseHistory}
             </h2>
             {historyLoading ? (
               <p className="mt-3 flex items-center gap-2 text-sm font-bold text-clay-muted">
                 <Loader2 size={14} className="animate-spin" />
-                Memuat riwayat...
+                {p.loadingHistory}
               </p>
             ) : history.length === 0 ? (
               <p className="mt-3 text-sm font-semibold text-clay-muted">
-                Belum ada pembelian.
+                {p.noPurchases}
               </p>
             ) : (
               <ul className="mt-4 flex flex-col gap-2.5">
@@ -726,7 +703,7 @@ export default function PricingPage() {
                             : "bg-clay-muted/10 text-clay-muted"
                         }`}
                       >
-                        {h.status === "paid" ? "Lunas" : "Belum dibayar"}
+                        {h.status === "paid" ? p.paid : p.unpaid}
                       </span>
                     </div>
                   </li>
@@ -751,12 +728,10 @@ export default function PricingPage() {
               <AlertTriangle size={28} className="text-red-500" />
             </div>
             <h2 className="mt-4 text-xl font-extrabold text-clay-dark">
-              Batalkan Langganan?
+              {p.cancelTitle}
             </h2>
             <p className="mt-2 text-sm font-semibold text-clay-muted">
-              Akses premium akan berhenti <b>sekarang</b>. Karena harga Pro
-              sudah sangat murah, <b>tidak ada pengembalian dana (refund)</b>{" "}
-              untuk sisa masa aktif.
+              {p.cancelDesc}
             </p>
             <div className="mt-5 flex flex-col gap-2.5">
               <button
@@ -767,10 +742,10 @@ export default function PricingPage() {
                 {cancelling ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 size={16} className="animate-spin" />
-                    Membatalkan…
+                    {p.cancelling}
                   </span>
                 ) : (
-                  "Ya, Batalkan Langganan"
+                  p.yesCancel
                 )}
               </button>
               <button
@@ -778,7 +753,7 @@ export default function PricingPage() {
                 disabled={cancelling}
                 className="w-full rounded-clay-md py-3 text-sm font-extrabold text-clay-muted transition-colors hover:bg-clay-beige disabled:opacity-60"
               >
-                Tidak jadi
+                {p.notNow}
               </button>
             </div>
           </div>

@@ -29,8 +29,11 @@ import {
   signInWithGoogle,
   verifyOtpLogin,
 } from "@/lib/auth";
+import { useI18n } from "@/context/LocaleContext";
 
 export default function RegisterPage() {
+  const { dict } = useI18n();
+  const a = dict.auth;
   const router = useRouter();
   const [step, setStep] = useState<"form" | "otp">("form");
   const [name, setName] = useState("");
@@ -102,7 +105,7 @@ export default function RegisterPage() {
   }, []);
 
   if (!checked) {
-    return <PageLoader title="Menyiapkan halaman daftar..." />;
+    return <PageLoader title={a.pageLoaderReg} />;
   }
 
   const startCooldown = () => {
@@ -130,11 +133,11 @@ export default function RegisterPage() {
     setError(null);
 
     if (name.trim().length < 2 || !email.trim()) {
-      setError("Isi nama (minimal 2 huruf) dan email dulu ya.");
+      setError(a.errNameEmail);
       return;
     }
     if (captchaConfigured && !captchaToken) {
-      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
+      setError(a.errCaptcha);
       return;
     }
 
@@ -143,7 +146,7 @@ export default function RegisterPage() {
     const result = await requestOtpLogin(email, name, captchaToken ?? undefined);
     setSending(false);
     if (!result.ok) {
-      setError(result.error ?? "Gagal mengirim kode. Coba lagi.");
+      setError(result.error ?? a.errSend);
       return;
     }
 
@@ -158,11 +161,11 @@ export default function RegisterPage() {
     setError(null);
 
     if (otpCode.trim().length !== 6) {
-      setError("Masukkan kode 6 digit dari email.");
+      setError(a.errOtp6);
       return;
     }
     if (captchaConfigured && !captchaToken) {
-      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
+      setError(a.errCaptcha);
       return;
     }
 
@@ -176,7 +179,7 @@ export default function RegisterPage() {
       refCode || undefined
     );
     if (!result.ok) {
-      setError(result.error ?? "Gagal verifikasi. Coba lagi.");
+      setError(result.error ?? a.errVerify);
       setSubmitting(false);
       return;
     }
@@ -203,9 +206,7 @@ export default function RegisterPage() {
       setGoogleBusy(false);
     } catch (e) {
       setGoogleBusy(false);
-      setError(
-        e instanceof Error ? e.message : "Gagal membuka daftar dengan Google."
-      );
+      setError(e instanceof Error ? e.message : a.errGoogleReg);
     }
   };
 
@@ -221,13 +222,11 @@ export default function RegisterPage() {
 
         <CardClay className="!p-8 sm:!p-10">
           <h1 className="flex items-center justify-center gap-2 text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
-            Daftar Gratis Sekarang
+            {a.regTitle}
             <Rocket size={26} className="shrink-0 text-clay-secondary" />
           </h1>
           <p className="mt-2 text-center text-base font-semibold text-clay-muted">
-            {step === "form"
-              ? "Isi nama & email — akun dibuat otomatis setelah kode OTP kamu verifikasi"
-              : "Cek emailmu untuk kode verifikasi"}
+            {step === "form" ? a.regSubForm : a.regSubOtp}
           </p>
 
           {step === "form" ? (
@@ -244,13 +243,13 @@ export default function RegisterPage() {
                 ) : (
                   <GoogleIcon size={18} />
                 )}
-                Daftar dengan Google
+                {a.regGoogle}
               </button>
 
               <div className="mt-5 flex items-center gap-3">
                 <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
                 <span className="text-xs font-extrabold uppercase tracking-wider text-clay-muted">
-                  atau
+                  {a.or}
                 </span>
                 <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
               </div>
@@ -258,7 +257,7 @@ export default function RegisterPage() {
               <form onSubmit={handleSendOtp} className="mt-5 space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  NAMA LENGKAP
+                  {a.fullName}
                 </label>
                 <div className="relative">
                   <User
@@ -268,7 +267,7 @@ export default function RegisterPage() {
                   <InputClay
                     type="text"
                     autoComplete="name"
-                    placeholder="Nama kamu"
+                    placeholder={a.namePlaceholder}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="!pl-11"
@@ -279,7 +278,7 @@ export default function RegisterPage() {
 
               <div>
                 <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  EMAIL
+                  {a.email}
                 </label>
                 <div className="relative">
                   <Mail
@@ -290,7 +289,7 @@ export default function RegisterPage() {
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    placeholder="kamu@email.com"
+                    placeholder={a.emailPlaceholder}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="!pl-11"
@@ -323,7 +322,7 @@ export default function RegisterPage() {
                 ) : (
                   <>
                     <KeyRound size={18} className="mr-2" />
-                    Daftar dengan Kode OTP
+                    {a.regOtp}
                   </>
                 )}
               </ButtonClay>
@@ -337,17 +336,16 @@ export default function RegisterPage() {
                 className="flex items-center gap-1 text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary"
               >
                 <ArrowLeft size={13} />
-                Ubah nama / email
+                {a.changeNameEmail}
               </button>
               <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
-                Kode 6 digit terkirim ke{" "}
+                {a.otpSent}{" "}
                 <b className="text-clay-dark">{email.trim().toLowerCase()}</b>.
-                Periksa kotak masuk (atau spam) email kamu. Akun dibuat otomatis
-                saat kode benar.
+                {a.regOtpSent}
               </p>
               <div>
                 <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  KODE OTP
+                  {a.otpLabel}
                 </label>
                 <input
                   type="text"
@@ -390,7 +388,7 @@ export default function RegisterPage() {
                 ) : (
                   <>
                     <ArrowRight size={18} className="mr-2" />
-                    Buat Akun & Masuk
+                    {a.createAccount}
                   </>
                 )}
               </ButtonClay>
@@ -402,23 +400,23 @@ export default function RegisterPage() {
                 className="w-full text-center text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary disabled:opacity-50"
               >
                 {sending
-                  ? "Mengirim ulang..."
+                  ? a.resending
                   : cooldown > 0
-                    ? `Kirim ulang dalam ${cooldown}s`
-                    : "Kirim ulang kode"}
+                    ? `${a.resendIn} ${cooldown}s`
+                    : a.resend}
               </button>
             </form>
           )}
 
           <p className="mt-6 text-center text-sm font-bold text-clay-muted">
-            Sudah punya akun?{" "}
+            {a.haveAccount}{" "}
             <Link href="/login" className="font-extrabold text-clay-primary underline-offset-2 hover:underline">
-              Masuk di sini
+              {a.loginHere}
             </Link>
           </p>
           <p className="mt-3 text-center text-xs font-semibold text-clay-muted">
             <Link href="/" className="text-clay-muted underline-offset-2 hover:underline">
-              ← Kembali ke beranda
+              {a.backHome}
             </Link>
           </p>
         </CardClay>

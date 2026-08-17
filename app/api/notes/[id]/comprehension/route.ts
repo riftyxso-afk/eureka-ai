@@ -6,6 +6,7 @@ import {
   generateComprehension,
   type ComprehensionConfig,
 } from "@/lib/studyTools";
+import { languageFromRequest } from "@/lib/locale";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -62,7 +63,8 @@ export async function POST(
       id,
       found.note.title,
       chapters,
-      { count, difficulty, types }
+      { count, difficulty, types },
+      languageFromRequest(req)
     );
     if (questions.length === 0) {
       return NextResponse.json(

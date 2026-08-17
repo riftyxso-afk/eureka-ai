@@ -33,6 +33,7 @@ import {
 } from "@/lib/assistant/prompt";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
 import { enforcePremium } from "@/lib/premium";
+import { languageFromRequest } from "@/lib/locale";
 import type { RagHit } from "@/lib/assistant/context";
 
 /** Batas ukuran lampiran (dataUrl base64) — ~3MB file asli. */
@@ -527,6 +528,7 @@ export async function POST(req: NextRequest) {
           ragSkipped: ragHits.length === 0 && ragError !== "",
           webResults,
           attachedDocument,
+          language: languageFromRequest(req),
         });
         // Isi lengkap catatan yang disebut (@) — disuntikkan ke prompt user
         // agar AI selalu membacanya (tidak bergantung pada hasil RAG).

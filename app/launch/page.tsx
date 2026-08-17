@@ -17,6 +17,7 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { isLoggedIn, syncAuthSession } from "@/lib/auth";
+import { useI18n } from "@/context/LocaleContext";
 
 type Phase = "checking" | "guest" | "working" | "done";
 
@@ -26,33 +27,10 @@ interface TrialState {
   message?: string;
 }
 
-const PERKS = [
-  {
-    icon: Crown,
-    title: "Trial Pro 7 Hari",
-    desc: "Chat AI, catatan otomatis, kuis & flashcards tanpa batas — gratis 7 hari.",
-  },
-  {
-    icon: Mic,
-    title: "Rekam Suara di Composer",
-    desc: "Bicara, langsung jadi teks di kolom chat — tanpa ngetik.",
-  },
-  {
-    icon: PhoneCall,
-    title: "Panggilan AI Realtime",
-    desc: "Tutor suara Eureka.AI: tanya dengan suara, dijawab dengan suara.",
-  },
-  {
-    icon: Sparkles,
-    title: "Akses Awal Fitur Baru",
-    desc: "Jadi beta tester — coba fitur eksperimental sebelum rilis publik.",
-  },
-];
-
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("id-ID", {
+  return d.toLocaleDateString(locale === "en" ? "en-US" : "id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -66,6 +44,14 @@ function formatDate(iso: string): string {
  * halaman hanya menampilkan CTA masuk.
  */
 export default function LaunchPage() {
+  const { locale, dict } = useI18n();
+  const l = dict.launch;
+  const PERKS = [
+    { icon: Crown, title: l.perks[0].title, desc: l.perks[0].desc },
+    { icon: Mic, title: l.perks[1].title, desc: l.perks[1].desc },
+    { icon: PhoneCall, title: l.perks[2].title, desc: l.perks[2].desc },
+    { icon: Sparkles, title: l.perks[3].title, desc: l.perks[3].desc },
+  ];
   const [phase, setPhase] = useState<Phase>("checking");
   const [trial, setTrial] = useState<TrialState | null>(null);
   const [betaOk, setBetaOk] = useState(false);
@@ -122,7 +108,7 @@ export default function LaunchPage() {
       });
       setBetaOk(betaRes.ok && b?.ok === true);
       if (!trialRes.ok && !betaRes.ok) {
-        setError("Sebagian hadiah gagal diaktifkan. Silakan coba lagi nanti.");
+        setError(l.claimFail);
       }
       setPhase("done");
     })();
@@ -137,15 +123,14 @@ export default function LaunchPage() {
         {/* Header */}
         <div className="mb-8 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-clay-full bg-clay-primary/10 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-clay-primary">
-            <Gift size={12} /> Peluncuran Eureka.AI
+            <Gift size={12} /> {l.chip}
           </span>
           <h1 className="mt-3 flex flex-wrap items-center justify-center gap-2 text-3xl font-extrabold sm:text-4xl">
-            Klaim Hadiah Launch Eureka.AI
+            {l.title}
             <Rocket size={30} className="shrink-0 text-clay-secondary" />
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-sm font-semibold text-clay-muted sm:text-base">
-            Buka link ini saat sudah masuk, dan hadiahmu aktif otomatis —
-            tanpa kode, tanpa kartu kredit.
+            {l.subtitle}
           </p>
         </div>
 
@@ -174,31 +159,30 @@ export default function LaunchPage() {
             {phase === "checking" && (
               <div className="flex items-center justify-center gap-2 py-4 text-sm font-extrabold text-clay-muted">
                 <Loader2 size={18} className="animate-spin text-clay-primary" />
-                Memeriksa sesi kamu...
+                {l.checking}
               </div>
             )}
 
             {phase === "guest" && (
               <div className="text-center">
                 <h2 className="text-lg font-extrabold sm:text-xl">
-                  Hadiah untuk pengguna Eureka.AI
+                  {l.guestTitle}
                 </h2>
                 <p className="mx-auto mt-1 max-w-md text-sm font-semibold text-clay-muted">
-                  Masuk (atau daftar gratis) dulu, lalu kembali ke halaman ini —
-                  trial Pro 7 hari &amp; akses beta langsung aktif otomatis.
+                  {l.guestDesc}
                 </p>
                 <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
                   <Link href="/login?next=/launch">
-                    <ButtonClay className="w-full sm:w-auto">Masuk &amp; Klaim</ButtonClay>
+                    <ButtonClay className="w-full sm:w-auto">{l.masukKlaim}</ButtonClay>
                   </Link>
                   <Link href="/register?next=/launch">
                     <ButtonClay variant="secondary" className="w-full sm:w-auto">
-                      Daftar Gratis
+                      {l.daftarGratis}
                     </ButtonClay>
                   </Link>
                 </div>
                 <p className="mt-3 text-[11px] font-bold text-clay-muted">
-                  Sudah punya akun? Cukup masuk — tidak perlu mendaftar ulang.
+                  {l.guestNote}
                 </p>
               </div>
             )}
@@ -207,10 +191,10 @@ export default function LaunchPage() {
               <div className="py-2 text-center">
                 <Loader2 size={26} className="mx-auto animate-spin text-clay-primary" />
                 <p className="mt-3 text-sm font-extrabold text-clay-dark">
-                  Mengaktifkan hadiahmu...
+                  {l.workingTitle}
                 </p>
                 <p className="mt-1 text-xs font-semibold text-clay-muted">
-                  Trial Pro + akses beta — sebentar lagi aktif.
+                  {l.workingDesc}
                 </p>
               </div>
             )}
@@ -235,15 +219,15 @@ export default function LaunchPage() {
                   <div className="min-w-0">
                     <h2 className="text-base font-extrabold sm:text-lg">
                       {trial?.ok
-                        ? "Trial Pro 7 Hari Aktif!"
-                        : trial?.message ?? "Trial tidak tersedia"}
+                        ? l.trialActive
+                        : trial?.message ?? l.trialUnavailable}
                     </h2>
                     <p className="mt-0.5 text-xs font-semibold text-clay-muted sm:text-sm">
                       {trial?.ok && trial?.premiumUntil
-                        ? `Aktif sampai ${formatDate(trial.premiumUntil)} — chat AI, catatan otomatis, kuis & flashcards tanpa batas.`
+                        ? `${l.trialUntil} ${formatDate(trial.premiumUntil, locale)} — ${l.trialUntilDesc}`
                         : trial?.message
-                          ? `${trial.message} Kamu tetap bisa memakai beta & fitur gratis.`
-                          : "Kamu tetap bisa memakai beta & fitur gratis."}
+                          ? `${trial.message} ${l.stillFree}`
+                          : l.stillFree}
                     </p>
                   </div>
                 </div>
@@ -263,12 +247,10 @@ export default function LaunchPage() {
                   </span>
                   <div className="min-w-0">
                     <h2 className="text-base font-extrabold sm:text-lg">
-                      {betaOk ? "Beta Tester Aktif!" : "Beta tidak tersedia"}
+                      {betaOk ? l.betaActive : l.betaUnavailable}
                     </h2>
                     <p className="mt-0.5 text-xs font-semibold text-clay-muted sm:text-sm">
-                      {betaOk
-                        ? "Rekam suara di composer & panggilan AI realtime sudah terbuka di halaman chat kamu."
-                        : "Gagal mengaktifkan beta. Coba lagi nanti."}
+                      {betaOk ? l.betaActiveDesc : l.betaFail}
                     </p>
                   </div>
                 </div>
@@ -281,11 +263,11 @@ export default function LaunchPage() {
 
                 <div className="flex flex-col justify-center gap-2 pt-1 sm:flex-row">
                   <Link href="/home">
-                    <ButtonClay className="w-full sm:w-auto">Mulai Belajar</ButtonClay>
+                    <ButtonClay className="w-full sm:w-auto">{l.mulalBelajar}</ButtonClay>
                   </Link>
                   <Link href="/dashboard">
                     <ButtonClay variant="secondary" className="w-full sm:w-auto">
-                      Ke Dashboard
+                      {l.keDashboard}
                     </ButtonClay>
                   </Link>
                 </div>
@@ -295,10 +277,9 @@ export default function LaunchPage() {
         </div>
 
         <p className="mt-8 text-center text-xs font-semibold text-clay-muted">
-          Satu akun = satu trial Pro (7 hari). Sudah pernah klaim? Beta tetap
-          bisa diaktifkan. Pertanyaan? Tanya lewat{" "}
+          {l.footer} {l.question}{" "}
           <Link href="/home" className="font-extrabold text-clay-primary underline">
-            chat Eureka.AI
+            {l.chatLink}
           </Link>
           .
         </p>

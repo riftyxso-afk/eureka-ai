@@ -16,26 +16,16 @@ import { useBeta } from "@/lib/useBeta";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { isLoggedIn, syncAuthSession } from "@/lib/auth";
-
-const BETA_FEATURES = [
-  {
-    icon: Mic,
-    title: "Rekam Suara di Composer",
-    desc: "Bicara, langsung jadi teks di kolom chat — tanpa ngetik.",
-  },
-  {
-    icon: PhoneCall,
-    title: "Panggilan AI Realtime",
-    desc: "Tutor suara Eureka.AI: tanya dengan suara, dijawab dengan suara + visualizer animasi.",
-  },
-  {
-    icon: Sparkles,
-    title: "Akses Awal Fitur Baru",
-    desc: "Kamu termasuk yang pertama mencoba fitur eksperimental sebelum rilis publik.",
-  },
-];
+import { useI18n } from "@/context/LocaleContext";
 
 export default function JoinBetaPage() {
+  const { dict } = useI18n();
+  const j = dict.join;
+  const BETA_FEATURES = [
+    { icon: Mic, title: j.featRecTitle, desc: j.featRecDesc },
+    { icon: PhoneCall, title: j.featCallTitle, desc: j.featCallDesc },
+    { icon: Sparkles, title: j.featEarlyTitle, desc: j.featEarlyDesc },
+  ];
   const { isBeta, loading, refresh } = useBeta();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +42,7 @@ export default function JoinBetaPage() {
       }
       const userId = getUserId();
       if (!userId) {
-        setError("Silakan masuk dulu untuk join beta.");
+        setError(j.errLogin);
         return;
       }
       const res = await apiFetch("/api/beta/join", {
@@ -65,15 +55,13 @@ export default function JoinBetaPage() {
         error?: string;
       } | null;
       if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Gagal join beta. Coba lagi.");
+        setError(body?.error ?? j.errJoin);
         return;
       }
       setJustJoined(true);
       await refresh();
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Gagal join beta. Coba lagi."
-      );
+      setError(e instanceof Error ? e.message : j.errJoin);
     } finally {
       setBusy(false);
     }
@@ -86,15 +74,14 @@ export default function JoinBetaPage() {
       <div className="mx-auto max-w-3xl">
         <div className="mb-8 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-clay-full bg-clay-primary/10 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-clay-primary">
-            <Sparkles size={12} /> Program Beta Tester
+            <Sparkles size={12} /> {j.chip}
           </span>
           <h1 className="mt-3 flex items-center justify-center gap-2 text-3xl font-extrabold sm:text-4xl">
-            Gabung Beta Eureka.AI
+            {j.title}
             <Rocket size={30} className="shrink-0 text-clay-secondary" />
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-sm font-semibold text-clay-muted sm:text-base">
-            Bantu kami menguji fitur baru &amp; dapatkan akses lebih awal. Sebagai
-            beta tester, kamu bisa langsung mencoba fitur eksperimental:
+            {j.subtitle}
           </p>
         </div>
 
@@ -124,19 +111,18 @@ export default function JoinBetaPage() {
                   <CheckCircle2 size={28} />
                 </span>
                 <h2 className="mt-3 text-lg font-extrabold sm:text-xl">
-                  Kamu sudah beta tester!
+                  {j.alreadyTitle}
                 </h2>
                 <p className="mt-1 text-sm font-semibold text-clay-muted">
-                  Fitur Rekam Suara &amp; Panggilan AI sudah terbuka di halaman
-                  chat kamu.
+                  {j.alreadyDesc}
                 </p>
                 <div className="mt-4 flex flex-col justify-center gap-2 sm:flex-row">
                   <Link href="/home">
-                    <ButtonClay className="w-full sm:w-auto">Coba Sekarang</ButtonClay>
+                    <ButtonClay className="w-full sm:w-auto">{j.tryNow}</ButtonClay>
                   </Link>
                   <Link href="/dashboard">
                     <ButtonClay variant="secondary" className="w-full sm:w-auto">
-                      Ke Dashboard
+                      {j.keDashboard}
                     </ButtonClay>
                   </Link>
                 </div>
@@ -144,11 +130,10 @@ export default function JoinBetaPage() {
             ) : (
               <div className="text-center">
                 <h2 className="text-lg font-extrabold sm:text-xl">
-                  Siap mencoba fitur baru?
+                  {j.readyTitle}
                 </h2>
                 <p className="mx-auto mt-1 max-w-md text-sm font-semibold text-clay-muted">
-                  Klik tombol di bawah, dan akses beta langsung aktif di akunmu.
-                  Tanpa biaya, tanpa menunggu persetujuan.
+                  {j.readyDesc}
                 </p>
                 {error && (
                   <p className="mx-auto mt-3 max-w-md rounded-clay-md border-2 border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 sm:text-sm">
@@ -159,16 +144,15 @@ export default function JoinBetaPage() {
                   <ButtonClay onClick={handleJoin} disabled={busy || loading}>
                     {busy ? (
                       <span className="flex items-center justify-center gap-2">
-                        <Loader2 size={16} className="animate-spin" /> Mengaktifkan...
+                        <Loader2 size={16} className="animate-spin" /> {j.activating}
                       </span>
                     ) : (
-                      "Gabung Beta Sekarang"
+                      j.joinNow
                     )}
                   </ButtonClay>
                 </div>
                 <p className="mt-3 text-[11px] font-bold text-clay-muted">
-                  Butuh akun — bila belum masuk, kamu akan diarahkan ke halaman
-                  login dulu, lalu kembali otomatis.
+                  {j.joinNote}
                 </p>
               </div>
             )}
@@ -176,11 +160,10 @@ export default function JoinBetaPage() {
         </div>
 
         <p className="mt-8 text-center text-xs font-semibold text-clay-muted">
-          Ada pertanyaan? Tanyakan lewat{" "}
+          {j.question}{" "}
           <Link href="/home" className="font-extrabold text-clay-primary underline">
-            chat Eureka.AI
+            {j.chatLink}
           </Link>{" "}
-          ya.
         </p>
       </div>
     </main>

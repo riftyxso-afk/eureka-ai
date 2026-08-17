@@ -21,9 +21,7 @@ import InputClay from "@/components/ui/InputClay";
 import GoogleIcon from "@/components/ui/GoogleIcon";
 import TurnstileCaptcha from "@/components/ui/TurnstileCaptcha";
 import { isTurnstileClientConfigured } from "@/lib/captcha";
-import { PageLoader } from "@/components/ui/PageLoader";
-import {
-  getSafeNext,
+import { PageLoader } from "@/components/ui/PageLoader";import { getSafeNext,
   isLoggedIn,
   loginUser,
   needsOnboarding,
@@ -31,10 +29,13 @@ import {
   signInWithGoogle,
   verifyOtpLogin,
 } from "@/lib/auth";
+import { useI18n } from "@/context/LocaleContext";
 
 type LoginMode = "password" | "otp";
 
 export default function LoginPage() {
+  const { dict } = useI18n();
+  const a = dict.auth;
   const router = useRouter();
   const [mode, setMode] = useState<LoginMode>("password");
   const [email, setEmail] = useState("");
@@ -85,7 +86,7 @@ export default function LoginPage() {
   }, []);
 
   if (!checked) {
-    return <PageLoader title="Menyiapkan halaman masuk..." />;
+    return <PageLoader title={a.pageLoader} />;
   }
 
   const startCooldown = () => {
@@ -117,9 +118,7 @@ export default function LoginPage() {
       setGoogleBusy(false);
     } catch (e) {
       setGoogleBusy(false);
-      setError(
-        e instanceof Error ? e.message : "Gagal membuka login Google."
-      );
+      setError(e instanceof Error ? e.message : a.errGoogle);
     }
   };
 
@@ -129,11 +128,11 @@ export default function LoginPage() {
     setError(null);
 
     if (!email.trim() || !password) {
-      setError("Isi email dan kata sandi dulu ya.");
+      setError(a.errFill);
       return;
     }
     if (captchaConfigured && !captchaToken) {
-      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
+      setError(a.errCaptcha);
       return;
     }
 
@@ -141,7 +140,7 @@ export default function LoginPage() {
     resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
     const result = await loginUser({ email, password, captchaToken: captchaToken ?? undefined });
     if (!result.ok) {
-      setError(result.error ?? "Gagal masuk. Coba lagi.");
+      setError(result.error ?? a.errLogin);
       setSubmitting(false);
       return;
     }
@@ -155,11 +154,11 @@ export default function LoginPage() {
     setError(null);
 
     if (!email.trim()) {
-      setError("Masukkan email dulu ya.");
+      setError(a.errEmail);
       return;
     }
     if (captchaConfigured && !captchaToken) {
-      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
+      setError(a.errCaptcha);
       return;
     }
 
@@ -168,7 +167,7 @@ export default function LoginPage() {
     const result = await requestOtpLogin(email, undefined, captchaToken ?? undefined);
     setOtpSending(false);
     if (!result.ok) {
-      setError(result.error ?? "Gagal mengirim kode. Coba lagi.");
+      setError(result.error ?? a.errSend);
       return;
     }
 
@@ -183,11 +182,11 @@ export default function LoginPage() {
     setError(null);
 
     if (otpCode.trim().length !== 6) {
-      setError("Masukkan kode 6 digit dari email.");
+      setError(a.errOtp6);
       return;
     }
     if (captchaConfigured && !captchaToken) {
-      setError("Selesaikan verifikasi keamanan (captcha) dulu ya.");
+      setError(a.errCaptcha);
       return;
     }
 
@@ -195,7 +194,7 @@ export default function LoginPage() {
     resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
     const result = await verifyOtpLogin(email, otpCode, undefined, captchaToken ?? undefined);
     if (!result.ok) {
-      setError(result.error ?? "Gagal verifikasi. Coba lagi.");
+      setError(result.error ?? a.errVerify);
       setSubmitting(false);
       return;
     }
@@ -222,11 +221,11 @@ export default function LoginPage() {
 
         <CardClay className="!p-8 sm:!p-10">
           <h1 className="text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
-            Selamat Datang Kembali!
+            {a.welcome}
             <Hand size={26} className="ml-2 inline text-clay-primary" />
           </h1>
           <p className="mt-2 text-center text-base font-semibold text-clay-muted">
-            Masuk dan lanjutkan momen Eureka-mu
+            {a.welcomeSub}
           </p>
 
           {/* Login dengan Google */}
@@ -241,13 +240,13 @@ export default function LoginPage() {
             ) : (
               <GoogleIcon size={18} />
             )}
-            Masuk dengan Google
+            {a.loginGoogle}
           </button>
 
           <div className="mt-5 flex items-center gap-3">
             <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
             <span className="text-xs font-extrabold uppercase tracking-wider text-clay-muted">
-              atau
+              {a.or}
             </span>
             <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
           </div>
@@ -256,8 +255,8 @@ export default function LoginPage() {
           <div className="mt-6 flex gap-2 rounded-clay-full border-3 border-clay-shadow/40 bg-clay-inputBg p-1 shadow-clay-inset">
             {(
               [
-                { id: "password", label: "Kata Sandi" },
-                { id: "otp", label: "Kode OTP" },
+                { id: "password", label: a.tabPassword },
+                { id: "otp", label: a.tabOtp },
               ] as { id: LoginMode; label: string }[]
             ).map((tab) => (
               <button
@@ -282,7 +281,7 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="mt-6 space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  EMAIL
+                  {a.email}
                 </label>
                 <div className="relative">
                   <Mail
@@ -293,7 +292,7 @@ export default function LoginPage() {
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    placeholder="kamu@email.com"
+                    placeholder={a.emailPlaceholder}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="!pl-11"
@@ -304,7 +303,7 @@ export default function LoginPage() {
 
               <div>
                 <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  KATA SANDI
+                  {a.password}
                 </label>
                 <div className="relative">
                   <Lock
@@ -323,7 +322,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                    aria-label={showPassword ? a.hidePassword : a.showPassword}
                     className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-clay-muted transition-colors hover:text-clay-primary"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -355,7 +354,7 @@ export default function LoginPage() {
                 ) : (
                   <>
                     <LogIn size={18} className="mr-2" />
-                    Masuk
+                    {a.login}
                   </>
                 )}
               </ButtonClay>
@@ -363,12 +362,11 @@ export default function LoginPage() {
           ) : !otpSent ? (
             <form onSubmit={handleSendOtp} className="mt-6 space-y-5">
               <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
-                Masukkan email — kami kirim kode 6 digit yang berlaku beberapa
-                menit. Tidak perlu kata sandi!
+                {a.otpHint}
               </p>
               <div>
                 <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  EMAIL
+                  {a.email}
                 </label>
                 <div className="relative">
                   <Mail
@@ -379,7 +377,7 @@ export default function LoginPage() {
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    placeholder="kamu@email.com"
+                    placeholder={a.emailPlaceholder}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="!pl-11"
@@ -412,7 +410,7 @@ export default function LoginPage() {
                 ) : (
                   <>
                     <KeyRound size={18} className="mr-2" />
-                    Kirim Kode
+                    {a.sendCode}
                   </>
                 )}
               </ButtonClay>
@@ -425,16 +423,16 @@ export default function LoginPage() {
                 className="flex items-center gap-1 text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary"
               >
                 <ArrowLeft size={13} />
-                Ganti email
+                {a.changeEmail}
               </button>
               <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
-                Kode 6 digit terkirim ke{" "}
+                {a.otpSent}{" "}
                 <b className="text-clay-dark">{email.trim().toLowerCase()}</b>.
-                Periksa kotak masuk (atau spam) email kamu.
+                {a.otpCheckInbox}
               </p>
               <div>
                 <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  KODE OTP
+                  {a.otpLabel}
                 </label>
                 <input
                   type="text"
@@ -477,7 +475,7 @@ export default function LoginPage() {
                 ) : (
                   <>
                     <LogIn size={18} className="mr-2" />
-                    Masuk
+                    {a.login}
                   </>
                 )}
               </ButtonClay>
@@ -489,23 +487,23 @@ export default function LoginPage() {
                 className="w-full text-center text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary disabled:opacity-50"
               >
                 {otpSending
-                  ? "Mengirim ulang..."
+                  ? a.resending
                   : cooldown > 0
-                    ? `Kirim ulang dalam ${cooldown}s`
-                    : "Kirim ulang kode"}
+                    ? `${a.resendIn} ${cooldown}s`
+                    : a.resend}
               </button>
             </form>
           )}
 
           <p className="mt-6 text-center text-sm font-bold text-clay-muted">
-            Belum punya akun?{" "}
+            {a.noAccount}{" "}
             <Link href="/register" className="font-extrabold text-clay-primary underline-offset-2 hover:underline">
-              Daftar Gratis
+              {dict.nav.cobaGratis}
             </Link>
           </p>
           <p className="mt-3 text-center text-xs font-semibold text-clay-muted">
             <Link href="/" className="text-clay-muted underline-offset-2 hover:underline">
-              ← Kembali ke beranda
+              {a.backHome}
             </Link>
           </p>
         </CardClay>

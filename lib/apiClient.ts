@@ -58,7 +58,22 @@ export async function apiFetch(
   // Lampirkan token sesi (bila ada) agar backend bisa memverifikasi user.
   const token = await getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  // Kirim locale aktif (id/en) — backend memakai ini untuk memilih bahasa
+  // konten AI (catatan, kuis, flashcards, jawaban chat).
+  const locale = getClientLocale();
+  if (locale) headers.set("x-locale", locale);
   return fetch(apiUrl(path), { ...init, headers });
+}
+
+/** Baca locale aktif dari cookie (diset middleware / LocaleContext). */
+export function getClientLocale(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const m = document.cookie.match(/(?:^|;\s*)eureka_locale=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : "";
+  } catch {
+    return "";
+  }
 }
 
 /** EventSource ke endpoint SSE API backend. */
