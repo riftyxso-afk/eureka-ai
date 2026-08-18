@@ -29,7 +29,7 @@ export default function ChatSkeleton() {
           alt=""
           aria-hidden
           style={{ mixBlendMode: "screen" }}
-          className="mt-1 h-8 w-8 shrink-0 object-contain"
+          className="mt-1 h-10 w-10 shrink-0 object-contain"
         />
         <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-white px-4 py-3 shadow-clay-sm">
           <div className="space-y-2">
@@ -54,7 +54,7 @@ export default function ChatSkeleton() {
           alt=""
           aria-hidden
           style={{ mixBlendMode: "screen" }}
-          className="mt-1 h-8 w-8 shrink-0 object-contain"
+          className="mt-1 h-10 w-10 shrink-0 object-contain"
         />
         <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-white px-4 py-3 shadow-clay-sm">
           <div className="space-y-2">

@@ -29,14 +29,13 @@ export function DashboardPreparing() {
         transition={{ type: "spring", stiffness: 220, damping: 22 }}
         className="relative z-10 mx-4 w-full max-w-sm rounded-clay border-3 border-clay-borderLight bg-white p-8 text-center shadow-clay-lg"
       >
-        <div className="relative mx-auto h-20 w-20">
-          <div className="absolute inset-0 animate-ping rounded-full bg-clay-primary/20" />
+        <div className="relative mx-auto h-32 w-32">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/holo-sticker.gif"
             alt="Logo Eureka.AI"
             style={{ mixBlendMode: "screen" }}
-            className="relative h-20 w-20 object-contain"
+            className="relative h-32 w-32 object-contain"
           />
         </div>
 

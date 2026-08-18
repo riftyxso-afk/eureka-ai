@@ -124,7 +124,7 @@ export default function AuthCallbackPage() {
         src="/holo-sticker.gif"
         alt="Logo Eureka.AI"
         style={{ mixBlendMode: "screen" }}
-        className="h-14 w-14 object-contain"
+        className="h-24 w-24 object-contain"
       />
       <div className="mt-6 flex items-center gap-3 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-6 py-4 shadow-clay-sm">
         <Loader2 size={22} className="animate-spin text-clay-primary" />

@@ -47,14 +47,13 @@ export function PageLoader({ title }: PageLoaderProps) {
         transition={{ type: "spring", stiffness: 220, damping: 24 }}
         className="w-full max-w-sm rounded-clay border-3 border-clay-borderLight bg-white p-8 text-center shadow-clay-lg"
       >
-        <div className="relative mx-auto h-16 w-16">
-          <div className="absolute inset-0 animate-ping rounded-full bg-clay-primary/20" />
+        <div className="relative mx-auto h-28 w-28">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/holo-sticker.gif"
             alt="Logo Eureka.AI"
             style={{ mixBlendMode: "screen" }}
-            className="relative h-16 w-16 object-contain"
+            className="relative h-28 w-28 object-contain"
           />
         </div>
 
