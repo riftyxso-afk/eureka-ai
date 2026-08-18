@@ -61,6 +61,22 @@ export default function UpvotePage() {
             {l.cta}
           </a>
           <p className="mt-3 text-xs font-semibold text-clay-muted">{l.ctaNote}</p>
+
+          {/* Badge Featured Product Hunt */}
+          <div className="mt-6 flex justify-center">
+            <a
+              href="https://www.producthunt.com/products/eureka-ai-socratic-ai-study-tutor?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-eureka-ai-socratic-ai-study-tutor"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                alt="Eureka.AI — Socratic AI Study Tutor - AI Socratic tutor that turns videos & PDFs into study notes | Product Hunt"
+                width={250}
+                height={54}
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1225609&theme=light&t=1787036631696"
+              />
+            </a>
+          </div>
         </div>
 
         {/* Kenapa Eureka.AI (tutor) */}
