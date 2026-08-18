@@ -458,6 +458,41 @@ export const dictionaries = {
       mulaiBelajar: "Mulai Belajar",
       keBeranda: "Ke Beranda",
     },
+    // ── Halaman /upvote (Product Hunt) ────────────────────
+    upvote: {
+      chip: "Product Hunt",
+      title: "Bantu Eureka.AI Menang Hari Ini",
+      subtitle:
+        "Satu upvote darimu membantu jutaan pelajar Indonesia menemukan tutor AI Socratic yang ramah, murah, dan bekerja dari materi mereka sendiri.",
+      cta: "Upvote di Product Hunt",
+      ctaNote: "Gratis & cepat — login Product Hunt lalu klik tombol upvote.",
+      howTitle: "Cara Upvote (30 detik)",
+      steps: [
+        { title: "Klik tombol di atas", desc: "Kamu diarahkan ke halaman Eureka.AI di Product Hunt." },
+        { title: "Login Product Hunt", desc: "Pakai email atau akun Google — gratis dan cepat." },
+        { title: "Klik ▲ Upvote", desc: "Selesai! Dukunganmu sangat berarti untuk Eureka.AI." },
+      ],
+      tutorTitle: "Kenapa Eureka.AI layak di-upvote?",
+      tutorSubtitle:
+        "Tutor AI Socratic yang mengubah video, artikel & PDF jadi catatan otomatis — plus kuis, kartu hafalan, dan tanya jawab per bab.",
+      perks: [
+        {
+          title: "Catatan otomatis",
+          desc: "Ubah video YouTube, artikel & PDF menjadi catatan terstruktur dalam hitungan menit.",
+        },
+        {
+          title: "Tanya per bab",
+          desc: "RAG cerdas: jawaban akurat dari materi catatanmu sendiri, lengkap dengan sumber.",
+        },
+        {
+          title: "Kuis & kartu hafalan",
+          desc: "Latihan yang dibuat AI dari materimu — belajar aktif, bukan sekadar membaca.",
+        },
+      ],
+      askEureka: "Mau lihat dulu seperti apa?",
+      askCta: "Coba Tanya Eureka",
+      backHome: "Ke Beranda",
+    },
     // ── Halaman /dashboard/leaderboard ────────────────────
     leaderboard: {
       title: "Leaderboard",
@@ -1122,6 +1157,41 @@ export const dictionaries = {
       chatLink: "Eureka.AI chat",
       mulaiBelajar: "Start Learning",
       keBeranda: "Back to Home",
+    },
+    // ── Halaman /upvote (Product Hunt) ────────────────────
+    upvote: {
+      chip: "Product Hunt",
+      title: "Help Eureka.AI Win Today",
+      subtitle:
+        "One upvote from you helps millions of Indonesian students discover a friendly, affordable Socratic AI tutor that works from their own study materials.",
+      cta: "Upvote on Product Hunt",
+      ctaNote: "Free & fast — log in to Product Hunt and hit the upvote button.",
+      howTitle: "How to Upvote (30 seconds)",
+      steps: [
+        { title: "Click the button above", desc: "You'll be taken to Eureka.AI's page on Product Hunt." },
+        { title: "Log in to Product Hunt", desc: "Use email or your Google account — free and quick." },
+        { title: "Click ▲ Upvote", desc: "Done! Your support means a lot to Eureka.AI." },
+      ],
+      tutorTitle: "Why Eureka.AI deserves your upvote",
+      tutorSubtitle:
+        "A Socratic AI tutor that turns videos, articles & PDFs into auto-generated notes — plus quizzes, flashcards, and per-chapter Q&A.",
+      perks: [
+        {
+          title: "Auto-generated notes",
+          desc: "Turn YouTube videos, articles & PDFs into structured notes within minutes.",
+        },
+        {
+          title: "Per-chapter Q&A",
+          desc: "Smart RAG: accurate answers from your own notes, complete with sources.",
+        },
+        {
+          title: "Quizzes & flashcards",
+          desc: "AI-made practice from your material — active learning, not just reading.",
+        },
+      ],
+      askEureka: "Want to see it first?",
+      askCta: "Try Asking Eureka",
+      backHome: "Back to Home",
     },
     leaderboard: {
       title: "Leaderboard",
