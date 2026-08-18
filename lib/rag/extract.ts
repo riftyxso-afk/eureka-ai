@@ -42,6 +42,8 @@ async function fetchYoutubeTitle(videoId: string): Promise<string | null> {
 export interface TranscriptSegment {
   text: string;
   offsetMs: number;
+  /** Durasi segmen dalam ms (dari library youtube-transcript; 0 bila tidak tersedia). */
+  durationMs?: number;
 }
 
 export interface ExtractedContent {
@@ -84,7 +86,11 @@ export async function scrapeYoutubeTranscript(url: string): Promise<ExtractedCon
   }
 
   const cleaned = transcript
-    .map((t) => ({ text: cleanTranscriptText(t.text), offsetMs: t.offset ?? 0 }))
+    .map((t) => ({
+      text: cleanTranscriptText(t.text),
+      offsetMs: t.offset ?? 0,
+      durationMs: t.duration ?? 0,
+    }))
     .filter((s) => s.text.length > 0);
 
   const text = cleaned.map((s) => s.text).join(" ").trim();

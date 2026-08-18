@@ -40,6 +40,10 @@ import HighlightToolbar from "@/components/note/HighlightToolbar";
 import { NoteTOC } from "@/components/note/NoteTOC";
 import { NoteContent } from "@/components/note/NoteContent";
 import { NoteAIChat } from "@/components/note/NoteAIChat";
+import { YoutubeEmbed } from "@/components/video/YoutubeEmbed";
+import { useBeta } from "@/lib/useBeta";
+import { VideoViewOverlay } from "@/components/video/VideoViewOverlay";
+import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import { DreamingOverlay } from "@/components/note/DreamingOverlay";
 import { useRegenerateJob } from "@/lib/useRegenerateJob";
 import type { HighlightEntry } from "@/lib/highlights-store";
@@ -62,6 +66,7 @@ interface NoteDetail {
   chapters: Chapter[];
   createdAt: string;
   subject: string;
+  sourceUrl?: string;
   keyPoints?: string[];
   noteType?: string;
 }
@@ -191,6 +196,10 @@ export default function NoteDetailPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Video yang sedang dilihat via tombol "View" (expand + poin isi video).
+  const [viewVideo, setViewVideo] = useState<{ url: string; title?: string } | null>(null);
+  // Fitur video (embed + View) hanya untuk beta tester (akses lewat /join).
+  const { isBeta } = useBeta();
   const [showQuiz, setShowQuiz] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showPdfWorkflow, setShowPdfWorkflow] = useState(false);
@@ -849,6 +858,31 @@ export default function NoteDetailPage() {
             </p>
           </div>
 
+          {/* Video sumber (catatan dari YouTube) — hanya beta tester (akses
+              lewat /join). Tonton sambil baca & tanya AI */}
+          {isBeta &&
+            data.subject === "YouTube" &&
+            (findYoutubeLink(data.sourceUrl ?? "")?.url ?? null) && (
+              <div className="card-clay mt-4 p-4 sm:p-6">
+                <h2 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-clay-muted">
+                  Video Sumber
+                </h2>
+                <YoutubeEmbed
+                  url={data.sourceUrl ?? ""}
+                  title={data.title}
+                  onView={(url) => {
+                    // Pertahanan berlapis: hanya beta bisa membuka View.
+                    if (isBeta) setViewVideo({ url, title: data.title });
+                  }}
+                />
+                <p className="mt-3 text-xs font-medium text-clay-muted/70">
+                  Tonton video sambil membaca catatan — Eureka bisa menjawab
+                  pertanyaanmu tentang materinya di bagian "Tanya AI tentang
+                  catatannya".
+                </p>
+              </div>
+            )}
+
           {/* Poin Penting */}
           {data.keyPoints && data.keyPoints.length > 0 && (
             <div className="card-clay mt-4 p-6">
@@ -1068,6 +1102,14 @@ export default function NoteDetailPage() {
           onSaved={() => loadNote()}
         />
       )}
+      {/* Tampilan expand video: video kiri + poin-poin isi video di kanan */}
+      <VideoViewOverlay
+        open={!!viewVideo}
+        url={viewVideo?.url ?? ""}
+        title={viewVideo?.title}
+        onClose={() => setViewVideo(null)}
+      />
+
       {/* Konfirmasi hapus catatan (permanen) */}
       {showDeleteConfirm && (
         <div

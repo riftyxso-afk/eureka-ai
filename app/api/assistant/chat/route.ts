@@ -9,7 +9,8 @@ import {
 } from "@/lib/ai";
 import { cleanSearchQuery, searchWeb } from "@/lib/firecrawl";
 import { checkRateLimit as checkHourlyRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
-import { extractTextFromFile } from "@/lib/rag/extract";
+import { extractTextFromFile, scrapeYoutubeTranscript } from "@/lib/rag/extract";
+import { findLatestYoutubeInUserMessages } from "@/lib/assistant/videoUrl";
 import {
   appendMessage,
   getMessages,
@@ -31,7 +32,10 @@ import {
   type AttachedDocument,
   type WebSearchResult,
 } from "@/lib/assistant/prompt";
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import {
+  authorizeAssistantUser,
+  isBetaTester,
+} from "@/lib/assistant/auth";
 import { enforcePremium } from "@/lib/premium";
 import { languageFromRequest } from "@/lib/locale";
 import type { RagHit } from "@/lib/assistant/context";
@@ -141,6 +145,8 @@ export async function POST(req: NextRequest) {
     clarifications?: unknown;
     /** User memilih "Langsung jawab saja" — lewati klarifikasi tanpa menilai ulang. */
     clarificationsSkipped?: unknown;
+    /** Link YouTube pada pesan user — video aktif sesi (konteks transkrip). */
+    videoUrl?: unknown;
   } | null;
 
   const rawSessionId = String(raw?.sessionId ?? "").trim();
@@ -520,8 +526,41 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // 4c) Tool video: link YouTube pada pesan (atau video aktif terbaru di
+        //     riwayat) → ekstrak transkrip sebagai konteks jawaban AI. Gagal
+        //     (video tanpa subtitle / timeout) TIDAK memblokir jawaban.
+        let activeVideoUrl =
+          typeof raw?.videoUrl === "string" && raw.videoUrl.trim()
+            ? raw.videoUrl.trim().slice(0, 500)
+            : "";
+        if (!activeVideoUrl) {
+          const fromHistory = findLatestYoutubeInUserMessages(prior);
+          if (fromHistory) activeVideoUrl = fromHistory;
+        }
+        // Fitur video (embed + diskusi dari transkrip) hanya untuk beta tester
+        // (akses lewat /join) — cek hanya saat ada video agar tanpa video tidak
+        // ada query tambahan ke DB.
+        const videoAllowed =
+          !!activeVideoUrl && (await isBetaTester(userId));
+        let videoContextMd = "";
+        if (videoAllowed) {
+          try {
+            const extracted = await scrapeYoutubeTranscript(activeVideoUrl);
+            videoContextMd = `JUDUL: ${extracted.title}\n\nTRANSCRIPT:\n${extracted.text.slice(
+              0,
+              20000
+            )}`;
+          } catch (e) {
+            console.warn(
+              "[api/assistant/chat] transkrip video tidak tersedia, lanjut tanpa konteks video:",
+              e
+            );
+            videoContextMd = "(transkrip video tidak tersedia)";
+          }
+        }
+
         // 5) System prompt + riwayat + pertanyaan
-        const system = buildSystemPrompt({
+        let system = buildSystemPrompt({
           context,
           ragHits,
           mentionedNotes: mentionedNotesMeta,
@@ -530,6 +569,9 @@ export async function POST(req: NextRequest) {
           attachedDocument,
           language: languageFromRequest(req),
         });
+        if (videoContextMd) {
+          system += `\n\nMODE "DISKUSI VIDEO":\nPengguna sedang berdiskusi tentang video YouTube (${activeVideoUrl}). Jawab pertanyaan BERDASARKAN transkrip video berikut bila tersedia. Bila transkrip tidak tersedia, akui dengan jujur bahwa kamu tidak bisa membaca isi video, dan JANGAN mengarang kutipan atau klaim dari isi video.\n\n${videoContextMd}`;
+        }
         // Isi lengkap catatan yang disebut (@) — disuntikkan ke prompt user
         // agar AI selalu membacanya (tidak bergantung pada hasil RAG).
         const mentionedNoteContents =

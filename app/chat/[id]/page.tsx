@@ -31,6 +31,7 @@ import {
 import WebSearchPipeline from "@/components/asisten/WebSearchPipeline";
 import AiErrorPopup from "@/components/asisten/AiErrorPopup";
 import Composer from "@/components/asisten/Composer";
+import { VideoViewOverlay } from "@/components/video/VideoViewOverlay";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
 import TutorialHost from "@/components/tutorial/TutorialHost";
@@ -101,6 +102,11 @@ export default function ChatPage() {
   const [notePrompt, setNotePrompt] = useState<string | null>(null);
   const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
   const [notePrefs, setNotePrefs] = useState<NoteCreatePrefs | null>(null);
+  // Riwayat percakapan saat user minta "buat catatan" — jadi materi sumber
+  // catatan (topik yang sedang dibahas di chat), lihat NoteProgressOverlay.
+  const [noteHistory, setNoteHistory] = useState<
+    { role: string; content: string }[]
+  >([]);
   const [imagePrompt, setImagePrompt] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [copiedAll, setCopiedAll] = useState(false);
@@ -108,6 +114,8 @@ export default function ChatPage() {
   const [cardsOpen, setCardsOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
+  // Video yang sedang dilihat via tombol "View" pada embed (expand + poin).
+  const [viewVideo, setViewVideo] = useState<{ url: string; title?: string } | null>(null);
   const { isBeta } = useBeta();
   // Pop-up error AI — muncul saat model down; "Tutup" menyembunyikan sampai
   // error BARU datang (di-reset lewat useEffect di bawah).
@@ -363,7 +371,15 @@ export default function ChatPage() {
                         completed={!chat.sending && !chat.hasError}
                       />
                     )}
-                    <MessageBubble message={m} prevMessage={prevMsg} />
+                    <MessageBubble
+                      message={m}
+                      prevMessage={prevMsg}
+                      videoEnabled={isBeta}
+                      onViewVideo={(url) => {
+                        // Pertahanan berlapis: hanya beta bisa membuka View.
+                        if (isBeta) setViewVideo({ url });
+                      }}
+                    />
                   </div>
                 );
               })}
@@ -415,7 +431,10 @@ export default function ChatPage() {
           isBeta={isBeta}
           onCall={() => setCallOpen(true)}
           noteWizardPrompt={wizardPrompt}
-          onNoteWizardClose={() => setWizardPrompt(null)}
+          onNoteWizardClose={() => {
+            setWizardPrompt(null);
+            setNoteHistory([]);
+          }}
           onNoteWizardStart={(prefs) => {
             setNotePrefs(prefs);
             setNotePrompt(wizardPrompt);
@@ -439,6 +458,18 @@ export default function ChatPage() {
               return;
             }
             if (detectNoteIntent(input.question).isNoteRequest) {
+              // Topik yang sedang dibahas di chat ikut jadi materi catatan —
+              // hanya untuk beta tester (akses lewat /join). Non-beta tetap
+              // bisa buat catatan seperti biasa (tanpa konteks percakapan).
+              setNoteHistory(
+                isBeta
+                  ? chat.renderedMessages
+                      .filter(
+                        (m) => m.role === "user" || m.role === "assistant"
+                      )
+                      .map((m) => ({ role: m.role, content: m.content }))
+                  : []
+              );
               setWizardPrompt(input.question);
               return;
             }
@@ -453,9 +484,11 @@ export default function ChatPage() {
         open={!!notePrompt}
         prompt={notePrompt ?? ""}
         prefs={notePrefs ?? undefined}
+        history={noteHistory}
         onClose={() => {
           setNotePrompt(null);
           setNotePrefs(null);
+          setNoteHistory([]);
         }}
       />
 
@@ -504,6 +537,14 @@ export default function ChatPage() {
 
       {/* Panggilan suara AI (beta) */}
       <AiCallModal open={callOpen} onClose={() => setCallOpen(false)} />
+
+      {/* Tampilan expand video: video kiri + poin-poin isi video di kanan */}
+      <VideoViewOverlay
+        open={!!viewVideo}
+        url={viewVideo?.url ?? ""}
+        title={viewVideo?.title}
+        onClose={() => setViewVideo(null)}
+      />
 
       {/* Pop-up model AI down — info cepat tanpa menunggu lama */}
       <AiErrorPopup

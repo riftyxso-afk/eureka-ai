@@ -7,6 +7,7 @@ import {
   streamAssistantChat,
   type ClarificationQuestion,
 } from "@/lib/assistant-stream";
+import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type {
   AssistantChatMessage,
   AssistantChatSession,
@@ -199,6 +200,11 @@ export function useAssistantChat(options: {
       const userId = getUserId();
       if (!userId) return;
 
+      // Link YouTube pada pesan → video aktif (embed + konteks transkrip AI).
+      // Deteksi otomatis dari teks bila input belum membawanya.
+      const videoUrl =
+        input.videoUrl ?? findYoutubeLink(input.question)?.url ?? null;
+
       lastSendRef.current = input;
       stoppedRef.current = false;
       setSending(true);
@@ -220,6 +226,7 @@ export function useAssistantChat(options: {
           model: null,
           createdAt: nowIso,
           attachmentName: input.attachment?.filename ?? null,
+          videoUrl,
         },
         {
           id: "stream-" + nowIso,
@@ -242,6 +249,7 @@ export function useAssistantChat(options: {
           webSearch: input.webSearch,
           attachment: input.attachment,
           speedMode: input.speedMode,
+          videoUrl,
           clarifications: input.clarifications,
           clarificationsSkipped: input.clarificationsSkipped,
         },

@@ -22,6 +22,11 @@ export interface ChatToolOptions {
   attachment?: ChatAttachment | null;
   /** Kecepatan jawaban AI: fast (Kilat) / normal (Seimbang) / deep (Mendalam). */
   speedMode?: "fast" | "normal" | "deep";
+  /**
+   * Link YouTube pada pesan user (jika ada) — server mengekstrak transkrip
+   * sebagai konteks jawaban AI dan sesi memakainya sebagai "video aktif".
+   */
+  videoUrl?: string | null;
 }
 
 /** Satu hasil pencarian web (tool globe) yang ditampilkan ke user. */
@@ -55,6 +60,11 @@ export interface AssistantChatMessage {
   createdAt: string;
   /** Nama file lampiran (hanya untuk pesan user optimis — tidak disimpan server). */
   attachmentName?: string | null;
+  /**
+   * Link YouTube pada pesan user (hanya untuk pesan optimis — server tidak
+   * menyimpan kolom ini; di-render ulang dari content setelah reload).
+   */
+  videoUrl?: string | null;
 }
 
 export interface AssistantChatSession {

@@ -13,6 +13,7 @@ import { embedTexts } from "@/lib/rag/embed";
 import { saveNoteWithChunks, type StoredChunk } from "@/lib/rag/store";
 import {
   generateAiSummary,
+  generateAiTitle,
   processLongDocumentToChapters,
   processSubtitleToChapters,
   processYouTubeSubtitle,
@@ -136,6 +137,10 @@ export interface NotesProcessorResult {
 }
 
 const SUBJECT_BY_SOURCE: Record<string, string> = SOURCE_LABEL;
+
+/** Judul hasil ekstraksi yang masih placeholder generik (tanpa topik). */
+const WEAK_NOTE_TITLE_RE =
+  /^(catatan|ringkasan|materi|dokumen|catatan baru|untitled|tanpa judul|ringkasan materi)$/i;
 
 /**
  * Ekstrak semua sumber; sumber yang gagal dilewati (dikumpulkan) selama
@@ -335,6 +340,25 @@ export async function processNoteForBackground(
     }
     advance("chapters", 0.8, "Membuat ringkasan...");
     summary = await generateAiSummary(extracted.text, prefs);
+    if (input.jobId && (await isJobCancelled(input.jobId))) {
+      throw new JobCancelledError();
+    }
+  }
+
+  // Judul placeholder generik (mis. file "catatan.txt" dari topik chat) →
+  // minta AI membuat judul sesuai isi materi. Gagal/tanpa AI key → pertahankan
+  // judul lama (fallback "Ringkasan Materi" di bawah).
+  if (
+    !title ||
+    WEAK_NOTE_TITLE_RE.test(title.trim())
+  ) {
+    advance("chapters", 0.92, "Menentukan judul catatan...");
+    try {
+      const aiTitle = await generateAiTitle(extracted.text, prefs);
+      if (aiTitle) title = aiTitle;
+    } catch (e) {
+      console.warn("[notesProcessor] Judul AI gagal — pakai judul lama:", e);
+    }
     if (input.jobId && (await isJobCancelled(input.jobId))) {
       throw new JobCancelledError();
     }

@@ -94,6 +94,25 @@ export async function authorizeAssistantUser(
 }
 
 /**
+ * Cek apakah user terdaftar sebagai beta tester (gating fitur baru, akses
+ * lewat halaman /join). Fail-closed: bila Supabase tidak terkonfigurasi atau
+ * query gagal, dianggap BUKAN beta tester.
+ */
+export async function isBetaTester(userId: string): Promise<boolean> {
+  try {
+    const { data } = await db()
+      .from("users")
+      .select("is_beta")
+      .eq("id", userId)
+      .maybeSingle();
+    return data?.is_beta === true;
+  } catch (e) {
+    console.warn("[auth] Cek status beta gagal — anggap non-beta:", e);
+    return false;
+  }
+}
+
+/**
  * Ambil userId dari token sesi (tanpa memaksa cocok dengan param).
  * Berguna untuk route yang hanya butuh tahu SIAPA user-nya (mis. rate limit).
  * @returns userId, atau "" bila tanpa token / Supabase belum dikonfigurasi / token invalid.

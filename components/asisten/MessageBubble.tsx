@@ -5,8 +5,10 @@ import { motion } from "framer-motion";
 import { BookMarked, Check, Copy, Paperclip, RefreshCw, Zap } from "lucide-react";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
+import { YoutubeEmbed } from "@/components/video/YoutubeEmbed";
 import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
+import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type { AssistantChatMessage } from "@/lib/assistant/types";
 
 interface MessageBubbleProps {
@@ -15,6 +17,11 @@ interface MessageBubbleProps {
   onRetry?: () => void;
   /** Pesan user sebelumnya — dipakai hitung lama AI menjawab. */
   prevMessage?: AssistantChatMessage | null;
+  /** Klik "View" pada embed video → buka tampilan expand (overlay di halaman). */
+  onViewVideo?: (url: string) => void;
+  /** Fitur video (embed + View) hanya untuk beta tester — default true agar
+   *  pemanggil lama tidak berubah; halaman chat mengirim status beta. */
+  videoEnabled?: boolean;
 }
 
 /**
@@ -96,12 +103,19 @@ export default function MessageBubble({
   isStreaming = false,
   onRetry,
   prevMessage,
+  onViewVideo,
+  videoEnabled = true,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const empty = !message.content.trim();
   const duration = isUser
     ? null
     : answerDurationMs(message, prevMessage);
+  // Link YouTube pesan user → tampilkan embed di bawah teks. Field videoUrl
+  // hanya ada di pesan optimis; setelah reload di-detect ulang dari content.
+  const userVideoUrl =
+    (isUser && (message.videoUrl || findYoutubeLink(message.content)?.url)) ||
+    null;
 
   if (isUser) {
     return (
@@ -131,6 +145,11 @@ export default function MessageBubble({
                     {message.attachmentName.slice(0, 40)}
                   </span>
                 )}
+              </div>
+            )}
+            {videoEnabled && userVideoUrl && (
+              <div className="mt-2.5">
+                <YoutubeEmbed url={userVideoUrl} onView={onViewVideo} />
               </div>
             )}
           </div>

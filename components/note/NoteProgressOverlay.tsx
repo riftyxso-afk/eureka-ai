@@ -7,6 +7,7 @@ import { Crown, Square, X } from "lucide-react";
 import { apiFetch, apiEventSource } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
+import { buildChatTranscript } from "@/lib/assistant/chatTranscript";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 
 interface NoteProgressOverlayProps {
@@ -15,6 +16,11 @@ interface NoteProgressOverlayProps {
   prompt: string;
   /** Preferensi dari wizard (jenis catatan, jumlah bab, detail). Opsional. */
   prefs?: NoteCreatePrefs;
+  /**
+   * Riwayat percakapan chat (dari /chat) — dipakai sebagai materi sumber
+   * tambahan saat prompt TANPA URL, agar catatan sesuai topik yang dibahas.
+   */
+  history?: { role: string; content: string }[];
   onClose: () => void;
 }
 
@@ -27,6 +33,7 @@ export function NoteProgressOverlay({
   open,
   prompt,
   prefs,
+  history,
   onClose,
 }: NoteProgressOverlayProps) {
   const router = useRouter();
@@ -115,13 +122,20 @@ export function NoteProgressOverlay({
       );
     } else {
       // Tanpa URL: buat file teks dari topik prompt → AI menyusun catatan.
+      // Riwayat percakapan chat (topik yang sedang dibahas) ikut jadi materi
+      // sumber; dibatasi pesan terakhir & panjang karakter (buildChatTranscript).
+      const transcript = buildChatTranscript(history ?? []);
+      const baseText = intent.topic || prompt;
+      const fileContent = transcript
+        ? `${baseText}\n\n=== PERCAKAPAN (materi tambahan) ===\n${transcript}`
+        : baseText;
       form.append(
         "sources",
         JSON.stringify([{ type: "dokumen", fileName: "catatan.txt" }])
       );
       form.append(
         "file0",
-        new File([intent.topic || prompt], "catatan.txt", {
+        new File([fileContent], "catatan.txt", {
           type: "text/plain",
         })
       );

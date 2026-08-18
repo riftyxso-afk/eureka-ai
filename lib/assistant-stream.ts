@@ -45,6 +45,11 @@ export interface AssistantChatInput extends ChatToolOptions {
   userId: string;
   question: string;
   mentions?: string[];
+  /**
+   * Link YouTube pada pesan user — server memakainya sebagai video aktif
+   * dan menyuntikkan transkrip sebagai konteks jawaban AI.
+   */
+  videoUrl?: string | null;
   /** Jawaban klarifikasi dari pengguna — disuntikkan server ke konteks. */
   clarifications?: { id: string; question?: string; answer: string }[];
   /**
@@ -69,6 +74,7 @@ export function buildAssistantChatBody(
     webSearch: input.webSearch === true,
     attachment: input.attachment ?? null,
     speedMode: input.speedMode ?? "normal",
+    videoUrl: input.videoUrl ?? null,
     clarifications: input.clarifications ?? [],
     clarificationsSkipped: input.clarificationsSkipped === true,
   };

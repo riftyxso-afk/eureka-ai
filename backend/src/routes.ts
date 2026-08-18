@@ -165,6 +165,13 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/assistant/sessions/:sessionId/share", assistantSessionsShare);
   count += 7;
 
+  // ─── Video YouTube (panel View) ──────────────────────────
+  const videoPoints = await import("@/app/api/video/points/route");
+  const videoTranscript = await import("@/app/api/video/transcript/route");
+  mount(app, "/api/video/points", videoPoints);
+  mount(app, "/api/video/transcript", videoTranscript);
+  count += 2;
+
   // ─── Share chat publik (view-only) ─────────────────────
   const sharesToken = await import("@/app/api/shares/[token]/route");
   mount(app, "/api/shares/:token", sharesToken);

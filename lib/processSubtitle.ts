@@ -426,6 +426,43 @@ Output JSON: {"summary": "..."}`,
   return clean.slice(0, fallbackMaxChars);
 }
 
+/**
+ * Buat judul singkat & deskriptif dari teks materi via AI.
+ * Mengembalikan "" bila AI tidak tersedia/gagal — pemanggil yang memutuskan
+ * fallback (mis. mempertahankan judul lama).
+ */
+export async function generateAiTitle(
+  text: string,
+  prefs: NotePreferences = {}
+): Promise<string> {
+  const clean = text.trim();
+  if (!clean || !hasAiKey()) return "";
+
+  try {
+    const parsed = await aiChatJson<{ title?: unknown }>(
+      {
+        system:
+          "Kamu adalah asisten belajar yang memberi judul catatan. Jawab HANYA JSON tanpa teks lain.",
+        user: `Berikut materi belajar (bagian awal):\n\n${clean.slice(
+          0,
+          12000
+        )}\n\nBuat judul catatan yang singkat (maksimal 6 kata), sesuai topik utama materi ini. Tanpa tanda kutip, tanpa awalan "Catatan:", tanpa titik di akhir.\n\n${buildPreferencesText(
+          prefs
+        )}\n\nOutput JSON: {"title": "..."}`,
+        json: true,
+        maxTokens: 60,
+        temperature: 0.3,
+      },
+      (raw) => extractJsonObject<{ title?: unknown }>(raw)
+    );
+    const t = typeof parsed.title === "string" ? parsed.title.trim() : "";
+    return t.replace(/^["'“”]+|["'“”]+$/g, "").slice(0, 80).trim();
+  } catch (e) {
+    console.warn("[processSubtitle] Judul AI gagal:", e);
+    return "";
+  }
+}
+
 export interface ProcessedContent {
   title: string;
   summary: string;
