@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Crown, Square, X } from "lucide-react";
-import { apiFetch, apiEventSource } from "@/lib/apiClient";
+import { apiFetch, apiEventSource, getClientLocale } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
 import { buildChatTranscript } from "@/lib/assistant/chatTranscript";
@@ -146,7 +146,8 @@ export function NoteProgressOverlay({
       prefs?.generationMode ?? "cepat" // ±1-2 menit, langsung inti
     );
     form.append("gayaPenulisan", "Ramah & Santai");
-    form.append("bahasa", "Bahasa Indonesia");
+    // Bahasa catatan mengikuti locale aktif (id/en) agar konten AI sinkron.
+    form.append("bahasa", getClientLocale() === "en" ? "English" : "Bahasa Indonesia");
     form.append("chapterCount", String(prefs?.chapterCount ?? 3));
     form.append("noteType", prefs?.noteType ?? "rangkuman");
     form.append("userId", getUserId());

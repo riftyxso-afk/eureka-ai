@@ -34,6 +34,7 @@ import Composer from "@/components/asisten/Composer";
 import { VideoViewOverlay } from "@/components/video/VideoViewOverlay";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
+import { useI18n } from "@/context/LocaleContext";
 import TutorialHost from "@/components/tutorial/TutorialHost";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { copyText } from "@/lib/assistant/clipboard";
@@ -117,6 +118,8 @@ export default function ChatPage() {
   // Video yang sedang dilihat via tombol "View" pada embed (expand + poin).
   const [viewVideo, setViewVideo] = useState<{ url: string; title?: string } | null>(null);
   const { isBeta } = useBeta();
+  const { dict } = useI18n();
+  const l = dict.chat;
   // Pop-up error AI — muncul saat model down; "Tutup" menyembunyikan sampai
   // error BARU datang (di-reset lewat useEffect di bawah).
   const [errorDismissed, setErrorDismissed] = useState(false);
@@ -185,7 +188,7 @@ export default function ChatPage() {
       .filter((m) => m.content.trim())
       .map(
         (m) =>
-          `${m.role === "user" ? "Anda" : "Eureka"}:\n${markdownToPlainText(m.content)}`
+          `${m.role === "user" ? l.you : l.eureka}:\n${markdownToPlainText(m.content)}`
       )
       .join("\n\n");
     if (!transcript.trim()) return;
@@ -263,7 +266,7 @@ export default function ChatPage() {
                   <Link
                     href="/dashboard"
                     data-tutorial-id="dashboard-nav"
-                    aria-label="Buka Dashboard"
+                    aria-label={l.openDashboard}
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 lg:hidden"
                   >
                     <LayoutDashboard size={18} />
@@ -272,10 +275,10 @@ export default function ChatPage() {
                   <img src="/logo.png" alt="Logo Eureka.AI" className="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8" />
                   <div className="min-w-0">
                     <h1 className="truncate text-sm font-extrabold text-clay-dark sm:text-base">
-                      {activeSession?.title ?? "Chat Eureka"}
+                      {activeSession?.title ?? l.title}
                     </h1>
                     <p className="hidden text-[11px] font-bold text-clay-muted sm:block">
-                      Punya akses ke catatan, bab & progresmu
+                      {l.hasAccess}
                     </p>
                   </div>
                 </div>
@@ -285,8 +288,8 @@ export default function ChatPage() {
                       <button
                         onClick={handleCopyAll}
                         disabled={chat.sending}
-                        title="Salin seluruh chat sebagai teks bersih"
-                        aria-label="Salin seluruh chat"
+                        title={l.copyAllTitle}
+                        aria-label={l.copyAll}
                         data-testid="chat-copy-all"
                         className="btn-clay-ghost !min-h-[40px] !px-2.5 !py-2 text-xs disabled:opacity-50 sm:!px-3.5"
                       >
@@ -296,14 +299,14 @@ export default function ChatPage() {
                           <Copy size={14} className="sm:mr-1.5" />
                         )}
                         <span className="hidden sm:inline">
-                          {copiedAll ? "Tersalin!" : "Salin chat"}
+                          {copiedAll ? l.copied : l.copyAll}
                         </span>
                       </button>
                       <button
                         onClick={() => setShareOpen(true)}
                         disabled={chat.sending}
-                        title="Bagikan chat lewat link publik"
-                        aria-label="Bagikan chat"
+                        title={l.shareTitle}
+                        aria-label={l.share}
                         data-testid="chat-share"
                         className="btn-clay-ghost !min-h-[40px] !px-2.5 !py-2 text-xs disabled:opacity-50 sm:!px-3.5"
                       >
@@ -315,7 +318,7 @@ export default function ChatPage() {
                   <button
                     onClick={chat.handleNew}
                     className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
-                    aria-label="Chat baru"
+                    aria-label={l.newChat}
                     data-testid="chat-new-top"
                   >
                     <Plus size={16} />
@@ -341,14 +344,13 @@ export default function ChatPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="Eureka" className="mx-auto h-16 w-16 object-contain" />
               <h2 className="mt-4 flex items-center justify-center gap-2 text-lg font-extrabold text-clay-dark sm:text-xl">
-                Halo! <Hand size={22} className="shrink-0 text-clay-primary" /> Ada
-                yang mau ditanya atau dipelajari?
+                {l.emptyTitle}{" "}
+                <Hand size={22} className="shrink-0 text-clay-primary" />
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-relaxed text-clay-muted">
-                Eureka bisa meringkas catatanmu, menjelaskan bab yang sulit,
-                menyusun rencana belajar, atau menjawab soal. Ketik{" "}
+                {l.emptyDesc1}{" "}
                 <span className="rounded-clay-full bg-clay-primary/15 px-1.5 py-0.5 font-extrabold text-clay-primary">@</span>{" "}
-                untuk melampirkan catatan.
+                {l.emptyDesc2}
               </p>
             </div>
           ) : (
@@ -413,7 +415,7 @@ export default function ChatPage() {
                     className="block w-full rounded-clay-md border-3 border-clay-borderLight bg-clay-primary px-5 py-3 text-center text-sm font-extrabold text-white shadow-clay-btn transition-all hover:brightness-110 active:translate-y-0.5"
                   >
                     <span className="inline-flex items-center gap-1.5">
-                      <Crown size={16} /> Upgrade ke Pro untuk lanjut
+                      <Crown size={16} /> {l.upgrade}
                     </span>
                   </Link>
                 </div>
@@ -507,7 +509,7 @@ export default function ChatPage() {
       <ShareModal
         open={shareOpen}
         sessionId={sessionId}
-        title={activeSession?.title ?? "Percakapan"}
+        title={activeSession?.title ?? l.conversation}
         onClose={() => setShareOpen(false)}
       />
 

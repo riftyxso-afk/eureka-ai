@@ -31,31 +31,45 @@ import { DashboardPreparing } from "@/components/dashboard/DashboardPreparing";
 import TutorialHost from "@/components/tutorial/TutorialHost";
 import { Reveal } from "@/components/ui/Reveal";
 import { useOnboarding } from "@/context/OnboardingContext";
+import { useI18n } from "@/context/LocaleContext";
 import { getUserId, getUserName } from "@/lib/identity";
 import { announceLevelUp } from "@/lib/levelUp";
+import type { Locale, Dictionary } from "@/lib/i18n";
 import type { Note } from "@/lib/types";
 
-function formatUpdatedAt(iso: string): string {
+function formatUpdatedAt(
+  iso: string,
+  l: Dictionary["dashboard"],
+  locale: Locale
+): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
-  if (diff < 60_000) return "Baru saja";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} mnt lalu`;
-  if (d.toDateString() === new Date().toDateString()) {
-    return `Hari ini, ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+  if (diff < 60_000) return l.justNow;
+  if (diff < 3_600_000) {
+    return l.minutesAgo.replace("{n}", String(Math.floor(diff / 60_000)));
   }
-  return `${d.getDate()} ${d.toLocaleDateString("id-ID", { month: "short" })}`;
+  if (d.toDateString() === new Date().toDateString()) {
+    const time = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+    return l.todayAt.replace("{time}", time);
+  }
+  return `${d.getDate()} ${d.toLocaleDateString(
+    locale === "en" ? "en-US" : "id-ID",
+    { month: "short" }
+  )}`;
 }
 
-function getGreeting() {
+function getGreeting(l: Dictionary["dashboard"]): string {
   const h = new Date().getHours();
-  if (h < 11) return "Selamat Pagi";
-  if (h < 15) return "Selamat Siang";
-  if (h < 19) return "Selamat Sore";
-  return "Selamat Malam";
+  if (h < 11) return l.greetingMorning;
+  if (h < 15) return l.greetingAfternoon;
+  if (h < 19) return l.greetingEvening;
+  return l.greetingNight;
 }
 
 export default function DashboardPage() {
   const { data } = useOnboarding();
+  const { locale, dict } = useI18n();
+  const l = dict.dashboard;
   const [notes, setNotes] = useState<Note[]>([]);
   const [notesLoading, setNotesLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -225,7 +239,7 @@ export default function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pinned }),
       });
-      if (!res.ok) throw new Error("Gagal menyimpan pin.");
+      if (!res.ok) throw new Error(l.errPin);
     } catch {
       setNotes((prev) =>
         prev.map((n) => (n.id === id ? { ...n, pinned: !pinned } : n))
@@ -240,23 +254,23 @@ export default function DashboardPage() {
 
   // Hapus catatan dari kartu dashboard (konfirmasi + hapus permanen).
   const deleteNote = async (id: string) => {
-    if (!window.confirm("Yakin ingin menghapus catatan ini? Tindakan ini tidak bisa dibatalkan.")) return;
+    if (!window.confirm(l.confirmDelete)) return;
     try {
       const res = await apiFetch(`/api/notes/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const d = await res.json().catch(() => null);
-        alert(d?.error ?? "Gagal menghapus catatan.");
+        alert(d?.error ?? l.errDelete);
         return;
       }
       setNotes((prev) => prev.filter((n) => n.id !== id));
     } catch {
-      alert("Gagal menghapus catatan. Coba lagi ya.");
+      alert(l.errDeleteRetry);
     }
   };
 
   const chips: { id: "semua" | "terbaru"; label: string }[] = [
-    { id: "semua", label: "Semua Subjek" },
-    { id: "terbaru", label: "Terbaru" },
+    { id: "semua", label: l.allSubjects },
+    { id: "terbaru", label: l.newest },
   ];
 
   return (
@@ -273,11 +287,11 @@ export default function DashboardPage() {
               aria-hidden="true"
             />
             <p className="flex-1 text-xs font-bold text-amber-800 sm:text-sm">
-              Versi pengembangan — sebagian fitur mungkin belum berfungsi optimal.
+              {l.devBanner}
             </p>
             <button
               onClick={hideBanner}
-              aria-label="Tutup pemberitahuan"
+              aria-label={l.closeNotice}
               className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-amber-700 transition-colors hover:bg-amber-200"
             >
               <X size={14} />
@@ -290,18 +304,18 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="flex items-center gap-1.5 text-2xl font-extrabold sm:text-3xl">
-              {getGreeting()}, {userName.split(" ")[0]}!
+              {getGreeting(l)}, {userName.split(" ")[0]}!
               <Hand size={22} className="shrink-0 text-clay-primary" />
             </h1>
             <p className="mt-1 text-sm font-semibold text-clay-muted sm:text-base">
-              Siap belajar hari ini?
+              {l.readyToday}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <NotificationBell />
             <Link href="/home">
               <ButtonClay className="min-h-[44px] px-5 py-2 text-sm">
-                <Rocket size={16} className="mr-2" /> Mulai Belajar
+                <Rocket size={16} className="mr-2" /> {l.startLearning}
               </ButtonClay>
             </Link>
           </div>
@@ -312,18 +326,18 @@ export default function DashboardPage() {
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             icon={FileText}
-            label="Total Catatan"
+            label={l.totalNotes}
             value={notes.length}
           />
-          <StatsCard icon={Flame} label="Streak" value={progress.streak} />
+          <StatsCard icon={Flame} label={l.streak} value={progress.streak} />
           <StatsCard
             icon={Clock}
-            label="Kartu Jatuh Tempo"
+            label={l.dueCards}
             value={progress.dueCards}
           />
           <StatsCard
             icon={Trophy}
-            label="Peringkat"
+            label={l.rank}
             value={progress.rank === null ? "—" : progress.rank}
           />
         </div>
@@ -338,10 +352,10 @@ export default function DashboardPage() {
               </span>
               <div>
                 <p className="text-base font-extrabold leading-tight sm:text-lg">
-                  Level {progress.level}
+                  {l.level.replace("{level}", String(progress.level))}
                 </p>
                 <p className="text-xs font-bold text-clay-muted">
-                  {progress.levelTitle} · {progress.streak} hari
+                  {progress.levelTitle} · {l.days.replace("{n}", String(progress.streak))}
                 </p>
               </div>
             </div>
@@ -396,14 +410,14 @@ export default function DashboardPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-base font-extrabold text-amber-950 sm:text-lg">
-                  Rencana Belajar
+                  {l.studyPlan}
                 </p>
                 <p className="mt-0.5 text-xs font-bold text-amber-800/70 sm:text-sm">
-                  Susun rencana mingguanmu — lipat demi lipat menuju target
+                  {l.studyPlanDesc}
                 </p>
               </div>
               <span className="hidden shrink-0 rounded-clay-full border-3 border-amber-700/20 bg-white/70 px-3 py-1.5 text-xs font-extrabold text-amber-800 sm:block">
-                Buka →
+                {l.open}
               </span>
             </div>
           </div>
@@ -412,7 +426,7 @@ export default function DashboardPage() {
 
         <Reveal delay={0.26}>
         <section className="mt-8">
-          <h2 className="text-lg font-extrabold sm:text-xl">Catatan Kamu</h2>
+          <h2 className="text-lg font-extrabold sm:text-xl">{l.yourNotes}</h2>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -421,7 +435,7 @@ export default function DashboardPage() {
                 className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
               />
               <InputClay
-                placeholder="Cari catatan..."
+                placeholder={l.searchNotes}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 !h-12 text-sm sm:text-base"
@@ -448,7 +462,7 @@ export default function DashboardPage() {
             {notesLoading ? (
               <div className="card-clay flex items-center justify-center py-12 text-center">
                 <p className="text-sm font-bold text-clay-muted">
-                  Memuat catatan...
+                  {l.loadingNotes}
                 </p>
               </div>
             ) : filteredNotes.length === 0 ? (
@@ -457,17 +471,16 @@ export default function DashboardPage() {
                   <FileQuestion size={30} className="text-clay-muted" />
                 </div>
                 <h3 className="mt-4 text-lg font-extrabold">
-                  Belum ada catatan
+                  {l.noNotes}
                 </h3>
                 <p className="mt-1.5 max-w-sm text-sm font-semibold text-clay-muted">
-                  Mulai dengan mengunggah materi belajar pertamamu. AI akan ubah
-                  jadi catatan terstruktur.
+                  {l.noNotesDesc}
                 </p>
                 <ButtonClay
                   onClick={() => setIsModalOpen(true)}
                   className="mt-5 min-h-[44px] px-5 py-2 text-sm"
                 >
-                  <FileText size={17} className="mr-2" /> Buat Catatan Pertama
+                  <FileText size={17} className="mr-2" /> {l.createFirstNote}
                 </ButtonClay>
               </div>
             ) : (
@@ -478,7 +491,7 @@ export default function DashboardPage() {
                     id={note.id}
                     title={note.title}
                     subject={note.subject}
-                    updatedAt={formatUpdatedAt(note.createdAt)}
+                    updatedAt={formatUpdatedAt(note.createdAt, l, locale)}
                     pinned={note.pinned === true}
                     onTogglePin={(id, pinned) => void togglePin(id, pinned)}
                     onDelete={(id) => void deleteNote(id)}
@@ -500,7 +513,7 @@ export default function DashboardPage() {
           onClick={() => setIsModalOpen(true)}
           data-tutorial-id="create-note-btn"
           className="flex h-14 w-14 items-center justify-center rounded-full bg-clay-primary text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:h-16 sm:w-16"
-          aria-label="Buat catatan baru"
+          aria-label={l.createNote}
         >
           <Plus size={24} className="sm:hidden" />
           <Plus size={28} className="hidden sm:block" />

@@ -50,6 +50,8 @@ import type { HighlightEntry } from "@/lib/highlights-store";
 import type { NoteImage } from "@/lib/note-images-store";
 import { getUserId, getUserName } from "@/lib/identity";
 import { emojiToIcon } from "@/lib/emojiIcon";
+import { useI18n } from "@/context/LocaleContext";
+import type { Dictionary, Locale } from "@/lib/i18n";
 
 interface Chapter {
   id: number;
@@ -71,38 +73,53 @@ interface NoteDetail {
   noteType?: string;
 }
 
-const NOTE_TYPE_BADGES: Record<string, { label: string; icon: string }> = {
-  rangkuman: { label: "Rangkuman", icon: "📚" },
-  makalah: { label: "Makalah", icon: "📄" },
-  laporan: { label: "Laporan", icon: "📋" },
-  poin: { label: "Poin Penting", icon: "⚡" },
+const NOTE_TYPE_BADGES: Record<
+  string,
+  { labelKey: keyof Dictionary["note"]; icon: string }
+> = {
+  rangkuman: { labelKey: "badgeRangkuman", icon: "📚" },
+  makalah: { labelKey: "badgeMakalah", icon: "📄" },
+  laporan: { labelKey: "badgeLaporan", icon: "📋" },
+  poin: { labelKey: "badgePoin", icon: "⚡" },
 };
 
-function firstSentence(text: string): string {
+function firstSentence(text: string, fallbackLabel = "Bab"): string {
   const match = text.match(/^.{1,90}?[.!?](\s|$)/);
   if (match) return match[0].trim();
   const fallback = text.slice(0, 90).trim();
-  return fallback.length ? `${fallback}...` : "Bab";
+  return fallback.length ? `${fallback}...` : fallbackLabel;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: Locale): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("id-ID", {
+  return d.toLocaleDateString(locale === "en" ? "en-US" : "id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 }
 
+/** Tombol aksi — id dipakai untuk routing (label diambil dari dictionary). */
 const ACTION_BUTTONS = [
-  { icon: Layers, label: "Flashcards" },
-  { icon: ClipboardCheck, label: "Kuis" },
-  { icon: BookOpenCheck, label: "Uji Pemahaman" },
-  { icon: Map, label: "Mind Map" },
-  { icon: FileText, label: "Dokumen" },
-  { icon: Share2, label: "Bagikan" },
-];
+  { id: "flashcards", icon: Layers },
+  { id: "quiz", icon: ClipboardCheck },
+  { id: "comprehension", icon: BookOpenCheck },
+  { id: "mindmap", icon: Map },
+  { id: "doc", icon: FileText },
+  { id: "share", icon: Share2 },
+] as const;
+
+type ActionId = (typeof ACTION_BUTTONS)[number]["id"];
+
+const ACTION_LABEL_KEYS: Record<ActionId, keyof Dictionary["note"]> = {
+  flashcards: "actionFlashcards",
+  quiz: "actionQuiz",
+  comprehension: "actionComprehension",
+  mindmap: "actionMindmap",
+  doc: "actionDoc",
+  share: "actionShare",
+};
 
 interface PresenceEntry {
   name: string;
@@ -147,19 +164,21 @@ function ImageFigure({
   image: NoteImage;
   onDelete: () => void;
 }) {
+  const { dict } = useI18n();
+  const l = dict.note;
   return (
     <figure className="mt-4">
       <div className={`flex ${IMAGE_ALIGN[image.alignment]}`}>
         <div className={`relative w-full ${IMAGE_SIZE[image.size]}`}>
           <img
             src={image.url}
-            alt={image.caption ?? "Ilustrasi catatan"}
+            alt={image.caption ?? l.imageAlt}
             className="w-full rounded-clay-md border-2 border-clay-shadow/20 object-cover shadow-clay-sm"
           />
           <button
             onClick={onDelete}
-            aria-label="Hapus gambar"
-            title="Hapus gambar"
+            aria-label={l.deleteImage}
+            title={l.deleteImage}
             className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-clay-shadow/30 bg-white/90 text-clay-muted transition-colors hover:border-red-300 hover:text-red-500"
           >
             <Trash2 size={15} />
@@ -215,6 +234,8 @@ export default function NoteDetailPage() {
   const searchParams = useSearchParams();
   const [userName] = useState(() => getUserName());
   const userId = getUserId();
+  const { locale, dict } = useI18n();
+  const l = dict.note;
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenNote, setRegenNote] = useState(false);
   const regen = useRegenerateJob();
@@ -240,7 +261,7 @@ export default function NoteDetailPage() {
         const fallbackChapters = (data.chunks ?? []).map(
           (c: { id: string; text: string }, i: number) => ({
             id: i + 1,
-            title: firstSentence(c.text),
+            title: firstSentence(c.text, l.chapter),
             content: c.text,
           })
         );
@@ -265,7 +286,7 @@ export default function NoteDetailPage() {
           summary:
             data.note.summary ||
             data.chunks?.[0]?.text.slice(0, 220) ||
-            "Tidak ada ringkasan.",
+            l.noSummary,
           chapters: chaptersData,
           createdAt: data.note.createdAt,
           subject: data.note.subject,
@@ -292,11 +313,11 @@ export default function NoteDetailPage() {
       loadNote();
       setRegenNote(false);
       setConfirmRegen(false);
-      notify("Catatan berhasil ditulis ulang!");
+      notify(l.rewriteDone);
     } else if (regenNote && regen.error) {
       setRegenNote(false);
       setConfirmRegen(false);
-      notify(`Gagal menulis ulang: ${regen.error}`);
+      notify(l.rewriteFailed.replace("{error}", regen.error));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [regen.running, regenNote]);
@@ -304,7 +325,7 @@ export default function NoteDetailPage() {
   const handleRegenerateAll = async () => {
     setConfirmRegen(false);
     setRegenNote(true);
-    notify("AI menulis ulang seluruh catatan...");
+    notify(l.rewriting);
     await regen.start(`/api/notes/${params.id}/regenerate`);
   };
 
@@ -345,7 +366,7 @@ export default function NoteDetailPage() {
       );
       if (res.ok) {
         setImages((prev) => prev.filter((i) => i.id !== image.id));
-        notify("Ilustrasi dihapus.");
+        notify(l.imageDeleted);
       }
     } catch {
       // abaikan
@@ -399,7 +420,7 @@ export default function NoteDetailPage() {
    */
   const generateAiHighlights = async () => {
     setAiHighlighting(true);
-    setAiHighlightStatus("Menyiapkan AI...");
+    setAiHighlightStatus(l.preparingAi);
     let received = 0;
     try {
       const res = await apiFetch(`/api/notes/${params.id}/highlights/generate`, {
@@ -407,7 +428,7 @@ export default function NoteDetailPage() {
       });
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Gagal membuat stabilo AI.");
+        throw new Error(data?.error ?? l.aiHighlightFailed);
       }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -469,7 +490,7 @@ export default function NoteDetailPage() {
               ];
             });
           } else if (ev.type === "error") {
-            throw new Error(ev.error ?? "Gagal membuat stabilo AI.");
+            throw new Error(ev.error ?? l.aiHighlightFailed);
           } else if (ev.type === "done") {
             received = ev.count ?? received;
           }
@@ -477,12 +498,14 @@ export default function NoteDetailPage() {
       }
       notify(
         received > 0
-          ? `Stabilo AI diterapkan (${received} bagian)!`
-          : "Tidak ada bagian baru yang layak distabilo."
+          ? l.aiHighlightsApplied.replace("{n}", String(received))
+          : l.noNewHighlights
       );
     } catch (e) {
       notify(
-        e instanceof Error ? `Gagal: ${e.message}` : "Gagal membuat stabilo AI."
+        e instanceof Error
+          ? l.failed.replace("{error}", e.message)
+          : l.aiHighlightFailed
       );
     } finally {
       setAiHighlighting(false);
@@ -513,7 +536,7 @@ export default function NoteDetailPage() {
     } catch {
       // abaikan
     }
-    notify(next ? "Disimpan ke bookmark!" : "Bookmark dihapus");
+    notify(next ? l.bookmarkSaved : l.bookmarkRemoved);
   };
 
   // Bergabung via link undangan (?invite=TOKEN)
@@ -528,7 +551,7 @@ export default function NoteDetailPage() {
           body: JSON.stringify({ action: "join", token }),
         });
         if (res.ok) {
-          notify("Kamu bergabung sebagai kolaborator!");
+          notify(l.joinedCollab);
           router.replace(`/dashboard/note/${params.id}`);
         }
       } catch {
@@ -571,12 +594,12 @@ export default function NoteDetailPage() {
     return (
       <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
         <div className="card-clay flex items-center justify-center py-16 text-clay-muted">
-          <p className="text-base font-extrabold">Memuat catatan...</p>
+          <p className="text-base font-extrabold">{l.loading}</p>
         </div>
         <DreamingOverlay
           open
-          title="Membaca catatanmu..."
-          status="AI sedang menyiapkan halaman"
+          title={l.reading}
+          status={l.preparingPage}
         />
       </div>
     );
@@ -589,15 +612,15 @@ export default function NoteDetailPage() {
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
             <FileQuestion size={36} className="text-clay-muted" />
           </div>
-          <h3 className="mt-6 text-xl font-extrabold">Catatan tidak ditemukan</h3>
+          <h3 className="mt-6 text-xl font-extrabold">{l.notFound}</h3>
           <p className="mt-2 max-w-sm text-base font-semibold text-clay-muted">
-            Catatan ini mungkin sudah dihapus atau tautannya salah.
+            {l.notFoundDesc}
           </p>
           <Link
             href="/dashboard"
             className="btn-clay-primary mt-6 !min-h-[44px] !px-5 text-sm"
           >
-            Kembali ke Dashboard
+            {l.backDashboard}
           </Link>
         </div>
       </div>
@@ -657,37 +680,37 @@ export default function NoteDetailPage() {
           `/chat/${sessData.session.id}?note=${encodeURIComponent(data.id)}`
         );
       } else {
-        notify("Gagal membuat sesi chat. Coba lagi ya.");
+        notify(l.chatSessionFailed);
       }
     } catch {
-      notify("Gagal membuat sesi chat. Coba lagi ya.");
+      notify(l.chatSessionFailed);
     }
   };
 
-  const handleAction = (label: string) => {
-    if (label === "Kuis") {
+  const handleAction = (id: ActionId) => {
+    if (id === "quiz") {
       setShowQuiz(true);
       return;
     }
-    if (label === "Uji Pemahaman") {
+    if (id === "comprehension") {
       router.push(`/dashboard/note/${data.id}/uji-pemahaman`);
       return;
     }
-    if (label === "Flashcards") {
+    if (id === "flashcards") {
       setShowFlashcards(true);
       return;
     }
-    if (label === "Bagikan") {
+    if (id === "share") {
       setShowShareNote(true);
       return;
     }
-    if (label === "Dokumen") {
+    if (id === "doc") {
       // F9: PDF dengan ALUR KERJA realtime — modal SSE (Python/reportlab,
       // fallback pdfkit) lalu unduh otomatis saat selesai.
       setShowPdfWorkflow(true);
       return;
     }
-    alert(`Fitur ${label} segera hadir!`);
+    alert(l.comingSoon.replace("{feature}", l[ACTION_LABEL_KEYS[id]]));
   };
 
   const deleteNoteNow = async () => {
@@ -696,13 +719,13 @@ export default function NoteDetailPage() {
       const res = await apiFetch(`/api/notes/${data.id}`, { method: "DELETE" });
       if (!res.ok) {
         const d = await res.json().catch(() => null);
-        notify(d?.error ?? "Gagal menghapus catatan.");
+        notify(d?.error ?? l.deleteFailed);
         setDeleting(false);
         return;
       }
       router.push("/dashboard");
     } catch {
-      notify("Gagal menghapus catatan. Coba lagi ya.");
+      notify(l.deleteFailedRetry);
       setDeleting(false);
     }
   };
@@ -714,7 +737,7 @@ export default function NoteDetailPage() {
         <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
           <Link
             href="/dashboard"
-            aria-label="Kembali ke dashboard"
+            aria-label={l.backToDashboard}
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-3"
           >
             <ArrowLeft size={20} />
@@ -746,14 +769,14 @@ export default function NoteDetailPage() {
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <Pencil size={16} className="mr-2" />
-            Ubah
+            {l.edit}
           </button>
           <button
             onClick={() => setShowVersions(true)}
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <History size={16} className="mr-2" />
-            Versi
+            {l.versions}
           </button>
           <button
             onClick={() => setConfirmRegen(true)}
@@ -761,44 +784,42 @@ export default function NoteDetailPage() {
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <RefreshCw size={16} className="mr-2" />
-            Tulis Ulang
+            {l.rewrite}
           </button>
           <Link
             href={`/dashboard/note/${data.id}/papan`}
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <PenTool size={16} className="mr-2" />
-            Papan
+            {l.whiteboard}
           </Link>
           <button
             onClick={askNote}
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <MessageCircleQuestion size={16} className="mr-2" />
-            Tanya AI
+            {l.askAi}
           </button>
           <button
-            onClick={() =>
-              notify("Panggilan suara & video call segera hadir!")
-            }
+            onClick={() => notify(l.callComingSoon)}
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <Phone size={16} className="mr-2" />
-            Panggilan
+            {l.call}
           </button>
           <button
             onClick={() => setShowShareNote(true)}
             className="btn-clay-primary shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <Share2 size={16} className="mr-2" />
-            Bagikan
+            {l.share}
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm !text-red-500 hover:!bg-red-50"
           >
             <Trash2 size={16} className="mr-2" />
-            Hapus
+            {l.delete}
           </button>
         </div>
       </div>
@@ -808,13 +829,15 @@ export default function NoteDetailPage() {
         <div className="card-clay flex flex-wrap items-center gap-3 !p-4">
           <div className="flex items-center gap-1.5 text-sm font-bold text-clay-muted">
             <Users size={16} className="text-clay-primary" />
-            <span>{presence.length} sedang membuka catatan ini</span>
+            <span>
+              {l.viewing.replace("{n}", String(presence.length))}
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {presence.map((p, i) => (
               <div
                 key={`${p.name}-${i}`}
-                title={`${p.name} (${p.role === "editor" ? "Editor" : "Viewer"})`}
+                title={`${p.name} (${p.role === "editor" ? l.editor : l.viewer})`}
                 className="flex items-center gap-2 rounded-full border-2 border-clay-shadow/40 bg-white/70 py-1 pl-1 pr-3"
               >
                 <span className="relative">
@@ -826,7 +849,7 @@ export default function NoteDetailPage() {
                   <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500" />
                 </span>
                 <span className="text-xs font-bold text-clay-dark">
-                  {p.name === userName ? "Kamu" : p.name}
+                  {p.name === userName ? l.you : p.name}
                 </span>
                 <span className="rounded-full bg-clay-beige px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-clay-muted">
                   {p.role}
@@ -851,7 +874,7 @@ export default function NoteDetailPage() {
           {/* Ringkasan */}
           <div className="card-clay p-6">
             <h2 className="mb-2 text-xs font-extrabold uppercase tracking-wider text-clay-muted">
-              Ringkasan
+              {l.summary}
             </h2>
             <p className="break-words text-[17px] font-semibold leading-6 text-clay-dark">
               {data.summary}
@@ -865,7 +888,7 @@ export default function NoteDetailPage() {
             (findYoutubeLink(data.sourceUrl ?? "")?.url ?? null) && (
               <div className="card-clay mt-4 p-4 sm:p-6">
                 <h2 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-clay-muted">
-                  Video Sumber
+                  {l.sourceVideo}
                 </h2>
                 <YoutubeEmbed
                   url={data.sourceUrl ?? ""}
@@ -876,9 +899,7 @@ export default function NoteDetailPage() {
                   }}
                 />
                 <p className="mt-3 text-xs font-medium text-clay-muted/70">
-                  Tonton video sambil membaca catatan — Eureka bisa menjawab
-                  pertanyaanmu tentang materinya di bagian "Tanya AI tentang
-                  catatannya".
+                  {l.sourceVideoDesc}
                 </p>
               </div>
             )}
@@ -887,7 +908,7 @@ export default function NoteDetailPage() {
           {data.keyPoints && data.keyPoints.length > 0 && (
             <div className="card-clay mt-4 p-6">
               <h2 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-clay-muted">
-                Poin Penting
+                {l.keyPoints}
               </h2>
               <ul className="space-y-2.5">
                 {data.keyPoints.map((point, i) => (
@@ -910,12 +931,14 @@ export default function NoteDetailPage() {
           <div className="-mx-4 mt-4 flex flex-wrap items-center gap-2 px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-0">
             {ACTION_BUTTONS.map((item) => (
               <button
-                key={item.label}
-                onClick={() => handleAction(item.label)}
+                key={item.id}
+                onClick={() => handleAction(item.id)}
                 className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
               >
                 <item.icon size={16} className="mr-2" />
-                <span className="font-extrabold">{item.label}</span>
+                <span className="font-extrabold">
+                  {l[ACTION_LABEL_KEYS[item.id]]}
+                </span>
               </button>
             ))}
             <button
@@ -929,12 +952,12 @@ export default function NoteDetailPage() {
                 <Sparkles size={16} className="mr-2 text-clay-primary" />
               )}
               <span className="font-extrabold">
-                {aiHighlighting ? "Menstabilo..." : "Stabilo AI"}
+                {aiHighlighting ? l.aiHighlighting : l.aiHighlight}
               </span>
             </button>
             {highlights.length > 0 && !aiHighlighting && (
               <span className="shrink-0 text-xs font-bold text-clay-muted">
-                {highlights.length} bagian distabilo
+                {l.highlightedCount.replace("{n}", String(highlights.length))}
               </span>
             )}
           </div>
@@ -944,7 +967,7 @@ export default function NoteDetailPage() {
             <div className="card-clay mt-4 flex items-center gap-3 !p-4">
               <Loader2 size={18} className="animate-spin text-clay-primary" />
               <p className="min-w-0 flex-1 text-sm font-extrabold text-clay-dark">
-                {aiHighlightStatus || "AI sedang menstabilo catatanmu..."}
+                {aiHighlightStatus || l.aiHighlightStatus}
               </p>
             </div>
           )}
@@ -966,8 +989,8 @@ export default function NoteDetailPage() {
                     className="btn-clay-ghost !min-h-[40px] !px-3 text-xs"
                   >
                     {chapters.some((c) => collapsedMap[c.id])
-                      ? "Perluas semua bab"
-                      : "Ciutkan semua bab"}
+                      ? l.expandAll
+                      : l.collapseAll}
                   </button>
                 </div>
                 {chapters.map((chapter) => {
@@ -1006,7 +1029,7 @@ export default function NoteDetailPage() {
               </>
             ) : (
               <div className="card-clay p-6 text-sm font-semibold text-clay-muted">
-                Catatan ini belum memiliki bab.
+                {l.noChapters}
               </div>
             )}
           </div>
@@ -1015,7 +1038,7 @@ export default function NoteDetailPage() {
           {images.filter((i) => !i.chapterId).length > 0 && (
             <div className="mt-6">
               <h3 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-clay-muted">
-                Ilustrasi
+                {l.illustrations}
               </h3>
               <div className="space-y-4">
                 {images
@@ -1049,13 +1072,13 @@ export default function NoteDetailPage() {
                     );
                     return <TypeIcon size={13} />;
                   })()}
-                  {NOTE_TYPE_BADGES[data.noteType].label}
+                  {l[NOTE_TYPE_BADGES[data.noteType].labelKey]}
                 </span>
               </div>
             )}
             <div className="flex items-center gap-2">
               <Calendar size={16} />
-              <span>{formatDate(data.createdAt)}</span>
+              <span>{formatDate(data.createdAt, locale)}</span>
             </div>
           </div>
 
@@ -1126,11 +1149,10 @@ export default function NoteDetailPage() {
               </span>
               <div className="min-w-0">
                 <h3 className="text-base font-extrabold text-clay-dark">
-                  Hapus catatan ini?
+                  {l.deleteTitle}
                 </h3>
                 <p className="mt-1 text-xs font-semibold leading-relaxed text-clay-muted">
-                  "{data.title}" akan dihapus permanen beserta semua bab, gambar,
-                  kuis, dan kartu hafalannya. Tindakan ini tidak bisa dibatalkan.
+                  {l.deleteDesc.replace("{title}", data.title)}
                 </p>
               </div>
             </div>
@@ -1141,7 +1163,7 @@ export default function NoteDetailPage() {
                 onClick={() => setShowDeleteConfirm(false)}
                 className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"
               >
-                Batal
+                {l.cancel}
               </button>
               <button
                 type="button"
@@ -1154,7 +1176,7 @@ export default function NoteDetailPage() {
                 ) : (
                   <Trash2 size={16} />
                 )}
-                {deleting ? "Menghapus..." : "Hapus Permanen"}
+                {deleting ? l.deleting : l.deletePermanent}
               </button>
             </div>
           </div>
@@ -1195,30 +1217,26 @@ export default function NoteDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-extrabold text-clay-dark">
-              Tulis ulang seluruh catatan?
+              {l.regenTitle}
             </h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-clay-muted">
-              AI akan menulis ulang semua bab dari{" "}
-              <span className="font-extrabold text-clay-dark">
-                “{data.title}”
-              </span>{" "}
-              ({chapters.length} bab) berdasarkan konten yang ada. Proses ini
-              bisa memakan waktu beberapa menit — kamu bisa menunggu di halaman
-              ini atau membiarkannya jalan.
+              {l.regenDesc
+                .replace("{title}", data.title)
+                .replace("{n}", String(chapters.length))}
             </p>
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setConfirmRegen(false)}
                 className="btn-clay-ghost flex-1 !min-h-[46px] !px-4 text-sm"
               >
-                Batal
+                {l.cancel}
               </button>
               <button
                 onClick={handleRegenerateAll}
                 className="btn-clay-primary flex-1 !min-h-[46px] !px-4 text-sm"
               >
                 <RefreshCw size={15} className="mr-2" />
-                Tulis Ulang
+                {l.rewrite}
               </button>
             </div>
           </div>
@@ -1228,7 +1246,7 @@ export default function NoteDetailPage() {
       {/* Overlay "AI dreaming" saat menulis ulang */}
       <DreamingOverlay
         open={regen.running}
-        title="AI sedang menulis ulang catatanmu..."
+        title={l.regenDreaming}
         status={regen.message}
         percent={regen.percent}
         onCancel={() => void regen.stop()}

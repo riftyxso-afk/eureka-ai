@@ -453,7 +453,9 @@ export async function processNoteForBackground(
               "enrichment",
               0.1 + (doneCount / Math.max(total, 1)) * 0.72,
               label
-            )
+            ),
+          // Bahasa enrichment mengikuti bahasa catatan (id/en).
+          prefs.bahasa
         );
         chapters = enriched.chapters;
         references = enriched.references;

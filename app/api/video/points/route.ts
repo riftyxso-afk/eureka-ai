@@ -6,6 +6,7 @@ import {
   isBetaTester,
 } from "@/lib/assistant/auth";
 import { extractYoutubeVideoId } from "@/lib/assistant/videoUrl";
+import { languageFromRequest } from "@/lib/locale";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { getVideoPoints, videoPointsCache } from "@/lib/videoPoints";
 
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await getVideoPoints(url);
+    const result = await getVideoPoints(url, languageFromRequest(req));
     if ("error" in result) {
       if (result.error === "no-transcript") {
         return NextResponse.json(

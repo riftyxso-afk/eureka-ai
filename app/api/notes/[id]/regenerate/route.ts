@@ -12,6 +12,7 @@ import { runAfter } from "@/lib/after";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { regenerateAllChapters } from "@/lib/regenerate";
 import { requireAuth } from "@/lib/assistant/auth";
+import { languageFromRequest } from "@/lib/locale";
 import { canStartGeneration, createJob, executeJob, updateJob } from "@/lib/jobQueue";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
@@ -93,7 +94,12 @@ export async function POST(
           const chapters = await regenerateAllChapters(
             found.note,
             instruction || undefined,
-            undefined,
+            {
+              studyMode: "standar",
+              gayaPenulisan: "Ramah & Santai",
+              // Bahasa tulis-ulang mengikuti locale user (id/en).
+              bahasa: languageFromRequest(req),
+            },
             (percent, message) => updateJob(id, { percent, message })
           );
           updateJob(id, {

@@ -39,13 +39,15 @@ import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSideb
 import Composer from "@/components/asisten/Composer";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
+import { useI18n } from "@/context/LocaleContext";
+import type { Dictionary } from "@/lib/i18n";
 
 interface FeatureChip {
   icon: LucideIcon;
-  title: string;
-  desc: string;
+  titleKey: keyof Dictionary["home"];
+  descKey: keyof Dictionary["home"];
   /** Chat: klik → langsung kirim prompt ke AI. */
-  prompt?: string;
+  promptKey?: keyof Dictionary["home"];
   /** Navigasi: klik → pindah ke halaman ini. */
   href?: string;
 }
@@ -53,67 +55,69 @@ interface FeatureChip {
 const FEATURES: FeatureChip[] = [
   {
     icon: BookOpen,
-    title: "Ringkas Materi",
-    desc: "Ringkas catatan belajarmu",
-    prompt: "Ringkas materi pelajaran yang sedang saya pelajari berdasarkan catatan saya.",
+    titleKey: "featRingkas",
+    descKey: "featRingkasDesc",
+    promptKey: "featRingkasPrompt",
   },
   {
     icon: Brain,
-    title: "Jelaskan Analogi",
-    desc: "Konsep sulit jadi gampang",
-    prompt: "Jelaskan konsep yang sedang saya pelajari dengan analogi sederhana yang mudah dipahami.",
+    titleKey: "featAnalogi",
+    descKey: "featAnalogiDesc",
+    promptKey: "featAnalogiPrompt",
   },
   {
     icon: Target,
-    title: "Rencana Belajar",
-    desc: "Siapkan jadwal ujian",
-    prompt: "Buatkan rencana belajar mingguan untuk persiapan ujian saya.",
+    titleKey: "featRencana",
+    descKey: "featRencanaDesc",
+    promptKey: "featRencanaPrompt",
   },
   {
     icon: PenLine,
-    title: "Bantu Soal",
-    desc: "Langkah demi langkah",
-    prompt: "Bantu saya mengerjakan soal latihan berikut langkah demi langkah.",
+    titleKey: "featSoal",
+    descKey: "featSoalDesc",
+    promptKey: "featSoalPrompt",
   },
   {
     icon: Layers,
-    title: "Flashcards",
-    desc: "Buat kartu hafalan dari catatan",
-    prompt: "Buatkan kartu hafalan (flashcards) dari catatan saya untuk dihafal.",
+    titleKey: "featCards",
+    descKey: "featCardsDesc",
+    promptKey: "featCardsPrompt",
   },
   {
     icon: FileText,
-    title: "Kuis Latihan",
-    desc: "Latihan pilihan ganda",
-    prompt: "Buatkan kuis latihan pilihan ganda dari materi yang sedang saya pelajari.",
+    titleKey: "featKuis",
+    descKey: "featKuisDesc",
+    promptKey: "featKuisPrompt",
   },
   {
     icon: CalendarDays,
-    title: "Jadwal Belajar",
-    desc: "Kelola jadwal & rutinitas",
+    titleKey: "featJadwal",
+    descKey: "featJadwalDesc",
     href: "/dashboard/jadwal",
   },
   {
     icon: Trophy,
-    title: "Leaderboard",
-    desc: "Lihat peringkat belajarmu",
+    titleKey: "featLeaderboard",
+    descKey: "featLeaderboardDesc",
     href: "/dashboard/leaderboard",
   },
 ];
 
-function greetingText(): { icon: LucideIcon; text: string } {
+function greetingText(
+  l: Dictionary["home"]
+): { icon: LucideIcon; text: string } {
   const h = new Date().getHours();
   const icon = h < 6 ? Moon : h < 12 ? Sun : h < 17 ? Sun : h < 21 ? Sunset : Moon;
   const part =
     h < 6
-      ? "Selamat malam"
+      ? l.greetingNight
       : h < 12
-        ? "Selamat pagi"
+        ? l.greetingMorning
         : h < 17
-          ? "Selamat siang"
+          ? l.greetingAfternoon
           : h < 21
-            ? "Selamat sore"
-            : "Selamat malam";
+            ? l.greetingEvening
+            : l.greetingNight;
   return { icon, text: part };
 }
 
@@ -126,6 +130,8 @@ export default function HomePage() {
   const [imagePrompt, setImagePrompt] = useState<string | null>(null);
   const [callOpen, setCallOpen] = useState(false);
   const { isBeta } = useBeta();
+  const { dict } = useI18n();
+  const l = dict.home;
   const launchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const chat = useAssistantChat({
@@ -168,10 +174,10 @@ export default function HomePage() {
   const name = useMemo(() => {
     const session = getSession();
     const raw = session?.name || getUserName();
-    return raw.trim().split(" ")[0] || "Teman Belajar";
+    return raw.trim().split(" ")[0] || l.studyBuddy;
   }, []);
 
-  const greeting = greetingText();
+  const greeting = greetingText(l);
 
   /** Buat sesi → simpan prompt → animasi → pindah ke /chat/[id]. */
   const launchChat = useCallback(
@@ -259,7 +265,7 @@ export default function HomePage() {
             <Link
               href="/dashboard"
               data-tutorial-id="dashboard-nav"
-              aria-label="Buka Dashboard"
+              aria-label={dict.chat.openDashboard}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 lg:hidden"
             >
               <LayoutDashboard size={18} />
@@ -268,17 +274,17 @@ export default function HomePage() {
             <img src="/logo.png" alt="Logo Eureka.AI" className="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8" />
             <div className="min-w-0">
               <h1 className="truncate text-sm font-extrabold text-clay-dark sm:text-base">
-                Beranda Eureka
+                {l.title}
               </h1>
               <p className="hidden text-[11px] font-bold text-clay-muted sm:block">
-                Chat dengan AI yang mengenal catatan & progresmu
+                {l.subtitle}
               </p>
             </div>
           </div>
           <button
             onClick={chat.handleNew}
             className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
-            aria-label="Chat baru"
+            aria-label={dict.chat.newChat}
             data-testid="home-new-top"
           >
             <Plus size={16} />
@@ -292,17 +298,16 @@ export default function HomePage() {
 
           <div className="mx-auto flex min-h-[52vh] max-w-2xl flex-col items-center justify-center text-center">
             <span className="inline-flex items-center gap-1.5 rounded-clay-full border-3 border-clay-secondary/30 bg-clay-secondary/10 px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide text-clay-secondary">
-              <Sparkles size={13} /> Asisten Belajar Eureka
+              <Sparkles size={13} /> {l.chip}
             </span>
             <h1 className="mt-5 flex items-center justify-center gap-2 text-[27px] font-extrabold text-clay-dark sm:text-4xl">
               <greeting.icon size={28} className="shrink-0 text-clay-primary" />
-              Halo, {name}!
+              {l.hello.replace("{name}", name)}
             </h1>
             <p className="mt-3 max-w-md text-base font-semibold leading-relaxed text-clay-muted">
-              Tanyakan apa saja — Eureka menjawab berdasarkan catatan, bab,
-              subjek, dan progres belajarmu. Ketik{" "}
+              {l.desc}{" "}
               <span className="rounded-clay-full bg-clay-primary/15 px-1.5 py-0.5 font-extrabold text-clay-primary">@</span>{" "}
-              untuk melampirkan catatan tertentu.
+              {l.descAttach}
             </p>
 
             <div className="mt-8 grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -314,11 +319,11 @@ export default function HomePage() {
                     </span>
                     <span className="min-w-0">
                       <span className="flex items-center gap-1 text-[13px] font-extrabold text-clay-dark group-hover:text-clay-primary">
-                        {f.title}
+                        {l[f.titleKey]}
                         <ChevronRight size={13} className="shrink-0 text-clay-muted" />
                       </span>
                       <span className="mt-0.5 block text-[11px] font-bold leading-snug text-clay-muted">
-                        {f.desc}
+                        {l[f.descKey]}
                       </span>
                     </span>
                   </span>
@@ -327,10 +332,10 @@ export default function HomePage() {
                 if (f.href) {
                   return (
                     <Link
-                      key={f.title}
+                      key={f.titleKey}
                       href={f.href}
                       className="group"
-                      data-testid={`home-feature-${f.title.toLowerCase().replace(/\s+/g, "-")}`}
+                      data-testid={`home-feature-${f.titleKey}`}
                     >
                       {card}
                     </Link>
@@ -338,13 +343,14 @@ export default function HomePage() {
                 }
                 return (
                   <button
-                    key={f.title}
+                    key={f.titleKey}
                     type="button"
                     onClick={() =>
-                      f.prompt && launchChat({ question: f.prompt, mentions: [] })
+                      f.promptKey &&
+                      launchChat({ question: l[f.promptKey], mentions: [] })
                     }
                     className="group"
-                    data-testid={`home-feature-${f.title.toLowerCase().replace(/\s+/g, "-")}`}
+                    data-testid={`home-feature-${f.titleKey}`}
                   >
                     {card}
                   </button>
@@ -423,7 +429,7 @@ export default function HomePage() {
             <div className="flex items-center gap-3">
               <div className="h-5 w-5 animate-spin rounded-full border-[3px] border-clay-primary/30 border-t-clay-primary" />
               <p className="text-sm font-bold text-clay-muted">
-                Menghubungkan ke Eureka…
+                {l.connecting}
               </p>
             </div>
           </motion.div>

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { requireAuth } from "@/lib/assistant/auth";
 import { aiChat, hasAiKey } from "@/lib/ai";
+import { languageFromRequest } from "@/lib/locale";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
     }
 
     const context = TYPE_CONTEXT[type] ?? TYPE_CONTEXT.umum;
+    const isEnglish = languageFromRequest(req) === "English";
 
     const prompt = `Buat strategi bimbingan belajar yang AKURAT dan TERPERINCI untuk misi berikut:
 
@@ -89,7 +91,11 @@ DATA MISI:
 - Tenggat: ${deadline || "tidak ditentukan"}
 ${education ? `- Jenjang/Kelas: ${education}` : ""}
 
-Susun respons HANYA dalam Bahasa Indonesia dengan format:
+${
+  isEnglish
+    ? "Write the response ONLY in English with this format:"
+    : "Susun respons HANYA dalam Bahasa Indonesia dengan format:"
+}
 
 GUIDE (1 paragraf pendek, 2-3 kalimat) — gambaran besar strategi.
 
@@ -100,8 +106,9 @@ STEPS (4-6 langkah konkret, urut):
 Pastikan langkah sesuai jenis misi di atas, angka dan istilah akurat (SNBP/SNBT/UTBK/IPK), dan dapat langsung dijalankan minggu ini.`;
 
     const raw = await aiChat({
-      system:
-        "Kamu adalah mentor belajar (study coach) yang berpengalaman membimbing mahasiswa kejar IPK dan siswa SMA menuju SNBP/SNBT. Jawab akurat, spesifik, dan tidak bertele-tele.",
+      system: isEnglish
+        ? "You are an experienced study coach guiding university students raising their GPA and high school students preparing for SNBP/SNBT. Answer accurately, specifically, and concisely. Write your answer in clear, well-structured English."
+        : "Kamu adalah mentor belajar (study coach) yang berpengalaman membimbing mahasiswa kejar IPK dan siswa SMA menuju SNBP/SNBT. Jawab akurat, spesifik, dan tidak bertele-tele.",
       user: prompt,
       maxTokens: 1200,
       temperature: 0.4,

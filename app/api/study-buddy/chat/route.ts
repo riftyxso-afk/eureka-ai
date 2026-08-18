@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { BuddyCharacter, ChatMessage } from '@/lib/study-buddy/buddyTypes';
 import { BUDDY_TEMPLATES } from '@/lib/study-buddy/buddyTemplates';
 import { requireAuth } from '@/lib/assistant/auth';
+import { languageFromRequest } from '@/lib/locale';
 import { AI_SAFETY_GUARDRAIL } from '@/lib/prompts/safety';
 import { aiChatJson, extractJsonObject, hasAiKey } from '@/lib/ai';
 
@@ -42,13 +43,18 @@ function makeId(): string {
 }
 
 async function generateContextQuestions(
-  character: BuddyCharacter
+  character: BuddyCharacter,
+  language: string
 ): Promise<{ reply: string; questions: BuddyQuestion[] }> {
+  const isEnglish = language === 'English';
   const parsed = await aiChatJson<{ questions?: { q?: unknown; options?: unknown[] }[] }>(
     {
-      system:
-        'Kamu adalah teman belajar yang ramah. Buat pertanyaan untuk mengenal kebutuhan belajar pengguna. Jawab HANYA JSON.',
-      user: `Buat 3 pertanyaan pilihan ganda singkat (bahasa Indonesia) untuk mengenal kebutuhan belajar: (1) target belajar, (2) mata pelajaran favorit/prioritas, (3) tingkat kesulitan yang diinginkan. Tiap pertanyaan 3 opsi.\n\nOutput JSON: {"questions": [{"q": "...", "options": ["A", "B", "C"]}]}`,
+      system: isEnglish
+        ? 'You are a friendly study buddy. Create questions to learn about the user\'s learning needs. Reply ONLY with JSON.'
+        : 'Kamu adalah teman belajar yang ramah. Buat pertanyaan untuk mengenal kebutuhan belajar pengguna. Jawab HANYA JSON.',
+      user: isEnglish
+        ? `Create 3 short multiple-choice questions (in English) to learn about study needs: (1) study goal, (2) favorite/priority subject, (3) desired difficulty level. Each question has 3 options.\n\nOutput JSON: {"questions": [{"q": "...", "options": ["A", "B", "C"]}]}`
+        : `Buat 3 pertanyaan pilihan ganda singkat (bahasa Indonesia) untuk mengenal kebutuhan belajar: (1) target belajar, (2) mata pelajaran favorit/prioritas, (3) tingkat kesulitan yang diinginkan. Tiap pertanyaan 3 opsi.\n\nOutput JSON: {"questions": [{"q": "...", "options": ["A", "B", "C"]}]}`,
       json: true,
       maxTokens: 500,
       temperature: 0.4,
@@ -78,15 +84,20 @@ async function generateContextQuestions(
 }
 
 async function startQuiz(
-  character: BuddyCharacter
+  character: BuddyCharacter,
+  language: string
 ): Promise<{ reply: string; quizId?: string; questions?: BuddyQuestion[] }> {
+  const isEnglish = language === 'English';
   const parsed = await aiChatJson<{
     questions?: { q?: unknown; options?: unknown[]; answer?: unknown }[];
   }>(
     {
-      system:
-        'Kamu adalah pembuat kuis belajar untuk siswa. Buat 5 soal pilihan ganda sederhana yang bisa dijawab dari pelajaran umum. Jawab HANYA JSON.',
-      user: `Buat 5 soal pilihan ganda (bahasa Indonesia) dengan 4 opsi masing-masing dan tandai jawaban benar (indeks 0-3). Variasikan topik (matematika, IPA, bahasa) dan tingkatkan kesulitan bertahap.\n\nOutput JSON: {"questions": [{"q": "...", "options": ["A","B","C","D"], "answer": 0}]}`,
+      system: isEnglish
+        ? 'You are a quiz creator for students. Create 5 simple multiple-choice questions answerable from general lessons. Reply ONLY with JSON.'
+        : 'Kamu adalah pembuat kuis belajar untuk siswa. Buat 5 soal pilihan ganda sederhana yang bisa dijawab dari pelajaran umum. Jawab HANYA JSON.',
+      user: isEnglish
+        ? `Create 5 multiple-choice questions (in English) with 4 options each and mark the correct answer (index 0-3). Vary topics (math, science, language) and increase difficulty gradually.\n\nOutput JSON: {"questions": [{"q": "...", "options": ["A","B","C","D"], "answer": 0}]}`
+        : `Buat 5 soal pilihan ganda (bahasa Indonesia) dengan 4 opsi masing-masing dan tandai jawaban benar (indeks 0-3). Variasikan topik (matematika, IPA, bahasa) dan tingkatkan kesulitan bertahap.\n\nOutput JSON: {"questions": [{"q": "...", "options": ["A","B","C","D"], "answer": 0}]}`,
       json: true,
       maxTokens: 1200,
       temperature: 0.6,
@@ -204,12 +215,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Karakter tidak valid' }, { status: 400 });
     }
 
+    const language = languageFromRequest(req);
+
     // ── Intent: kuis ─────────────────────────────────────────────
     if (intent === 'quiz' && action === 'answer' && quizId && questionId && answer) {
       return NextResponse.json(answerQuiz(quizId, questionId, answer));
     }
     if (intent === 'quiz') {
-      const result = await startQuiz(character);
+      const result = await startQuiz(character, language);
       return NextResponse.json(result);
     }
 
@@ -230,7 +243,7 @@ export async function POST(req: NextRequest) {
               : 'Catat ya! Lanjut pertanyaan berikutnya 👇',
         });
       }
-      const { reply, questions } = await generateContextQuestions(character);
+      const { reply, questions } = await generateContextQuestions(character, language);
       return NextResponse.json({ reply, questions });
     }
 
@@ -255,7 +268,7 @@ Peranmu:
 - Selalu positif, ramah, dan supportive${contextHint}
 
 Gaya bicara:
-- Gunakan bahasa Indonesia yang santai tapi sopan
+- ${language === 'English' ? 'Always speak in relaxed but polite English' : 'Gunakan bahasa Indonesia yang santai tapi sopan'}
 - Gunakan emoji sesekali (tidak berlebihan)
 - Buat jawaban singkat dan mudah dipahami (max 3-4 kalimat)
 - Jika user bertanya tentang materi, berikan penjelasan yang jelas dengan contoh

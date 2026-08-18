@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 import { getUserId, getUserName } from "@/lib/identity";
+import { useI18n } from "@/context/LocaleContext";
+import type { Dictionary } from "@/lib/i18n";
 
 interface FriendEntry {
   id: string;
@@ -47,15 +49,17 @@ function colorIndex(name: string): number {
   return Math.abs(h) % AVATAR_COLORS.length;
 }
 
-const RELATION_LABEL: Record<string, string> = {
-  self: "Kamu",
-  friend: "Teman",
-  incoming: "Menunggu respons kamu",
-  outgoing: "Menunggu diterima",
-  none: "Belum berteman",
+const RELATION_KEYS: Record<string, keyof Dictionary["friends"]> = {
+  self: "relSelf",
+  friend: "relFriend",
+  incoming: "relIncoming",
+  outgoing: "relOutgoing",
+  none: "relNone",
 };
 
 export default function FriendsPage() {
+  const { dict } = useI18n();
+  const l = dict.friends;
   const userId = getUserId();
   const userName = getUserName();
 
@@ -133,17 +137,17 @@ export default function FriendsPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Gagal menambah teman.");
+      if (!res.ok) throw new Error(data.error ?? l.errAdd);
       if (data.relation === "friend") {
-        notify(`${targetName} sekarang temanmu!`);
+        notify(l.nowFriends.replace("{name}", targetName));
       } else {
-        notify(`Permintaan pertemanan dikirim ke ${targetName}`);
+        notify(l.requestSent.replace("{name}", targetName));
       }
       setQuery("");
       setResults([]);
       await loadAll();
     } catch (e) {
-      notify(e instanceof Error ? e.message : "Gagal menambah teman.");
+      notify(e instanceof Error ? e.message : l.errAdd);
     } finally {
       setBusyId(null);
     }
@@ -158,25 +162,27 @@ export default function FriendsPage() {
         body: JSON.stringify({ action, userId, fromId, name: userName }),
       });
       notify(
-        action === "accept" ? `${name} diterima sebagai teman!` : `Permintaan ${name} ditolak.`
+        action === "accept"
+          ? l.accepted.replace("{name}", name)
+          : l.declined.replace("{name}", name)
       );
       await loadAll();
     } catch {
-      notify("Terjadi kesalahan. Coba lagi.");
+      notify(l.errGeneric);
     } finally {
       setBusyId(null);
     }
   };
 
   const removeFriend = async (friendId: string, name: string) => {
-    if (!window.confirm(`Hapus ${name} dari daftar teman?`)) return;
+    if (!window.confirm(l.confirmRemove.replace("{name}", name))) return;
     setBusyId(`del-${friendId}`);
     try {
       await apiFetch(`/api/friends/${friendId}?userId=${userId}`, { method: "DELETE" });
-      notify(`${name} dihapus dari daftar teman.`);
+      notify(l.removed.replace("{name}", name));
       await loadAll();
     } catch {
-      notify("Gagal menghapus teman.");
+      notify(l.errRemove);
     } finally {
       setBusyId(null);
     }
@@ -218,10 +224,10 @@ export default function FriendsPage() {
     <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
       <div className="flex items-center gap-3">
         <Users size={28} className="text-clay-primary" />
-        <h1 className="text-2xl font-extrabold sm:text-3xl">Teman</h1>
+        <h1 className="text-2xl font-extrabold sm:text-3xl">{l.title}</h1>
       </div>
       <p className="mt-2 text-base font-semibold text-clay-muted">
-        Cari teman, kirim undangan, dan belajar bareng
+        {l.desc}
       </p>
 
       {/* Pencarian */}
@@ -234,14 +240,14 @@ export default function FriendsPage() {
           <input
             value={query}
             onChange={(e) => search(e.target.value)}
-            placeholder="Cari nama teman..."
+            placeholder={l.searchPlaceholder}
             className="input-clay w-full !pl-12"
           />
         </div>
 
         {searching && (
           <p className="mt-3 flex items-center gap-2 text-sm font-bold text-clay-muted">
-            <Loader2 size={15} className="animate-spin" /> Mencari...
+            <Loader2 size={15} className="animate-spin" /> {l.searching}
           </p>
         )}
 
@@ -251,10 +257,10 @@ export default function FriendsPage() {
               renderRow(
                 r.id,
                 r.name,
-                RELATION_LABEL[r.relation] ?? "",
+                RELATION_KEYS[r.relation] ? l[RELATION_KEYS[r.relation]] : "",
                 r.relation === "self" ? (
                   <span className="rounded-full bg-clay-beige px-3 py-1 text-xs font-extrabold text-clay-muted">
-                    Kamu
+                    {l.relSelf}
                   </span>
                 ) : r.relation === "none" || r.relation === "incoming" ? (
                   <button
@@ -262,11 +268,11 @@ export default function FriendsPage() {
                     className="btn-clay-primary whitespace-nowrap !min-h-[44px] !px-3 text-xs"
                   >
                     <UserPlus size={14} className="mr-1" />
-                    {r.relation === "incoming" ? "Terima" : "Tambah"}
+                    {r.relation === "incoming" ? l.accept : l.add}
                   </button>
                 ) : (
                   <span className="rounded-full bg-clay-beige px-3 py-1 text-xs font-extrabold text-clay-muted">
-                    ✓ {RELATION_LABEL[r.relation]}
+                    ✓ {RELATION_KEYS[r.relation] ? l[RELATION_KEYS[r.relation]] : ""}
                   </span>
                 ),
                 busyId === `add-${r.name}`
@@ -278,10 +284,9 @@ export default function FriendsPage() {
         {!searching && query.trim().length > 0 && results.length === 0 && (
           <div className="mt-3 rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4">
             <p className="text-sm font-semibold text-clay-muted">
-              Tidak ada pengguna bernama{" "}
-              <b className="text-clay-dark">“{query.trim()}”</b> yang terdaftar.
-              Pastikan temanmu sudah membuat akun Eureka.AI, lalu cari dengan
-              nama atau @username-nya.
+              {l.noUserTitle}{" "}
+              <b className="text-clay-dark">“{query.trim()}”</b>{" "}
+              {l.noUserDesc}
             </p>
           </div>
         )}
@@ -291,28 +296,28 @@ export default function FriendsPage() {
       {incoming.length > 0 && (
         <div className="mt-6">
           <h2 className="mb-3 text-lg font-extrabold text-clay-dark">
-            Permintaan Masuk ({incoming.length})
+            {l.incomingTitle.replace("{n}", String(incoming.length))}
           </h2>
           <ul className="space-y-2">
             {incoming.map((r) =>
               renderRow(
                 r.id,
                 r.name,
-                "Ingin berteman denganmu",
+                l.wantsToBeFriend,
                 <>
                   <button
                     onClick={() => respondRequest("accept", r.id, r.name)}
                     className="btn-clay-primary whitespace-nowrap !min-h-[44px] !px-3 text-xs"
                   >
                     <Check size={14} className="mr-1" />
-                    Terima
+                    {l.accept}
                   </button>
                   <button
                     onClick={() => respondRequest("decline", r.id, r.name)}
                     className="btn-clay-ghost whitespace-nowrap !min-h-[44px] !px-3 text-xs"
                   >
                     <X size={14} className="mr-1" />
-                    Tolak
+                    {l.decline}
                   </button>
                 </>,
                 busyId === `accept-${r.id}` || busyId === `decline-${r.id}`
@@ -326,13 +331,13 @@ export default function FriendsPage() {
       {outgoing.length > 0 && (
         <div className="mt-6">
           <h2 className="mb-3 text-lg font-extrabold text-clay-dark">
-            Menunggu Diterima ({outgoing.length})
+            {l.outgoingTitle.replace("{n}", String(outgoing.length))}
           </h2>
           <ul className="space-y-2">
             {outgoing.map((r) =>
-              renderRow(r.id, r.name, "Permintaan menunggu respons", (
+              renderRow(r.id, r.name, l.requestPending, (
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-700">
-                  ⏳ Menunggu
+                  {l.waiting}
                 </span>
               ))
             )}
@@ -343,11 +348,11 @@ export default function FriendsPage() {
       {/* Daftar teman */}
       <div className="mt-6">
         <h2 className="mb-3 text-lg font-extrabold text-clay-dark">
-          Daftar Teman ({friends.length})
+          {l.friendsTitle.replace("{n}", String(friends.length))}
         </h2>
         {friends.length === 0 ? (
           <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
-            Belum ada teman. Cari dan undang temanmu di atas!
+            {l.emptyFriends}
           </p>
         ) : (
           <ul className="space-y-2">
@@ -355,10 +360,10 @@ export default function FriendsPage() {
               renderRow(
                 f.id,
                 f.name,
-                "Teman",
+                l.relFriend,
                 <button
                   onClick={() => removeFriend(f.id, f.name)}
-                  aria-label={`Hapus ${f.name}`}
+                  aria-label={l.deleteFriend.replace("{name}", f.name)}
                   className="btn-clay-ghost !min-h-[44px] !px-3"
                 >
                   <Trash2 size={15} className="text-clay-muted" />

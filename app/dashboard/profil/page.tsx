@@ -26,6 +26,7 @@ import { getUserId, getUserName, setUserName } from "@/lib/identity";
 import { logoutUser, updateSessionName } from "@/lib/auth";
 import { fileToAvatarDataUrl, getAvatar, setAvatar } from "@/lib/avatar";
 import { PlanBadge } from "@/components/PlanBadge";
+import { useI18n } from "@/context/LocaleContext";
 
 const SCHOOL_KEY = "eureka_school";
 
@@ -40,6 +41,8 @@ function readSchool(): string {
 
 export default function ProfilPage() {
   const { data, update } = useOnboarding();
+  const { dict } = useI18n();
+  const l = dict.profile;
   const userId = getUserId();
   const [form, setForm] = useState({
     name: getUserName(),
@@ -162,12 +165,12 @@ export default function ProfilPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      showToast("Nama tidak boleh kosong!");
+      showToast(l.errNameEmpty);
       return;
     }
     const cleanUsername = form.username.trim().toLowerCase().replace(/^@+/, "");
     if (cleanUsername && !/^[a-z0-9_]{3,20}$/.test(cleanUsername)) {
-      showToast("Username hanya huruf kecil, angka, dan _ (3–20).");
+      showToast(l.errUsername);
       return;
     }
     setUserName(form.name);
@@ -195,17 +198,17 @@ export default function ProfilPage() {
       });
       const payload = await res.json();
       if (!res.ok) {
-        showToast(payload?.error ?? "Gagal menyimpan profil.");
+        showToast(payload?.error ?? l.errSave);
         return;
       }
       if (payload?.user?.userNumber != null) {
         setUserNumber(Number(payload.user.userNumber));
       }
     } catch {
-      showToast("Gagal menyimpan profil.");
+      showToast(l.errSave);
       return;
     }
-    showToast("Profil berhasil disimpan!");
+    showToast(l.saved);
   };
 
   const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,32 +216,32 @@ export default function ProfilPage() {
     e.target.value = "";
     if (!file) return;
     if (file.size > 4 * 1024 * 1024) {
-      showToast("Foto maksimal 4 MB.");
+      showToast(l.errPhotoSize);
       return;
     }
     try {
       const dataUrl = await fileToAvatarDataUrl(file);
       setAvatar(dataUrl);
       setAvatarState(dataUrl);
-      showToast("Foto profil diubah! Simpan untuk mengunci.");
+      showToast(l.photoChanged);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal memuat foto.");
+      showToast(err instanceof Error ? err.message : l.errPhotoLoad);
     }
   };
 
   const removeAvatar = () => {
     setAvatar(null);
     setAvatarState(null);
-    showToast("Foto profil dihapus.");
+    showToast(l.photoRemoved);
   };
 
   const copyRefLink = async () => {
     if (!refStatus?.link) return;
     try {
       await navigator.clipboard.writeText(refStatus.link);
-      showToast("Link referral disalin!");
+      showToast(l.refCopied);
     } catch {
-      showToast("Gagal menyalin. Salin manual dari kotak di bawah.");
+      showToast(l.refCopyFailed);
     }
   };
 
@@ -247,8 +250,8 @@ export default function ProfilPage() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: "Ajak teman belajar di Eureka.AI",
-          text: "Daftar lewat link ini dan dapatkan Premium 30 hari setelah 5 teman bergabung!",
+          title: l.shareTitle,
+          text: l.shareText,
           url: refStatus.link,
         });
       } else {
@@ -260,23 +263,23 @@ export default function ProfilPage() {
   };
 
   const handleLogout = async () => {
-    if (window.confirm("Yakin ingin keluar dari Eureka.AI?")) {
+    if (window.confirm(l.confirmLogout)) {
       await logoutUser();
       window.location.href = "/login";
     }
   };
 
   const statCards = [
-    { icon: TrendingUp, label: "Total XP", value: stats.xp },
-    { icon: BookOpen, label: "Total Catatan", value: stats.totalNotes },
-    { icon: Flame, label: "Streak", value: stats.streak },
+    { icon: TrendingUp, label: l.totalXp, value: stats.xp },
+    { icon: BookOpen, label: l.totalNotes, value: stats.totalNotes },
+    { icon: Flame, label: l.streak, value: stats.streak },
   ];
 
   return (
     <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <h1 className="text-2xl font-extrabold sm:text-3xl">Profil</h1>
+      <h1 className="text-2xl font-extrabold sm:text-3xl">{l.title}</h1>
       <p className="mt-2 text-base font-semibold text-clay-muted">
-        Kelola data diri dan pengaturan akunmu
+        {l.desc}
       </p>
 
       {/* Avatar + info ringkas */}
@@ -286,7 +289,7 @@ export default function ProfilPage() {
             {avatar ? (
               <img
                 src={avatar}
-                alt="Foto profil"
+                alt={l.photoAlt}
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -295,8 +298,8 @@ export default function ProfilPage() {
           </div>
           <button
             onClick={() => avatarInputRef.current?.click()}
-            aria-label="Ubah foto profil"
-            title="Ubah foto profil"
+            aria-label={l.changePhoto}
+            title={l.changePhoto}
             className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-clay-primary text-white shadow-clay-btn transition-all duration-75 active:translate-y-0.5"
           >
             <Camera size={15} />
@@ -314,7 +317,7 @@ export default function ProfilPage() {
             onClick={removeAvatar}
             className="mt-2 flex items-center gap-1 text-xs font-extrabold text-red-500 underline-offset-2 hover:underline"
           >
-            <Trash2 size={12} /> Hapus foto profil
+            <Trash2 size={12} /> {l.removePhoto}
           </button>
         )}
         <p className="mt-4 flex items-center justify-center gap-2 text-2xl font-extrabold text-clay-dark">
@@ -327,13 +330,13 @@ export default function ProfilPage() {
             @{form.username}
             {userNumber != null && (
               <span className="ml-2 rounded-full bg-clay-primary/10 px-3 py-0.5 text-xs">
-                Pengguna ke-{userNumber}
+                {l.userNumber.replace("{n}", String(userNumber))}
               </span>
             )}
           </p>
         )}
         <span className="mt-3 inline-block rounded-clay-full border-2 border-clay-primary bg-clay-primary/10 px-5 py-1.5 text-sm font-extrabold text-clay-primary">
-          Level {stats.level} · PELAJAR KONSISTEN
+          Level {stats.level} · {l.levelTitle}
         </span>
       </div>
 
@@ -357,22 +360,20 @@ export default function ProfilPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
               <Gift size={20} className="text-clay-primary" />
-              Program Referral
+              {l.referralProgram}
             </h2>
             {refStatus.rewarded ? (
               <span className="flex items-center gap-1.5 rounded-clay-full bg-clay-success/15 px-4 py-1.5 text-xs font-extrabold text-clay-success">
-                <PartyPopper size={14} /> Reward Premium sudah kamu dapatkan!
+                <PartyPopper size={14} /> {l.rewardClaimed}
               </span>
             ) : (
               <span className="rounded-clay-full bg-clay-primary/10 px-4 py-1.5 text-xs font-extrabold text-clay-primary">
-                Ajak {refStatus.goal} teman → Premium {refStatus.goal === 5 ? "30" : ""} hari
+                {l.inviteGoal.replace("{n}", String(refStatus.goal))}
               </span>
             )}
           </div>
           <p className="mt-3 text-sm font-semibold text-clay-muted">
-            Bagikan link kamu. Setiap teman yang benar-benar mendaftar lewat
-            link ini dihitung sebagai rujukan — dapatkan Premium 30 hari
-            setelah {refStatus.goal} rujukan valid (sekali pakai).
+            {l.referralDesc.replace("{n}", String(refStatus.goal))}
           </p>
 
           <div className="mt-4 flex items-center gap-2">
@@ -381,16 +382,16 @@ export default function ProfilPage() {
             </div>
             <button
               onClick={copyRefLink}
-              aria-label="Salin link referral"
-              title="Salin link referral"
+              aria-label={l.copyRefLink}
+              title={l.copyRefLink}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md border-2 border-clay-primary bg-clay-primary text-white transition-all duration-75 active:translate-y-0.5"
             >
               <Copy size={17} />
             </button>
             <button
               onClick={shareRefLink}
-              aria-label="Bagikan link referral"
-              title="Bagikan link referral"
+              aria-label={l.shareRefLink}
+              title={l.shareRefLink}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md border-2 border-clay-primary bg-clay-primary text-white transition-all duration-75 active:translate-y-0.5"
             >
               <Share2 size={17} />
@@ -400,12 +401,17 @@ export default function ProfilPage() {
           <div className="mt-5">
             <div className="flex items-center justify-between text-xs font-extrabold text-clay-muted">
               <span>
-                Rujukan valid: {refStatus.count}/{refStatus.goal}
+                {l.validRefs
+                  .replace("{count}", String(refStatus.count))
+                  .replace("{goal}", String(refStatus.goal))}
               </span>
               <span>
                 {refStatus.count >= refStatus.goal
-                  ? "Siap! Cek status premium kamu"
-                  : `Kurang ${Math.max(refStatus.goal - refStatus.count, 0)} lagi`}
+                  ? l.readyCheck
+                  : l.needMore.replace(
+                      "{n}",
+                      String(Math.max(refStatus.goal - refStatus.count, 0))
+                    )}
               </span>
             </div>
             <div className="mt-2 h-3 w-full overflow-hidden rounded-clay-full bg-clay-shadow/25">
@@ -425,25 +431,25 @@ export default function ProfilPage() {
 
       {/* Form edit profil */}
       <CardClay className="mt-6">
-        <h2 className="text-lg font-extrabold text-clay-dark">Edit Profil</h2>
+        <h2 className="text-lg font-extrabold text-clay-dark">{l.editProfile}</h2>
 
         <div className="mt-5 space-y-5">
           <div>
             <label className="mb-2 flex items-center gap-1.5 text-sm font-extrabold text-clay-dark">
               <User size={15} className="text-clay-primary" />
-              NAMA LENGKAP
+              {l.fullName}
             </label>
             <InputClay
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Nama lengkap"
+              placeholder={l.namePlaceholder}
             />
           </div>
 
           <div>
             <label className="mb-2 flex items-center gap-1.5 text-sm font-extrabold text-clay-dark">
               <User size={15} className="text-clay-primary" />
-              @USERNAME
+              {l.username}
             </label>
             <InputClay
               value={form.username}
@@ -456,19 +462,19 @@ export default function ProfilPage() {
                     .replace(/[^a-z0-9_]/g, ""),
                 })
               }
-              placeholder="username (dipakai teman untuk mencari kamu)"
+              placeholder={l.usernamePlaceholder}
             />
           </div>
 
           <div>
             <label className="mb-2 flex items-center gap-1.5 text-sm font-extrabold text-clay-dark">
               <Mail size={15} className="text-clay-primary" />
-              EMAIL
+              {l.email}
             </label>
             <InputClay
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="email@contoh.com"
+              placeholder={l.emailPlaceholder}
               disabled
             />
           </div>
@@ -476,19 +482,19 @@ export default function ProfilPage() {
           <div>
             <label className="mb-2 flex items-center gap-1.5 text-sm font-extrabold text-clay-dark">
               <School size={15} className="text-clay-primary" />
-              SEKOLAH
+              {l.school}
             </label>
             <InputClay
               value={form.school}
               onChange={(e) => setForm({ ...form, school: e.target.value })}
-              placeholder="Nama sekolah"
+              placeholder={l.schoolPlaceholder}
             />
           </div>
 
           <div>
             <label className="mb-2 flex items-center gap-1.5 text-sm font-extrabold text-clay-dark">
               <GraduationCap size={15} className="text-clay-primary" />
-              KELAS
+              {l.grade}
             </label>
             <div className="relative">
               <select
@@ -498,7 +504,7 @@ export default function ProfilPage() {
               >
                 {["", "10 SMA", "11 SMA", "12 SMA", "Mahasiswa"].map((g) => (
                   <option key={g} value={g}>
-                    {g || "Pilih kelas..."}
+                    {g || l.chooseGrade}
                   </option>
                 ))}
               </select>
@@ -510,7 +516,7 @@ export default function ProfilPage() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
             <ButtonClay onClick={handleSave} className="sm:flex-1">
-              Simpan Perubahan
+              {l.saveChanges}
             </ButtonClay>
             <ButtonClay
               variant="secondary"
@@ -518,7 +524,7 @@ export default function ProfilPage() {
               className="border-red-300 text-red-500 sm:flex-1"
             >
               <LogOut size={18} className="mr-2" />
-              Keluar
+              {l.logout}
             </ButtonClay>
           </div>
         </div>

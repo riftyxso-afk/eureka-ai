@@ -41,21 +41,26 @@ interface ScrapedSource {
   content: string;
 }
 
-/** Query pencarian satu bab (AI): pendek & spesifik. */
+/** Query pencarian satu bab (AI): pendek & spesifik, mengikuti bahasa catatan. */
 async function generateSearchQuery(
   noteTitle: string,
   chapterTitle: string,
-  chapterPreview: string
+  chapterPreview: string,
+  language: string
 ): Promise<string> {
+  const isEnglish = language === "English";
   const parsed = await aiChatJson<{ query?: unknown }>(
     {
-      system:
-        "Kamu adalah generator kata kunci pencarian yang ahli. Jawab HANYA JSON object valid, tanpa markdown atau teks lain.",
+      system: isEnglish
+        ? "You are an expert search keyword generator. Reply ONLY with a valid JSON object, no markdown or other text."
+        : "Kamu adalah generator kata kunci pencarian yang ahli. Jawab HANYA JSON object valid, tanpa markdown atau teks lain.",
       user: `Catatan belajar: "${noteTitle}"
 Bab: "${chapterTitle}"
 Isi bab (cuplikan): ${chapterPreview.slice(0, 600)}
 
-Buat 1 search query pendek dan spesifik (maksimal 12 kata, bahasa Indonesia) untuk mencari di web:
+Buat 1 search query pendek dan spesifik (maksimal 12 kata, ${
+        isEnglish ? "in English" : "bahasa Indonesia"
+      }) untuk mencari di web:
 1. Fakta/angka/tanggal/nama yang bisa memvalidasi isi bab
 2. Informasi tambahan untuk memperkaya penjelasan
 3. Contoh nyata atau ilustrasi praktis
@@ -115,12 +120,18 @@ interface EnrichmentData {
 /** AI mengekstrak fakta validasi + info tambahan + contoh dari hasil pencarian. */
 async function extractEnrichmentData(
   chapterContent: string,
-  searchResults: ScrapedSource[]
+  searchResults: ScrapedSource[],
+  language: string
 ): Promise<EnrichmentData> {
+  const langRule =
+    language === "English"
+      ? "Write all facts, points, and examples in English."
+      : "Tulis semua fakta, poin, dan contoh dalam bahasa Indonesia.";
   const parsed = await aiChatJson<EnrichmentData>(
     {
-      system:
-        "Kamu adalah pemeriksa fakta (fact-checker) yang teliti. Jawab HANYA JSON object valid, tanpa markdown atau teks lain.",
+      system: `${language === "English"
+        ? "You are a meticulous fact-checker. Reply ONLY with a valid JSON object, no markdown or other text."
+        : "Kamu adalah pemeriksa fakta (fact-checker) yang teliti. Jawab HANYA JSON object valid, tanpa markdown atau teks lain."}`,
       user: `Catatan belajar (cuplikan bab):
 ${chapterContent.slice(0, 4000)}
 
@@ -134,6 +145,7 @@ Ekstrak dari hasil pencarian:
 2. "enrichmentPoints": 1-3 informasi tambahan yang memperkaya penjelasan bab (JANGAN mengulang isi bab).
 3. "examples": 1-2 contoh nyata atau ilustrasi praktis yang bisa disisipkan ke bab.
 Jangan menulis fakta yang tidak didukung oleh sumber di atas.
+${langRule}
 
 Output HANYA JSON object, tanpa teks lain:
 {"validationFacts": ["..."], "enrichmentPoints": ["..."], "examples": ["..."]}`,
@@ -164,8 +176,13 @@ Output HANYA JSON object, tanpa teks lain:
 async function enrichChapterContent(
   chapter: NoteChapter,
   data: EnrichmentData,
-  sources: SearchSource[]
+  sources: SearchSource[],
+  language: string
 ): Promise<string> {
+  const langRule =
+    language === "English"
+      ? "Write the enriched chapter in English, matching the note's language."
+      : "Tulis bab hasil enrichment dalam bahasa Indonesia, mengikuti bahasa catatan.";
   const parsed = await aiChatJson<{ content?: unknown }>(
     {
       system:
@@ -188,6 +205,7 @@ TUGAS:
 3. Pertahankan struktur heading (###), bullet, dan bagian lain yang sudah ada — JANGAN merombak isi selain menambah.
 4. Jangan membuat bagian referensi di bab ini (dibuat otomatis di akhir catatan).
 5. Jangan menambah fakta yang tidak ada di data di atas.
+${langRule}
 
 Output HANYA JSON object, tanpa teks lain:
 {"content": "<bab lengkap dengan enrichment>"}`,
@@ -216,7 +234,9 @@ Output HANYA JSON object, tanpa teks lain:
 export async function enrichChaptersWithWebSearch(
   noteTitle: string,
   chapters: NoteChapter[],
-  onProgress?: (done: number, total: number, label: string) => void
+  onProgress?: (done: number, total: number, label: string) => void,
+  /** Bahasa catatan ("Bahasa Indonesia" | "English") — mengikuti prefs user. */
+  language: string = "Bahasa Indonesia"
 ): Promise<WebSearchEnrichmentResult> {
   if (!isWebSearchEnrichmentAvailable()) {
     return { chapters, references: [], totalSearches: 0 };
@@ -251,7 +271,8 @@ export async function enrichChaptersWithWebSearch(
       const query = await generateSearchQuery(
         noteTitle,
         chapter.title,
-        chapter.content.slice(0, 500)
+        chapter.content.slice(0, 500),
+        language
       );
       const results = await searchAndScrape(query, allowed);
       if (results.length === 0) {
@@ -260,7 +281,7 @@ export async function enrichChaptersWithWebSearch(
       }
       totalSearches += results.length;
 
-      const data = await extractEnrichmentData(chapter.content, results);
+      const data = await extractEnrichmentData(chapter.content, results, language);
       const hasData =
         data.validationFacts.length > 0 ||
         data.enrichmentPoints.length > 0 ||
@@ -276,7 +297,7 @@ export async function enrichChaptersWithWebSearch(
         snippet: r.content.trim().replace(/\s+/g, " ").slice(0, 240),
       }));
 
-      const newContent = await enrichChapterContent(chapter, data, sources);
+      const newContent = await enrichChapterContent(chapter, data, sources, language);
       enriched.push({ ...chapter, content: newContent, sources });
       references.push(...sources);
     } catch (e) {

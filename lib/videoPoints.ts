@@ -83,9 +83,11 @@ export type VideoPointsError = { error: "invalid-url" | "no-transcript" | "ai-fa
 /**
  * Generate poin penting video dari transkrip (cache dulu, generate hanya saat
  * miss). Server-only: scrape transkrip & panggilan AI lewat dynamic import.
+ * `language` mengikuti locale user ("Bahasa Indonesia" | "English").
  */
 export async function getVideoPoints(
-  url: string
+  url: string,
+  language: string = "Bahasa Indonesia"
 ): Promise<VideoPointsResult | VideoPointsError> {
   const { extractYoutubeVideoId } = await import("@/lib/assistant/videoUrl");
   const videoId = extractYoutubeVideoId(url);
@@ -106,11 +108,15 @@ export async function getVideoPoints(
     return { error: "no-transcript" };
   }
 
+  const isEnglish = language === "English";
   const transcript = extracted.text.slice(0, 20000);
   const raw = await aiChat({
-    system:
-      "Kamu meringkas video YouTube menjadi poin-poin belajar untuk siswa. Jawab HANYA daftar poin — satu poin per baris diawali '- '. Gunakan bahasa Indonesia yang santai tapi jelas. Tanpa pendahuluan dan tanpa penutup.",
-    user: `Buat 5-8 poin penting dari transkrip video berikut:\n\n${transcript}`,
+    system: isEnglish
+      ? "You summarize YouTube videos into study points for students. Reply ONLY with a bullet list — one point per line starting with '- '. Use clear, friendly English. No introduction and no closing."
+      : "Kamu meringkas video YouTube menjadi poin-poin belajar untuk siswa. Jawab HANYA daftar poin — satu poin per baris diawali '- '. Gunakan bahasa Indonesia yang santai tapi jelas. Tanpa pendahuluan dan tanpa penutup.",
+    user: isEnglish
+      ? `Create 5-8 key points from the following video transcript:\n\n${transcript}`
+      : `Buat 5-8 poin penting dari transkrip video berikut:\n\n${transcript}`,
     maxTokens: 600,
     temperature: 0.4,
   });

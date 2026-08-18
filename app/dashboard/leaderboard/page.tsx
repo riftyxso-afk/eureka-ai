@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Crown, Medal, Trophy, Users } from "lucide-react";
 import { getUserId, getUserName } from "@/lib/identity";
 import { apiFetch } from "@/lib/apiClient";
+import { useI18n } from "@/context/LocaleContext";
 
 interface LeaderboardEntry {
   id: string;
@@ -27,6 +28,8 @@ function formatXP(xp: number): string {
 type ViewMode = "all" | "friends";
 
 export default function LeaderboardPage() {
+  const { dict } = useI18n();
+  const l = dict.leaderboard;
   const [view, setView] = useState<ViewMode>("all");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [currentUser, setCurrentUser] = useState<LeaderboardEntry | null>(null);
@@ -65,13 +68,13 @@ export default function LeaderboardPage() {
         <div className="flex items-center gap-3">
           <Trophy size={24} className="text-clay-primary sm:hidden" />
           <Trophy size={28} className="hidden text-clay-primary sm:block" />
-          <h1 className="text-2xl font-extrabold sm:text-3xl">Leaderboard</h1>
+          <h1 className="text-2xl font-extrabold sm:text-3xl">{l.title}</h1>
         </div>
         <div className="flex gap-2">
           {(
             [
-              { key: "all" as ViewMode, label: "Semua" },
-              { key: "friends" as ViewMode, label: "Teman" },
+              { key: "all" as ViewMode, label: l.all },
+              { key: "friends" as ViewMode, label: l.friends },
             ]
           ).map((mode) => (
             <button
@@ -90,7 +93,7 @@ export default function LeaderboardPage() {
         </div>
       </div>
       <p className="mt-2 text-base font-semibold text-clay-muted">
-        Peringkatmu di antara teman-teman belajar (XP nyata)
+        {l.desc}
       </p>
 
       {/* Peringkat user saat ini */}
@@ -105,7 +108,7 @@ export default function LeaderboardPage() {
                 <p className="truncate text-base font-extrabold text-clay-dark">
                   {currentUser.name}
                   <span className="ml-2 text-sm font-extrabold text-clay-muted">
-                    (Kamu)
+                    {l.you}
                   </span>
                 </p>
                 <p className="text-sm font-bold text-clay-muted">
@@ -124,11 +127,11 @@ export default function LeaderboardPage() {
       <div className="mt-6 flex flex-col gap-3">
         {loading ? (
           <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
-            Memuat leaderboard...
+            {l.loading}
           </p>
         ) : displayEntries.length === 0 ? (
           <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
-            Belum ada teman di leaderboard. Tambahkan teman di tab Teman!
+            {l.empty}
           </p>
         ) : (
           displayEntries.map((entry) => {
@@ -154,7 +157,7 @@ export default function LeaderboardPage() {
                     {entry.name}
                     {isMe && (
                       <span className="ml-2 text-xs font-extrabold text-clay-primary">
-                        (Kamu)
+                        {l.you}
                       </span>
                     )}
                   </p>

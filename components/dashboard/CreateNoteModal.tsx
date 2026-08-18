@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiFetch, apiEventSource } from "@/lib/apiClient";
+import { apiFetch, apiEventSource, getClientLocale } from "@/lib/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -273,7 +273,10 @@ export const CreateNoteModal = ({
     "lengkap"
   );
   const [gayaPenulisan, setGayaPenulisan] = useState("Ramah & Santai");
-  const [bahasa, setBahasa] = useState("Bahasa Indonesia");
+  // Default bahasa mengikuti locale aktif (id/en) — user tetap bisa ganti.
+  const [bahasa, setBahasa] = useState(
+    getClientLocale() === "en" ? "English" : "Bahasa Indonesia"
+  );
   const [chapterCount, setChapterCount] = useState(4);
   const [noteType, setNoteType] = useState("rangkuman");
   const [processing, setProcessing] = useState(false);
@@ -382,7 +385,7 @@ export const CreateNoteModal = ({
     setStudyMode("standar");
     setGenerationMode("lengkap");
     setGayaPenulisan("Ramah & Santai");
-    setBahasa("Bahasa Indonesia");
+    setBahasa(getClientLocale() === "en" ? "English" : "Bahasa Indonesia");
     setChapterCount(4);
     setNoteType("rangkuman");
     setError(null);
