@@ -30,7 +30,7 @@ function resolveLocale(req: NextRequest): Locale {
   return DEFAULT_LOCALE;
 }
 
-const MAINTENANCE_MODE = true; // Ubah ke false untuk menonaktifkan mode pemeliharaan
+const MAINTENANCE_MODE = false; // Ubah ke true untuk menonaktifkan mode pemeliharaan
 
 export function middleware(req: NextRequest) {
   const { pathname, search, hash } = req.nextUrl;
