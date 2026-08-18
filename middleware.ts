@@ -30,8 +30,31 @@ function resolveLocale(req: NextRequest): Locale {
   return DEFAULT_LOCALE;
 }
 
+const MAINTENANCE_MODE = true; // Ubah ke false untuk menonaktifkan mode pemeliharaan
+
 export function middleware(req: NextRequest) {
   const { pathname, search, hash } = req.nextUrl;
+
+  // ── MODE PEMELIHARAAN ──
+  // Block semua halaman. Hanya izinkan:
+  //  - /maintenance (halaman pemeliharaan itu sendiri)
+  //  - /_next (aset internal Next.js — CSS, JS, font, gambar)
+  //  - file statis yang mengandung titik (favicon.ico, robots.txt, dll)
+  //  - /api (backend VPS — tetap hidup supaya bisa dimatikan manual di sana)
+  if (MAINTENANCE_MODE) {
+    const isMaintenancePage =
+      pathname === "/maintenance" || pathname === "/en/maintenance" || pathname === "/id/maintenance";
+    const isNextInternal = pathname.startsWith("/_next");
+    const isStaticFile = pathname.includes("."); // favicon.ico, robots.txt, banner.png, dll
+    const isApi = pathname.startsWith("/api");
+
+    if (!isMaintenancePage && !isNextInternal && !isStaticFile && !isApi) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/maintenance";
+      return NextResponse.redirect(url, 302);
+    }
+  }
+
   const match = pathname.match(LOCALE_PREFIX_RE);
 
   // ── Path sudah ber-prefix locale: rewrite ke path asli + header ──
