@@ -121,8 +121,9 @@ export default function AuthCallbackPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-clay-beige px-4">
       <img
-        src="/logo.png"
+        src="/holo-sticker.gif"
         alt="Logo Eureka.AI"
+        style={{ mixBlendMode: "screen" }}
         className="h-14 w-14 object-contain"
       />
       <div className="mt-6 flex items-center gap-3 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-6 py-4 shadow-clay-sm">

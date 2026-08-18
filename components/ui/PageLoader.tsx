@@ -51,8 +51,9 @@ export function PageLoader({ title }: PageLoaderProps) {
           <div className="absolute inset-0 animate-ping rounded-full bg-clay-primary/20" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo.png"
+            src="/holo-sticker.gif"
             alt="Logo Eureka.AI"
+            style={{ mixBlendMode: "screen" }}
             className="relative h-16 w-16 object-contain"
           />
         </div>

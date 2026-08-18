@@ -25,9 +25,10 @@ export default function ChatSkeleton() {
       <div className="flex items-start gap-2.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo.png"
+          src="/holo-sticker.gif"
           alt=""
           aria-hidden
+          style={{ mixBlendMode: "screen" }}
           className="mt-1 h-8 w-8 shrink-0 object-contain"
         />
         <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-white px-4 py-3 shadow-clay-sm">
@@ -49,9 +50,10 @@ export default function ChatSkeleton() {
       <div className="flex items-start gap-2.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo.png"
+          src="/holo-sticker.gif"
           alt=""
           aria-hidden
+          style={{ mixBlendMode: "screen" }}
           className="mt-1 h-8 w-8 shrink-0 object-contain"
         />
         <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-white px-4 py-3 shadow-clay-sm">
