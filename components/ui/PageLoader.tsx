@@ -45,7 +45,7 @@ export function PageLoader({ title }: PageLoaderProps) {
         initial={{ opacity: 0, y: 14, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: "spring", stiffness: 220, damping: 24 }}
-        className="w-full max-w-sm rounded-clay border-3 border-clay-borderLight bg-white p-8 text-center shadow-clay-lg"
+        className="w-full max-w-sm rounded-clay border-3 border-clay-borderLight bg-clay-cream p-8 text-center shadow-clay-lg"
       >
         <div className="relative mx-auto h-28 w-28">
           {/* eslint-disable-next-line @next/next/no-img-element */}

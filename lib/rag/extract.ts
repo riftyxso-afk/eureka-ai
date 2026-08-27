@@ -39,6 +39,36 @@ async function fetchYoutubeTitle(videoId: string): Promise<string | null> {
   }
 }
 
+/** Download audio YouTube sebagai Buffer untuk Whisper fallback (pakai @distube/ytdl-core, fallback ke ytdl-core). */
+async function downloadYoutubeAudio(videoId: string): Promise<Buffer> {
+  let ytdl: any;
+  try {
+    ytdl = (await import("@distube/ytdl-core")).default;
+  } catch {
+    ytdl = (await import("ytdl-core")).default;
+  }
+  const url = `https://www.youtube.com/watch?v=${videoId}`;
+  if (!ytdl.validateURL(url)) throw new Error("Link YouTube tidak valid untuk download audio.");
+  const info = await ytdl.getInfo(videoId);
+  const format = ytdl.chooseFormat(info.formats, { filter: "audioonly", quality: "highestaudio" });
+  if (!format) throw new Error("Tidak ada format audio untuk video ini.");
+  const stream = ytdl.downloadFromInfo(info, { filter: "audioonly", quality: "highestaudio" });
+  const chunks: Buffer[] = [];
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Download audio timeout (30s)")), 30000);
+    stream.on("data", (c: Buffer) => chunks.push(c));
+    stream.on("end", () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    stream.on("error", (e: Error) => {
+      clearTimeout(timeout);
+      reject(e);
+    });
+  });
+  return Buffer.concat(chunks);
+}
+
 export interface TranscriptSegment {
   text: string;
   offsetMs: number;
@@ -71,18 +101,42 @@ export async function scrapeYoutubeTranscript(url: string): Promise<ExtractedCon
 
   const { YoutubeTranscript } = await import("youtube-transcript");
 
-  let transcript;
-  try {
-    transcript = await YoutubeTranscript.fetchTranscript(videoId, { lang: "id" });
-  } catch {
-    // Video tanpa subtitle bahasa Indonesia → coba bahasa default
+  let transcript: Awaited<ReturnType<typeof YoutubeTranscript.fetchTranscript>> | null = null;
+  let lastErr: unknown = null;
+  // Coba beberapa bahasa — di HP kadang muncul auto-caption "id" tapi di scraper butuh fallback "en"/default
+  const langs: (string | undefined)[] = ["id", "en", "en-US", undefined];
+  for (const lang of langs) {
     try {
-      transcript = await YoutubeTranscript.fetchTranscript(videoId);
-    } catch {
-      throw new Error(
-        "Video ini tidak memiliki subtitle yang bisa diambil. Coba video lain."
-      );
+      transcript = lang
+        ? await YoutubeTranscript.fetchTranscript(videoId, { lang })
+        : await YoutubeTranscript.fetchTranscript(videoId);
+      if (transcript && transcript.length > 0) break;
+    } catch (e) {
+      lastErr = e;
     }
+  }
+  if (!transcript || transcript.length === 0) {
+    // Fallback: tidak ada subtitle → coba transkripsi audio via Whisper (download audio YouTube)
+    if (isOpenAICompatible()) {
+      try {
+        console.info(`[extract] No transcript for ${videoId}, fallback to Whisper audio...`);
+        const audioBuffer = await downloadYoutubeAudio(videoId);
+        // Batasi 25MB (limit Whisper)
+        if (audioBuffer.length > 25 * 1024 * 1024) {
+          throw new Error("Audio video terlalu besar untuk ditranskripsi (>25MB). Coba video lebih pendek.");
+        }
+        const transcribed = await transcribeAudioVideo(audioBuffer, `${videoId}.mp3`);
+        const title = (await fetchYoutubeTitle(videoId)) ?? `Video YouTube (${videoId})`;
+        return { text: transcribed.text, title, sourceUrl: `https://www.youtube.com/watch?v=${videoId}` };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn(`[extract] Whisper fallback gagal untuk ${videoId}:`, msg);
+        // Jatuh ke error asli di bawah
+      }
+    }
+    throw new Error(
+      "Video ini tidak memiliki subtitle yang bisa diambil. Coba video lain, atau pakai sumber Dokumen/Web. Di HP kadang auto-caption muncul tapi di PC/scraper tidak terbaca — itu normal untuk Shorts/video tanpa CC manual."
+    );
   }
 
   const cleaned = transcript

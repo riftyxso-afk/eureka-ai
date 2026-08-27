@@ -60,7 +60,7 @@ export const NoteContent = forwardRef<HTMLDivElement, NoteContentProps>(
       <div
         ref={ref}
         id={`chapter-${chapter.id}`}
-        className="scroll-mt-28 min-w-0 max-w-full overflow-hidden rounded-clay bg-white p-5 shadow-clay-sm sm:p-6"
+        className="scroll-mt-28 min-w-0 max-w-full overflow-hidden rounded-clay bg-clay-cream p-5 shadow-clay-sm sm:p-6"
       >
         <div className="mb-4 border-b-2 border-clay-shadow/20 pb-4">
           {/* Mobile: judul paling atas (nomor bab di samping kiri), lalu tombol aksi di bawahnya. */}

@@ -287,7 +287,7 @@ export function PdfWorkflowModal({
                       ? { duration: 1.8, repeat: Infinity, ease: "easeInOut" }
                       : {}
                   }
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-clay-lg bg-white/15 text-white shadow-clay-sm"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-clay-lg bg-clay-cream/15 text-white shadow-clay-sm"
                 >
                   <FileText size={24} />
                 </motion.span>
@@ -329,7 +329,7 @@ export function PdfWorkflowModal({
                 className={`mt-4 flex w-full items-center gap-3 rounded-clay-md border-3 p-4 text-left transition-all duration-75 ${
                   includeImages
                     ? "border-clay-primary bg-clay-primary/10 shadow-clay-sm"
-                    : "border-clay-shadow/50 bg-white shadow-clay-sm hover:-translate-y-0.5"
+                    : "border-clay-shadow/50 bg-clay-cream shadow-clay-sm hover:-translate-y-0.5"
                 }`}
               >
                 <span
@@ -355,7 +355,7 @@ export function PdfWorkflowModal({
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 ${
                     includeImages
                       ? "border-clay-primary bg-clay-primary text-white"
-                      : "border-clay-shadow/40 bg-white text-transparent"
+                      : "border-clay-shadow/40 bg-clay-cream text-transparent"
                   }`}
                 >
                   <Check size={14} />
@@ -402,7 +402,7 @@ export function PdfWorkflowModal({
                           ? "border-emerald-300 bg-emerald-50"
                           : state === "active"
                             ? "border-clay-primary bg-clay-primary/10"
-                            : "border-clay-shadow/25 bg-white/60 opacity-60"
+                            : "border-clay-shadow/25 bg-clay-cream/60 opacity-60"
                       }`}
                     >
                       <span

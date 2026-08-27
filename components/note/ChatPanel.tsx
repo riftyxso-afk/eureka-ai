@@ -272,7 +272,7 @@ export default function ChatPanel({
         className="max-h-[280px] sm:max-h-[320px] space-y-2.5 sm:space-y-3 overflow-y-auto pr-1 -mr-1"
       >
         {messages.length === 0 ? (
-          <p className="rounded-xl sm:rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4 sm:p-5 text-center text-xs sm:text-sm font-semibold text-clay-muted">
+          <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-4 sm:p-5 text-center text-xs sm:text-sm font-semibold text-clay-muted">
             Belum ada diskusi. Mulai chat untuk belajar bareng!
           </p>
         ) : (
@@ -301,7 +301,7 @@ export default function ChatPanel({
                     <span className="shrink-0">{formatTime(m.createdAt)}</span>
                   </div>
                   {parent && (
-                    <div className="mb-1 rounded-lg sm:rounded-xl border-l-4 border-clay-primary/40 bg-white/70 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold text-clay-muted">
+                    <div className="mb-1 rounded-lg sm:rounded-xl border-l-4 border-clay-primary/40 bg-clay-cream/70 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold text-clay-muted">
                       <span className="font-extrabold">{parent.senderName}:</span>{" "}
                       {parent.content.slice(0, 40)}
                       {parent.content.length > 40 ? "..." : ""}
@@ -320,7 +320,7 @@ export default function ChatPanel({
                           key={i}
                           className={
                             mine
-                              ? "rounded-md bg-white/20 px-1 font-extrabold text-white"
+                              ? "rounded-md bg-clay-cream/20 px-1 font-extrabold text-white"
                               : "rounded-md bg-clay-primary/15 px-1 font-extrabold text-clay-primary"
                           }
                         >
@@ -350,7 +350,7 @@ export default function ChatPanel({
 
       {/* Reply bar */}
       {replyTo && (
-        <div className="mt-3 flex items-center justify-between rounded-xl border-2 border-clay-shadow/40 bg-white/70 px-2.5 sm:px-3 py-2">
+        <div className="mt-3 flex items-center justify-between rounded-xl border-2 border-clay-shadow/40 bg-clay-cream/70 px-2.5 sm:px-3 py-2">
           <span className="truncate text-[11px] sm:text-xs font-semibold text-clay-muted min-w-0 pr-2">
             Membalas <b>{replyTo.senderName}</b>: {replyTo.content.slice(0, 30)}
             {replyTo.content.length > 30 ? "..." : ""}
@@ -368,7 +368,7 @@ export default function ChatPanel({
       {/* Input */}
       <div className="relative mt-3">
         {mentionQuery !== null && mentionCandidates.length > 0 && (
-          <div className="absolute bottom-full left-0 z-10 mb-2 w-full rounded-xl sm:rounded-2xl border-2 border-clay-shadow/40 bg-white p-1.5 sm:p-2 shadow-clay max-h-48 overflow-y-auto">
+          <div className="absolute bottom-full left-0 z-10 mb-2 w-full rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream p-1.5 sm:p-2 shadow-clay max-h-48 overflow-y-auto">
             {mentionCandidates.map((name) => (
               <button
                 key={name}

@@ -193,7 +193,7 @@ export function ImageGenerationOverlay({
           {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={`spark-${i}`}
-              className="pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-white"
+              className="pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-clay-cream"
               style={{
                 top: `${(i * 41 + 13) % 92}%`,
                 left: `${(i * 57 + 9) % 92}%`,
@@ -208,12 +208,12 @@ export function ImageGenerationOverlay({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 10 }}
             transition={{ type: "spring", stiffness: 240, damping: 24 }}
-            className="relative z-10 mx-3 w-full max-w-md overflow-hidden rounded-clay border-3 border-white/15 bg-white/10 text-center shadow-clay-lg backdrop-blur-md sm:mx-4"
+            className="relative z-10 mx-3 w-full max-w-md overflow-hidden rounded-clay border-3 border-white/15 bg-clay-cream/10 text-center shadow-clay-lg backdrop-blur-md sm:mx-4"
           >
             {/* Header */}
             <div className="flex items-center justify-between gap-3 border-b-2 border-white/15 px-4 py-3.5 sm:px-5">
               <div className="flex min-w-0 items-center gap-2">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-white/20 bg-white/10">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-white/20 bg-clay-cream/10">
                   <ImageIcon size={17} className="text-clay-secondary" />
                 </span>
                 <div className="min-w-0 text-left">
@@ -234,7 +234,7 @@ export function ImageGenerationOverlay({
               <button
                 onClick={onClose}
                 aria-label="Tutup"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-white/15 bg-white/10 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-white/15 bg-clay-cream/10 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
               >
                 <X size={16} />
               </button>
@@ -246,7 +246,7 @@ export function ImageGenerationOverlay({
                 <div className="flex flex-col items-center gap-4">
                   {/* Kartu gambar shimmer — kotak melengkung ala dreaming */}
                   <div
-                    className="relative h-52 w-full max-w-xs overflow-hidden rounded-clay-md border-2 border-white/20 bg-white/5 shadow-clay"
+                    className="relative h-52 w-full max-w-xs overflow-hidden rounded-clay-md border-2 border-white/20 bg-clay-cream/5 shadow-clay"
                     style={{ animation: "eureka-img-float 3.5s ease-in-out infinite" }}
                   >
                     {/* Shimmer bergerak */}
@@ -279,7 +279,7 @@ export function ImageGenerationOverlay({
                         <div
                           key={s}
                           className={`flex items-center gap-2.5 rounded-clay-full px-3 py-1.5 transition-colors ${
-                            active ? "bg-white/10" : ""
+                            active ? "bg-clay-cream/10" : ""
                           }`}
                         >
                           {done ? (
@@ -342,13 +342,13 @@ export function ImageGenerationOverlay({
                     </a>
                     <button
                       onClick={() => setViewerOpen(true)}
-                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-clay-md border-2 border-white/25 bg-white/10 px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-white/20 sm:flex-none"
+                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-clay-md border-2 border-white/25 bg-clay-cream/10 px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-white/20 sm:flex-none"
                     >
                       <Maximize2 size={15} /> Lihat
                     </button>
                     <button
                       onClick={() => void generate(true)}
-                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-clay-md border-2 border-white/25 bg-white/10 px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-white/20 sm:flex-none"
+                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-clay-md border-2 border-white/25 bg-clay-cream/10 px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-white/20 sm:flex-none"
                     >
                       <RefreshCw size={15} /> Buat Ulang
                     </button>
@@ -362,7 +362,7 @@ export function ImageGenerationOverlay({
               <div className="border-t-2 border-white/15 px-4 py-3 sm:px-5">
                 <button
                   onClick={onClose}
-                  className="w-full min-h-[42px] rounded-clay-md border-2 border-white/20 bg-white/5 py-2 text-sm font-extrabold text-white/85 transition-colors hover:bg-white/15"
+                  className="w-full min-h-[42px] rounded-clay-md border-2 border-white/20 bg-clay-cream/5 py-2 text-sm font-extrabold text-white/85 transition-colors hover:bg-white/15"
                 >
                   {phase === "done" ? "Selesai" : "Tutup"}
                 </button>
@@ -388,7 +388,7 @@ export function ImageGenerationOverlay({
                   <button
                     onClick={() => setViewerOpen(false)}
                     aria-label="Tutup tampilan penuh"
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-clay-cream/10 text-white transition-colors hover:bg-white/20"
                   >
                     <X size={18} />
                   </button>

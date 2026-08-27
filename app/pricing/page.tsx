@@ -450,7 +450,7 @@ export default function PricingPage() {
               >
                 {p.refreshStatus}
               </ButtonClay>
-              <Link href="/home">
+              <Link href="/dashboard">
                 <ButtonClay fullWidth>{p.backHome}</ButtonClay>
               </Link>
               {tier !== "trial" && (
@@ -602,7 +602,7 @@ export default function PricingPage() {
                       }
                     }}
                     placeholder={p.codePlaceholder}
-                    className="w-full rounded-clay-md border-2 border-clay-borderLight bg-white px-3 py-2 text-sm font-bold uppercase text-clay-dark outline-none focus:border-clay-primary"
+                    className="w-full rounded-clay-md border-2 border-clay-borderLight bg-clay-cream px-3 py-2 text-sm font-bold uppercase text-clay-dark outline-none focus:border-clay-primary"
                   />
                   <button
                     onClick={() => void applyCode()}
@@ -628,7 +628,7 @@ export default function PricingPage() {
             </div>
 
             {/* KANAN: benefit */}
-            <div className="rounded-clay-md border-2 border-clay-borderLight bg-white p-6 shadow-clay-sm">
+            <div className="rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-6 shadow-clay-sm">
               <p className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
                 {p.everything} <Crown size={20} className="text-clay-secondary" />
               </p>
@@ -721,7 +721,7 @@ export default function PricingPage() {
           onClick={() => setConfirmCancel(false)}
         >
           <div
-            className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 text-center shadow-2xl"
+            className="relative w-full max-w-md overflow-hidden rounded-3xl bg-clay-cream p-6 text-center shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50">

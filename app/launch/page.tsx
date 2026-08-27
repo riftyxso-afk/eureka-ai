@@ -262,7 +262,7 @@ export default function LaunchPage() {
                 )}
 
                 <div className="flex flex-col justify-center gap-2 pt-1 sm:flex-row">
-                  <Link href="/home">
+                  <Link href="/dashboard">
                     <ButtonClay className="w-full sm:w-auto">{l.mulalBelajar}</ButtonClay>
                   </Link>
                   <Link href="/dashboard">
@@ -278,7 +278,7 @@ export default function LaunchPage() {
 
         <p className="mt-8 text-center text-xs font-semibold text-clay-muted">
           {l.footer} {l.question}{" "}
-          <Link href="/home" className="font-extrabold text-clay-primary underline">
+          <Link href="/dashboard" className="font-extrabold text-clay-primary underline">
             {l.chatLink}
           </Link>
           .

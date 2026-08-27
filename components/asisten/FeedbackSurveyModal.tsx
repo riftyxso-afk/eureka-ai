@@ -148,12 +148,12 @@ export default function FeedbackSurveyModal({
                 rows={3}
                 maxLength={2000}
                 placeholder="Apa yang bisa Eureka perbaiki?"
-                className="w-full resize-none rounded-clay-md border-2 border-clay-borderLight bg-white px-3 py-2.5 text-sm font-semibold text-clay-dark outline-none focus:border-clay-primary placeholder:text-clay-muted"
+                className="w-full resize-none rounded-clay-md border-2 border-clay-borderLight bg-clay-cream px-3 py-2.5 text-sm font-semibold text-clay-dark outline-none focus:border-clay-primary placeholder:text-clay-muted"
               />
             </div>
 
             {error && (
-              <p className="rounded-2xl border-2 border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-600">
+              <p className="rounded-clay-md border-2 border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-600">
                 {error}
               </p>
             )}

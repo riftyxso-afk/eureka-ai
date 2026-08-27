@@ -138,7 +138,7 @@ export function NoteCreateWizardPanel({
   >("rangkuman");
 
   return (
-    <div className="bg-white">
+    <div className="bg-clay-cream">
       {/* Header */}
       <div className="border-b-2 border-clay-borderLight px-4 py-3 sm:px-5">
         <div className="flex items-start justify-between gap-3">
@@ -214,7 +214,7 @@ export function NoteCreateWizardPanel({
                     className={`${cardSelect} ${
                       active
                         ? "border-clay-primary bg-clay-primary/10 shadow-clay-sm"
-                        : "border-clay-shadow/40 bg-white hover:-translate-y-0.5 hover:shadow-clay-sm"
+                        : "border-clay-shadow/40 bg-clay-cream hover:-translate-y-0.5 hover:shadow-clay-sm"
                     }`}
                   >
                     <span
@@ -333,7 +333,7 @@ export function NoteCreateWizardPanel({
                     className={`${cardSelect} ${
                       active
                         ? "border-clay-primary bg-clay-primary/10 shadow-clay-sm"
-                        : "border-clay-shadow/40 bg-white hover:-translate-y-0.5 hover:shadow-clay-sm"
+                        : "border-clay-shadow/40 bg-clay-cream hover:-translate-y-0.5 hover:shadow-clay-sm"
                     }`}
                   >
                     <span
@@ -394,7 +394,7 @@ export function NoteCreateWizardPanel({
                     className={`${cardSelect} ${
                       active
                         ? "border-clay-primary bg-clay-primary/10 shadow-clay-sm"
-                        : "border-clay-shadow/40 bg-white hover:-translate-y-0.5 hover:shadow-clay-sm"
+                        : "border-clay-shadow/40 bg-clay-cream hover:-translate-y-0.5 hover:shadow-clay-sm"
                     }`}
                   >
                     <span
@@ -436,7 +436,7 @@ export function NoteCreateWizardPanel({
         {step > 1 ? (
           <button
             onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3 | 4)}
-            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-4 py-2 text-sm font-extrabold text-clay-muted transition-colors hover:text-clay-dark"
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream px-4 py-2 text-sm font-extrabold text-clay-muted transition-colors hover:text-clay-dark"
           >
             <ArrowLeft size={15} /> Kembali
           </button>

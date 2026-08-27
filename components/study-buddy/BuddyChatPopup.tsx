@@ -272,7 +272,7 @@ export default function BuddyChatPopup({
       initial={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
       animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, x: 20, y: 20 }}
-      className="fixed inset-x-4 bottom-28 z-50 flex max-h-[70dvh] w-auto flex-col overflow-hidden rounded-clay-md border-2 border-clay-shadow/40 bg-white shadow-clay-lg sm:inset-x-auto sm:bottom-32 sm:right-6 sm:left-auto sm:h-[500px] sm:w-96 dark:border-clay-shadow/30 dark:bg-[#221F33]"
+      className="fixed inset-x-4 bottom-28 z-50 flex max-h-[70dvh] w-auto flex-col overflow-hidden rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream shadow-clay-lg sm:inset-x-auto sm:bottom-32 sm:right-6 sm:left-auto sm:h-[500px] sm:w-96 dark:border-clay-shadow/30 dark:bg-[#221F33]"
     >
       {/* Header */}
       <div
@@ -356,7 +356,7 @@ export default function BuddyChatPopup({
                         type="button"
                         disabled={isLoading}
                         onClick={() => void handleAnswer(msg, opt)}
-                        className="flex items-center gap-1 rounded-clay-full border-2 border-clay-shadow/40 bg-white px-2.5 py-1.5 text-[11px] font-extrabold text-clay-dark transition-all duration-75 hover:border-clay-primary hover:text-clay-primary disabled:opacity-50 sm:text-xs dark:bg-[#2B2840] dark:text-white"
+                        className="flex items-center gap-1 rounded-clay-full border-2 border-clay-shadow/40 bg-clay-cream px-2.5 py-1.5 text-[11px] font-extrabold text-clay-dark transition-all duration-75 hover:border-clay-primary hover:text-clay-primary disabled:opacity-50 sm:text-xs dark:bg-[#2B2840] dark:text-white"
                       >
                         <Check size={11} className="text-clay-primary" />
                         {opt}

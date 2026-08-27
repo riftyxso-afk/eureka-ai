@@ -139,7 +139,7 @@ function PremiumSuccessPopupInner() {
               exit={{ scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 200, damping: 22 }}
               data-success-card
-              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
+              className="relative w-full max-w-md overflow-hidden rounded-clay bg-clay-cream shadow-2xl"
             >
               {/* Header gradient emas */}
               <div className="relative bg-gradient-to-br from-clay-primary via-clay-secondary to-amber-500 px-6 pb-8 pt-7 text-center">
@@ -148,7 +148,7 @@ function PremiumSuccessPopupInner() {
                   <PartyPopper className="absolute right-5 top-6 text-white/50" size={18} />
                   <PartyPopper className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/50" size={20} />
                 </div>
-                <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20 ring-4 ring-white/30">
+                <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-clay-cream/20 ring-4 ring-white/30">
                   <Crown size={30} className="text-white" />
                 </div>
                 <h2 className="relative mt-3 flex items-center justify-center gap-2 text-2xl font-extrabold text-white drop-shadow">
@@ -193,7 +193,7 @@ function PremiumSuccessPopupInner() {
               <button
                 onClick={handleClose}
                 aria-label="Tutup"
-                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
+                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-clay-cream/20 text-white transition-colors hover:bg-white/30"
               >
                 <X size={16} strokeWidth={3} />
               </button>

@@ -15,6 +15,9 @@ import {
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
+import CelebrationOverlay, {
+  type CelebrationVariant,
+} from "@/components/CelebrationOverlay";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { emojiToIcon } from "@/lib/emojiIcon";
@@ -35,6 +38,11 @@ export default function MisiPage() {
   const [showNew, setShowNew] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [loadingGuide, setLoadingGuide] = useState<string | null>(null);
+  // Perayaan pencapaian misi (milestone).
+  const [celebration, setCelebration] = useState<CelebrationVariant | null>(
+    null
+  );
+  const [celebrationGrand, setCelebrationGrand] = useState(false);
 
   // Form misi baru
   const [template, setTemplate] = useState<MissionType>("ipk");
@@ -109,9 +117,15 @@ export default function MisiPage() {
   };
 
   const completeMission = (id: string) => {
+    // Intensitas perayaan sadar-konteks: target sudah terpenuhi penuh
+    // → perayaan lebih meriah dibanding ditandai selesai manual.
+    const m = missions.find((x) => x.id === id);
+    const prog = m ? Math.round(missionProgress(m)) : 0;
     updateMission(id, { status: "done" });
     reload();
     notify("Misi selesai — hebat!");
+    setCelebrationGrand(prog >= 100);
+    setCelebration("milestone");
   };
 
   const active = missions.filter((m) => m.status === "active");
@@ -147,7 +161,7 @@ export default function MisiPage() {
                   className={`rounded-clay-md border-3 p-3 text-left transition-all duration-75 min-h-[72px] ${
                     activeTpl
                       ? "border-clay-primary bg-clay-primary/5 shadow-clay-sm"
-                      : "border-clay-shadow/40 bg-white hover:-translate-y-0.5"
+                      : "border-clay-shadow/40 bg-clay-cream hover:-translate-y-0.5"
                   }`}
                 >
                   <span className="flex items-center gap-2">
@@ -399,6 +413,13 @@ export default function MisiPage() {
           </div>
         </div>
       )}
+
+      {/* Perayaan pencapaian misi */}
+      <CelebrationOverlay
+        variant={celebration}
+        grand={celebrationGrand}
+        onDone={() => setCelebration(null)}
+      />
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn">

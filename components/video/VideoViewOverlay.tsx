@@ -265,7 +265,7 @@ export function VideoViewOverlay({
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-5xl overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-white shadow-clay-lg"
+            className="w-full max-w-5xl overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
           >
             {/* Header */}
             <div className="flex items-center justify-between gap-3 border-b-[3px] border-clay-borderLight px-4 py-2.5 sm:px-5">
@@ -333,7 +333,7 @@ export function VideoViewOverlay({
                     )}
 
                     {subtitle.status === "no-subtitle" && (
-                      <div className="rounded-clay-md border-2 border-clay-borderLight bg-white/70 px-4 py-3 text-sm font-bold text-clay-muted">
+                      <div className="rounded-clay-md border-2 border-clay-borderLight bg-clay-cream/70 px-4 py-3 text-sm font-bold text-clay-muted">
                         Video ini tidak memiliki subtitle yang bisa ditampilkan.
                       </div>
                     )}

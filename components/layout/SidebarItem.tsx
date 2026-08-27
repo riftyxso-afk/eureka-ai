@@ -48,7 +48,7 @@ export const SidebarItem = ({
         href={href}
         onClick={onClick}
         title={collapsed ? label : undefined}
-        className={`${itemBase} text-clay-dark hover:bg-clay-beige hover:text-red-500 hover:shadow-[0_4px_0_#D1C4B4]`}
+        className={`${itemBase} text-clay-dark hover:bg-clay-beige hover:text-red-500 hover:shadow-[0_4px_0_rgb(var(--clay-shadow))]`}
       >
         <Icon size={16} />
         {labelNode}
@@ -62,7 +62,7 @@ export const SidebarItem = ({
         href={href}
         onClick={onClick}
         title={collapsed ? label : undefined}
-        className={`${itemBase} border-3 border-clay-borderLight bg-clay-primary text-white shadow-[0_6px_0_#5B21B6] active:translate-y-0.5 active:shadow-[0_4px_0_#5B21B6]`}
+        className={`${itemBase} border-3 border-clay-borderLight bg-clay-primary text-white shadow-[0_6px_0_rgb(var(--clay-btn-shadow))] active:translate-y-0.5 active:shadow-[0_4px_0_rgb(var(--clay-btn-shadow))]`}
       >
         <Icon size={16} />
         {labelNode}
@@ -75,7 +75,7 @@ export const SidebarItem = ({
       href={href}
       onClick={onClick}
       title={collapsed ? label : undefined}
-      className={`${itemBase} text-clay-dark hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4]`}
+      className={`${itemBase} text-clay-dark hover:bg-clay-beige hover:shadow-[0_4px_0_rgb(var(--clay-shadow))]`}
     >
       <Icon size={16} />
       {labelNode}

@@ -144,7 +144,15 @@ export async function streamAssistantChat(
         const payload = trimmed.slice(5).trim();
         if (!payload) continue;
         try {
-          onEvent(JSON.parse(payload) as AssistantStreamEvent);
+          const ev = JSON.parse(payload) as AssistantStreamEvent;
+          onEvent(ev);
+          // Sound saat AI selesai menjawab
+          if (ev.type === "done") {
+            try {
+              const { playCompletionSound } = await import("@/lib/sound/cuelume");
+              playCompletionSound();
+            } catch {}
+          }
         } catch {
           // data malformed — abaikan
         }

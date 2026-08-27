@@ -26,54 +26,57 @@
  * - JUANROUTER_API_KEY      (key router.juan.web.id, awalan sk-…; fallback terakhir)
  * - JUANROUTER_BASE_URL     (default https://router.juan.web.id/v1)
  * - JUANROUTER_MODEL        (default deepseek-v4-flash)
+ * - NINE_ROUTER_API_KEY     (key 9router, awalan sk-…; unified gateway)
+ * - NINE_ROUTER_BASE_URL    (default http://localhost:20128/v1)
+ * - NINE_ROUTER_MODEL       (default relay-combo)
  */
-export type AiProvider = "aimurah" | "openai" | "openagentic";
+export type AiProvider = "aimurah" | "openai" | "openagentic" | "openrouter" | "9router";
 
 /**
  * Kecepatan jawaban AI yang bisa dipilih user di composer (/home & /chat):
- * - "fast"   → Kilat: model ringan dari Juan Router (gemini-3.6-flash,
- *             gemini-3.5-flash, gemini-3.7-flash-low, deepseek-v4-flash,
- *             laguna-s-2.1, mistral-large, gemma-4-31b-it)
- * - "normal" → Seimbang: Juan Router (deepseek-v4-pro, gemini-3.7-flash-high,
- *             grok-4.5, MiniMax-M2.7-highspeed, minimax-m3)
- * - "deep"   → Mendalam: model besar dari Juan Router (gpt-5.6-terra,
- *             gpt-5.6-sol, grok-4.6, qwen3.8-max, kimi-k2.7)
+ * - "fast"   → Kilat: model tercepat/ringan (gemini-3.7-flash-low, deepseek-v4-flash-vision-exp)
+ * - "normal" → Seimbang: model balanced (deepseek-v4-pro, deepseek-v4-pro-0813, gemini-3.7-flash-high, minimax-m3, qwen3.8-max)
+ * - "deep"   → Mendalam: model terpintar (claude-opus-5, gpt-5.6-terra, gpt-5.6-luna, grok-4.6, muse-spark-1.2)
  *
- * Pilihan dikirim dari klien → route chat → aiChat/aiChatStream. Bila satu
- * model error (mis. tidak tersedia / 400 / 404), otomatis coba model
- * berikutnya dalam daftar mode, lalu provider fallback — tidak memutus chat.
+ * Urutan = prioritas (paling pintar/cepat di depan per tier). Bila satu model error (400/404/503),
+ * otomatis coba berikutnya, lalu provider fallback — tidak memutus chat.
  */
 export type AiSpeedMode = "fast" | "normal" | "deep";
 
-/** Daftar model per mode — urut = prioritas (model hidup di depan). */
+/** Daftar model per mode — Juan Router, disesuaikan ON + tambahan premium, urut terpintar di tier mendalam. */
 export const SPEED_MODEL_LISTS: Record<AiSpeedMode, string[]> = {
-  // Kilat — Juan Router
-  fast: [
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3.7-flash-low",
-    "deepseek-v4-flash",
-    "laguna-s-2.1",
-    "mistral-large",
-    "gemma-4-31b-it",
-  ],
-  // Seimbang — Juan Router
+  // Kilat — tercepat, ringan (cocok untuk ringkasan cepat/soal pendek)
+  fast: ["gemini-3.7-flash-low", "deepseek-v4-flash-vision-exp"],
+  // Seimbang — balance kecepatan & kualitas
   normal: [
     "deepseek-v4-pro",
+    "deepseek-v4-pro-0813",
     "gemini-3.7-flash-high",
-    "grok-4.5",
-    "MiniMax-M2.7-highspeed",
     "minimax-m3",
+    "qwen3.8-max",
   ],
-  // Mendalam — Juan Router
+  // Mendalam — terpintar, untuk analisis mendalam (urut ON di depan: gpt-5.6-terra/luna ON, sisanya fallback 503/500)
   deep: [
     "gpt-5.6-terra",
-    "gpt-5.6-sol",
+    "gpt-5.6-luna",
     "grok-4.6",
-    "qwen3.8-max",
-    "kimi-k2.7",
+    "claude-opus-5",
+    "muse-spark-1.2",
   ],
 };
+
+/** Model free untuk OpenAgentic & AIMurah — hanya 2 ini sesuai instruksi. */
+export const OPENAGENTIC_FREE_MODELS = ["deepseek-v4-flash-free", "hy3-free"] as const;
+export const AIMURAH_FREE_MODELS = ["deepseek-v4-flash-free", "hy3-free"] as const;
+
+/** Model free untuk OpenRouter — hanya yang :free sesuai instruksi (urut ON di depan, 429/timeout di belakang). */
+export const OPENROUTER_FREE_MODELS = [
+  "nvidia/nemotron-3.5-lightning:free",
+  "liquid/lfm-2.5-2.6b:free",
+  "z-ai/glm-5.2:free",
+  "poolside/laguna-s-2.1:free",
+  "thinkingmachines/inkling-small:free",
+] as const;
 
 export const SPEED_LABELS: Record<AiSpeedMode, string> = {
   fast: "Kilat",
@@ -87,7 +90,7 @@ export const AI_PROVIDER: AiProvider =
 export const AI_BASE_URL =
   process.env.AI_BASE_URL ?? "https://aimurah.my.id/api/v1";
 
-export const AI_MODEL = process.env.AI_MODEL ?? "deepseek-v4-flash";
+export const AI_MODEL = process.env.AI_MODEL ?? "deepseek-v4-flash-free";
 
 export const AI_API_KEY =
   process.env.AI_API_KEY ?? process.env.OPENAI_API_KEY ?? "";
@@ -101,7 +104,7 @@ export const OPENAGENTIC_BASE_URL =
 export const OPENAGENTIC_API_KEY = process.env.OPENAGENTIC_API_KEY ?? "";
 
 export const OPENAGENTIC_MODEL =
-  process.env.OPENAGENTIC_MODEL ?? "claude-sonnet-4.5";
+  process.env.OPENAGENTIC_MODEL ?? "deepseek-v4-flash-free";
 
 export const OPENROUTER_BASE_URL =
   process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
@@ -109,7 +112,7 @@ export const OPENROUTER_BASE_URL =
 export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
 
 export const OPENROUTER_MODEL =
-  process.env.OPENROUTER_MODEL ?? "nvidia/nemotron-3-super-120b-a12b:free";
+  process.env.OPENROUTER_MODEL ?? "z-ai/glm-5.2:free";
 
 export const JUANROUTER_BASE_URL =
   process.env.JUANROUTER_BASE_URL ?? "https://router.juan.web.id/v1";
@@ -117,7 +120,15 @@ export const JUANROUTER_BASE_URL =
 export const JUANROUTER_API_KEY = process.env.JUANROUTER_API_KEY ?? "";
 
 export const JUANROUTER_MODEL =
-  process.env.JUANROUTER_MODEL ?? "deepseek-v4-flash";
+  process.env.JUANROUTER_MODEL ?? "gemini-3.7-flash-low";
+
+export const NINE_ROUTER_BASE_URL =
+  process.env.NINE_ROUTER_BASE_URL ?? "http://localhost:20128/v1";
+
+export const NINE_ROUTER_API_KEY = process.env.NINE_ROUTER_API_KEY ?? "";
+
+export const NINE_ROUTER_MODEL =
+  process.env.NINE_ROUTER_MODEL ?? "relay-combo";
 
 interface ProviderConfig {
   baseURL: string;
@@ -158,6 +169,38 @@ function getProviderConfig(): ProviderConfig | null {
       name: "OpenAI",
     };
   }
+  if (AI_PROVIDER === "openrouter") {
+    if (!OPENROUTER_API_KEY) {
+      console.error(
+        "[AI Error] OPENROUTER_API_KEY is not set for OpenRouter provider"
+      );
+      return null;
+    }
+    console.log("[AI] Using OpenRouter provider");
+    return {
+      baseURL: OPENROUTER_BASE_URL,
+      apiKey: OPENROUTER_API_KEY,
+      model: OPENROUTER_MODEL,
+      defaultModel: OPENROUTER_MODEL,
+      name: "OpenRouter",
+    };
+  }
+  if (AI_PROVIDER === "9router") {
+    if (!NINE_ROUTER_API_KEY) {
+      console.error(
+        "[AI Error] NINE_ROUTER_API_KEY is not set for 9Router provider"
+      );
+      return null;
+    }
+    console.log("[AI] Using 9Router provider");
+    return {
+      baseURL: NINE_ROUTER_BASE_URL,
+      apiKey: NINE_ROUTER_API_KEY,
+      model: NINE_ROUTER_MODEL,
+      defaultModel: NINE_ROUTER_MODEL,
+      name: "9Router",
+    };
+  }
   if (!AI_API_KEY) {
     console.error('[AI Error] AI_API_KEY is not set for AIMurah provider');
     return null;
@@ -173,7 +216,7 @@ function getProviderConfig(): ProviderConfig | null {
 }
 
 export function hasAiKey(): boolean {
-  return getProviderChain().length > 0;
+  return getProviderChain("normal", true).length > 0 || getProviderChain("normal", false).length > 0;
 }
 
 /** Semua provider OpenAI-compatible → embedding & transkripsi tersedia bila ada key. */
@@ -187,7 +230,7 @@ export function isOpenAICompatible(): boolean {
  * loop provider otomatis mencoba model berikutnya (fallback antar model),
  * lalu ke provider fallback (mis. OpenRouter bila key tersedia).
  */
-function getProviderChain(speedMode: AiSpeedMode = "normal"): ProviderConfig[] {
+function getProviderChain(speedMode: AiSpeedMode = "normal", forChat: boolean = false): ProviderConfig[] {
   const chain: ProviderConfig[] = [];
 
   const pushProvider = (
@@ -201,60 +244,55 @@ function getProviderChain(speedMode: AiSpeedMode = "normal"): ProviderConfig[] {
     }
   };
 
+  // Mode unified 9Router: hanya 9Router yang aktif, semua provider lain dinonaktifkan (tidak dihapus)
+  // Kecepatan dipetakan ke model spesifik via 9Router untuk latensi optimal (bench: fast 5.7s < deep 8.1s < relay-combo 12s)
+  if (AI_PROVIDER === "9router") {
+    if (!NINE_ROUTER_API_KEY) return chain;
+    const speedModel: Record<AiSpeedMode, string> = {
+      fast: "jr/gemini-3.5-flash-lite",
+      normal: "jr/deepseek-v4-flash",
+      deep: "jr/gemini-3.7-flash-high",
+    };
+    const m = speedModel[speedMode] ?? NINE_ROUTER_MODEL;
+    pushProvider(NINE_ROUTER_BASE_URL, NINE_ROUTER_API_KEY, "9Router", [m]);
+    return chain;
+  }
+
   const juanKey = JUANROUTER_API_KEY;
   const openRouterKey = OPENROUTER_API_KEY;
+  const openAgenticKey = OPENAGENTIC_API_KEY;
 
-  if (speedMode === "fast") {
-    // Kilat: Juan Router dengan 4 model cepat.
+  // Chat → Juan Router ONLY (sesuai instruksi: untuk chat saja gunakan Juan)
+  if (forChat) {
     if (juanKey) {
-      pushProvider(
-        JUANROUTER_BASE_URL,
-        juanKey,
-        "JuanRouter",
-        SPEED_MODEL_LISTS.fast
-      );
-    } else {
-      // Juan Router tidak dikonfigurasi → pakai provider utama (default).
-      const main = getProviderConfig();
-      if (main) pushProvider(main.baseURL, main.apiKey, main.name, [main.defaultModel]);
+      const tierModels = SPEED_MODEL_LISTS[speedMode];
+      pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", tierModels);
+      return chain;
     }
-    if (openRouterKey) {
-      pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [OPENROUTER_MODEL]);
+    // Fallback bila Juan key kosong — pakai OpenAgentic
+    if (openAgenticKey) {
+      pushProvider(OPENAGENTIC_BASE_URL, openAgenticKey, "OpenAgentic", [...OPENAGENTIC_FREE_MODELS]);
     }
     return chain;
   }
 
-  if (speedMode === "deep") {
-    // Mendalam: Juan Router dengan 4 model besar.
-    if (juanKey) {
-      pushProvider(
-        JUANROUTER_BASE_URL,
-        juanKey,
-        "JuanRouter",
-        SPEED_MODEL_LISTS.deep
-      );
-    } else {
-      const main = getProviderConfig();
-      if (main) pushProvider(main.baseURL, main.apiKey, main.name, [main.defaultModel]);
-    }
-    if (openRouterKey) {
-      pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [OPENROUTER_MODEL]);
-    }
-    return chain;
-  }
-
-  // Seimbang (normal): Juan Router daftar model seimbang → OpenRouter.
-  // (Provider utama OpenAgentic dipakai untuk kecepatan default bila
-  // dikonfigurasi; daftar normal diambil dari SPEED_MODEL_LISTS.)
-  const main = getProviderConfig();
-  if (main && main.name !== "OpenAgentic") {
-    pushProvider(main.baseURL, main.apiKey, main.name, [main.defaultModel]);
-  }
-  if (juanKey) {
-    pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", SPEED_MODEL_LISTS.normal);
+  // Buat catatan → OPENAGENTIC + OPENROUTER ONLY (Juan dinonaktifkan, jangan hapus)
+  // OpenAgentic di depan karena JSON lebih reliable (deepseek-v4-flash-free / hy3-free ✓)
+  if (openAgenticKey) {
+    pushProvider(OPENAGENTIC_BASE_URL, openAgenticKey, "OpenAgentic", [...OPENAGENTIC_FREE_MODELS]);
   }
   if (openRouterKey) {
-    pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [OPENROUTER_MODEL]);
+    pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [...OPENROUTER_FREE_MODELS]);
+  }
+  // Fallback bila keduanya kosong — pakai Juan
+  if (chain.length === 0 && juanKey) {
+    const tierModels = SPEED_MODEL_LISTS[speedMode];
+    pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", tierModels);
+  }
+  // Fallback: bila tidak ada key sama sekali, coba provider utama tunggal
+  if (chain.length === 0) {
+    const main = getProviderConfig();
+    if (main) pushProvider(main.baseURL, main.apiKey, main.name, [main.defaultModel]);
   }
   return chain;
 }
@@ -278,6 +316,8 @@ export interface AiChatOptions {
    * mendukungnya. Bila provider menolak gambar, dicoba ulang tanpa gambar.
    */
   visionImage?: { dataUrl: string; filename: string } | null;
+  /** true = pakai Juan Router (chat), false/undefined = pakai OpenAgentic+OpenRouter (buat catatan). */
+  forChat?: boolean;
 }
 
 /** Ekstrak objek JSON dari teks AI (toleran terhadap ```markdown fence & trailing comma). */
@@ -399,7 +439,7 @@ export function isAiBusyError(e: unknown): boolean {
  *   bila provider tidak mendukungnya.
  */
 export async function aiChat(options: AiChatOptions): Promise<string> {
-  const providers = getProviderChain(options.speedMode ?? "normal");
+  const providers = getProviderChain(options.speedMode ?? "normal", !!options.forChat);
   
   console.log('[AI] aiChat called with options:', {
     hasSystem: !!options.system,
@@ -414,9 +454,13 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
     const hint =
       AI_PROVIDER === "openagentic"
         ? "Isi OPENAGENTIC_API_KEY di .env.local (daftar & buat key di openagentic.id)."
-        : AI_PROVIDER === "openai"
-          ? "Isi OPENAI_API_KEY di .env.local."
-          : "Tambahkan AI_API_KEY di .env.local (daftar di aimurah.my.id).";
+        : AI_PROVIDER === "openrouter"
+          ? "Isi OPENROUTER_API_KEY di .env.local (daftar & buat key di openrouter.ai/keys)."
+          : AI_PROVIDER === "9router"
+            ? "Isi NINE_ROUTER_API_KEY di .env.local."
+            : AI_PROVIDER === "openai"
+              ? "Isi OPENAI_API_KEY di .env.local."
+              : "Tambahkan AI_API_KEY di .env.local (daftar di aimurah.my.id).";
     throw new Error(`API key AI belum diatur. ${hint}`);
   }
 
@@ -652,14 +696,18 @@ export async function aiChatStream(
     else if (options.onEvent) options.onEvent(e);
   };
 
-  const providers = getProviderChain(options.speedMode ?? "normal");
+  const providers = getProviderChain(options.speedMode ?? "normal", !!options.forChat);
   if (providers.length === 0) {
     const hint =
       AI_PROVIDER === "openagentic"
         ? "Isi OPENAGENTIC_API_KEY di .env.local (daftar & buat key di openagentic.id)."
-        : AI_PROVIDER === "openai"
-          ? "Isi OPENAI_API_KEY di .env.local."
-          : "Tambahkan AI_API_KEY di .env.local (daftar di aimurah.my.id).";
+        : AI_PROVIDER === "openrouter"
+          ? "Isi OPENROUTER_API_KEY di .env.local (daftar & buat key di openrouter.ai/keys)."
+          : AI_PROVIDER === "9router"
+            ? "Isi NINE_ROUTER_API_KEY di .env.local."
+            : AI_PROVIDER === "openai"
+              ? "Isi OPENAI_API_KEY di .env.local."
+              : "Tambahkan AI_API_KEY di .env.local (daftar di aimurah.my.id).";
     throw new Error(`API key AI belum diatur. ${hint}`);
   }
 

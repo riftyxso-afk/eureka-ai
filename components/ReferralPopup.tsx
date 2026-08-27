@@ -149,7 +149,7 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
             exit={{ scale: 0.92, y: 20 }}
             transition={{ type: "spring", stiffness: 260, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
+            className="relative w-full max-w-md overflow-hidden rounded-clay bg-clay-cream shadow-2xl"
           >
             {/* Header */}
             <div className="relative bg-gradient-to-br from-clay-primary via-clay-secondary to-amber-500 px-6 pb-7 pt-6 text-center">
@@ -167,7 +167,7 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
                   className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-40"
                 />
               </div>
-              <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/20 ring-4 ring-white/30">
+              <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-clay-cream/20 ring-4 ring-white/30">
                 <Gift size={26} className="text-white" />
               </div>
               <h2 className="relative mt-3 text-xl font-extrabold text-white drop-shadow">
@@ -267,7 +267,7 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
             <button
               onClick={onClose}
               aria-label="Tutup"
-              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
+              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-clay-cream/20 text-white transition-colors hover:bg-white/30"
             >
               <X size={16} strokeWidth={3} />
             </button>

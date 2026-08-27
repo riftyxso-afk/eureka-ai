@@ -372,6 +372,7 @@ export async function POST(req: NextRequest) {
           json: true,
           maxTokens: 400,
           temperature: 0.2,
+          forChat: true,
         },
         (raw) =>
           extractJsonObject<{
@@ -586,18 +587,24 @@ export async function POST(req: NextRequest) {
           attachedDocument,
         });
 
-        // 6) Stream dari AI
+        // 6) Stream dari AI — maxTokens disesuaikan agar rangkuman tidak terpotong
         emit({ type: "meta", mode: "assistant", model: "" });
         try {
+          const maxTokensBySpeed: Record<AiSpeedMode, number> = {
+            fast: 900,
+            normal: 1400,
+            deep: 2000,
+          };
           const result = await aiChatStream(
             {
               system,
               user: userPrompt,
               history,
-              maxTokens: 1600,
-              temperature: 0.7,
+              maxTokens: maxTokensBySpeed[speedMode] ?? 1400,
+              temperature: speedMode === "fast" ? 0.4 : 0.7,
               visionImage,
               speedMode,
+              forChat: true,
             },
             (ev) => {
               if (ev.type === "token") {

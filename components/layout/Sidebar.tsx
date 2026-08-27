@@ -7,23 +7,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen,
   CalendarDays,
-  ClipboardCheck,
   Crown,
   Flag,
   Flame,
-  Home,
+  HelpCircle,
   LayoutDashboard,
   LogOut,
   Menu,
   Moon,
-  Origami,
   PanelLeftClose,
   PanelLeftOpen,
-  Pin,
   Settings,
   Share2,
   Sun,
-  Trophy,
   User,
   Users,
   X,
@@ -46,12 +42,11 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { id: "home", label: "Home", icon: Home, href: "/home" },
+  // Menu dipangkas agar ringkas — halaman yang dihapus dari daftar tetap
+  // dapat diakses lewat URL/link internal (Home, Rencana, Ujian, Leaderboard).
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { id: "jadwal", label: "Jadwal", icon: CalendarDays, href: "/dashboard/jadwal" },
-  { id: "rencana", label: "Rencana", icon: Origami, href: "/dashboard/rencana" },
   { id: "misi", label: "Misi", icon: Flag, href: "/dashboard/misi" },
-  { id: "ujian", label: "Ujian", icon: ClipboardCheck, href: "/dashboard/ujian" },
   {
     id: "mata-pelajaran",
     label: "Mata Pelajaran",
@@ -59,16 +54,32 @@ const menuItems: MenuItem[] = [
     href: "/dashboard/mata-pelajaran",
   },
   { id: "streaks", label: "Streaks", icon: Flame, href: "/dashboard/streaks" },
-  {
-    id: "leaderboard",
-    label: "Leaderboard",
-    icon: Trophy,
-    href: "/dashboard/leaderboard",
-  },
   { id: "teman", label: "Teman", icon: Users, href: "/dashboard/teman" },
   { id: "profil", label: "Profil", icon: User, href: "/dashboard/profil" },
   { id: "pengaturan", label: "Pengaturan", icon: Settings, href: "/dashboard/pengaturan" },
+  { id: "panduan", label: "Panduan", icon: HelpCircle, href: "/dashboard/panduan" },
 ];
+
+/**
+ * Item menu aktif untuk path saat ini: cocok persis ATAU seluruh
+ * sub-halaman di bawahnya (prefix), dengan aturan match terpanjang
+ * menang sehingga tepat satu item aktif. Sub-halaman yang tidak punya
+ * menu sendiri (mis. /dashboard/note/<id>) menyorot menu induknya.
+ */
+export function activeMenuId(pathname: string): string | null {
+  let best: { id: string; len: number } | null = null;
+  for (const item of menuItems) {
+    const hit =
+      pathname === item.href || pathname.startsWith(item.href + "/");
+    if (!hit) continue;
+    if (!best || item.href.length > best.len) {
+      best = { id: item.id, len: item.href.length };
+    }
+  }
+  if (best) return best.id;
+  if (pathname.startsWith("/dashboard/note")) return "dashboard";
+  return null;
+}
 
 export const Sidebar = () => {
   const pathname = usePathname();
@@ -206,7 +217,7 @@ export const Sidebar = () => {
             icon={item.icon}
             label={item.label}
             href={item.href}
-            active={pathname === item.href}
+            active={activeMenuId(pathname) === item.id}
             onClick={onNavigate}
             collapsed={collapsed}
           />
@@ -228,7 +239,7 @@ export const Sidebar = () => {
         <button
           onClick={() => setReferralOpen(true)}
           title={collapsed ? "Bagikan Link (Referral)" : undefined}
-          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-clay-primary hover:shadow-[0_4px_0_#D1C4B4] ${
+          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-clay-primary hover:shadow-[0_4px_0_rgb(var(--clay-shadow))] ${
             collapsed ? "justify-center px-1" : "gap-3 px-4"
           }`}
         >
@@ -239,16 +250,6 @@ export const Sidebar = () => {
 
       <div className="mt-1 flex flex-col gap-1 border-t-2 border-clay-shadow/30 pt-1">
         <button
-          onClick={() => showToast("Fitur semat catatan segera hadir")}
-          title={collapsed ? "Sematkan" : undefined}
-          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4] ${
-            collapsed ? "justify-center px-1" : "gap-3 px-4"
-          }`}
-        >
-          <Pin size={15} />
-          {!collapsed && "Sematkan"}
-        </button>
-        <button
           onClick={() => {
             toggleTheme();
             showToast(
@@ -257,7 +258,7 @@ export const Sidebar = () => {
                 : "Mode gelap diaktifkan"
             );
           }}
-          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_#D1C4B4] ${
+          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_rgb(var(--clay-shadow))] ${
             collapsed ? "justify-center px-1" : "gap-3 px-4"
           }`}
         >
@@ -266,7 +267,7 @@ export const Sidebar = () => {
         </button>
         <button
           onClick={handleLogout}
-          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-red-500 hover:shadow-[0_4px_0_#D1C4B4] ${
+          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-red-500 hover:shadow-[0_4px_0_rgb(var(--clay-shadow))] ${
             collapsed ? "justify-center px-1" : "gap-3 px-4"
           }`}
         >
@@ -281,7 +282,7 @@ export const Sidebar = () => {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed left-4 top-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-clay-sm transition-all duration-75 active:translate-y-1 lg:hidden"
+        className="fixed left-4 top-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-clay-cream shadow-clay-sm transition-all duration-75 active:translate-y-1 lg:hidden"
         aria-label="Buka menu"
       >
         <Menu size={22} />
@@ -293,7 +294,7 @@ export const Sidebar = () => {
         }`}
       >
         <aside
-          className={`flex max-h-full w-full -translate-y-10 flex-col gap-2 overflow-y-auto rounded-clay bg-white shadow-clay-sm ${
+          className={`flex max-h-full w-full -translate-y-10 flex-col gap-2 overflow-y-auto rounded-clay bg-clay-cream shadow-clay-sm ${
             collapsed ? "p-2" : "p-3"
           }`}
         >
@@ -333,7 +334,7 @@ export const Sidebar = () => {
                 duration: 0.3,
                 ease: [0.32, 0.72, 0, 1],
               }}
-              className="fixed left-0 top-0 z-50 flex h-dvh w-[30%] min-w-[200px] max-w-[85vw] flex-col gap-2 overflow-y-auto overscroll-contain rounded-r-clay-md bg-white p-3 shadow-clay-lg lg:hidden before:absolute before:inset-0 before:pointer-events-none before:rounded-r-clay-md before:bg-gradient-to-b before:from-clay-primary/5 before:to-transparent"
+              className="fixed left-0 top-0 z-50 flex h-dvh w-[30%] min-w-[200px] max-w-[85vw] flex-col gap-2 overflow-y-auto overscroll-contain rounded-r-clay-md bg-clay-cream p-3 shadow-clay-lg lg:hidden before:absolute before:inset-0 before:pointer-events-none before:rounded-r-clay-md before:bg-gradient-to-b before:from-clay-primary/5 before:to-transparent"
             >
               <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight pb-2">
                 <Link href="/dashboard" onClick={() => setIsOpen(false)}>

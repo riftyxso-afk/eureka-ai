@@ -47,7 +47,7 @@ export default function QuizTake({
         return (
           <div
             key={q.id}
-            className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3 sm:p-4"
+            className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3 sm:p-4"
           >
             <div className="mb-2 text-xs sm:text-sm font-extrabold text-clay-dark leading-relaxed">
               {qi + 1}. {q.question}
@@ -67,7 +67,7 @@ export default function QuizTake({
                     key={oi}
                     disabled={submitted || busy}
                     onClick={() => onAnswer(q.id, oi)}
-                    className={`flex w-full items-center gap-2 rounded-xl border-2 bg-white px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
+                    className={`flex w-full items-center gap-2 rounded-xl border-2 bg-clay-cream px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
                   >
                     <span
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${

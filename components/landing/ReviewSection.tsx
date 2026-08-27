@@ -185,7 +185,7 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
         ) : hasReviews ? (
           <>
             {/* Ringkasan rating */}
-            <div className="mx-auto mt-10 flex max-w-md flex-col items-center gap-4 rounded-3xl border-2 border-[#E5E5E5] bg-white p-6 shadow-clay-sm sm:flex-row sm:justify-center">
+            <div className="mx-auto mt-10 flex max-w-md flex-col items-center gap-4 rounded-3xl border-2 border-[#E5E5E5] bg-clay-cream p-6 shadow-clay-sm sm:flex-row sm:justify-center">
               <p className="text-6xl font-extrabold tracking-tight text-[#13102B]">
                 {stats?.average?.toFixed(1).replace(".", ",")}
               </p>
@@ -202,7 +202,7 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
               {reviews.slice(0, 6).map((r) => (
                 <article
                   key={r.id}
-                  className="flex flex-col rounded-3xl border-2 border-[#E5E5E5] bg-white p-5 shadow-clay-sm"
+                  className="flex flex-col rounded-3xl border-2 border-[#E5E5E5] bg-clay-cream p-5 shadow-clay-sm"
                 >
                   <div className="flex items-center gap-3">
                     <span
@@ -286,7 +286,7 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
             aria-modal="true"
             aria-label="Beri ulasan"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-clay sm:rounded-3xl"
+            className="w-full max-w-md rounded-t-3xl bg-clay-cream p-6 shadow-clay sm:rounded-3xl"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-extrabold text-[#13102B]">

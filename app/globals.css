@@ -46,7 +46,7 @@
            rounded-clay-full border-3 border-clay-primary
            shadow-clay-sm transition-all duration-75
            active:shadow-clay-sm active:translate-y-1
-           hover:-translate-y-0.5 hover:shadow-[0_8px_0_#D1C4B4]
+           hover:-translate-y-0.5 hover:shadow-[0_8px_0_rgb(var(--clay-shadow))]
            cursor-pointer min-h-[60px] flex items-center justify-center
            disabled:opacity-60 disabled:pointer-events-none
            select-none;
@@ -57,7 +57,7 @@
            rounded-clay-full border-3 border-clay-shadow/40
            shadow-clay-sm transition-all duration-75
            active:shadow-clay-sm active:translate-y-1
-           hover:-translate-y-0.5 hover:bg-clay-beige hover:shadow-[0_8px_0_#D1C4B4]
+           hover:-translate-y-0.5 hover:bg-clay-beige hover:shadow-[0_8px_0_rgb(var(--clay-shadow))]
            cursor-pointer min-h-[60px] flex items-center justify-center
            disabled:opacity-60 disabled:pointer-events-none
            select-none;
@@ -148,6 +148,57 @@
       transparent
     );
     animation: shimmer 1.6s infinite;
+  }
+
+  /* KaTeX math — rapi tanpa scroll, langsung pas di layar */
+  .asisten-md .katex-display {
+    display: block;
+    text-align: center;
+    padding: 12px 0;
+    margin: 14px 0;
+    overflow: visible;
+    max-width: 100%;
+  }
+  .asisten-md .katex {
+    font-size: 1em;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+    color: inherit;
+    line-height: 1.4;
+  }
+  .asisten-md .katex .mord,
+  .asisten-md .katex .mrel,
+  .asisten-md .katex .mop,
+  .asisten-md .katex .mopen,
+  .asisten-md .katex .mclose,
+  .asisten-md .katex .mpunct {
+    color: inherit;
+  }
+  .asisten-md .katex-display > .katex {
+    display: inline-block;
+    max-width: 100%;
+  }
+  /* Rumus inline yang kompleks (\frac) otomatis jadi block biar tidak sesak di baris */
+  .asisten-md p .katex,
+  .asisten-md li .katex {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: 100%;
+    font-size: 0.98em;
+  }
+  .asisten-md .katex .base {
+    margin: 0;
+  }
+  /* Di layar sempit, kecilkan sedikit biar muat tanpa scroll */
+  @media (max-width: 480px) {
+    .asisten-md .katex {
+      font-size: 0.92em;
+    }
+    .asisten-md .katex-display {
+      padding: 8px 0;
+      margin: 10px 0;
+    }
   }
 }
 
@@ -306,110 +357,117 @@
 }
 
 /* ────────────────────────────────────────────────────────────
-   MODE GELAP — area login (dashboard, home, chat, profil,
-   pricing, dll.). Class `.dark` dipasang di <html> oleh
-   context/ThemeContext.tsx. Halaman publik (landing, login,
-   register) tidak punya varian ini → tetap terang.
-   Strategi: override kelas utilitas clay dengan selector
-   `.dark .x` (spesifisitas lebih tinggi dari `.x` Tailwind).
+   TOKEN TEMA CLAY — sumber kebenaran palet.
+   Format kanal "R G B" agar modifier opacity Tailwind (/10, /40)
+   tetap bekerja lewat <alpha-value> (lihat tailwind.config.ts).
+   Mode gelap cukup menukar nilai variabel di blok .dark — semua
+   utilitas clay (bg-, text-, border-, shadow-) ikut otomatis.
+   Class `.dark` dipasang di <html> oleh context/ThemeContext.tsx.
+   Halaman publik (landing, login, register) tidak memasangnya
+   → tetap terang.
    ──────────────────────────────────────────────────────────── */
+:root {
+  --clay-primary: 139 92 246; /* Soft Purple (Brand) #8B5CF6 */
+  --clay-secondary: 245 158 11; /* Warm Amber (Accent) #F59E0B */
+  --clay-success: 16 185 129; /* Soft Emerald (Eureka!) #10B981 */
+  --clay-dark: 45 42 36; /* Dark Chocolate Text #2D2A24 */
+  --clay-muted: 140 133 124; /* Muted Text #8C857C */
+  --clay-beige: 249 243 236; /* Canvas Background #F9F3EC */
+  --clay-cream: 255 255 255; /* Card Base #FFFFFF */
+  --clay-shadow: 209 196 180; /* Solid Drop Shadow #D1C4B4 */
+  --clay-shadow-dark: 176 168 152; /* Pressed State Shadow #B0A898 */
+  --clay-input-bg: 239 232 224; /* Depressed Input Area #EFE8E0 */
+  --clay-border-light: 196 181 253; /* Top/Left Highlight Border #C4B5FD */
+  --clay-border-shadow: 91 33 182; /* Bottom/Right Shadow Border #5B21B6 */
+  --clay-inset-mid: 229 231 235; /* Inset shadow kartu besar #E5E7EB */
+  --clay-inset-low: 243 244 246; /* Inset shadow kartu kecil #F3F4F6 */
+  --clay-btn-shadow: 91 33 182; /* Bayangan tombol primer #5B21B6 */
+  --clay-btn-highlight: 196 181 253; /* Kilau dalam tombol #C4B5FD */
+  --clay-thumb: 180 83 9; /* Bayangan thumbnail #B45309 */
+
+  /* Palet aksen mata pelajaran — tier terang (sumber: lib/palette.ts) */
+  --subject-sky: 3 105 161;
+  --subject-violet: 124 58 237;
+  --subject-rose: 190 18 60;
+  --subject-amber: 180 83 9;
+  --subject-emerald: 4 120 87;
+  --subject-fuchsia: 162 28 175;
+  --subject-blue: 29 78 216;
+  --subject-orange: 194 65 12;
+  --subject-teal: 15 118 110;
+  --subject-red: 185 28 28;
+  --subject-lime: 77 124 15;
+  --subject-indigo: 67 56 202;
+}
+
 .dark {
   color-scheme: dark;
+
+  --clay-primary: 139 92 246; /* brand tetap */
+  --clay-secondary: 245 158 11; /* aksen tetap */
+  --clay-success: 16 185 129;
+  --clay-dark: 241 236 229; /* teks utama → terang #F1ECE5 */
+  --clay-muted: 167 158 146; /* teks redup #A79E92 */
+  --clay-beige: 27 24 21; /* kanvas #1B1815 */
+  --clay-cream: 40 35 32; /* permukaan kartu #282320 */
+  --clay-shadow: 20 17 14; /* bayangan #14110E */
+  --clay-shadow-dark: 15 13 11; /* bayangan besar #0F0D0B */
+  --clay-input-bg: 51 45 39; /* area input #332D27 */
+  --clay-border-light: 74 66 58; /* border highlight #4A423A */
+  --clay-border-shadow: 20 17 14; /* border shadow #14110E */
+  --clay-inset-mid: 34 30 26; /* #221E1A */
+  --clay-inset-low: 31 27 23; /* #1F1B17 */
+  --clay-btn-shadow: 74 47 158; /* ungu tombol lebih lembut #4A2F9E */
+  --clay-btn-highlight: 139 108 232; /* kilau ungu #8B6CE8 */
+
+  /* Palet aksen mapel — tier gelap, lebih terang agar tetap AA
+     di permukaan #282320 (sumber: lib/palette.ts). */
+  --subject-sky: 125 211 252;
+  --subject-violet: 196 181 253;
+  --subject-rose: 253 164 175;
+  --subject-amber: 251 191 36;
+  --subject-emerald: 110 231 183;
+  --subject-fuchsia: 240 171 252;
+  --subject-blue: 147 197 253;
+  --subject-orange: 253 186 116;
+  --subject-teal: 94 234 212;
+  --subject-red: 252 165 165;
+  --subject-lime: 190 242 100;
+  --subject-indigo: 165 180 252;
 }
 
-.dark body {
-  background-color: #1b1815;
-  color: #f1ece5;
-}
-
-/* Latar & permukaan */
-.dark .bg-clay-beige {
-  background-color: #1b1815;
-}
-.dark .bg-white {
-  background-color: #282320;
-}
-.dark .bg-clay-inputBg {
-  background-color: #332d27;
-}
+/* Nuansa hover di dark memang beda dari nilai token dasar
+   (sedikit LEBIH TERANG dari permukaan, bukan lebih gelap). */
 .dark .hover\:bg-clay-beige:hover {
   background-color: #26211d;
 }
 .dark .hover\:bg-white:hover {
   background-color: #332d27;
 }
-
-/* Teks */
-.dark .text-clay-dark {
-  color: #f1ece5;
-}
-.dark .text-clay-muted {
-  color: #a79e92;
-}
-
-/* Border & bayangan solid clay */
-.dark .border-clay-borderLight {
-  border-color: #4a423a;
-}
-.dark .border-clay-shadow {
-  border-color: #14110e;
-}
-.dark .shadow-clay {
-  box-shadow: 0 10px 0 #14110e, inset 0 -4px 0 #221e1a;
-}
-.dark .shadow-clay-sm {
-  box-shadow: 0 6px 0 #14110e, inset 0 -3px 0 #1f1b17;
-}
-.dark .shadow-clay-lg {
-  box-shadow: 0 14px 0 #0f0d0b, inset 0 -6px 0 #1f1b17;
-}
 .dark .shadow-clay-inset {
   box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.45);
 }
-.dark .shadow-clay-btn {
-  box-shadow: 0 8px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
-}
-.dark .shadow-clay-btn-hover {
-  box-shadow: 0 10px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
-}
-.dark .shadow-clay-btn-active {
-  box-shadow: 0 4px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
+
+/* bg-white = permukaan kartu di area login → ikuti token cream.
+   (Setelah sweep 1.2 memakai bg-clay-cream, override ini hanya
+   menyisa sebagai jaring pengaman untuk pemakaian lama.) */
+.dark .bg-white {
+  background-color: rgb(var(--clay-cream));
 }
 
-/* Komponen bersama */
+/* Komponen bersama — hanya nuansa yang tidak bisa direduksi
+   menjadi satu pertukaran warna token. */
 .dark .card-clay {
-  background-color: #282320;
-  border-color: #38322c;
-  box-shadow: 0 10px 0 #14110e, inset 0 -4px 0 #221e1a;
-}
-.dark .input-clay {
-  background-color: #332d27;
-  color: #f1ece5;
+  border-color: #38322c; /* pengganti border-gray-100 */
 }
 .dark .btn-clay-primary {
   border-color: #6d4fd6;
-  box-shadow: 0 8px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
-}
-.dark .btn-clay-primary:hover {
-  box-shadow: 0 10px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
-}
-.dark .btn-clay-primary:active {
-  box-shadow: 0 4px 0 #4a2f9e, inset 0 -2px 0 #8b6ce8;
-}
-.dark .btn-clay-secondary,
-.dark .btn-clay-ghost {
-  background-color: #282320;
 }
 .dark .btn-clay-secondary {
   border-color: #8b6ce8;
-  box-shadow: 0 6px 0 #14110e, inset 0 -3px 0 #1f1b17;
 }
 .dark .btn-clay-ghost {
   border-color: #3d3730;
-  box-shadow: 0 6px 0 #14110e, inset 0 -3px 0 #1f1b17;
-}
-.dark .btn-clay-ghost:hover {
-  background-color: #332d27;
 }
 
 /* Kotak status/error berlatarb terang → tint gelap */
@@ -450,6 +508,36 @@
    sebagai kartu dekoratif; cukup samarkan di dark. */
 .dark .text-amber-950 {
   color: #f5d98a;
+}
+
+/* ═══ Avatar blob AI (EurekaBlobAvatar) — animasi mata ter-isolasi ═══ */
+.eureka-blob-eye-a,
+.eureka-blob-eye-b {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation-duration: 2.967s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+  animation-direction: alternate;
+}
+.eureka-blob-eye-a {
+  animation-name: eureka-blob-eye-a;
+}
+.eureka-blob-eye-b {
+  animation-name: eureka-blob-eye-b;
+}
+
+@keyframes eureka-blob-eye-b{0%{transform:matrix(0.86,0.1,-0.18,0.98,49.21,20.3)}1.124%{transform:matrix(0.86,0.1,-0.18,0.98,49.2,20.35)}2.247%{transform:matrix(0.86,0.1,-0.18,0.98,49.19,20.4)}3.371%{transform:matrix(0.86,0.1,-0.18,0.98,49.17,20.44)}4.494%{transform:matrix(0.86,0.1,-0.18,0.98,49.14,20.48)}5.618%{transform:matrix(0.86,0.1,-0.18,0.98,49.11,20.52)}6.742%{transform:matrix(0.86,0.1,-0.18,0.98,49.06,20.54)}7.865%{transform:matrix(0.86,0.1,-0.18,0.98,49.01,20.57)}8.989%{transform:matrix(0.86,0.1,-0.18,0.98,48.96,20.59)}10.112%{transform:matrix(0.86,0.1,-0.18,0.98,48.89,20.6)}11.236%{transform:matrix(0.86,0.1,-0.18,0.98,48.83,20.6)}12.36%{transform:matrix(0.86,0.1,-0.18,0.98,48.75,20.61)}13.483%{transform:matrix(0.86,0.1,-0.18,0.98,48.68,20.6)}14.607%{transform:matrix(0.86,0.1,-0.18,0.98,48.6,20.6)}15.73%{transform:matrix(0.87,0.1,-0.18,0.98,48.51,20.59)}16.854%{transform:matrix(0.87,0.1,-0.18,0.98,48.43,20.58)}17.978%{transform:matrix(0.87,0.1,-0.18,0.98,48.35,20.56)}19.101%{transform:matrix(0.87,0.1,-0.18,0.98,48.27,20.55)}20.225%{transform:matrix(0.87,0.1,-0.18,0.98,48.19,20.54)}21.348%{transform:matrix(0.87,0.1,-0.18,0.98,48.12,20.52)}22.472%{transform:matrix(0.87,0.1,-0.18,0.98,48.05,20.51)}23.596%{transform:matrix(0.87,0.1,-0.18,0.98,47.99,20.51)}24.719%{transform:matrix(0.87,0.1,-0.18,0.98,47.93,20.5)}25.843%{transform:matrix(0.87,0.1,-0.18,0.98,47.88,20.5)}26.966%{transform:matrix(0.87,0.1,-0.18,0.98,47.83,20.5)}28.09%{transform:matrix(0.87,0.1,-0.18,0.98,47.79,20.51)}29.213%{transform:matrix(0.87,0.1,-0.18,0.98,47.75,20.53)}30.337%{transform:matrix(0.87,0.1,-0.18,0.98,47.71,20.55)}31.461%{transform:matrix(0.87,0.1,-0.18,0.98,47.68,20.58)}32.584%{transform:matrix(0.87,0.1,-0.18,0.98,47.65,20.61)}33.708%{transform:matrix(0.87,0.1,-0.18,0.98,47.62,20.65)}34.831%{transform:matrix(0.87,0.1,-0.18,0.98,47.59,20.69)}35.955%{transform:matrix(0.87,0.1,-0.18,0.98,47.55,20.74)}37.079%{transform:matrix(0.87,0.09,-0.18,0.98,47.51,20.8)}38.202%{transform:matrix(0.87,0.09,-0.18,0.98,47.47,20.86)}39.326%{transform:matrix(0.87,0.09,-0.18,0.98,47.43,20.92)}40.449%{transform:matrix(0.87,0.09,-0.18,0.98,47.37,20.99)}41.573%{transform:matrix(0.87,0.09,-0.18,0.98,47.32,21.06)}42.697%{transform:matrix(0.87,0.09,-0.18,0.98,47.25,21.13)}43.82%{transform:matrix(0.87,0.09,-0.18,0.98,47.18,21.21)}44.944%{transform:matrix(0.87,0.09,-0.18,0.98,47.1,21.28)}46.067%{transform:matrix(0.88,0.09,-0.18,0.97,47.02,21.36)}47.191%{transform:matrix(0.88,0.09,-0.18,0.97,46.93,21.43)}48.315%{transform:matrix(0.88,0.06,-0.18,0.6,46.83,21.5)}49.438%{transform:matrix(0.88,0.02,-0.18,0.22,46.74,21.58)}50.562%{transform:matrix(0.88,0.02,-0.18,0.23,46.64,21.65)}51.685%{transform:matrix(0.88,0.05,-0.18,0.54,46.54,21.72)}52.809%{transform:matrix(0.88,0.08,-0.18,0.85,46.44,21.78)}53.933%{transform:matrix(0.88,0.09,-0.18,0.97,46.35,21.85)}55.056%{transform:matrix(0.88,0.09,-0.17,0.97,46.27,21.91)}56.18%{transform:matrix(0.88,0.09,-0.17,0.97,46.2,21.97)}57.303%{transform:matrix(0.88,0.09,-0.17,0.97,46.13,22.03)}58.427%{transform:matrix(0.88,0.09,-0.17,0.97,46.08,22.08)}59.551%{transform:matrix(0.88,0.09,-0.17,0.97,46.05,22.14)}60.674%{transform:matrix(0.88,0.09,-0.17,0.97,46.03,22.2)}61.798%{transform:matrix(0.88,0.09,-0.17,0.97,46.03,22.26)}62.921%{transform:matrix(0.88,0.09,-0.17,0.97,46.06,22.31)}64.045%{transform:matrix(0.88,0.09,-0.17,0.97,46.1,22.37)}65.169%{transform:matrix(0.88,0.09,-0.17,0.97,46.16,22.44)}66.292%{transform:matrix(0.88,0.09,-0.18,0.97,46.25,22.51)}67.416%{transform:matrix(0.88,0.09,-0.18,0.97,46.36,22.58)}68.539%{transform:matrix(0.88,0.09,-0.18,0.97,46.49,22.66)}69.663%{transform:matrix(0.88,0.09,-0.18,0.97,46.63,22.74)}70.787%{transform:matrix(0.88,0.09,-0.18,0.97,46.8,22.83)}71.91%{transform:matrix(0.88,0.09,-0.18,0.97,46.98,22.93)}73.034%{transform:matrix(0.88,0.08,-0.18,0.97,47.18,23.03)}74.157%{transform:matrix(0.88,0.08,-0.18,0.97,47.39,23.14)}75.281%{transform:matrix(0.87,0.08,-0.18,0.97,47.61,23.26)}76.404%{transform:matrix(0.87,0.08,-0.18,0.97,47.83,23.39)}77.528%{transform:matrix(0.87,0.08,-0.18,0.97,48.06,23.52)}78.652%{transform:matrix(0.87,0.08,-0.18,0.97,48.29,23.66)}79.775%{transform:matrix(0.87,0.08,-0.18,0.97,48.52,23.81)}80.899%{transform:matrix(0.87,0.08,-0.18,0.97,48.74,23.96)}82.022%{transform:matrix(0.87,0.08,-0.18,0.97,48.95,24.11)}83.146%{transform:matrix(0.87,0.08,-0.18,0.97,49.15,24.26)}84.27%{transform:matrix(0.87,0.08,-0.18,0.97,49.33,24.42)}85.393%{transform:matrix(0.86,0.08,-0.18,0.97,49.5,24.57)}86.517%{transform:matrix(0.86,0.08,-0.18,0.97,49.66,24.72)}87.64%{transform:matrix(0.86,0.08,-0.18,0.97,49.79,24.87)}88.764%{transform:matrix(0.86,0.08,-0.18,0.97,49.9,25.01)}89.888%{transform:matrix(0.86,0.07,-0.18,0.97,49.99,25.14)}91.011%{transform:matrix(0.86,0.07,-0.18,0.97,50.06,25.27)}92.135%{transform:matrix(0.86,0.07,-0.18,0.97,50.11,25.38)}93.258%{transform:matrix(0.86,0.07,-0.18,0.97,50.14,25.48)}94.382%{transform:matrix(0.86,0.07,-0.18,0.97,50.14,25.56)}95.506%{transform:matrix(0.86,0.07,-0.18,0.97,50.12,25.63)}96.629%{transform:matrix(0.86,0.07,-0.18,0.97,50.09,25.68)}97.753%{transform:matrix(0.86,0.07,-0.18,0.97,50.03,25.71)}98.876%{transform:matrix(0.86,0.07,-0.18,0.97,49.96,25.72)}100%{transform:matrix(0.86,0.07,-0.18,0.97,49.88,25.71)}}
+
+@keyframes eureka-blob-eye-a{0%{transform:matrix(0.97,-0.1,0.14,0.98,-20.84,22.57)}1.124%{transform:matrix(0.97,-0.1,0.14,0.98,-20.86,22.64)}2.247%{transform:matrix(0.97,-0.1,0.14,0.98,-20.89,22.7)}3.371%{transform:matrix(0.97,-0.1,0.14,0.98,-20.94,22.76)}4.494%{transform:matrix(0.97,-0.1,0.14,0.98,-20.99,22.81)}5.618%{transform:matrix(0.97,-0.1,0.14,0.98,-21.05,22.86)}6.742%{transform:matrix(0.97,-0.1,0.14,0.98,-21.12,22.9)}7.865%{transform:matrix(0.97,-0.1,0.14,0.97,-21.21,22.94)}8.989%{transform:matrix(0.97,-0.1,0.14,0.97,-21.3,22.98)}10.112%{transform:matrix(0.97,-0.1,0.14,0.97,-21.39,23)}11.236%{transform:matrix(0.97,-0.1,0.14,0.97,-21.5,23.02)}12.36%{transform:matrix(0.97,-0.1,0.14,0.97,-21.61,23.04)}13.483%{transform:matrix(0.97,-0.1,0.14,0.97,-21.72,23.05)}14.607%{transform:matrix(0.97,-0.1,0.14,0.97,-21.84,23.06)}15.73%{transform:matrix(0.97,-0.1,0.14,0.97,-21.96,23.07)}16.854%{transform:matrix(0.97,-0.1,0.14,0.97,-22.08,23.07)}17.978%{transform:matrix(0.97,-0.1,0.14,0.97,-22.19,23.07)}19.101%{transform:matrix(0.97,-0.1,0.14,0.97,-22.3,23.07)}20.225%{transform:matrix(0.97,-0.1,0.14,0.97,-22.41,23.07)}21.348%{transform:matrix(0.97,-0.1,0.14,0.97,-22.51,23.08)}22.472%{transform:matrix(0.97,-0.1,0.14,0.97,-22.61,23.08)}23.596%{transform:matrix(0.97,-0.11,0.14,0.97,-22.69,23.08)}24.719%{transform:matrix(0.97,-0.11,0.15,0.97,-22.77,23.08)}25.843%{transform:matrix(0.97,-0.11,0.15,0.97,-22.84,23.08)}26.966%{transform:matrix(0.97,-0.11,0.15,0.97,-22.9,23.09)}28.09%{transform:matrix(0.97,-0.11,0.15,0.97,-22.96,23.11)}29.213%{transform:matrix(0.97,-0.11,0.15,0.97,-23.01,23.13)}30.337%{transform:matrix(0.97,-0.11,0.15,0.97,-23.07,23.15)}31.461%{transform:matrix(0.97,-0.11,0.15,0.97,-23.12,23.19)}32.584%{transform:matrix(0.97,-0.11,0.15,0.97,-23.17,23.23)}33.708%{transform:matrix(0.97,-0.11,0.15,0.97,-23.23,23.27)}34.831%{transform:matrix(0.97,-0.11,0.15,0.97,-23.29,23.32)}35.955%{transform:matrix(0.97,-0.11,0.15,0.97,-23.35,23.37)}37.079%{transform:matrix(0.97,-0.11,0.15,0.97,-23.42,23.43)}38.202%{transform:matrix(0.97,-0.11,0.15,0.97,-23.5,23.49)}39.326%{transform:matrix(0.97,-0.11,0.15,0.97,-23.58,23.56)}40.449%{transform:matrix(0.97,-0.1,0.15,0.97,-23.68,23.62)}41.573%{transform:matrix(0.97,-0.1,0.15,0.97,-23.78,23.69)}42.697%{transform:matrix(0.97,-0.1,0.15,0.97,-23.89,23.76)}43.82%{transform:matrix(0.97,-0.1,0.15,0.97,-24.02,23.83)}44.944%{transform:matrix(0.97,-0.1,0.15,0.97,-24.15,23.9)}46.067%{transform:matrix(0.97,-0.1,0.15,0.97,-24.29,23.97)}47.191%{transform:matrix(0.97,-0.1,0.15,0.97,-24.44,24.03)}48.315%{transform:matrix(0.97,-0.06,0.15,0.6,-24.59,24.1)}49.438%{transform:matrix(0.97,-0.02,0.15,0.22,-24.74,24.16)}50.562%{transform:matrix(0.96,-0.02,0.15,0.23,-24.9,24.22)}51.685%{transform:matrix(0.96,-0.06,0.15,0.54,-25.05,24.28)}52.809%{transform:matrix(0.96,-0.09,0.15,0.85,-25.21,24.33)}53.933%{transform:matrix(0.96,-0.1,0.15,0.97,-25.35,24.39)}55.056%{transform:matrix(0.96,-0.1,0.15,0.97,-25.48,24.44)}56.18%{transform:matrix(0.96,-0.1,0.15,0.97,-25.6,24.5)}57.303%{transform:matrix(0.96,-0.1,0.15,0.97,-25.71,24.55)}58.427%{transform:matrix(0.96,-0.1,0.15,0.97,-25.8,24.6)}59.551%{transform:matrix(0.96,-0.1,0.15,0.97,-25.87,24.66)}60.674%{transform:matrix(0.96,-0.1,0.15,0.97,-25.91,24.72)}61.798%{transform:matrix(0.96,-0.1,0.15,0.97,-25.94,24.78)}62.921%{transform:matrix(0.96,-0.1,0.15,0.97,-25.93,24.84)}64.045%{transform:matrix(0.96,-0.1,0.15,0.97,-25.91,24.91)}65.169%{transform:matrix(0.96,-0.1,0.15,0.97,-25.85,24.99)}66.292%{transform:matrix(0.96,-0.1,0.15,0.97,-25.77,25.08)}67.416%{transform:matrix(0.96,-0.1,0.15,0.97,-25.66,25.17)}68.539%{transform:matrix(0.96,-0.1,0.15,0.97,-25.53,25.27)}69.663%{transform:matrix(0.96,-0.1,0.15,0.97,-25.37,25.38)}70.787%{transform:matrix(0.96,-0.1,0.15,0.97,-25.17,25.48)}71.91%{transform:matrix(0.96,-0.1,0.15,0.97,-24.94,25.57)}73.034%{transform:matrix(0.97,-0.1,0.15,0.97,-24.69,25.67)}74.157%{transform:matrix(0.97,-0.1,0.15,0.97,-24.42,25.78)}75.281%{transform:matrix(0.97,-0.1,0.15,0.97,-24.15,25.9)}76.404%{transform:matrix(0.97,-0.1,0.15,0.97,-23.86,26.02)}77.528%{transform:matrix(0.97,-0.1,0.15,0.97,-23.57,26.15)}78.652%{transform:matrix(0.97,-0.1,0.15,0.97,-23.29,26.28)}79.775%{transform:matrix(0.97,-0.1,0.15,0.97,-23.01,26.42)}80.899%{transform:matrix(0.97,-0.1,0.14,0.97,-22.74,26.56)}82.022%{transform:matrix(0.97,-0.1,0.14,0.97,-22.48,26.71)}83.146%{transform:matrix(0.97,-0.1,0.14,0.97,-22.24,26.86)}84.27%{transform:matrix(0.97,-0.1,0.14,0.97,-22.01,27)}85.393%{transform:matrix(0.97,-0.1,0.14,0.97,-21.78,27.12)}86.517%{transform:matrix(0.97,-0.09,0.14,0.97,-21.58,27.23)}87.64%{transform:matrix(0.97,-0.09,0.14,0.97,-21.42,27.35)}88.764%{transform:matrix(0.97,-0.09,0.14,0.97,-21.28,27.46)}89.888%{transform:matrix(0.97,-0.09,0.14,0.97,-21.17,27.57)}91.011%{transform:matrix(0.97,-0.09,0.14,0.97,-21.1,27.68)}92.135%{transform:matrix(0.97,-0.09,0.14,0.96,-21.06,27.78)}93.258%{transform:matrix(0.97,-0.09,0.14,0.96,-21.04,27.87)}94.382%{transform:matrix(0.97,-0.09,0.14,0.96,-21.06,27.96)}95.506%{transform:matrix(0.97,-0.09,0.14,0.96,-21.1,28.03)}96.629%{transform:matrix(0.97,-0.09,0.14,0.96,-21.17,28.1)}97.753%{transform:matrix(0.97,-0.09,0.14,0.96,-21.26,28.15)}98.876%{transform:matrix(0.97,-0.09,0.14,0.96,-21.37,28.18)}100%{transform:matrix(0.97,-0.09,0.14,0.96,-21.5,28.21)}}
+
+@media (prefers-reduced-motion: reduce) {
+  .eureka-blob-eye-a,
+  .eureka-blob-eye-b {
+    animation: none;
+    /* Pose netral agar karakter blob tetap utuh tanpa gerak */
+    transform: translateY(2px);
+  }
 }
 
 /* ═══ Syntax highlighting (highlight.js) — tema Material Palenight ═══ */

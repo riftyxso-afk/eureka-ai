@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Send, Sparkles } from "lucide-react";
+import { Send, Sparkles } from "lucide-react";
+import EurekaOrb from "@/components/ui/EurekaOrb";
 import { apiFetch } from "@/lib/apiClient";
 
 interface Message {
@@ -107,7 +108,7 @@ export const ChapterAIChat = ({
           {loading && (
             <div className="flex justify-start">
               <div className="flex items-center gap-2 rounded-clay-md bg-clay-beige px-4 py-3 text-sm font-bold text-clay-muted shadow-clay-sm">
-                <Loader2 size={16} className="animate-spin" />
+                <EurekaOrb variant="thinking" scale="inline" label="Eureka sedang berpikir" />
                 AI sedang berpikir...
               </div>
             </div>

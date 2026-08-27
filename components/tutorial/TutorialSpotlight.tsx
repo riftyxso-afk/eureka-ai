@@ -138,7 +138,7 @@ export default function TutorialSpotlight({
               initial={{ opacity: 0, scale: 0.9, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ type: "spring", stiffness: 240, damping: 20 }}
-              className="pointer-events-auto absolute left-1/2 top-1/2 max-h-[min(88vh,480px)] w-[min(92vw,380px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-clay-md border-3 border-clay-primary/40 bg-white p-6 text-center shadow-clay-lg"
+              className="pointer-events-auto absolute left-1/2 top-1/2 max-h-[min(88vh,480px)] w-[min(92vw,380px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-clay-md border-3 border-clay-primary/40 bg-clay-cream p-6 text-center shadow-clay-lg"
             >
               <motion.div
                 initial={{ scale: 0, rotate: -30 }}
@@ -195,7 +195,7 @@ export default function TutorialSpotlight({
                 ref={tooltipRef}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="pointer-events-auto fixed max-h-[min(60vh,320px)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-white p-4 shadow-clay-lg"
+                className="pointer-events-auto fixed max-h-[min(60vh,320px)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-4 shadow-clay-lg"
                 style={tooltipStyle()}
               >
                 <button
@@ -232,7 +232,7 @@ export default function TutorialSpotlight({
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="pointer-events-auto absolute left-1/2 top-16 max-h-[min(70vh,400px)] w-[min(92vw,340px)] -translate-x-1/2 overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-white p-4 text-center shadow-clay-lg"
+              className="pointer-events-auto absolute left-1/2 top-16 max-h-[min(70vh,400px)] w-[min(92vw,340px)] -translate-x-1/2 overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-4 text-center shadow-clay-lg"
             >
               <p className="text-sm font-bold text-clay-dark">
                 {current?.text}

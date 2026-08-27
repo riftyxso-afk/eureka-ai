@@ -89,7 +89,7 @@ export function isLoggedIn(): boolean {
  * path lokal, cegah open redirect). Dipakai halaman kampanye seperti
  * /launch dan /join agar user kembali otomatis setelah masuk.
  */
-export function getSafeNext(defaultPath = "/home"): string {
+export function getSafeNext(defaultPath = "/dashboard"): string {
   if (typeof window === "undefined") return defaultPath;
   const next = new URLSearchParams(window.location.search).get("next") ?? "";
   if (next.startsWith("/") && !next.startsWith("//") && !next.includes(":")) {
@@ -568,6 +568,8 @@ export async function logoutUser(): Promise<void> {
 /**
  * True bila user belum menyelesaikan onboarding (profil belum ada / belum lengkap).
  * Dipakai untuk mengarahkan user ke /onboarding setelah masuk.
+ * Pengguna yang melewati onboarding (profileData.onboardingSkipped) TIDAK
+ * diarahkan paksa — mereka bisa melengkapinya nanti dari halaman profil.
  */
 export async function needsOnboarding(): Promise<boolean> {
   const session = getSession();
@@ -581,7 +583,10 @@ export async function needsOnboarding(): Promise<boolean> {
     if (res.status === 404) return true;
     if (!res.ok) return false;
     const payload = await res.json();
-    return !payload?.user?.onboardingCompleted;
+    const u = payload?.user;
+    if (u?.onboardingCompleted) return false;
+    if (u?.profileData?.onboardingSkipped) return false;
+    return true;
   } catch {
     return false;
   }

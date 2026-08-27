@@ -101,7 +101,7 @@ export default function LeaderboardPage() {
         <div className="mt-6 rounded-clay border-3 border-clay-primary bg-clay-primary/5 p-5 shadow-clay">
           <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-lg font-extrabold text-clay-primary shadow-clay-inset">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-clay-cream text-lg font-extrabold text-clay-primary shadow-clay-inset">
                 {currentUser.avatar || currentUser.name.charAt(0).toUpperCase()}
               </span>
               <div className="min-w-0">
@@ -126,11 +126,11 @@ export default function LeaderboardPage() {
       {/* Daftar */}
       <div className="mt-6 flex flex-col gap-3">
         {loading ? (
-          <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
+          <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
             {l.loading}
           </p>
         ) : displayEntries.length === 0 ? (
-          <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
+          <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
             {l.empty}
           </p>
         ) : (
@@ -143,7 +143,7 @@ export default function LeaderboardPage() {
                 className={`card-clay flex items-center justify-between gap-4 !p-4 !shadow-clay-sm transition-all duration-75 ${
                   isTop3
                     ? TOP3_STYLE[entry.rank - 1].card
-                    : "hover:-translate-y-0.5 hover:shadow-[0_8px_0_#D1C4B4]"
+                    : "hover:-translate-y-0.5 hover:shadow-[0_8px_0_rgb(var(--clay-shadow))]"
                 } ${isMe ? "!border-clay-primary ring-2 ring-clay-primary/30" : ""}`}
               >
                 <div className="flex min-w-0 items-center gap-4">

@@ -1,5 +1,7 @@
 "use client";
 
+import EurekaOrb from "@/components/ui/EurekaOrb";
+
 /**
  * Skeleton loading chat — placeholder bubble user & AI dengan shimmer
  * CSS (reuse @keyframes shimmer di globals.css). Meniru ukuran bubble
@@ -23,15 +25,13 @@ export default function ChatSkeleton() {
 
       {/* Bubble AI 1 (kiri, multi-baris) */}
       <div className="flex items-start gap-2.5">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/holo-sticker.gif"
-          alt=""
+        <span
           aria-hidden
-          style={{ mixBlendMode: "screen" }}
-          className="mt-1 h-10 w-10 shrink-0 object-contain"
-        />
-        <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-white px-4 py-3 shadow-clay-sm">
+          className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center"
+        >
+          <EurekaOrb variant="connecting" scale="inline" label="Memuat sesi" />
+        </span>
+        <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-clay-cream px-4 py-3 shadow-clay-sm">
           <div className="space-y-2">
             <div className="relative h-3.5 w-4/5 overflow-hidden rounded-full bg-clay-beige">
               <span className="skeleton-shimmer motion-reduce:animate-none" />
@@ -56,7 +56,7 @@ export default function ChatSkeleton() {
           style={{ mixBlendMode: "screen" }}
           className="mt-1 h-10 w-10 shrink-0 object-contain"
         />
-        <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-white px-4 py-3 shadow-clay-sm">
+        <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-clay-cream px-4 py-3 shadow-clay-sm">
           <div className="space-y-2">
             <div className="relative h-3.5 w-2/3 overflow-hidden rounded-full bg-clay-beige">
               <span className="skeleton-shimmer motion-reduce:animate-none" />

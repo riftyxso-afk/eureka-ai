@@ -76,7 +76,7 @@ export default function ClarificationCard({
                       className={`flex items-center gap-1.5 rounded-clay-full border-2 px-3 py-1.5 text-xs font-extrabold transition-all duration-75 min-h-[38px] ${
                         active
                           ? "border-clay-primary bg-clay-primary text-white shadow-clay-btn"
-                          : "border-clay-shadow/40 bg-white text-clay-dark hover:border-clay-primary/60"
+                          : "border-clay-shadow/40 bg-clay-cream text-clay-dark hover:border-clay-primary/60"
                       }`}
                     >
                       {active && <Check size={13} />}

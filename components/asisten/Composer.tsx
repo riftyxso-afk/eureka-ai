@@ -143,6 +143,7 @@ interface ComposerProps {
   userId: string;
   sending: boolean;
   disabled?: boolean;
+  placeholder?: string;
   /** Isi awal — dipakai suggestion chips: berubah → teks ikut berubah + fokus. */
   initialValue?: string;
   /**
@@ -177,6 +178,7 @@ export default function Composer({
   userId,
   sending,
   disabled = false,
+  placeholder,
   initialValue = "",
   initialMentions = [],
   compact = false,
@@ -639,7 +641,7 @@ export default function Composer({
           {/* Catatan: TIDAK pakai overflow-hidden di kotak ini — kalau dipakai,
               popover kecepatan AI & mention akan terpotong. Clipping sudut
               wizard ditangani sendiri oleh panel wizard. */}
-          <div className="rounded-clay-md border-2 border-clay-borderLight bg-white shadow-clay transition-all duration-75 focus-within:border-clay-primary">
+          <div className="rounded-2xl border border-gray-200/80 bg-white shadow-sm transition-all duration-75 focus-within:border-clay-primary/40 focus-within:shadow-md dark:border-clay-borderLight/40 dark:bg-clay-cream">
             {/* Wizard F&Q menyatu DI DALAM kotak composer — memanjang ke atas
                 saat muncul, menyusut kembali setelah submit (posisi normal). */}
             <AnimatePresence initial={false}>
@@ -669,7 +671,7 @@ export default function Composer({
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
                 rows={1}
-                placeholder="Tanya apa saja… ketik @ untuk melampirkan catatanmu"
+                placeholder={placeholder ?? "Tanya apa saja… ketik @ untuk melampirkan catatanmu"}
                 className={`w-full resize-none bg-transparent font-semibold leading-relaxed text-clay-dark outline-none placeholder:text-clay-muted disabled:opacity-60 ${
                   compact ? "max-h-[120px] text-sm" : "max-h-[180px] text-base"
                 }`}
@@ -846,7 +848,7 @@ export default function Composer({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -8, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute bottom-full right-0 z-40 mb-2 w-44 overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-white p-1 shadow-clay-lg"
+                        className="absolute bottom-full right-0 z-40 mb-2 w-44 overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-1 shadow-clay-lg"
                       >
                         {SPEED_OPTIONS.map((o) => {
                           const active = speedMode === o.value;
@@ -928,7 +930,7 @@ export default function Composer({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute bottom-full left-2 z-30 mb-2 w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-white shadow-clay-lg"
+                className="absolute bottom-full left-2 z-30 mb-2 w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
               >
                 <div className="flex items-center gap-2 border-b-2 border-clay-borderLight px-3.5 py-2.5 text-xs font-extrabold text-clay-muted">
                   <Terminal size={14} className="text-clay-primary" />
@@ -976,7 +978,7 @@ export default function Composer({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute bottom-full left-2 z-30 mb-2 w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-white shadow-clay-lg"
+                className="absolute bottom-full left-2 z-30 mb-2 w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
               >
                 <div className="flex items-center gap-2 border-b-2 border-clay-borderLight px-3.5 py-2.5 text-xs font-extrabold text-clay-muted">
                   <BookOpen size={14} className="text-clay-primary" />

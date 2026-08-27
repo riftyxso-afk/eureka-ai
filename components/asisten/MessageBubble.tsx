@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { BookMarked, Check, Copy, Paperclip, RefreshCw, Zap } from "lucide-react";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
+import EurekaOrb from "@/components/ui/EurekaOrb";
+import EurekaBlobAvatar from "@/components/asisten/EurekaBlobAvatar";
 import { YoutubeEmbed } from "@/components/video/YoutubeEmbed";
 import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
@@ -45,7 +47,7 @@ function CopyButton({ content }: { content: string }) {
       onClick={handleCopy}
       aria-label="Salin pesan"
       title="Salin pesan sebagai teks bersih"
-      className="inline-flex min-h-[26px] items-center gap-1 self-start rounded-clay-full border-2 border-clay-borderLight bg-white px-2 py-0.5 text-[11px] font-bold text-clay-muted shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 hover:text-clay-primary active:translate-y-1"
+      className="inline-flex min-h-[26px] items-center gap-1 self-start rounded-clay-full border-2 border-clay-borderLight bg-clay-cream px-2 py-0.5 text-[11px] font-bold text-clay-muted shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 hover:text-clay-primary active:translate-y-1"
     >
       {copied ? <Check size={12} /> : <Copy size={12} />}
       {copied ? "Tersalin" : "Salin"}
@@ -80,18 +82,8 @@ function answerDurationMs(
 }
 
 function ThinkingDots() {
-  return (
-    <span className="inline-flex items-center gap-1.5 py-1">
-      {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          className="h-2 w-2 rounded-full bg-clay-primary"
-          animate={{ y: [0, -6, 0], opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.18 }}
-        />
-      ))}
-    </span>
-  );
+  // Loading resmi: orb composing dari thinking-orbs (lihat spec orb-loading-system)
+  return <EurekaOrb variant="thinking" scale="inline" label="Eureka sedang berpikir" />;
 }
 
 /**
@@ -134,13 +126,13 @@ export default function MessageBubble({
             {(message.mentions.length > 0 || message.attachmentName) && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {message.mentions.length > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-clay-full bg-white/20 px-2 py-0.5 text-[10.5px] font-extrabold">
+                  <span className="inline-flex items-center gap-1 rounded-clay-full bg-clay-cream/20 px-2 py-0.5 text-[10.5px] font-extrabold">
                     <BookMarked size={11} />
                     {message.mentions.length} catatan
                   </span>
                 )}
                 {message.attachmentName && (
-                  <span className="inline-flex items-center gap-1 rounded-clay-full bg-white/20 px-2 py-0.5 text-[10.5px] font-extrabold">
+                  <span className="inline-flex items-center gap-1 rounded-clay-full bg-clay-cream/20 px-2 py-0.5 text-[10.5px] font-extrabold">
                     <Paperclip size={11} />
                     {message.attachmentName.slice(0, 40)}
                   </span>
@@ -164,14 +156,9 @@ export default function MessageBubble({
       animate={{ opacity: 1, y: 0 }}
       className="flex items-start gap-2.5"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/logo.png"
-        alt="Logo Eureka.AI"
-        className="mt-1 h-8 w-8 shrink-0 object-contain"
-      />
+      <EurekaBlobAvatar size={32} className="mt-1 shrink-0" />
       <div className="flex min-w-0 max-w-[85%] flex-col gap-1.5">
-        <div className="break-words rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-white px-4 py-3 shadow-clay-sm">
+        <div className="break-words rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-clay-cream px-4 py-3 shadow-clay-sm">
           {isStreaming && empty ? (
             <div className="flex items-center gap-2 py-0.5">
               <ThinkingDots />
@@ -221,7 +208,7 @@ export default function MessageBubble({
         {!isStreaming && empty && onRetry && (
           <button
             onClick={onRetry}
-            className="inline-flex items-center gap-1.5 self-start rounded-clay-full border-3 border-clay-secondary bg-white px-4 py-1.5 text-xs font-extrabold text-clay-secondary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
+            className="inline-flex items-center gap-1.5 self-start rounded-clay-full border-3 border-clay-secondary bg-clay-cream px-4 py-1.5 text-xs font-extrabold text-clay-secondary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
           >
             <RefreshCw size={13} /> Coba lagi
           </button>

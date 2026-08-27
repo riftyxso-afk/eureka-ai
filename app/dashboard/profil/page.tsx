@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import {
   BookOpen,
+  Brain,
   Camera,
   Copy,
   Flame,
@@ -14,6 +15,7 @@ import {
   PartyPopper,
   School,
   Share2,
+  Sparkles,
   Trash2,
   TrendingUp,
   User,
@@ -27,8 +29,27 @@ import { logoutUser, updateSessionName } from "@/lib/auth";
 import { fileToAvatarDataUrl, getAvatar, setAvatar } from "@/lib/avatar";
 import { PlanBadge } from "@/components/PlanBadge";
 import { useI18n } from "@/context/LocaleContext";
+import {
+  EDUCATION_OPTIONS,
+  ONBOARDING_STEPS,
+  gradeOptionsFor,
+} from "@/lib/onboardingContent";
+import {
+  educationForGrade,
+  gradeLabel,
+  normalizeGrade,
+} from "@/lib/gradeVocab";
 
 const SCHOOL_KEY = "eureka_school";
+
+/** Label tampilan untuk nilai opsi onboarding (weakTopic/habit/peakHour). */
+function optionLabel(stepKey: string, value?: string | null): string {
+  if (!value) return "—";
+  const step = ONBOARDING_STEPS.find((s) => s.key === stepKey);
+  return (
+    step?.options?.find((o) => o.value === value)?.label ?? value
+  );
+}
 
 function readSchool(): string {
   if (typeof window === "undefined") return "";
@@ -49,6 +70,7 @@ export default function ProfilPage() {
     email: "",
     username: "",
     school: readSchool(),
+    education: "",
     grade: "",
   });
   const [userNumber, setUserNumber] = useState<number | null>(null);
@@ -69,6 +91,15 @@ export default function ProfilPage() {
     rewarded: boolean;
     link: string;
   } | null>(null);
+  // Ringkasan hasil onboarding + status skip (kartu "Lengkapi Orientasi").
+  const [summary, setSummary] = useState<{
+    psyLabel: string;
+    weakTopic: string;
+    learningHabit: string;
+    peakHour: string;
+    tagline: string;
+  } | null>(null);
+  const [onboardingSkipped, setOnboardingSkipped] = useState(false);
 
   useEffect(() => {
     setForm((prev) => ({
@@ -85,13 +116,36 @@ export default function ProfilPage() {
         const payload = await res.json();
         const u = payload?.user;
         if (!u) return;
+        // Kosakata grade kanonik: nilai lama bergaya label dinormalisasi
+        // agar select tidak kosong dan simpanan tidak merusak data.
+        const canonicalGrade =
+          normalizeGrade(u.profileData?.grade) ?? normalizeGrade(data.grade);
+        const education =
+          (typeof u.profileData?.education === "string" &&
+            u.profileData.education) ||
+          educationForGrade(canonicalGrade) ||
+          "";
         setForm((prev) => ({
           ...prev,
           name: u.name || prev.name,
           email: u.email || prev.email,
           username: u.username || prev.username,
-          grade: u.profileData?.grade || prev.grade,
+          education,
+          grade: canonicalGrade || "",
         }));
+        if (typeof u.profileData?.onboardingSkipped === "boolean") {
+          setOnboardingSkipped(u.profileData.onboardingSkipped);
+        }
+        const a = u.profileData?.analysis;
+        if (a && typeof a === "object") {
+          setSummary({
+            psyLabel: a.psyLabel ?? "",
+            weakTopic: u.profileData?.weakTopic ?? "",
+            learningHabit: u.profileData?.learningHabit ?? "",
+            peakHour: u.profileData?.peakHour ?? "",
+            tagline: a.tagline ?? "",
+          });
+        }
         if (u.userNumber != null) setUserNumber(Number(u.userNumber));
         // Foto profil: prioritas dari server (profile_data.avatarUrl),
         // fallback ke cache lokal.
@@ -175,7 +229,15 @@ export default function ProfilPage() {
     }
     setUserName(form.name);
     updateSessionName(form.name);
-    update({ name: form.name.trim(), grade: form.grade });
+    // Simpan grade dalam kosakata kanonik (enum mesin), bukan label.
+    const canonicalGrade = normalizeGrade(form.grade) ?? "";
+    const canonicalEducation =
+      form.education || educationForGrade(canonicalGrade) || "";
+    update({
+      name: form.name.trim(),
+      education: canonicalEducation,
+      grade: canonicalGrade,
+    });
     try {
       window.localStorage.setItem(SCHOOL_KEY, form.school.trim());
     } catch {
@@ -191,7 +253,8 @@ export default function ProfilPage() {
           username: cleanUsername,
           profileData: {
             school: form.school.trim(),
-            grade: form.grade,
+            education: canonicalEducation,
+            grade: canonicalGrade,
             ...(avatar ? { avatarUrl: avatar } : {}),
           },
         }),
@@ -354,6 +417,76 @@ export default function ProfilPage() {
         ))}
       </div>
 
+      {/* Kartu lengkapi orientasi — hanya untuk yang melewati onboarding */}
+      {onboardingSkipped && (
+        <CardClay className="mt-6 !border-clay-primary/50">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
+                <Sparkles size={20} className="text-clay-primary" />
+                Kenalan lebih dekat yuk!
+              </h2>
+              <p className="mt-1 text-sm font-semibold text-clay-muted">
+                Lengkapi orientasi (±1 menit) supaya Eureka bisa mempersonalisasi
+                cara belajarmu.
+              </p>
+            </div>
+            <a
+              href="/onboarding?resume=1"
+              className="btn-clay-primary shrink-0 !min-h-[44px] !px-5 text-sm"
+            >
+              {l.completeOnboarding}
+            </a>
+          </div>
+        </CardClay>
+      )}
+
+      {/* Ringkasan hasil onboarding */}
+      {(summary || form.grade) && (
+        <CardClay className="mt-6">
+          <h2 className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
+            <Brain size={20} className="text-clay-primary" />
+            {l.learningProfile}
+          </h2>
+          {summary ? (
+            <>
+              {summary.tagline && (
+                <p className="mt-3 text-sm font-extrabold text-clay-primary">
+                  “{summary.tagline}”
+                </p>
+              )}
+              <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {[
+                  [l.summaryPsy, summary.psyLabel],
+                  [l.summaryWeak, optionLabel("weakTopic", summary.weakTopic)],
+                  [
+                    l.summaryHabit,
+                    optionLabel("learningHabit", summary.learningHabit),
+                  ],
+                  [l.summaryPeak, optionLabel("peakHour", summary.peakHour)],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-inputBg px-4 py-3"
+                  >
+                    <dt className="text-[10px] font-extrabold uppercase tracking-wide text-clay-muted">
+                      {label}
+                    </dt>
+                    <dd className="mt-1 text-sm font-bold text-clay-dark">
+                      {value || "—"}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          ) : (
+            <p className="mt-3 text-sm font-semibold text-clay-muted">
+              {l.summaryEmpty}
+            </p>
+          )}
+        </CardClay>
+      )}
+
       {/* Program Referral */}
       {refStatus && (
         <CardClay className="mt-6 !border-clay-primary/50">
@@ -494,17 +627,20 @@ export default function ProfilPage() {
           <div>
             <label className="mb-2 flex items-center gap-1.5 text-sm font-extrabold text-clay-dark">
               <GraduationCap size={15} className="text-clay-primary" />
-              {l.grade}
+              {l.education}
             </label>
             <div className="relative">
               <select
-                value={form.grade}
-                onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                value={form.education}
+                onChange={(e) =>
+                  setForm({ ...form, education: e.target.value, grade: "" })
+                }
                 className="w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-5 py-4 pr-12 text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none"
               >
-                {["", "10 SMA", "11 SMA", "12 SMA", "Mahasiswa"].map((g) => (
-                  <option key={g} value={g}>
-                    {g || l.chooseGrade}
+                <option value="">{l.chooseEducation}</option>
+                {EDUCATION_OPTIONS.map((edu) => (
+                  <option key={edu.value} value={edu.value}>
+                    {edu.label.replace(/^[^\w]+\s*/, "")}
                   </option>
                 ))}
               </select>
@@ -512,6 +648,39 @@ export default function ProfilPage() {
                 ▾
               </span>
             </div>
+          </div>
+
+          <div>
+            <label className="mb-2 flex items-center gap-1.5 text-sm font-extrabold text-clay-dark">
+              <GraduationCap size={15} className="text-clay-primary" />
+              {l.grade}
+            </label>
+            <div className="relative">
+              <select
+                value={form.grade}
+                onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                className="w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-5 py-4 pr-12 text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none disabled:opacity-60"
+                disabled={!form.education}
+              >
+                <option value="">
+                  {form.education ? l.chooseGrade : l.chooseEducation}
+                </option>
+                {gradeOptionsFor(form.education).map((g) => (
+                  <option key={g.value} value={g.value}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-clay-muted">
+                ▾
+              </span>
+            </div>
+            {/* Kelas tersimpan (mis. dari onboarding) tetap terbaca sebagai label */}
+            {!form.education && form.grade && (
+              <p className="mt-2 text-xs font-bold text-clay-muted">
+                Tersimpan: {gradeLabel(form.grade) || form.grade}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">

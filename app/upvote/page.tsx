@@ -127,7 +127,7 @@ export default function UpvotePage() {
 
         {/* Aksi sekunder */}
         <div className="mt-12 flex flex-col justify-center gap-2 sm:flex-row">
-          <Link href="/home">
+          <Link href="/dashboard">
             <ButtonClay className="w-full sm:w-auto">
               <span className="inline-flex items-center gap-2">
                 <Sparkles size={18} /> {l.askCta}

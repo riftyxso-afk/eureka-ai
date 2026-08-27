@@ -1,5 +1,9 @@
 import type { Config } from "tailwindcss";
 
+// Warna clay memakai CSS variable berbasis kanal RGB (format "R G B")
+// supaya modifier opacity (/10, /40, dst.) tetap bekerja dan mode gelap
+// cukup menukar nilai variabel di app/globals.css (.dark) — tanpa override
+// per-kelas. Lihat blok :root / .dark di app/globals.css.
 const config: Config = {
   // Mode gelap dikendalikan class `.dark` di <html> (lihat context/ThemeContext.tsx).
   darkMode: "class",
@@ -20,34 +24,66 @@ const config: Config = {
       },
       colors: {
         clay: {
-          primary: "#8B5CF6", // Soft Purple (Brand)
-          secondary: "#F59E0B", // Warm Amber (Accent)
-          success: "#10B981", // Soft Emerald (Eureka!)
-          dark: "#2D2A24", // Dark Chocolate Text
-          muted: "#8C857C", // Muted Text
-          beige: "#F9F3EC", // Canvas Background
-          cream: "#FFFFFF", // Card Base
-          shadow: "#D1C4B4", // Solid Drop Shadow
-          shadowDark: "#B0A898", // Pressed State Shadow
-          inputBg: "#EFE8E0", // Depressed Input Area
-          borderLight: "#C4B5FD", // Top/Left Highlight Border
-          borderShadow: "#5B21B6", // Bottom/Right Shadow Border
+          primary: "rgb(var(--clay-primary) / <alpha-value>)",
+          secondary: "rgb(var(--clay-secondary) / <alpha-value>)",
+          success: "rgb(var(--clay-success) / <alpha-value>)",
+          dark: "rgb(var(--clay-dark) / <alpha-value>)",
+          muted: "rgb(var(--clay-muted) / <alpha-value>)",
+          beige: "rgb(var(--clay-beige) / <alpha-value>)",
+          cream: "rgb(var(--clay-cream) / <alpha-value>)",
+          shadow: "rgb(var(--clay-shadow) / <alpha-value>)",
+          shadowDark: "rgb(var(--clay-shadow-dark) / <alpha-value>)",
+          inputBg: "rgb(var(--clay-input-bg) / <alpha-value>)",
+          borderLight: "rgb(var(--clay-border-light) / <alpha-value>)",
+          borderShadow: "rgb(var(--clay-border-shadow) / <alpha-value>)",
+        },
+        // Palet aksen mata pelajaran — nilai kanal di app/globals.css
+        // (:root = tier terang, .dark = tier gelap), sumber kebenaran
+        // hex di lib/palette.ts. Pemakaian: bg-subject-sky/15, text-subject-sky.
+        subject: {
+          sky: "rgb(var(--subject-sky) / <alpha-value>)",
+          violet: "rgb(var(--subject-violet) / <alpha-value>)",
+          rose: "rgb(var(--subject-rose) / <alpha-value>)",
+          amber: "rgb(var(--subject-amber) / <alpha-value>)",
+          emerald: "rgb(var(--subject-emerald) / <alpha-value>)",
+          fuchsia: "rgb(var(--subject-fuchsia) / <alpha-value>)",
+          blue: "rgb(var(--subject-blue) / <alpha-value>)",
+          orange: "rgb(var(--subject-orange) / <alpha-value>)",
+          teal: "rgb(var(--subject-teal) / <alpha-value>)",
+          red: "rgb(var(--subject-red) / <alpha-value>)",
+          lime: "rgb(var(--subject-lime) / <alpha-value>)",
+          indigo: "rgb(var(--subject-indigo) / <alpha-value>)",
         },
       },
       boxShadow: {
-        // Claymorphism Core Rules (SOLID SHADOWS, NO BLUR)
-        clay: "0 10px 0 #D1C4B4, inset 0 -4px 0 #E5E7EB",
-        "clay-sm": "0 6px 0 #D1C4B4, inset 0 -3px 0 #F3F4F6",
-        "clay-lg": "0 14px 0 #B0A898, inset 0 -6px 0 #F3F4F6",
-        "clay-btn": "0 8px 0 #5B21B6, inset 0 -2px 0 #C4B5FD",
-        "clay-btn-hover": "0 10px 0 #5B21B6, inset 0 -2px 0 #C4B5FD",
-        "clay-btn-active": "0 4px 0 #5B21B6, inset 0 -2px 0 #C4B5FD",
+        // Claymorphism Core Rules (SOLID SHADOWS, NO BLUR) — semua warna
+        // mengikuti variabel tema sehingga bayangan ikut gelap otomatis.
+        clay: "0 10px 0 rgb(var(--clay-shadow)), inset 0 -4px 0 rgb(var(--clay-inset-mid))",
+        "clay-sm":
+          "0 6px 0 rgb(var(--clay-shadow)), inset 0 -3px 0 rgb(var(--clay-inset-low))",
+        "clay-lg":
+          "0 14px 0 rgb(var(--clay-shadow-dark)), inset 0 -6px 0 rgb(var(--clay-inset-low))",
+        "clay-btn":
+          "0 8px 0 rgb(var(--clay-btn-shadow)), inset 0 -2px 0 rgb(var(--clay-btn-highlight))",
+        "clay-btn-hover":
+          "0 10px 0 rgb(var(--clay-btn-shadow)), inset 0 -2px 0 rgb(var(--clay-btn-highlight))",
+        "clay-btn-active":
+          "0 4px 0 rgb(var(--clay-btn-shadow)), inset 0 -2px 0 rgb(var(--clay-btn-highlight))",
         "clay-inset": "inset 0 4px 8px rgba(0,0,0,0.1)",
-        "clay-thumb": "0 4px 0 #B45309",
+        "clay-thumb": "0 4px 0 rgb(var(--clay-thumb))",
       },
       borderRadius: {
+        // SKALA RADIUS RESMI (satu-satunya nilai yang boleh dipakai):
+        //  clay      32px → kartu halaman, panel besar, shell pop-up/modal
+        //  clay-md   24px → kartu kecil, panel dalam modal, input/textarea
+        //  clay-sm   16px → kartu mini, kotak info/badge besar (jarang)
+        //  clay-full 50px → tombol pill & elemen kapsul
+        //  rounded-full     → avatar, dot, badge kecil membulat penuh
+        // Mikro (4–12px, kelas `rounded`/`rounded-lg`) hanya untuk elemen
+        // inline: chip kode, ekor chat bubble, thumbnail mini.
         clay: "32px",
         "clay-md": "24px",
+        "clay-sm": "16px",
         "clay-full": "50px",
       },
       borderWidth: {

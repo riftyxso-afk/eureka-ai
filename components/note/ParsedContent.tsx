@@ -55,7 +55,7 @@ function TableBlock({
         ref={wrapRef}
         className="overflow-x-auto rounded-clay-md border-2 border-clay-shadow/20 shadow-clay-sm"
       >
-        <table className="w-full min-w-[min(100%,420px)] border-collapse bg-white">
+        <table className="w-full min-w-[min(100%,420px)] border-collapse bg-clay-cream">
           <thead>
             <tr className="bg-clay-primary text-white">
               {headers.map((h, i) => (
@@ -74,7 +74,7 @@ function TableBlock({
                 key={i}
                 className={
                   i % 2 === 0
-                    ? "bg-white hover:bg-clay-beige/50"
+                    ? "bg-clay-cream hover:bg-clay-beige/50"
                     : "bg-clay-beige/30 hover:bg-clay-beige/70"
                 }
               >
@@ -218,7 +218,7 @@ export function ParsedContent({ items, highlights = [] }: ParsedContentProps) {
               <Suspense
                 key={index}
                 fallback={
-                  <div className="my-6 flex items-center justify-center rounded-clay-md border-2 border-clay-shadow/20 bg-white p-6">
+                  <div className="my-6 flex items-center justify-center rounded-clay-md border-2 border-clay-shadow/20 bg-clay-cream p-6">
                     <p className="text-sm font-bold text-clay-muted">
                       Memuat mind map...
                     </p>

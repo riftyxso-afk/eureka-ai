@@ -149,7 +149,7 @@ export default function AddImageModal({
                     className={`flex-1 rounded-clay-md border-2 py-2.5 sm:py-2 text-[11px] font-extrabold transition-all duration-75 min-h-[44px] ${
                       alignment === a
                         ? "border-clay-primary bg-clay-primary text-white"
-                        : "border-clay-shadow/40 bg-white text-clay-muted"
+                        : "border-clay-shadow/40 bg-clay-cream text-clay-muted"
                     }`}
                   >
                     {a === "left" ? "Kiri" : a === "center" ? "Tengah" : "Kanan"}
@@ -169,7 +169,7 @@ export default function AddImageModal({
                     className={`flex-1 rounded-clay-md border-2 py-2.5 sm:py-2 text-[11px] font-extrabold transition-all duration-75 min-h-[44px] ${
                       size === s
                         ? "border-clay-primary bg-clay-primary text-white"
-                        : "border-clay-shadow/40 bg-white text-clay-muted"
+                        : "border-clay-shadow/40 bg-clay-cream text-clay-muted"
                     }`}
                   >
                     {s === "small" ? "Kecil" : s === "medium" ? "Sedang" : "Besar"}

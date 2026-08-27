@@ -54,7 +54,7 @@ export const BackgroundJobPopup = () => {
         className="fixed bottom-4 left-4 right-20 z-40 sm:bottom-6 sm:left-6 sm:right-auto"
       >
         {expanded ? (
-          <div className="w-full rounded-clay border-3 border-clay-borderLight bg-white shadow-xl sm:w-[320px]">
+          <div className="w-full rounded-clay border-3 border-clay-borderLight bg-clay-cream shadow-xl sm:w-[320px]">
             <div className="flex items-center justify-between border-b-2 border-clay-shadow/30 px-3 py-3 sm:px-4">
               <div className="flex items-center gap-2">
                 <Loader2 size={16} className="animate-spin text-clay-primary sm:size-4" />
@@ -121,7 +121,7 @@ export const BackgroundJobPopup = () => {
           <button
             onClick={() => setExpanded(true)}
             aria-label="Lihat progres pembuatan catatan"
-            className="flex w-full items-center gap-2 rounded-clay-full border-3 border-clay-borderLight bg-white py-3 pl-4 pr-4 shadow-xl transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:w-auto sm:gap-3 sm:py-2.5 sm:pl-3.5"
+            className="flex w-full items-center gap-2 rounded-clay-full border-3 border-clay-borderLight bg-clay-cream py-3 pl-4 pr-4 shadow-xl transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:w-auto sm:gap-3 sm:py-2.5 sm:pl-3.5"
           >
             <Loader2 size={18} className="shrink-0 animate-spin text-clay-primary" />
             <span className="min-w-0 flex-1 text-left sm:flex-initial">

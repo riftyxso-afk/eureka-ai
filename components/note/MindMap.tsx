@@ -69,7 +69,7 @@ export function MindMap({ content }: MindMapProps) {
   }, [content]);
 
   return (
-    <div className="relative my-6 overflow-x-auto rounded-clay-md border-2 border-clay-shadow/20 bg-white p-6 shadow-clay-sm">
+    <div className="relative my-6 overflow-x-auto rounded-clay-md border-2 border-clay-shadow/20 bg-clay-cream p-6 shadow-clay-sm">
       <div
         ref={containerRef}
         className="inline-block min-w-full [&>svg]:block [&>svg]:mx-auto [&>svg]:max-w-none [&>svg]:h-auto"

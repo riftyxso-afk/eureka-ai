@@ -29,12 +29,18 @@ export interface ComprehensionStreamInput {
 /**
  * Kirim permintaan generate soal & stream respons AI.
  * Mengembalikan { abort } untuk menghentikan aliran (tombol batal).
+ *
+ * `onReady` (opsional) dipanggil SINKRON dengan fungsi abort pada saat
+ * pemanggilan — sebelum await pertama pemanggil — sehingga tombol
+ * "Hentikan" tidak pernah kehilangan referensi (anti race).
  */
 export async function streamComprehension(
   input: ComprehensionStreamInput,
-  onEvent: (event: ComprehensionStreamEvent) => void
+  onEvent: (event: ComprehensionStreamEvent) => void,
+  onReady?: (abort: () => void) => void
 ): Promise<{ abort: () => void; completed: Promise<void> }> {
   const controller = new AbortController();
+  onReady?.(() => controller.abort());
 
   const completed = (async () => {
     const headers = new Headers({ "Content-Type": "application/json" });

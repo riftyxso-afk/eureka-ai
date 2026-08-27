@@ -1,5 +1,6 @@
 "use client";
 
+import EurekaOrb from "@/components/ui/EurekaOrb";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, apiEventSource, getClientLocale } from "@/lib/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
@@ -12,8 +13,7 @@ import {
   FileText,
   Globe,
   Languages,
-  Loader2,
-  Music,
+    Music,
   PartyPopper,
   Plus,
   RotateCcw,
@@ -807,13 +807,12 @@ export const CreateNoteModal = ({
                 </div>
               ) : processing ? (
                 <div className="flex flex-col items-center px-4 py-8 sm:px-6 sm:py-12 text-center">
-                  <div className="relative h-12 w-12 sm:h-16 sm:w-16">
-                    <div className="absolute inset-0 animate-ping rounded-full bg-clay-primary/30" />
-                    <Loader2
-                      size={48}
-                      className="animate-spin text-clay-primary sm:w-16 sm:h-16"
-                    />
-                  </div>
+                  <EurekaOrb
+                    variant="working"
+                    scale="avatar"
+                    label="Membuat catatan"
+                    className="mx-auto"
+                  />
                   <motion.p
                     key={progressMessage}
                     initial={{ opacity: 0, y: 8 }}
@@ -1015,7 +1014,7 @@ export const CreateNoteModal = ({
                           className={`flex w-full items-center gap-3 rounded-clay-md border-3 p-3 sm:p-4 text-left transition-all duration-75 min-h-[56px] ${
                             translateToIndo
                               ? "border-clay-borderLight bg-clay-primary/10 shadow-clay-sm"
-                              : "border-clay-shadow/50 bg-white shadow-clay-sm hover:-translate-y-0.5"
+                              : "border-clay-shadow/50 bg-clay-cream shadow-clay-sm hover:-translate-y-0.5"
                           }`}
                         >
                           <span
@@ -1039,7 +1038,7 @@ export const CreateNoteModal = ({
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 ${
                               translateToIndo
                                 ? "border-clay-primary bg-clay-primary text-white"
-                                : "border-clay-shadow/40 bg-white text-transparent"
+                                : "border-clay-shadow/40 bg-clay-cream text-transparent"
                             }`}
                           >
                             <CheckCircle2 size={14} />
@@ -1062,8 +1061,8 @@ export const CreateNoteModal = ({
                               onClick={() => setStudyMode(mode.value)}
                               className={`flex flex-1 flex-col items-center rounded-clay-md border-3 p-2 sm:p-3 transition-all duration-75 min-h-[56px] ${
                                 active
-                                  ? "border-clay-borderLight bg-clay-primary text-white shadow-[0_6px_0_#5B21B6]"
-                                  : "border-clay-shadow/50 bg-white text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
+                                  ? "border-clay-borderLight bg-clay-primary text-white shadow-[0_6px_0_rgb(var(--clay-btn-shadow))]"
+                                  : "border-clay-shadow/50 bg-clay-cream text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
                               }`}
                             >
                               <span className="text-xs sm:text-sm font-extrabold">
@@ -1153,7 +1152,7 @@ export const CreateNoteModal = ({
                           return (
                             <div
                               key={src.id}
-                              className="rounded-clay-md border-3 border-clay-shadow/40 bg-white p-3 sm:p-4"
+                              className="rounded-clay-md border-3 border-clay-shadow/40 bg-clay-cream p-3 sm:p-4"
                             >
                               <div className="mb-2 flex items-center justify-between gap-2">
                                 <span className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-clay-dark">
@@ -1341,7 +1340,7 @@ export const CreateNoteModal = ({
                               className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 ${
                                 active
                                   ? "border-clay-primary bg-clay-primary text-white"
-                                  : "border-clay-shadow/40 bg-white text-transparent"
+                                  : "border-clay-shadow/40 bg-clay-cream text-transparent"
                               }`}
                             >
                               <CheckCircle2 size={14} />
@@ -1534,7 +1533,7 @@ export const CreateNoteModal = ({
                               className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 ${
                                 active
                                   ? "border-clay-primary bg-clay-primary text-white"
-                                  : "border-clay-shadow/40 bg-white text-transparent"
+                                  : "border-clay-shadow/40 bg-clay-cream text-transparent"
                               }`}
                             >
                               <CheckCircle2 size={14} />

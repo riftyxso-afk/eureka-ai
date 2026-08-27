@@ -105,14 +105,14 @@ export default function ShareModal({
           </p>
 
           {loading && (
-            <div className="flex items-center gap-2 rounded-2xl border-2 border-clay-shadow/40 bg-clay-beige p-3 text-sm font-bold text-clay-muted">
+            <div className="flex items-center gap-2 rounded-clay-md border-2 border-clay-shadow/40 bg-clay-beige p-3 text-sm font-bold text-clay-muted">
               <Loader2 size={16} className="animate-spin" />
               Membuat link share…
             </div>
           )}
 
           {error && (
-            <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-3 text-xs font-bold text-red-600">
+            <div className="rounded-clay-md border-2 border-red-300 bg-red-50 p-3 text-xs font-bold text-red-600">
               {error}
               <button
                 onClick={createShare}
@@ -125,13 +125,13 @@ export default function ShareModal({
           )}
 
           {!loading && link && (
-            <div className="rounded-2xl border-2 border-clay-shadow/40 bg-clay-beige p-3">
+            <div className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-beige p-3">
               <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-clay-muted">
                 <Link2 size={14} />
                 Link publik (hanya lihat)
               </div>
               <div className="flex items-center gap-2">
-                <code className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-xs font-bold text-clay-dark">
+                <code className="min-w-0 flex-1 truncate rounded-xl bg-clay-cream px-3 py-2 text-xs font-bold text-clay-dark">
                   {link}
                 </code>
                 <button

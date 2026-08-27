@@ -16,6 +16,7 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
 import {
   SCHEDULE_DAYS,
+  SCHEDULE_COLORS,
   addScheduleEntry,
   addTask,
   deleteScheduleEntry,
@@ -27,6 +28,7 @@ import {
   type ScheduleDay,
   type TaskItem,
 } from "@/lib/schedule-store";
+import { readableTextColor } from "@/lib/palette";
 
 type Tab = "jadwal" | "tugas";
 
@@ -54,6 +56,8 @@ export default function JadwalPage() {
   const [end, setEnd] = useState("09:00");
   const [subject, setSubject] = useState("");
   const [room, setRoom] = useState("");
+  // Warna kegiatan — kosong = otomatis (giliran palet).
+  const [entryColor, setEntryColor] = useState<string | null>(null);
 
   // Form tugas
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -88,9 +92,11 @@ export default function JadwalPage() {
       end: end || "09:00",
       subject: name,
       room: room.trim() || undefined,
+      color: entryColor ?? undefined,
     });
     setSubject("");
     setRoom("");
+    setEntryColor(null);
     setShowForm(false);
     reload();
     notify("Jadwal ditambahkan");
@@ -148,7 +154,7 @@ export default function JadwalPage() {
             className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-clay-full border-3 px-4 text-xs font-extrabold transition-all duration-75 active:translate-y-0.5 sm:min-h-[40px] sm:px-4 sm:text-sm ${
               tab === t.id
                 ? "border-clay-primary bg-clay-primary text-white shadow-clay-sm"
-                : "border-clay-shadow/50 bg-white text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
+                : "border-clay-shadow/50 bg-clay-cream text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
             }`}
           >
             <t.icon size={15} />
@@ -247,6 +253,46 @@ export default function JadwalPage() {
                     />
                   </div>
                 </div>
+
+                {/* Pilihan warna kegiatan — dari palet resmi aplikasi */}
+                <div className="mt-4">
+                  <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
+                    WARNA
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {SCHEDULE_COLORS.map((c) => {
+                      const selected = entryColor === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          aria-label={`Warna ${c}`}
+                          aria-pressed={selected}
+                          onClick={() =>
+                            setEntryColor(selected ? null : c)
+                          }
+                          className={`h-9 w-9 rounded-full border-3 transition-transform duration-75 ${
+                            selected
+                              ? "scale-110 border-clay-dark"
+                              : "border-transparent hover:scale-105"
+                          }`}
+                          style={{ background: c }}
+                        >
+                          {selected && (
+                            <CheckCircle2
+                              size={16}
+                              className="mx-auto"
+                              style={{ color: readableTextColor(c) }}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                    <span className="ml-1 text-[11px] font-bold text-clay-muted">
+                      Tanpa pilih = warna otomatis
+                    </span>
+                  </div>
+                </div>
                 <div className="mt-4 flex gap-3">
                   <ButtonClay
                     variant="secondary"
@@ -295,7 +341,13 @@ export default function JadwalPage() {
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
-                                  <p className="truncate text-sm font-extrabold text-clay-dark">
+                                  <p
+                                    className="w-fit max-w-full truncate rounded-full px-2.5 py-0.5 text-sm font-extrabold"
+                                    style={{
+                                      background: e.color,
+                                      color: readableTextColor(e.color),
+                                    }}
+                                  >
                                     {e.subject}
                                   </p>
                                   <p className="mt-0.5 text-xs font-bold text-clay-muted">
@@ -436,7 +488,7 @@ export default function JadwalPage() {
                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-3 transition-all duration-75 active:scale-90 ${
                           t.done
                             ? "border-clay-success bg-clay-success text-white"
-                            : "border-clay-shadow/50 bg-white text-transparent hover:border-clay-primary"
+                            : "border-clay-shadow/50 bg-clay-cream text-transparent hover:border-clay-primary"
                         }`}
                       >
                         <CheckCircle2 size={18} />

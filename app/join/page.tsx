@@ -117,7 +117,7 @@ export default function JoinBetaPage() {
                   {j.alreadyDesc}
                 </p>
                 <div className="mt-4 flex flex-col justify-center gap-2 sm:flex-row">
-                  <Link href="/home">
+                  <Link href="/dashboard">
                     <ButtonClay className="w-full sm:w-auto">{j.tryNow}</ButtonClay>
                   </Link>
                   <Link href="/dashboard">
@@ -161,7 +161,7 @@ export default function JoinBetaPage() {
 
         <p className="mt-8 text-center text-xs font-semibold text-clay-muted">
           {j.question}{" "}
-          <Link href="/home" className="font-extrabold text-clay-primary underline">
+          <Link href="/dashboard" className="font-extrabold text-clay-primary underline">
             {j.chatLink}
           </Link>{" "}
         </p>

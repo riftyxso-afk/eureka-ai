@@ -144,7 +144,7 @@ export function DreamingOverlay({
           {Array.from({ length: 14 }).map((_, i) => (
             <div
               key={`spark-${i}`}
-              className="pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-white"
+              className="pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-clay-cream"
               style={{
                 top: `${(i * 37 + 11) % 92}%`,
                 left: `${(i * 53 + 7) % 92}%`,
@@ -159,10 +159,10 @@ export function DreamingOverlay({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.94, y: 10 }}
             transition={{ type: "spring", stiffness: 220, damping: 22 }}
-            className="relative z-10 mx-4 w-full max-w-md rounded-clay border-3 border-white/15 bg-white/10 p-8 text-center shadow-clay-lg backdrop-blur-md sm:p-10"
+            className="relative z-10 mx-4 w-full max-w-md rounded-clay border-3 border-white/15 bg-clay-cream/10 p-8 text-center shadow-clay-lg backdrop-blur-md sm:p-10"
           >
             <div
-              className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-3 border-white/25 bg-white/10 shadow-clay"
+              className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-3 border-white/25 bg-clay-cream/10 shadow-clay"
               style={{ animation: "eureka-dream-float 3s ease-in-out infinite" }}
             >
               <Loader2 size={34} className="animate-spin text-clay-secondary" />

@@ -129,7 +129,18 @@ export default function OnboardingPage() {
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
   const [userNumber, setUserNumber] = useState<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [skipping, setSkipping] = useState(false);
   const analyzedRef = useRef(false);
+  // Mode resume: pengguna yang pernah melewati onboarding melengkapinya
+  // dari halaman profil (/onboarding?resume=1).
+  const [resumeMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return new URLSearchParams(window.location.search).get("resume") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const current = ONBOARDING_STEPS[step];
   const psyQuestion =
@@ -176,7 +187,7 @@ export default function OnboardingPage() {
         const res = await apiFetch(`/api/profile?userId=${encodeURIComponent(getUserId())}`);
         const payload = await res.json();
         if (!cancelled && payload?.user?.onboardingCompleted) {
-          router.replace("/home");
+          router.replace("/dashboard");
         }
       } catch {
         // biarkan (profil belum tersimpan)
@@ -360,6 +371,8 @@ export default function OnboardingPage() {
             learningHabit: data.learningHabit,
             peakHour: data.peakHour,
             analysis,
+            // Selesai onboarding → bersihkan penanda skip (termasuk mode resume).
+            onboardingSkipped: false,
           },
         }),
       });
@@ -380,7 +393,31 @@ export default function OnboardingPage() {
     } catch {
       // abaikan
     }
-    router.replace("/home");
+    router.replace("/dashboard");
+  };
+
+  const skipOnboarding = async () => {
+    if (skipping) return;
+    const ok = window.confirm(
+      "Lewati orientasi? Kamu bisa melengkapinya nanti dari halaman Profil."
+    );
+    if (!ok) return;
+    setSkipping(true);
+    try {
+      // Tandai dilewati agar tidak diarahkan paksa ke sini lagi.
+      await apiFetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: getUserId(),
+          email: getSession()?.email ?? "",
+          profileData: { onboardingSkipped: true },
+        }),
+      });
+    } catch {
+      // Gagal menyimpan flag → tetap masuk; onboarding akan ditawarkan lagi.
+    }
+    router.replace("/dashboard");
   };
 
   const progressValue =
@@ -397,11 +434,30 @@ export default function OnboardingPage() {
         </div>
 
         <ProgressBarClay value={progressValue} max={ONBOARDING_STEPS.length} />
-        <p className="mt-3 text-center text-sm font-bold text-clay-muted">
-          {phase === "form"
-            ? `Langkah ${step + 1} dari ${ONBOARDING_STEPS.length}`
-            : "Menyiapkan pengalaman belajarmu..."}
-        </p>
+        <div className="mt-3 flex items-center justify-center gap-3">
+          <p className="text-sm font-bold text-clay-muted">
+            {phase === "form"
+              ? `Langkah ${step + 1} dari ${ONBOARDING_STEPS.length}`
+              : "Menyiapkan pengalaman belajarmu..."}
+          </p>
+        </div>
+        {phase === "form" && (
+          <div className="mt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => void skipOnboarding()}
+              disabled={skipping}
+              className="rounded-clay-full px-4 py-1.5 text-xs font-extrabold text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-dark disabled:opacity-50"
+            >
+              {skipping ? "Melewati..." : "Lewati →"}
+            </button>
+          </div>
+        )}
+        {resumeMode && phase === "form" && (
+          <p className="mt-1 text-center text-xs font-extrabold text-clay-primary">
+            Melengkapi orientasi — jawabanmu tersimpan setelah selesai
+          </p>
+        )}
 
         <AnimatePresence mode="wait">
           {phase === "form" && (
@@ -519,14 +575,14 @@ export default function OnboardingPage() {
                           className={`flex w-full items-center gap-3 rounded-clay-md border-3 px-5 py-4 text-left text-base font-bold transition-all duration-75 active:translate-y-1 ${
                             selected
                               ? "border-clay-primary bg-clay-primary/10 shadow-clay-sm"
-                              : "border-clay-borderLight bg-white shadow-clay-sm hover:-translate-y-0.5"
+                              : "border-clay-borderLight bg-clay-cream shadow-clay-sm hover:-translate-y-0.5"
                           }`}
                         >
                           <span
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 transition-colors ${
                               selected
                                 ? "border-clay-primary bg-clay-primary"
-                                : "border-clay-shadow bg-white"
+                                : "border-clay-shadow bg-clay-cream"
                             }`}
                           >
                             {selected && (
@@ -559,14 +615,14 @@ export default function OnboardingPage() {
                           className={`flex w-full items-center gap-3 rounded-clay-md border-3 px-5 py-4 text-left text-base font-bold transition-all duration-75 active:translate-y-1 ${
                             selected
                               ? "border-clay-primary bg-clay-primary/10 shadow-clay-sm"
-                              : "border-clay-borderLight bg-white shadow-clay-sm hover:-translate-y-0.5"
+                              : "border-clay-borderLight bg-clay-cream shadow-clay-sm hover:-translate-y-0.5"
                           }`}
                         >
                           <span
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-3 transition-colors ${
                               selected
                                 ? "border-clay-primary bg-clay-primary"
-                                : "border-clay-shadow bg-white"
+                                : "border-clay-shadow bg-clay-cream"
                             }`}
                           >
                             {selected && (

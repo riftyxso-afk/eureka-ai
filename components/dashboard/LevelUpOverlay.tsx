@@ -86,7 +86,7 @@ export default function LevelUpOverlay() {
               </motion.div>
 
               <motion.div
-                className="card-clay mt-6 !bg-white/95 px-10 py-6 text-center !shadow-none"
+                className="card-clay mt-6 !bg-clay-cream/95 px-10 py-6 text-center !shadow-none"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.25 }}

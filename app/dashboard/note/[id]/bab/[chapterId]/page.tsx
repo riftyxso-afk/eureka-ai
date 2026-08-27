@@ -262,7 +262,7 @@ export default function ChapterNotepadPage() {
           value={userNote}
           onChange={(e) => handleUserNoteChange(e.target.value)}
           placeholder="Tulis catatanmu untuk bab ini... (tersimpan otomatis)"
-          className="input-clay min-h-[180px] w-full resize-y !rounded-2xl !text-base !font-medium !leading-relaxed"
+          className="input-clay min-h-[180px] w-full resize-y !text-base !font-medium !leading-relaxed"
         />
       </div>
 

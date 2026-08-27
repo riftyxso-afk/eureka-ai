@@ -172,7 +172,7 @@ export default function HighlightToolbar({
       className="fixed z-[70]"
       style={{ left, top, transform: "translateX(-50%)" }}
     >
-      <div className="flex flex-wrap items-center gap-1.5 rounded-clay-full border-3 border-clay-borderLight bg-white p-1.5 shadow-clay-lg sm:gap-1 sm:p-1 max-w-[calc(100vw-16px)]">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-clay-full border-3 border-clay-borderLight bg-clay-cream p-1.5 shadow-clay-lg sm:gap-1 sm:p-1 max-w-[calc(100vw-16px)]">
         <span className="pl-2 pr-1 text-clay-muted sm:pl-2 sm:pr-1">
           <Highlighter className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
         </span>

@@ -24,7 +24,7 @@ export const NoteTOC = ({
   return (
     <>
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-24 hidden h-[calc(100vh-120px)] w-[280px] shrink-0 overflow-y-auto rounded-clay bg-white p-4 shadow-clay-sm lg:block">
+      <aside className="sticky top-24 hidden h-[calc(100vh-120px)] w-[280px] shrink-0 overflow-y-auto rounded-clay bg-clay-cream p-4 shadow-clay-sm lg:block">
         <div className="mb-4 flex items-center gap-2">
           <List size={16} className="text-clay-primary" />
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-clay-muted">
@@ -60,7 +60,7 @@ export const NoteTOC = ({
             className={`max-w-full break-words rounded-clay-full px-4 py-2 text-xs font-extrabold transition-all duration-75 ${
               activeChapterId === chapter.id
                 ? "bg-clay-primary text-white shadow-clay-sm"
-                : "bg-white text-clay-dark shadow-clay-sm hover:bg-clay-beige"
+                : "bg-clay-cream text-clay-dark shadow-clay-sm hover:bg-clay-beige"
             }`}
           >
             {chapter.id}. {chapter.title}

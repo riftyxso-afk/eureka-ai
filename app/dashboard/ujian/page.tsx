@@ -222,7 +222,7 @@ export default function UjianPage() {
                     <button
                       onClick={() => handleDelete(exam)}
                       aria-label="Hapus ujian"
-                      className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-clay-shadow/30 bg-white/90 text-clay-muted transition-colors hover:border-red-300 hover:text-red-500"
+                      className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-clay-shadow/30 bg-clay-cream/90 text-clay-muted transition-colors hover:border-red-300 hover:text-red-500"
                     >
                       <Trash2 size={16} />
                     </button>

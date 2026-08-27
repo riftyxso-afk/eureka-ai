@@ -41,7 +41,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-clay-beige dark:bg-[#171526]">
       {/* Header */}
-      <div className="border-b-2 border-clay-shadow/20 bg-white/70 backdrop-blur-sm dark:bg-[#221F33]">
+      <div className="border-b-2 border-clay-shadow/20 bg-clay-cream/70 backdrop-blur-sm dark:bg-[#221F33]">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
             <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
@@ -101,7 +101,7 @@ export default function SettingsPage() {
               }`}
             >
               <span
-                className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-clay-cream transition-transform ${
                   settings.enabled ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -173,7 +173,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-clay-cream transition-transform ${
                     settings.triggers.pomodoro ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-clay-cream transition-transform ${
                     settings.triggers.chapterDone ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
@@ -227,7 +227,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-clay-cream transition-transform ${
                     settings.triggers.idle ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-clay-cream transition-transform ${
                     settings.triggers.random ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
@@ -281,7 +281,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-clay-cream transition-transform ${
                     settings.triggers.quizReminder ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
@@ -371,7 +371,7 @@ export default function SettingsPage() {
               }`}
             >
               <span
-                className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-6 w-6 sm:h-4 sm:w-4 transform rounded-full bg-clay-cream transition-transform ${
                   settings.animations ? 'translate-x-7 sm:translate-x-6' : 'translate-x-1'
                 }`}
               />

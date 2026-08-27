@@ -26,7 +26,7 @@ export default function SourceChips({ sources }: SourceChipsProps) {
         <Link
           key={s.noteId}
           href={`/dashboard/note/${s.noteId}${s.chapterId != null && s.chapterId > 0 ? `/bab/${s.chapterId}` : ""}`}
-          className="inline-flex max-w-[220px] items-center gap-1.5 rounded-clay-full border-2 border-clay-primary/30 bg-clay-primary/10 px-3 py-1 text-[11.5px] font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 hover:shadow-[0_3px_0_#C4B5FD]"
+          className="inline-flex max-w-[220px] items-center gap-1.5 rounded-clay-full border-2 border-clay-primary/30 bg-clay-primary/10 px-3 py-1 text-[11.5px] font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 hover:shadow-[0_3px_0_rgb(var(--clay-border-light))]"
           title={`${s.noteTitle}${s.chapterId != null && s.chapterId > 0 ? ` · Bab ${s.chapterId}` : ""}`}
         >
           <BookOpen size={12} className="shrink-0" />

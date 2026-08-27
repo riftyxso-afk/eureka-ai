@@ -268,7 +268,7 @@ export function NoteProgressOverlay({
             initial={{ opacity: 0, y: 24, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
-            className="w-full max-w-md rounded-clay-md border-2 border-clay-borderLight bg-white p-6 shadow-clay-lg"
+            className="w-full max-w-md rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-6 shadow-clay-lg"
           >
             <div className="flex items-start justify-between gap-3">
               <div>

@@ -311,7 +311,7 @@ export default function AiCallModal({
                     ? "animate-pulse border-clay-primary bg-clay-primary/15"
                     : phase === "thinking"
                       ? "border-amber-400 bg-amber-50"
-                      : "border-clay-borderLight bg-white"
+                      : "border-clay-borderLight bg-clay-cream"
               }`}
             >
               {phase === "thinking" ? (

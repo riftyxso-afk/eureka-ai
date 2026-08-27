@@ -100,7 +100,7 @@ export default function VersionModal({
         </div>
 
         {versions.length === 0 ? (
-          <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-5 text-center text-sm font-semibold text-clay-muted">
+          <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-5 text-center text-sm font-semibold text-clay-muted">
             Belum ada versi tersimpan. Edit judul catatan untuk membuat versi
             pertama.
           </p>
@@ -109,7 +109,7 @@ export default function VersionModal({
             {versions.map((v) => (
               <li
                 key={v.version}
-                className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-4"
+                className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-4"
               >
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="text-sm font-extrabold text-clay-primary">

@@ -66,7 +66,7 @@ export default function EmptyNotesCta({ notesCount }: EmptyNotesCtaProps) {
               </button>
               <button
                 onClick={dismiss}
-                className="inline-flex min-h-[40px] items-center rounded-clay-md border-2 border-clay-shadow/40 bg-white px-4 py-2 text-xs font-extrabold text-clay-muted transition-all duration-75 hover:text-clay-dark sm:text-sm"
+                className="inline-flex min-h-[40px] items-center rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream px-4 py-2 text-xs font-extrabold text-clay-muted transition-all duration-75 hover:text-clay-dark sm:text-sm"
               >
                 Nanti saja
               </button>

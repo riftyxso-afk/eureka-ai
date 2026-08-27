@@ -27,7 +27,7 @@ export function DashboardPreparing() {
         initial={{ scale: 0.94, y: 14 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 220, damping: 22 }}
-        className="relative z-10 mx-4 w-full max-w-sm rounded-clay border-3 border-clay-borderLight bg-white p-8 text-center shadow-clay-lg"
+        className="relative z-10 mx-4 w-full max-w-sm rounded-clay border-3 border-clay-borderLight bg-clay-cream p-8 text-center shadow-clay-lg"
       >
         <div className="relative mx-auto h-32 w-32">
           {/* eslint-disable-next-line @next/next/no-img-element */}

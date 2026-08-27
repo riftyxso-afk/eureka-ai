@@ -14,7 +14,6 @@ import {
   Medal,
   Origami,
   Plus,
-  Rocket,
   Search,
   Trophy,
   X,
@@ -28,6 +27,8 @@ import { NoteItem } from "@/components/dashboard/NoteItem";
 import { CreateNoteModal } from "@/components/dashboard/CreateNoteModal";
 import { BackgroundJobPopup } from "@/components/dashboard/BackgroundJobPopup";
 import { DashboardPreparing } from "@/components/dashboard/DashboardPreparing";
+import GuideBanner from "@/components/dashboard/GuideBanner";
+import AssistantHub from "@/components/dashboard/AssistantHub";
 import TutorialHost from "@/components/tutorial/TutorialHost";
 import { Reveal } from "@/components/ui/Reveal";
 import { useOnboarding } from "@/context/OnboardingContext";
@@ -75,6 +76,8 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"semua" | "terbaru">("semua");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Tab hub pada layar kecil: "asisten" | "aktivitas" (default: asisten).
+  const [hubTab, setHubTab] = useState<"asisten" | "aktivitas">("asisten");
   // Menunda render dashboard: setelah onboarding selesai tampilkan dulu
   // layar "Menyiapkan dashboardmu..." sebelum konten muncul.
   // Flag dibaca sekali di initializer (aman dari StrictMode double-effect).
@@ -313,118 +316,47 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <Link href="/home">
-              <ButtonClay className="min-h-[44px] px-5 py-2 text-sm">
-                <Rocket size={16} className="mr-2" /> {l.startLearning}
-              </ButtonClay>
-            </Link>
           </div>
         </div>
+        {/* Banner sekali-saja untuk pengguna yang melewati onboarding */}
+        <GuideBanner />
         </Reveal>
 
-        <Reveal delay={0.12}>
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            icon={FileText}
-            label={l.totalNotes}
-            value={notes.length}
-          />
-          <StatsCard icon={Flame} label={l.streak} value={progress.streak} />
-          <StatsCard
-            icon={Clock}
-            label={l.dueCards}
-            value={progress.dueCards}
-          />
-          <StatsCard
-            icon={Trophy}
-            label={l.rank}
-            value={progress.rank === null ? "—" : progress.rank}
-          />
+        {/* Tab layar kecil (<1280px): asisten & aktivitas bergantian agar
+             masing-masing mendapat lebar penuh — tidak berbagi ruang sempit.
+            Komponen tetap ter-mount (CSS hidden) sehingga state chat aman. */}
+        <div className="mt-5 flex gap-2">
+          {(
+            [
+              { id: "asisten" as const, label: "Asisten AI" },
+              { id: "aktivitas" as const, label: "Aktivitas" },
+            ]
+          ).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setHubTab(t.id)}
+              className={`min-h-[44px] flex-1 rounded-clay-full border-3 px-4 text-sm font-extrabold transition-all duration-75 active:translate-y-0.5 sm:flex-none sm:px-6 ${
+                hubTab === t.id
+                  ? "border-clay-primary bg-clay-primary text-white shadow-clay-sm"
+                  : "border-clay-shadow/50 bg-clay-cream text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
+
+        {/* Navigasi: Hanya satu panel tampil agar tidak menumpuk */}
+        <div className="mt-4">
+        <Reveal
+          delay={0.08}
+          className={`${hubTab === "asisten" ? "block" : "hidden"} min-w-0`}
+        >
+          <AssistantHub />
         </Reveal>
 
-        <Reveal delay={0.19}>
-        <CardClay className="mt-4 !p-4 sm:!p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-clay-primary sm:h-12 sm:w-12">
-                <Medal size={22} className="sm:size-[26px]" />
-              </span>
-              <div>
-                <p className="text-base font-extrabold leading-tight sm:text-lg">
-                  {l.level.replace("{level}", String(progress.level))}
-                </p>
-                <p className="text-xs font-bold text-clay-muted">
-                  {progress.levelTitle} · {l.days.replace("{n}", String(progress.streak))}
-                </p>
-              </div>
-            </div>
-            <p className="text-xs font-bold text-clay-muted sm:text-sm">
-              {progress.xp} / {progress.xp - progress.xpInLevel + progress.xpToNext} XP
-            </p>
-          </div>
-          <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-clay-inputBg shadow-clay-inset">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-clay-primary to-clay-borderLight transition-all duration-500"
-              style={{
-                width: `${Math.min(
-                  100,
-                  Math.round((progress.xpInLevel / progress.xpToNext) * 100)
-                )}%`,
-              }}
-            />
-          </div>
-        </CardClay>
-        </Reveal>
-
-        {/* Kartu Rencana Belajar — kertas origami */}
-        <Reveal delay={0.23}>
-        <Link href="/dashboard/rencana" className="mt-4 block">
-          <div
-            className="relative overflow-hidden rounded-clay-lg p-4 shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 hover:shadow-clay sm:p-5"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(255,251,235,0.92), rgba(254,243,199,0.8) 45%, rgba(253,230,138,0.55))",
-            }}
-          >
-            {/* Garis lipatan */}
-            <div
-              className="pointer-events-none absolute inset-0 opacity-60"
-              style={{
-                background:
-                  "repeating-linear-gradient(115deg, transparent 0 22px, rgba(180,140,60,0.08) 22px 23px, transparent 23px 46px, rgba(180,140,60,0.05) 46px 47px)",
-              }}
-            />
-            {/* Lipatan sudut */}
-            <div
-              className="pointer-events-none absolute right-0 top-0 h-12 w-12"
-              style={{
-                background:
-                  "linear-gradient(225deg, rgba(255,255,255,0.9), rgba(253,230,138,0.35))",
-                clipPath: "polygon(100% 0, 100% 100%, 0 0)",
-              }}
-            />
-            <div className="relative flex items-center gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-clay-lg bg-amber-500/15 text-amber-700 sm:h-14 sm:w-14">
-                <Origami size={24} className="sm:size-[26px]" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-base font-extrabold text-amber-950 sm:text-lg">
-                  {l.studyPlan}
-                </p>
-                <p className="mt-0.5 text-xs font-bold text-amber-800/70 sm:text-sm">
-                  {l.studyPlanDesc}
-                </p>
-              </div>
-              <span className="hidden shrink-0 rounded-clay-full border-3 border-amber-700/20 bg-white/70 px-3 py-1.5 text-xs font-extrabold text-amber-800 sm:block">
-                {l.open}
-              </span>
-            </div>
-          </div>
-        </Link>
-        </Reveal>
-
-        <Reveal delay={0.26}>
+        <div className={`${hubTab === "aktivitas" ? "block" : "hidden"} min-w-0`}>
+<Reveal delay={0.26}>
         <section className="mt-8">
           <h2 className="text-lg font-extrabold sm:text-xl">{l.yourNotes}</h2>
 
@@ -449,7 +381,7 @@ export default function DashboardPage() {
                   className={`min-h-[44px] shrink-0 rounded-clay-full border-3 px-4 text-xs font-extrabold transition-all duration-75 active:translate-y-0.5 sm:min-h-[40px] sm:px-3.5 ${
                     activeFilter === chip.id
                       ? "border-clay-primary bg-clay-primary text-white shadow-clay-sm"
-                      : "border-clay-shadow/50 bg-white text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
+                      : "border-clay-shadow/50 bg-clay-cream text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
                   }`}
                 >
                   {chip.label}
@@ -502,6 +434,8 @@ export default function DashboardPage() {
           </div>
         </section>
         </Reveal>
+        </div>{/* /aktivitas */}
+        </div>{/* /hub nav */}
       </main>
       )}
 

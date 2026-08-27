@@ -115,7 +115,7 @@ export const NotificationBell = () => {
       <button
         onClick={handleOpen}
         aria-label="Notifikasi"
-        className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
+        className="relative flex h-11 w-11 items-center justify-center rounded-full bg-clay-cream shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
       >
         <Bell size={20} className="text-clay-dark" />
         {unread > 0 && (
@@ -126,7 +126,7 @@ export const NotificationBell = () => {
       </button>
 
       {open && (
-        <div className="fixed inset-x-3 top-3 z-50 flex max-h-[calc(100dvh-1.5rem)] flex-col overflow-hidden rounded-clay border-3 border-clay-borderLight bg-white shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[320px] sm:max-h-none sm:max-w-[calc(100vw-2rem)]">
+        <div className="fixed inset-x-3 top-3 z-50 flex max-h-[calc(100dvh-1.5rem)] flex-col overflow-hidden rounded-clay border-3 border-clay-borderLight bg-clay-cream shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[320px] sm:max-h-none sm:max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between border-b-2 border-clay-shadow/30 px-4 py-3">
             <p className="text-sm font-extrabold text-clay-dark">
               Notifikasi {unread > 0 && `· ${unread} baru`}

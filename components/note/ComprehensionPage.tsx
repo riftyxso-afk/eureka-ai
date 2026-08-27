@@ -2,17 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { apiFetch } from "@/lib/apiClient";
 import { streamComprehension } from "@/lib/comprehensionStream";
 import { getUserId } from "@/lib/identity";
 import WritingBook from "@/components/note/WritingBook";
+import CelebrationOverlay, {
+  type CelebrationVariant,
+} from "@/components/CelebrationOverlay";
 import {
+  AlertTriangle,
   ArrowLeft,
   BookOpenCheck,
   Check,
   CheckCircle2,
   FileUp,
   Loader2,
+  RefreshCw,
   RotateCcw,
   Sparkles,
   Square,
@@ -57,10 +63,10 @@ export default function ComprehensionPage({
   const [sheetFile, setSheetFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Streaming realtime
+  // Streaming realtime — abort didaftarkan secara sinkron via onReady
+  // sehingga tombol "Hentikan" selalu berfungsi sejak klik pertama.
   const [streamText, setStreamText] = useState("");
   const streamAbortRef = useRef<(() => void) | null>(null);
-  const streamEndRef = useRef<Promise<void> | null>(null);
 
   const [questions, setQuestions] = useState<ComprehensionQuestion[] | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -68,6 +74,17 @@ export default function ComprehensionPage({
   const [grades, setGrades] = useState<Record<number, EssayGrade>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Guard submit: konfirmasi bila masih ada soal kosong.
+  const [confirmUnanswered, setConfirmUnanswered] = useState<number | null>(null);
+  // Penilaian essay gagal → tawarkan nilai ulang tanpa kerja ulang.
+  const [essayRetryAvailable, setEssayRetryAvailable] = useState(false);
+  const [essayRetrying, setEssayRetrying] = useState(false);
+  // Umpan balik gerak: jawab benar/salah & perayaan selesai.
+  const [celebration, setCelebration] = useState<CelebrationVariant | null>(
+    null
+  );
+  const [celebrationGrand, setCelebrationGrand] = useState(false);
 
   // Bersihkan stream saat komponen dilepas (pindah halaman).
   useEffect(() => {
@@ -92,7 +109,7 @@ export default function ComprehensionPage({
     setStreamText("");
     setStage("writing");
 
-    const { abort, completed } = await streamComprehension(
+    const pending = streamComprehension(
       {
         noteId,
         userId: getUserId(),
@@ -116,11 +133,14 @@ export default function ComprehensionPage({
           // Kembalikan ke setup agar user bisa coba lagi (teks tetap tampil).
           setStage("setup");
         }
+      },
+      // Dipanggil sinkron saat pemanggilan → ref terisi sebelum await apa pun.
+      (abort) => {
+        streamAbortRef.current = abort;
       }
     );
-    streamAbortRef.current = abort;
-    streamEndRef.current = completed;
     try {
+      const { completed } = await pending;
       await completed;
     } catch {
       // abort / error stream — pesan ditangani lewat event error.
@@ -172,10 +192,41 @@ export default function ComprehensionPage({
     }
   };
 
+  /** Kirim soal essay ke penilai AI. Return null bila gagal (throw/non-ok). */
+  const gradeEssaysViaAi = async (
+    essayQuestions: ComprehensionQuestion[]
+  ): Promise<EssayGrade[] | null> => {
+    if (!questions || essayQuestions.length === 0) return [];
+    try {
+      const res = await apiFetch(`/api/notes/${noteId}/comprehension/grade`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questions, answers: essayAnswers }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.grades ?? [];
+    } catch {
+      return null;
+    }
+  };
+
+  /** Fallback lokal saat penilaian AI gagal — tidak menghukum diam-diam. */
+  const fallbackEssayGrades = (
+    essayQuestions: ComprehensionQuestion[]
+  ): EssayGrade[] =>
+    essayQuestions.map((q) => ({
+      questionId: q.id,
+      status: "kurang tepat" as const,
+      feedback: "Gagal dinilai AI. Jawaban acuan:",
+      modelAnswer: q.modelAnswer ?? "",
+    }));
+
   const submit = async () => {
     if (!questions) return;
     setLoading(true);
     setError(null);
+    setConfirmUnanswered(null);
 
     // Nilai ABC secara lokal (indeks), essay lewat AI.
     const abcGrades: Record<number, EssayGrade> = {};
@@ -194,32 +245,66 @@ export default function ComprehensionPage({
       }
     }
 
-    let essayResult: EssayGrade[] = [];
-    if (essayQuestions.length > 0) {
-      try {
-        const res = await apiFetch(`/api/notes/${noteId}/comprehension/grade`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ questions, answers: essayAnswers }),
-        });
-        const data = await res.json();
-        if (res.ok) essayResult = data.grades ?? [];
-      } catch {
-        // Gagal grading essay → tetap tampilkan hasil ABC dengan catatan.
-        essayResult = essayQuestions.map((q) => ({
-          questionId: q.id,
-          status: "kurang tepat" as const,
-          feedback: "Gagal dinilai AI. Jawaban acuan:",
-          modelAnswer: q.modelAnswer ?? "",
-        }));
-      }
+    const aiResult = await gradeEssaysViaAi(essayQuestions);
+    let essayResult: EssayGrade[];
+    if (aiResult === null && essayQuestions.length > 0) {
+      // Gagal grade essay → skor parsial MCQ + tombol nilai ulang.
+      setEssayRetryAvailable(true);
+      essayResult = fallbackEssayGrades(essayQuestions);
+    } else {
+      setEssayRetryAvailable(false);
+      essayResult = aiResult ?? [];
     }
 
     const all = { ...abcGrades };
     for (const g of essayResult) all[g.questionId] = g;
     setGrades(all);
     setStage("result");
+    // Perayaan penyelesaian — lebih meriah bila skor sangat baik.
+    const totalCorrect = Object.values(all).filter(
+      (g) => g.status === "benar"
+    ).length;
+    setCelebrationGrand(totalCorrect / questions.length >= 0.9);
+    setCelebration("complete");
     setLoading(false);
+  };
+
+  /** Coba nilai ulang essay dari layar hasil, tanpa mengerjakan ulang. */
+  const retryEssayGrades = async () => {
+    if (!questions) return;
+    const essayQuestions = questions.filter((q) => q.type === "essay");
+    setEssayRetrying(true);
+    setError(null);
+    const result = await gradeEssaysViaAi(essayQuestions);
+    if (result === null) {
+      setError("Penilaian essay masih gagal. Coba lagi sebentar.");
+    } else {
+      setGrades((prev) => {
+        const next = { ...prev };
+        for (const g of result) next[g.questionId] = g;
+        return next;
+      });
+      setEssayRetryAvailable(false);
+    }
+    setEssayRetrying(false);
+  };
+
+  /** Hitung soal belum terjawab; buka konfirmasi bila ada sebelum menilai. */
+  const requestSubmit = () => {
+    if (!questions) return;
+    let unanswered = 0;
+    for (const q of questions) {
+      if (q.type === "abc") {
+        if (answers[q.id] === undefined) unanswered++;
+      } else if (!(essayAnswers[q.id] ?? "").trim()) {
+        unanswered++;
+      }
+    }
+    if (unanswered > 0) {
+      setConfirmUnanswered(unanswered);
+      return;
+    }
+    void submit();
   };
 
   const score = questions
@@ -234,6 +319,8 @@ export default function ComprehensionPage({
     setSheetFile(null);
     setStreamText("");
     setError(null);
+    setConfirmUnanswered(null);
+    setEssayRetryAvailable(false);
     setStage("setup");
   };
 
@@ -282,7 +369,7 @@ export default function ComprehensionPage({
                 className={`rounded-clay-md border-3 p-4 text-left transition-all duration-75 min-h-[96px] ${
                   mode === "materi"
                     ? "border-clay-primary bg-clay-primary/10"
-                    : "border-clay-shadow/40 bg-white hover:-translate-y-0.5"
+                    : "border-clay-shadow/40 bg-clay-cream hover:-translate-y-0.5"
                 }`}
               >
                 <Sparkles size={20} className="text-clay-primary" />
@@ -299,7 +386,7 @@ export default function ComprehensionPage({
                 className={`rounded-clay-md border-3 p-4 text-left transition-all duration-75 min-h-[96px] ${
                   mode === "upload"
                     ? "border-clay-primary bg-clay-primary/10"
-                    : "border-clay-shadow/40 bg-white hover:-translate-y-0.5"
+                    : "border-clay-shadow/40 bg-clay-cream hover:-translate-y-0.5"
                 }`}
               >
                 <FileUp size={20} className="text-clay-primary" />
@@ -464,7 +551,7 @@ export default function ComprehensionPage({
               {questions.length} soal — jawab lalu tekan Kumpulkan.
             </p>
             {questions.map((q, i) => (
-              <div key={q.id} className="rounded-clay-md border-3 border-clay-shadow/40 bg-white p-3 sm:p-4">
+              <div key={q.id} className="rounded-clay-md border-3 border-clay-shadow/40 bg-clay-cream p-3 sm:p-4">
                 <p className="text-sm sm:text-base font-extrabold text-clay-dark">
                   {i + 1}. {q.question}
                 </p>
@@ -480,9 +567,17 @@ export default function ComprehensionPage({
                         <button
                           key={oi}
                           type="button"
-                          onClick={() =>
-                            setAnswers((prev) => ({ ...prev, [q.id]: oi }))
-                          }
+                          onClick={() => {
+                            if (answers[q.id] === undefined) {
+                              // Umpan balik instan hanya pada pemilihan pertama.
+                              setCelebration(
+                                q.answer === oi
+                                  ? "answer-correct"
+                                  : "answer-wrong"
+                              );
+                            }
+                            setAnswers((prev) => ({ ...prev, [q.id]: oi }));
+                          }}
                           className={`flex w-full items-start gap-2 rounded-clay-md border-3 px-3 py-2 text-left text-sm font-bold transition-all duration-75 min-h-[44px] ${
                             selected
                               ? "border-clay-primary bg-clay-primary/10 text-clay-dark"
@@ -516,7 +611,7 @@ export default function ComprehensionPage({
 
             <button
               type="button"
-              onClick={submit}
+              onClick={requestSubmit}
               disabled={loading}
               className="btn-clay-primary w-full !min-h-[48px]"
             >
@@ -536,8 +631,41 @@ export default function ComprehensionPage({
               <p className="text-3xl font-extrabold text-clay-primary">
                 {score}/{questions.length}
               </p>
-              <p className="text-sm font-bold text-clay-muted">Skor kamu</p>
+              <p className="text-sm font-bold text-clay-muted">
+                Skor kamu
+                {essayRetryAvailable && " (sementara — baru pilihan ganda)"}
+              </p>
             </div>
+
+            {essayRetryAvailable && (
+              <div className="rounded-clay-md border-2 border-amber-300 bg-amber-50 p-3 sm:p-4">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-700" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-extrabold text-clay-dark">
+                      Bagian essay belum berhasil dinilai AI.
+                    </p>
+                    <p className="mt-0.5 text-xs font-semibold text-clay-muted">
+                      Skor di atas hanya menghitung pilihan ganda. Coba nilai
+                      ulang essay tanpa mengerjakan ulang.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={retryEssayGrades}
+                  disabled={essayRetrying}
+                  className="btn-clay-secondary mt-3 !min-h-[40px] !px-4 text-xs"
+                >
+                  {essayRetrying ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={14} />
+                  )}
+                  {essayRetrying ? "Menilai ulang..." : "Nilai Ulang Essay"}
+                </button>
+              </div>
+            )}
 
             {questions.map((q, i) => {
               const g = grades[q.id];
@@ -577,7 +705,7 @@ export default function ComprehensionPage({
                           </span>
                         </p>
                       )}
-                      <p className="mt-2 rounded-clay-md bg-white/70 px-2.5 py-2 text-xs font-semibold text-clay-dark">
+                      <p className="mt-2 rounded-clay-md bg-clay-cream/70 px-2.5 py-2 text-xs font-semibold text-clay-dark">
                         {g?.feedback || q.explanation || "Tidak ada penjelasan."}
                       </p>
                     </div>
@@ -596,6 +724,72 @@ export default function ComprehensionPage({
           </div>
         )}
       </div>
+
+      {/* Umpan balik & perayaan */}
+      <CelebrationOverlay
+        variant={celebration}
+        grand={celebrationGrand}
+        onDone={() => setCelebration(null)}
+      />
+
+      {/* Konfirmasi submit dengan soal kosong */}
+      <AnimatePresence>
+        {confirmUnanswered !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-clay-dark/50 px-4 backdrop-blur-[2px]"
+            onClick={() => setConfirmUnanswered(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 8 }}
+              transition={{ type: "spring", stiffness: 320, damping: 26 }}
+              role="alertdialog"
+              aria-modal="true"
+              onClick={(e) => e.stopPropagation()}
+              className="card-clay w-full max-w-sm !p-5"
+            >
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                  <AlertTriangle size={20} />
+                </span>
+                <div>
+                  <p className="text-sm font-extrabold text-clay-dark">
+                    Masih ada {confirmUnanswered} soal belum terjawab.
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-clay-muted">
+                    Soal kosong akan dinilai salah. Tetap kumpulkan sekarang?
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmUnanswered(null)}
+                  className="btn-clay-secondary flex-1 !min-h-[44px] text-sm"
+                >
+                  Periksa Lagi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void submit()}
+                  disabled={loading}
+                  className="btn-clay-primary flex-1 !min-h-[44px] text-sm"
+                >
+                  {loading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    "Kumpulkan Saja"
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -219,7 +219,7 @@ export default function QuizModal({
               )}
             </button>
             {error && (
-              <p className="rounded-2xl border-2 border-red-200 bg-red-50 p-3 sm:p-4 text-xs sm:text-sm font-semibold text-red-600">
+              <p className="rounded-clay-md border-2 border-red-200 bg-red-50 p-3 sm:p-4 text-xs sm:text-sm font-semibold text-red-600">
                 {error}
               </p>
             )}
@@ -232,7 +232,7 @@ export default function QuizModal({
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3 sm:p-4"
+              className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3 sm:p-4"
             >
               <div className="flex items-center gap-2">
                 <span className="h-4 w-4 animate-pulse rounded-full bg-clay-beige" />
@@ -249,7 +249,7 @@ export default function QuizModal({
                       duration: 0.3,
                       ease: "easeOut",
                     }}
-                    className="flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-clay-shadow/40 bg-white px-3"
+                    className="flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-clay-shadow/40 bg-clay-cream px-3"
                   >
                     <span className="h-6 w-6 animate-pulse rounded-full bg-clay-beige" />
                     <span
@@ -296,7 +296,7 @@ export default function QuizModal({
             {questions.map((q, qi) => {
               const chosen = answers[q.id];
               return (
-                <div key={q.id} className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3 sm:p-4">
+                <div key={q.id} className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3 sm:p-4">
                   <div className="mb-2 text-xs sm:text-sm font-extrabold text-clay-dark leading-relaxed">
                     {qi + 1}. {q.question}
                   </div>
@@ -319,7 +319,7 @@ export default function QuizModal({
                           onClick={() =>
                             setAnswers((prev) => ({ ...prev, [q.id]: oi }))
                           }
-                          className={`flex w-full items-center gap-2 rounded-xl border-2 bg-white px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
+                          className={`flex w-full items-center gap-2 rounded-xl border-2 bg-clay-cream px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
                         >
                           <span
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${
@@ -398,7 +398,7 @@ export default function QuizModal({
                 </div>
 
                 {shareToken && !roomToken && (
-                  <div className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3">
+                  <div className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3">
                     <p className="mb-1.5 text-[11px] font-extrabold text-clay-muted">
                       Link kuis — kerjakan sendiri, kunci jawaban muncul
                       setelah submit:
@@ -408,7 +408,7 @@ export default function QuizModal({
                         readOnly
                         value={buildQuizUrl(shareToken)}
                         onFocus={(e) => e.target.select()}
-                        className="min-w-0 flex-1 rounded-xl border-2 border-clay-shadow/40 bg-white px-3 py-2 text-[11px] font-semibold text-clay-muted outline-none"
+                        className="min-w-0 flex-1 rounded-xl border-2 border-clay-shadow/40 bg-clay-cream px-3 py-2 text-[11px] font-semibold text-clay-muted outline-none"
                       />
                       <button
                         onClick={copyShare}
@@ -422,7 +422,7 @@ export default function QuizModal({
                 )}
 
                 {!roomToken && (
-                  <div className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3">
+                  <div className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3">
                     <label className="mb-1 block text-[11px] font-extrabold text-clay-muted">
                       Nama host (untuk ruang live):
                     </label>
@@ -431,14 +431,14 @@ export default function QuizModal({
                       onChange={(e) => setRoomName(e.target.value)}
                       placeholder="mis. Budi"
                       maxLength={40}
-                      className="w-full rounded-xl border-2 border-clay-shadow/40 bg-white px-3 py-2 text-xs font-semibold text-clay-dark outline-none focus:border-clay-primary min-h-[44px]"
+                      className="w-full rounded-xl border-2 border-clay-shadow/40 bg-clay-cream px-3 py-2 text-xs font-semibold text-clay-dark outline-none focus:border-clay-primary min-h-[44px]"
                     />
                   </div>
                 )}
 
                 {roomToken && (
                   <div className="space-y-2">
-                    <div className="rounded-2xl border-2 border-clay-primary/40 bg-clay-primary/10 p-3">
+                    <div className="rounded-clay-md border-2 border-clay-primary/40 bg-clay-primary/10 p-3">
                       <p className="mb-1.5 text-[11px] font-extrabold text-clay-muted">
                         Link ruang live — bagikan ke teman, papan skor realtime:
                       </p>
@@ -447,7 +447,7 @@ export default function QuizModal({
                           readOnly
                           value={buildQuizUrl(roomToken)}
                           onFocus={(e) => e.target.select()}
-                          className="min-w-0 flex-1 rounded-xl border-2 border-clay-shadow/40 bg-white px-3 py-2 text-[11px] font-semibold text-clay-muted outline-none"
+                          className="min-w-0 flex-1 rounded-xl border-2 border-clay-shadow/40 bg-clay-cream px-3 py-2 text-[11px] font-semibold text-clay-muted outline-none"
                         />
                         <button
                           onClick={copyRoom}

@@ -206,9 +206,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Rate limit per user (proteksi token AI): maks 3 generate/jam. ──
+    // ── Rate limit per user (proteksi token AI): maks 10 generate/jam (naik dari 3 untuk dev, cegah 429 saat testing).
     ensureRateLimitPrune();
-    const rl = checkRateLimit(`note-process:${userId}`, 3, 60 * 60 * 1000);
+    const rl = checkRateLimit(`note-process:${userId}`, 10, 60 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
         {
@@ -329,15 +329,16 @@ export async function POST(req: NextRequest) {
             tracker.emit("extract", jobProgress ? 100 : 100, "Proses dibatalkan.");
             return;
           }
-          const msg = "Terjadi kesalahan saat memproses materi.";
-          console.error("[api/notes/process] Job gagal:", e);
+          const baseMsg = "Terjadi kesalahan saat memproses materi.";
+          const detail = e instanceof Error ? e.message : String(e);
+          console.error("[api/notes/process] Job gagal:", detail, e);
           updateJob(id, {
             status: "error",
-            error: msg,
+            error: `${baseMsg} Detail: ${detail}`.slice(0, 1200),
             message: "Proses gagal.",
             percent: 100,
           });
-          tracker.emit("extract", 100, "Proses gagal.");
+          tracker.emit("extract", 100, `Proses gagal: ${detail.slice(0, 120)}`);
         }
       },
     });
@@ -354,9 +355,10 @@ export async function POST(req: NextRequest) {
       { status: 202 }
     );
   } catch (e) {
-    const msg = "Terjadi kesalahan saat memproses materi.";
-    console.error("[api/notes/process]", e);
+    const baseMsg = "Terjadi kesalahan saat memproses materi.";
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error("[api/notes/process]", detail, e);
     tracker.emit("extract", 100, "Proses gagal.");
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: `${baseMsg} Detail: ${detail}`.slice(0, 1200) }, { status: 500 });
   }
 }

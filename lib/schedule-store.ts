@@ -45,16 +45,15 @@ export interface TaskItem {
 
 const KEY = "eureka_schedule";
 
-const DEFAULT_COLORS = [
-  "#8B5CF6",
-  "#F59E0B",
-  "#10B981",
-  "#3B82F6",
-  "#EF4444",
-  "#EC4899",
-  "#14B8A6",
-  "#6366F1",
-];
+/**
+ * Palet warna kegiatan jadwal — diambil dari palet aksen mata pelajaran
+ * resmi (lib/palette.ts, tier terang) agar satu sistem warna untuk
+ * sampul catatan, badge, dan jadwal. Warna solid dekoratif: teks pada
+ * blok dipilih otomatis via luminance (lihat readableTextColor).
+ */
+import { SUBJECT_ACCENTS } from "@/lib/palette";
+
+export const SCHEDULE_COLORS: string[] = SUBJECT_ACCENTS.map((a) => a.light);
 
 interface ScheduleStorage {
   entries: ScheduleEntry[];
@@ -90,13 +89,17 @@ function save(storage: ScheduleStorage): void {
 }
 
 export function addScheduleEntry(
-  input: Omit<ScheduleEntry, "id" | "color">
+  input: Omit<ScheduleEntry, "id" | "color"> & { color?: string }
 ): ScheduleEntry {
   const storage = getSchedule();
+  const { color: chosenColor, ...rest } = input;
   const entry: ScheduleEntry = {
-    ...input,
+    ...rest,
     id: `sched-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    color: DEFAULT_COLORS[storage.entries.length % DEFAULT_COLORS.length],
+    // Warna pilihan pengguna; tanpa pilihan → giliran palet agar
+    // kegiatan tetap saling terbedakan.
+    color:
+      chosenColor ?? SCHEDULE_COLORS[storage.entries.length % SCHEDULE_COLORS.length],
   };
   storage.entries = [...storage.entries, entry];
   save(storage);

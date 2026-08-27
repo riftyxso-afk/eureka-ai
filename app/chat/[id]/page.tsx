@@ -238,13 +238,13 @@ export default function ChatPage() {
           const remaining = await chat.deleteSession(id);
           if (id === sessionId) {
             router.replace(
-              remaining.length > 0 ? `/chat/${remaining[0].id}` : "/home"
+              remaining.length > 0 ? `/chat/${remaining[0].id}` : "/dashboard"
             );
           }
         }}
       />
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white sm:rounded-clay sm:border-2 sm:border-clay-borderLight sm:shadow-clay-sm">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-clay-cream sm:rounded-clay sm:border-2 sm:border-clay-borderLight sm:shadow-clay-sm">
         {/* Topbar — auto-hide saat scroll ke bawah (slide up), muncul saat ke atas */}
         <AnimatePresence initial={false}>
           {!headerHidden && (
@@ -267,7 +267,7 @@ export default function ChatPage() {
                     href="/dashboard"
                     data-tutorial-id="dashboard-nav"
                     aria-label={l.openDashboard}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 lg:hidden"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md bg-clay-cream text-clay-primary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 lg:hidden"
                   >
                     <LayoutDashboard size={18} />
                   </Link>

@@ -96,7 +96,7 @@ export default function FlashcardModal({
 
         {!cards && !generating && (
           <div className="space-y-3 sm:space-y-4">
-            <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
+            <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
               Ubah materi catatan menjadi kartu hafalan untuk belajar cepat!
             </p>
             <button
@@ -117,7 +117,7 @@ export default function FlashcardModal({
               )}
             </button>
             {error && (
-              <p className="rounded-2xl border-2 border-red-200 bg-red-50 p-3 sm:p-4 text-xs sm:text-sm font-semibold text-red-600">
+              <p className="rounded-clay-md border-2 border-red-200 bg-red-50 p-3 sm:p-4 text-xs sm:text-sm font-semibold text-red-600">
                 {error}
               </p>
             )}

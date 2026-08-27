@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Pin, PinOff, Trash2 } from "lucide-react";
+import { createElement, type CSSProperties } from "react";
+import { Pin, PinOff, Trash2 } from "lucide-react";
+import { subjectAccent, subjectIconFor } from "@/lib/palette";
 
 interface NoteItemProps {
   id: string;
@@ -22,23 +24,44 @@ export const NoteItem = ({
   onTogglePin,
   onDelete,
 }: NoteItemProps) => {
+  // Sampul deterministik per mata pelajaran — warna khas + ikon.
+  const accent = subjectAccent(subject);
+  const cssVar = `var(--subject-${accent.id})`;
+  const coverStyle: CSSProperties = {
+    background: `linear-gradient(135deg, rgb(${cssVar} / 0.26), rgb(${cssVar} / 0.10))`,
+  };
+  const accentColor: CSSProperties = { color: `rgb(${cssVar})` };
+
   return (
     <Link href={`/dashboard/note/${id}`} className="block h-full">
-      <div className="card-clay group relative flex aspect-square flex-col justify-between !p-4 transition-all duration-75 hover:-translate-y-0.5 hover:shadow-[0_10px_0_#C1B4A4] active:translate-y-1">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-clay-md bg-clay-beige shadow-clay-inset">
-            <FileText size={18} className="text-clay-primary" />
-          </div>
-          <span className="shrink-0 text-xs font-bold text-clay-muted">
-            {updatedAt}
+      <div className="card-clay group relative flex aspect-square flex-col overflow-hidden !p-0 transition-all duration-75 hover:-translate-y-0.5 hover:shadow-[0_10px_0_rgb(var(--clay-shadow-dark))] active:translate-y-1">
+        {/* Sampul berwarna sesuai mata pelajaran */}
+        <div
+          className="relative flex h-[36%] shrink-0 items-center justify-between gap-2 px-4"
+          style={coverStyle}
+        >
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-clay-md bg-white/70 shadow-sm"
+            style={accentColor}
+          >
+            {createElement(subjectIconFor(subject), { size: 18 })}
+          </span>
+          <span
+            className="min-w-0 truncate rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide"
+            style={accentColor}
+          >
+            {subject || "Catatan"}
           </span>
         </div>
-        <div>
+
+        {/* Isi kartu */}
+        <div className="flex min-h-0 flex-1 flex-col justify-between p-4">
           <p className="line-clamp-3 text-sm font-extrabold leading-snug text-clay-dark">
             {title}
           </p>
-          <p className="mt-1.5 text-xs font-bold text-clay-muted">{subject}</p>
+          <p className="text-xs font-bold text-clay-muted">{updatedAt}</p>
         </div>
+
         {onTogglePin && (
           <button
             type="button"
@@ -49,7 +72,7 @@ export const NoteItem = ({
               e.stopPropagation();
               onTogglePin(id, !pinned);
             }}
-            className={`absolute right-2.5 top-9 flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+            className={`absolute right-2.5 top-[38%] mt-1.5 flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
               pinned
                 ? "bg-clay-primary/15 text-clay-primary"
                 : "text-clay-muted opacity-0 hover:bg-clay-beige group-hover:opacity-100"
@@ -68,7 +91,7 @@ export const NoteItem = ({
               e.stopPropagation();
               onDelete(id);
             }}
-            className="absolute right-2.5 top-[4.5rem] flex h-8 w-8 items-center justify-center rounded-full text-clay-muted opacity-0 transition-colors hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+            className="absolute bottom-3 right-2.5 flex h-8 w-8 items-center justify-center rounded-full text-clay-muted opacity-0 transition-colors hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
           >
             <Trash2 size={14} />
           </button>

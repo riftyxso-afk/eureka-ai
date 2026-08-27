@@ -334,7 +334,7 @@ export default function RencanaPage() {
                       dayItems.map((item) => (
                         <div
                           key={item.id}
-                          className={`group flex items-start gap-1.5 rounded-clay-md border border-amber-900/10 bg-white/60 px-2 py-1.5 transition-all duration-75 ${
+                          className={`group flex items-start gap-1.5 rounded-clay-md border border-amber-900/10 bg-clay-cream/60 px-2 py-1.5 transition-all duration-75 ${
                             item.done ? "opacity-55" : ""
                           }`}
                         >
@@ -347,7 +347,7 @@ export default function RencanaPage() {
                             className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                               item.done
                                 ? "border-amber-500 bg-amber-500 text-white"
-                                : "border-amber-900/30 bg-white hover:border-amber-500"
+                                : "border-amber-900/30 bg-clay-cream hover:border-amber-500"
                             }`}
                           >
                             {item.done && <Check size={10} strokeWidth={4} />}
@@ -422,7 +422,7 @@ export default function RencanaPage() {
                         className={`rounded-clay-full border border-amber-900/10 px-2.5 py-1 text-[11px] font-extrabold ${
                           item.done
                             ? "bg-emerald-100 text-emerald-800 line-through"
-                            : "bg-white/70 text-amber-950"
+                            : "bg-clay-cream/70 text-amber-950"
                         }`}
                       >
                         {item.time ? `${formatTime(item.time)} · ` : ""}

@@ -51,7 +51,7 @@ export default function ChatSidebar({
   };
 
   return (
-    <div className="sticky top-0 hidden max-h-[calc(100vh-2rem)] w-[260px] shrink-0 flex-col gap-2 self-start rounded-clay border-2 border-clay-borderLight bg-white p-3 shadow-clay-sm lg:flex">
+    <div className="sticky top-0 hidden max-h-[calc(100vh-2rem)] w-[260px] shrink-0 flex-col gap-2 self-start rounded-clay border-2 border-clay-borderLight bg-clay-cream p-3 shadow-clay-sm lg:flex">
       {/* Header + tombol chat baru */}
       <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight pb-2.5">
         <span className="flex items-center gap-2 text-sm font-extrabold text-clay-dark">
@@ -197,7 +197,7 @@ export function MobileSessionButton({
         ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 w-11 items-center justify-center rounded-clay-md bg-white text-clay-primary shadow-clay-sm [touch-action:manipulation]"
+        className="flex h-11 w-11 items-center justify-center rounded-clay-md bg-clay-cream text-clay-primary shadow-clay-sm [touch-action:manipulation]"
         aria-label="Riwayat chat"
         aria-expanded={open}
       >
@@ -222,7 +222,7 @@ export function MobileSessionButton({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.15 }}
               onClick={(e) => e.stopPropagation()}
-              className="fixed z-50 w-64 max-w-[calc(100vw-1.5rem)] max-h-[50vh] overflow-y-auto overscroll-contain rounded-clay-md border-2 border-clay-borderLight bg-white p-2 shadow-clay-lg"
+              className="fixed z-50 w-64 max-w-[calc(100vw-1.5rem)] max-h-[50vh] overflow-y-auto overscroll-contain rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-2 shadow-clay-lg"
               style={
                 pos ? { left: pos.left, top: pos.top } : { left: 12, top: 64 }
               }

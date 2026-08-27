@@ -145,7 +145,7 @@ export default function ShareNoteModal({
           <button
             type="button"
             onClick={onOpenCollaborators}
-            className="flex w-full items-center justify-center gap-2 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-4 py-2.5 text-sm font-extrabold text-clay-dark transition-colors hover:border-clay-primary hover:text-clay-primary"
+            className="flex w-full items-center justify-center gap-2 rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream px-4 py-2.5 text-sm font-extrabold text-clay-dark transition-colors hover:border-clay-primary hover:text-clay-primary"
           >
             <Users size={16} />
             Kelola kolaborator (edit bersama)

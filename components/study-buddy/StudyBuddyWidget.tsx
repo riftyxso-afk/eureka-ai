@@ -82,9 +82,9 @@ export default function StudyBuddyWidget({ triggerMessage }: StudyBuddyWidgetPro
                 exit={{ opacity: 0, y: 10 }}
                 className="absolute bottom-full right-0 mb-2 mr-2"
               >
-                <div className="bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg text-xs sm:text-sm max-w-[160px] sm:max-w-[200px] border border-gray-200 dark:border-gray-700">
+                <div className="bg-clay-cream dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg text-xs sm:text-sm max-w-[160px] sm:max-w-[200px] border border-gray-200 dark:border-gray-700">
                   {currentMessage}
-                  <div className="absolute -bottom-1 right-4 w-2 h-2 bg-white dark:bg-gray-800 border-r border-b border-gray-200 dark:border-gray-700 transform rotate-45" />
+                  <div className="absolute -bottom-1 right-4 w-2 h-2 bg-clay-cream dark:bg-gray-800 border-r border-b border-gray-200 dark:border-gray-700 transform rotate-45" />
                 </div>
               </motion.div>
             )}
@@ -93,7 +93,7 @@ export default function StudyBuddyWidget({ triggerMessage }: StudyBuddyWidgetPro
           {/* Buddy Avatar - Clickable - Mobile Responsive */}
           <motion.button
             onClick={handleBuddyClick}
-            className="relative bg-gradient-to-br from-primary/10 to-primary/5 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-shadow border border-primary/20 cursor-pointer group touch-manipulation"
+            className="relative bg-gradient-to-br from-primary/10 to-primary/5 p-3 sm:p-4 rounded-xl sm:rounded-clay-md shadow-lg hover:shadow-xl transition-shadow border border-primary/20 cursor-pointer group touch-manipulation"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -117,7 +117,7 @@ export default function StudyBuddyWidget({ triggerMessage }: StudyBuddyWidgetPro
           <div className="absolute -top-2 -left-2 flex gap-1">
             <button
               onClick={() => setIsMinimized(!isMinimized)}
-              className="flex h-9 w-9 sm:h-7 sm:w-7 items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 touch-manipulation"
+              className="flex h-9 w-9 sm:h-7 sm:w-7 items-center justify-center bg-clay-cream dark:bg-gray-800 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 touch-manipulation"
               aria-label="Minimize"
             >
               <Minimize2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />

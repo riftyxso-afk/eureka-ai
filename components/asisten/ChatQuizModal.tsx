@@ -150,7 +150,7 @@ export default function ChatQuizModal({
               )}
             </button>
             {error && (
-              <p className="rounded-2xl border-2 border-red-200 bg-red-50 p-3 sm:p-4 text-xs sm:text-sm font-semibold text-red-600">
+              <p className="rounded-clay-md border-2 border-red-200 bg-red-50 p-3 sm:p-4 text-xs sm:text-sm font-semibold text-red-600">
                 {error}
               </p>
             )}
@@ -163,7 +163,7 @@ export default function ChatQuizModal({
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3 sm:p-4"
+              className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3 sm:p-4"
             >
               <div className="flex items-center gap-2">
                 <span className="h-4 w-4 animate-pulse rounded-full bg-clay-beige" />
@@ -180,7 +180,7 @@ export default function ChatQuizModal({
                       duration: 0.3,
                       ease: "easeOut",
                     }}
-                    className="flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-clay-shadow/40 bg-white px-3"
+                    className="flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-clay-shadow/40 bg-clay-cream px-3"
                   >
                     <span className="h-6 w-6 animate-pulse rounded-full bg-clay-beige" />
                     <span
@@ -233,7 +233,7 @@ export default function ChatQuizModal({
               return (
                 <div
                   key={q.id}
-                  className="rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3 sm:p-4"
+                  className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3 sm:p-4"
                 >
                   <div className="mb-2 text-xs sm:text-sm font-extrabold text-clay-dark leading-relaxed">
                     {qi + 1}. {q.question}
@@ -255,7 +255,7 @@ export default function ChatQuizModal({
                           onClick={() =>
                             setAnswers((prev) => ({ ...prev, [q.id]: oi }))
                           }
-                          className={`flex w-full items-center gap-2 rounded-xl border-2 bg-white px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
+                          className={`flex w-full items-center gap-2 rounded-xl border-2 bg-clay-cream px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
                         >
                           <span
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${

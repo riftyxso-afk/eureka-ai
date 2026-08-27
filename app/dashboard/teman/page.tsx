@@ -197,7 +197,7 @@ export default function FriendsPage() {
   ) => (
     <li
       key={key}
-      className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3"
+      className="flex flex-wrap items-center gap-3 rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3"
     >
       <span
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${AVATAR_COLORS[colorIndex(name)]}`}
@@ -282,7 +282,7 @@ export default function FriendsPage() {
         )}
 
         {!searching && query.trim().length > 0 && results.length === 0 && (
-          <div className="mt-3 rounded-2xl border-2 border-dashed border-clay-shadow/40 p-4">
+          <div className="mt-3 rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-4">
             <p className="text-sm font-semibold text-clay-muted">
               {l.noUserTitle}{" "}
               <b className="text-clay-dark">“{query.trim()}”</b>{" "}
@@ -351,7 +351,7 @@ export default function FriendsPage() {
           {l.friendsTitle.replace("{n}", String(friends.length))}
         </h2>
         {friends.length === 0 ? (
-          <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
+          <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
             {l.emptyFriends}
           </p>
         ) : (

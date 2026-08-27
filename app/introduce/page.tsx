@@ -93,7 +93,7 @@ export default function IntroducePage() {
 
         {/* Aksi */}
         <div className="mt-8 flex flex-col justify-center gap-2 sm:flex-row">
-          <Link href="/home">
+          <Link href="/dashboard">
             <ButtonClay className="w-full sm:w-auto">{l.mulaiBelajar}</ButtonClay>
           </Link>
           <Link href="/">
@@ -107,7 +107,7 @@ export default function IntroducePage() {
 
         <p className="mt-8 text-center text-xs font-semibold text-clay-muted">
           {l.watchNote}{" "}
-          <Link href="/home" className="font-extrabold text-clay-primary underline">
+          <Link href="/dashboard" className="font-extrabold text-clay-primary underline">
             {l.chatLink}
           </Link>
           .

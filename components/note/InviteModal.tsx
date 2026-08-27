@@ -188,13 +188,13 @@ export default function InviteModal({
 
         {/* Link undangan */}
         {inviteLink && (
-          <div className="mt-4 rounded-2xl border-2 border-clay-shadow/40 bg-clay-beige p-3">
+          <div className="mt-4 rounded-clay-md border-2 border-clay-shadow/40 bg-clay-beige p-3">
             <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-clay-muted">
               <Link2 size={14} />
               Link undangan (bagikan ke temanmu)
             </div>
             <div className="flex items-center gap-2">
-              <code className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-xs font-bold text-clay-dark">
+              <code className="min-w-0 flex-1 truncate rounded-xl bg-clay-cream px-3 py-2 text-xs font-bold text-clay-dark">
                 {inviteLink}
               </code>
               <button
@@ -209,7 +209,7 @@ export default function InviteModal({
         )}
 
         {/* Papan tulis kolaboratif */}
-        <div className="mt-4 rounded-2xl border-2 border-clay-shadow/40 bg-clay-beige p-3">
+        <div className="mt-4 rounded-clay-md border-2 border-clay-shadow/40 bg-clay-beige p-3">
           <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-clay-muted">
             <PenTool size={14} />
             Papan tulis kolaboratif (realtime)
@@ -245,7 +245,7 @@ export default function InviteModal({
             Kolaborator ({collaborators.length})
           </h3>
           {collaborators.length === 0 ? (
-            <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
+            <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-3 sm:p-4 text-center text-xs sm:text-sm font-semibold text-clay-muted">
               Belum ada kolaborator. Undang temanmu untuk belajar bareng!
             </p>
           ) : (
@@ -253,7 +253,7 @@ export default function InviteModal({
               {collaborators.map((c, i) => (
                 <li
                   key={c.id}
-                  className="flex items-center gap-3 rounded-2xl border-2 border-clay-shadow/40 bg-white/60 p-3 sm:p-3.5"
+                  className="flex items-center gap-3 rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3 sm:p-3.5"
                 >
                   <span
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}
