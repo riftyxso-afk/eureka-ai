@@ -54,6 +54,14 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/exams", exams);
   count++;
 
+  // ─── Tasks & pengingat (task-reminders) ────────────────
+  const tasks = await import("@/app/api/tasks/route");
+  mount(app, "/api/tasks", tasks);
+  count++;
+  const cronReminders = await import("@/app/api/cron/reminders/route");
+  mount(app, "/api/cron/reminders", cronReminders);
+  count++;
+
   // ─── Feedback (survey performa Eureka) ─────────────────
   const feedbackNote = await import("@/app/api/feedback/note/route");
   mount(app, "/api/feedback/note", feedbackNote);
