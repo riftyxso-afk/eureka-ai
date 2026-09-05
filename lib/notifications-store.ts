@@ -9,7 +9,9 @@ export type NotificationType =
   | "friend_accepted"
   | "mention"
   | "achievement"
-  | "note_ready";
+  | "note_ready"
+  | "exam_reminder"
+  | "task_reminder";
 
 export interface AppNotification {
   id: string;

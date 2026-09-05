@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   CalendarDays,
+  CalendarRange,
   CheckCircle2,
   ChevronDown,
   ClipboardList,
@@ -11,9 +12,11 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
+import { ScheduleCalendar } from "@/components/dashboard/ScheduleCalendar";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
+import { apiFetch } from "@/lib/apiClient";
 import {
   SCHEDULE_DAYS,
   SCHEDULE_COLORS,
@@ -28,9 +31,9 @@ import {
   type ScheduleDay,
   type TaskItem,
 } from "@/lib/schedule-store";
-import { readableTextColor } from "@/lib/palette";
+import { accentForSubject, readableTextColor } from "@/lib/palette";
 
-type Tab = "jadwal" | "tugas";
+type Tab = "jadwal" | "kalender" | "tugas";
 
 function formatDue(dueDate?: string): string {
   if (!dueDate) return "Tanpa tenggat";
@@ -48,6 +51,10 @@ export default function JadwalPage() {
   const [entries, setEntries] = useState<ScheduleEntry[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  // Tugas dari fitur Tugas & Ujian (server) — tampil di kalender sebagai chip.
+  const [serverTasks, setServerTasks] = useState<
+    { id: string; title: string; dueDate: string; subject?: string }[]
+  >([]);
 
   // Form jadwal
   const [showForm, setShowForm] = useState(false);
@@ -73,6 +80,28 @@ export default function JadwalPage() {
 
   useEffect(() => {
     reload();
+    // Muat tugas server (fitur Tugas & Ujian) untuk kalender — best effort.
+    void (async () => {
+      try {
+        const res = await apiFetch("/api/tasks");
+        if (res.ok) {
+          const data = await res.json().catch(() => null);
+          const list = Array.isArray(data?.tasks) ? data.tasks : [];
+          setServerTasks(
+            list
+              .filter((t: { dueDate?: string; status?: string }) => t.dueDate && t.status !== "selesai")
+              .map((t: { id: string; title: string; dueDate: string; subject?: string }) => ({
+                id: t.id,
+                title: t.title,
+                dueDate: t.dueDate,
+                subject: t.subject,
+              }))
+          );
+        }
+      } catch {
+        // kalender tetap tampil dengan data lokal
+      }
+    })();
   }, []);
 
   const notify = (msg: string) => {
@@ -145,6 +174,7 @@ export default function JadwalPage() {
         {(
           [
             { id: "jadwal", label: "Jadwal Mapel", icon: CalendarDays },
+            { id: "kalender", label: "Kalender", icon: CalendarRange },
             { id: "tugas", label: `Tugas${pending > 0 ? ` (${pending})` : ""}`, icon: ClipboardList },
           ] as { id: Tab; label: string; icon: LucideIcon }[]
         ).map((t) => (
@@ -381,6 +411,22 @@ export default function JadwalPage() {
                 )}
               </div>
             )}
+          </motion.div>
+        ) : tab === "kalender" ? (
+          <motion.div
+            key="kalender"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.18 }}
+            className="mt-5"
+          >
+            <ScheduleCalendar
+              entries={entries}
+              tasks={tasks}
+              serverTasks={serverTasks}
+              accentOf={(subjectName) => accentForSubject(subjectName).light}
+            />
           </motion.div>
         ) : (
           <motion.div

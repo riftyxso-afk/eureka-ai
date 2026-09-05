@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 import {
+  AlarmClock,
   AtSign,
   Bell,
+  CalendarDays,
   CheckCheck,
   FileText,
   Trophy,
@@ -34,6 +36,8 @@ const TYPE_ICON: Record<NotificationType, LucideIcon> = {
   mention: AtSign,
   achievement: Trophy,
   note_ready: FileText,
+  exam_reminder: CalendarDays,
+  task_reminder: AlarmClock,
 };
 
 function formatRelative(iso: string): string {

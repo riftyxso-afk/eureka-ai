@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlarmClock,
   BookOpen,
   CalendarDays,
   Crown,
@@ -46,6 +47,7 @@ const menuItems: MenuItem[] = [
   // dapat diakses lewat URL/link internal (Home, Rencana, Ujian, Leaderboard).
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { id: "jadwal", label: "Jadwal", icon: CalendarDays, href: "/dashboard/jadwal" },
+  { id: "tugas", label: "Tugas & Ujian", icon: AlarmClock, href: "/dashboard/tugas" },
   { id: "misi", label: "Misi", icon: Flag, href: "/dashboard/misi" },
   {
     id: "mata-pelajaran",
@@ -67,6 +69,21 @@ const menuItems: MenuItem[] = [
  * menu sendiri (mis. /dashboard/note/<id>) menyorot menu induknya.
  */
 export function activeMenuId(pathname: string): string | null {
+  // Pemetaan halaman tanpa menu sendiri → menu induk yang relevan.
+  // DICEK DULU sebelum prefix-match /dashboard agar tidak tertangkap
+  // menu "Dashboard" (prefix /dashboard lebih pendek tapi match duluan
+  // pada best-length loop — keduanya prefix, jadi urutan penting).
+  const PARENT: [string, string][] = [
+    ["/dashboard/note", "dashboard"],
+    ["/dashboard/keamanan", "pengaturan"],
+    ["/dashboard/ujian", "dashboard"],
+    ["/dashboard/leaderboard", "dashboard"],
+    ["/dashboard/rencana", "jadwal"],
+  ];
+  for (const [prefix, id] of PARENT) {
+    if (pathname === prefix || pathname.startsWith(prefix + "/")) return id;
+  }
+
   let best: { id: string; len: number } | null = null;
   for (const item of menuItems) {
     const hit =
@@ -76,9 +93,7 @@ export function activeMenuId(pathname: string): string | null {
       best = { id: item.id, len: item.href.length };
     }
   }
-  if (best) return best.id;
-  if (pathname.startsWith("/dashboard/note")) return "dashboard";
-  return null;
+  return best?.id ?? null;
 }
 
 export const Sidebar = () => {
