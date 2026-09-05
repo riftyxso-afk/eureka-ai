@@ -62,6 +62,11 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/cron/reminders", cronReminders);
   count++;
 
+  // ─── Ekspor jadwal PDF (schedule-export) ───────────────
+  const scheduleExport = await import("@/app/api/schedule/export/route");
+  mount(app, "/api/schedule/export", scheduleExport);
+  count++;
+
   // ─── Feedback (survey performa Eureka) ─────────────────
   const feedbackNote = await import("@/app/api/feedback/note/route");
   mount(app, "/api/feedback/note", feedbackNote);

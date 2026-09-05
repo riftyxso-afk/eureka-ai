@@ -8,11 +8,13 @@ import {
   CheckCircle2,
   ChevronDown,
   ClipboardList,
+  Download,
   Plus,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { ScheduleCalendar } from "@/components/dashboard/ScheduleCalendar";
+import { ScheduleExportModal } from "@/components/dashboard/ScheduleExportModal";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
@@ -51,6 +53,8 @@ export default function JadwalPage() {
   const [entries, setEntries] = useState<ScheduleEntry[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  // Modal ekspor jadwal (schedule-export).
+  const [exportOpen, setExportOpen] = useState(false);
   // Tugas dari fitur Tugas & Ujian (server) — tampil di kalender sebagai chip.
   const [serverTasks, setServerTasks] = useState<
     { id: string; title: string; dueDate: string; subject?: string }[]
@@ -164,10 +168,29 @@ export default function JadwalPage() {
 
   return (
     <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <h1 className="text-2xl font-extrabold sm:text-3xl">Jadwal</h1>
-      <p className="mt-2 text-base font-semibold text-clay-muted">
-        Atur jadwal mata pelajaran &amp; pantau tugas-tugasmu
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold sm:text-3xl">Jadwal</h1>
+          <p className="mt-2 text-base font-semibold text-clay-muted">
+            Atur jadwal mata pelajaran &amp; pantau tugas-tugasmu
+          </p>
+        </div>
+        <button
+          onClick={() => setExportOpen(true)}
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-clay-md border-2 border-clay-borderLight bg-clay-cream px-4 text-sm font-extrabold text-clay-dark shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
+          title="Ekspor jadwal sebagai PDF atau gambar"
+        >
+          <Download size={16} /> Ekspor
+        </button>
+      </div>
+
+      {/* Modal ekspor PDF / PNG / share (schedule-export) */}
+      <ScheduleExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        entries={entries}
+        tasks={tasks}
+      />
 
       {/* Tab */}
       <div className="mt-5 flex gap-2">
