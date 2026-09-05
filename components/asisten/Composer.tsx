@@ -157,7 +157,7 @@ function ToolButton({
         active
           ? activeClass ?? "bg-clay-primary/15 text-clay-primary"
           : "bg-clay-primary/10 text-clay-primary hover:bg-clay-primary/15"
-      } ${compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"} ${className}`}
+      } ${compact ? "!min-h-[40px] !min-w-[40px] !px-2 text-[11px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"} ${className}`}
     >
       {children}
     </button>
@@ -779,24 +779,26 @@ export default function Composer({
               )}
             </AnimatePresence>
 
-            <div className={compact ? "px-3 py-2" : "px-4 py-3"}>
+            <div className={compact ? "px-3 py-2.5" : "px-4 py-3"}>
               <textarea
                 ref={textareaRef}
                 value={text}
                 onChange={(e) => handleChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
-                rows={1}
+                rows={2}
                 placeholder={placeholder ?? "Tanya apa saja… ketik @ untuk melampirkan catatanmu"}
                 className={`w-full resize-none bg-transparent font-semibold leading-relaxed text-clay-dark outline-none placeholder:text-clay-muted disabled:opacity-60 ${
-                  compact ? "max-h-[120px] text-sm" : "max-h-[180px] text-base"
+                  compact ? "max-h-[120px] text-[15px] min-h-[48px]" : "max-h-[180px] text-base min-h-[52px]"
                 }`}
                 data-testid="asisten-composer"
               />
               <div className={`flex min-w-0 items-center justify-between gap-3 ${compact ? "mt-1" : "mt-1.5"}`}>
                 <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-                  {/* ── Tombol "+" — semua tool dalam satu menu (pola Prompt Bar) ── */}
-                  <div className="relative shrink-0" ref={plusRef}>
+                  {/* ── Tombol "+" — semua tool dalam satu menu (pola Prompt Bar) ──
+                      Popover di-anchor ke tepi atas KARTU (bukan tombol) agar
+                      muncul DI ATAS prompt box, tidak menimpanya. */}
+                  <div className="shrink-0" ref={plusRef}>
                     <button
                       type="button"
                       onClick={() => setPlusOpen((v) => !v)}
@@ -807,7 +809,7 @@ export default function Composer({
                         plusOpen
                           ? "bg-clay-primary/15 text-clay-primary"
                           : "bg-clay-primary/10 text-clay-primary hover:bg-clay-primary/15"
-                      } ${compact ? "!min-h-[32px] !min-w-[32px]" : "!min-h-[38px] !min-w-[38px]"}`}
+                      } ${compact ? "!min-h-[40px] !min-w-[40px]" : "!min-h-[38px] !min-w-[38px]"}`}
                     >
                       <Plus
                         size={compact ? 15 : 17}
@@ -823,7 +825,7 @@ export default function Composer({
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 8, scale: 0.97 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute bottom-full left-0 z-40 mb-2 max-h-[60dvh] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-1.5 shadow-clay-lg"
+                          className="absolute bottom-full left-2 z-40 mb-2 max-h-[60dvh] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-1.5 shadow-clay-lg"
                         >
                           {/* Lampirkan catatan */}
                           <PlusRow
@@ -940,8 +942,9 @@ export default function Composer({
                   )}
                 </div>
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-                {/* Pilihan kecepatan/model AI — di samping kiri tombol kirim */}
-                <div className="relative" ref={speedRef}>
+                {/* Pilihan kecepatan/model AI — di samping kiri tombol kirim.
+                    Popover di-anchor ke tepi atas KARTU (lihat wrapper speedRef). */}
+                <div ref={speedRef}>
                   {(() => {
                     const cur = SPEED_OPTIONS.find((o) => o.value === speedMode) ?? SPEED_OPTIONS[1];
                     const manual = selectedModel
@@ -960,7 +963,7 @@ export default function Composer({
                         className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
                           manual ? "bg-clay-primary/15 text-clay-primary" : cur.active
                         } ${
-                          compact ? "!min-h-[32px] !px-2 text-[10px]" : "!min-h-[38px] !px-2.5 text-[11px]"
+                          compact ? "!min-h-[40px] !px-2.5 text-[11px]" : "!min-h-[38px] !px-2.5 text-[11px]"
                         }`}
                       >
                         {manual ? (
@@ -990,7 +993,7 @@ export default function Composer({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -8, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute bottom-full right-0 z-40 mb-2 max-h-[60dvh] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-1 shadow-clay-lg"
+                        className="absolute bottom-full right-2 z-40 mb-2 max-h-[60dvh] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-1 shadow-clay-lg"
                       >
                         {SPEED_OPTIONS.map((o) => {
                           const active = speedMode === o.value && !selectedModel;
@@ -1070,7 +1073,7 @@ export default function Composer({
                 {sending ? (
                   <button
                     onClick={onStop}
-                    className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-clay-full bg-clay-primary/15 font-extrabold text-clay-primary transition-all duration-150 ease-out hover:bg-clay-primary/20 active:scale-[0.97] ${compact ? "!min-h-[32px] !px-3 text-[10px]" : "!min-h-[38px] !px-4 text-[11px]"}`}
+                    className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-clay-full bg-clay-primary/15 font-extrabold text-clay-primary transition-all duration-150 ease-out hover:bg-clay-primary/20 active:scale-[0.97] ${compact ? "!min-h-[40px] !px-3.5 text-[11px]" : "!min-h-[38px] !px-4 text-[11px]"}`}
                     aria-label="Hentikan"
                     data-testid="asisten-stop"
                   >
@@ -1083,7 +1086,7 @@ export default function Composer({
                     disabled={!canSend}
                     className={`inline-flex shrink-0 items-center justify-center rounded-clay-full bg-clay-primary font-extrabold text-white shadow-[0_2px_10px_rgb(var(--clay-primary)/0.35)] transition-all duration-150 ease-out hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 ${
                       compact
-                        ? "!min-h-[32px] !min-w-[32px] !px-2.5"
+                        ? "!min-h-[40px] !min-w-[40px] !px-2.5"
                         : "!min-h-[38px] !min-w-[38px] !px-4"
                     }`}
                     aria-label="Kirim"
