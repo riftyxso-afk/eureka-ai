@@ -16,11 +16,12 @@ Panduan go-live Eureka.AI:
 | `NEXT_PUBLIC_API_URL` | **YES** | URL backend produksi, mis. `https://api.eureka-ai.web.id` (tanpa `/` di akhir) |
 | `NEXT_PUBLIC_SUPABASE_URL` | **YES** | Supabase Dashboard → Project Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **YES** | Supabase Dashboard → API (anon public key) |
-| `AI_PROVIDER` / `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | **YES** | Provider AI utama (OpenAgentic/OpenRouter, lihat `.env.example`) |
-| `OPENAGENTIC_API_KEY` | No | Bila memakai provider OpenAgentic |
-| `OPENROUTER_API_KEY` | No | Bila memakai provider OpenRouter |
+| `JUANROUTER_API_KEY` | **YES** | **WAJIB untuk semua generate TEKS** (chat, catatan, kuis, judul) — router.juan.web.id → Dashboard → API Keys |
+| `OPENROUTER_API_KEY` | No | Fallback DARURAT teks bila seluruh Juan Router gagal — openrouter.ai/keys |
+| `OPENAGENTIC_API_KEY` | No | KHUSUS text-to-image (Eureka Draw & ilustrasi); tanpa ini hanya fitur gambar nonaktif |
+| `OPENAGENTIC_IMAGE_MODEL` | No | Model gambar OpenAgentic (default `ali-qwen-image-2.0-pro`) |
+| `AI_PROVIDER` / `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | No | Provider embedding/transkripsi (belum tersedia di Juan Router; default openagentic) |
 | `OPENAI_API_KEY` | No | Bila memakai provider OpenAI |
-| `JUANROUTER_API_KEY` | No | Bila memakai provider JuanRouter |
 | `FIRECRAWL_API_KEY` | No | Web search (fitur Pro) |
 | `RESEND_API_KEY` | **YES** | Resend (email OTP/welcome/premium) — awalan `re_` |
 | `RESEND_FROM_EMAIL` | No | Pengirim email, mis. `Eureka.AI <noreply@domainmu.com>` |
@@ -40,10 +41,11 @@ Buat file `/var/www/eureka-backend/.env` (salin dari `backend/.env.example`):
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | **YES** | Supabase Project Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | **YES** | Supabase → service_role key (RAHASIA — jangan bocor ke frontend) |
-| `AI_PROVIDER` / `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | **YES** | Provider AI utama |
-| `OPENAGENTIC_API_KEY` | No | Bila memakai OpenAgentic |
-| `OPENROUTER_API_KEY` | No | Bila memakai OpenRouter |
-| `JUANROUTER_API_KEY` | No | Bila memakai JuanRouter |
+| `JUANROUTER_API_KEY` | **YES** | **WAJIB untuk semua generate TEKS** — router.juan.web.id |
+| `OPENROUTER_API_KEY` | No | Fallback DARURAT teks bila seluruh Juan Router gagal |
+| `OPENAGENTIC_API_KEY` | No | KHUSUS text-to-image (tanpa ini hanya fitur gambar nonaktif) |
+| `OPENAGENTIC_IMAGE_MODEL` | No | Model gambar OpenAgentic (default `ali-qwen-image-2.0-pro`) |
+| `AI_PROVIDER` / `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | No | Provider embedding/transkripsi (default openagentic) |
 | `FIRECRAWL_API_KEY` | No | Web search |
 | `SUMOPOD_API_KEY` | No | Ekstraksi audio/video (opsional) |
 | `RESEND_API_KEY` | **YES** | Resend — awalan `re_` |

@@ -8,6 +8,8 @@ import { apiFetch, apiEventSource, getClientLocale } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
 import { buildChatTranscript } from "@/lib/assistant/chatTranscript";
+import { useNoteSteps, type NoteStep } from "@/components/note/useNoteSteps";
+import { NoteLoadingSteps } from "@/components/note/NoteLoadingSteps";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 
 interface NoteProgressOverlayProps {
@@ -49,6 +51,7 @@ export function NoteProgressOverlay({
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const doneRef = useRef(false);
   const percentRef = useRef(0);
+  const { steps, handleEvent, reset: resetSteps } = useNoteSteps();
 
   const cleanup = useCallback(() => {
     esRef.current?.close();
@@ -97,6 +100,7 @@ export function NoteProgressOverlay({
       setPercent(0);
       percentRef.current = 0;
       setMessage("Menyiapkan materi…");
+      resetSteps();
       return;
     }
     if (startedRef.current) return;
@@ -126,6 +130,16 @@ export function NoteProgressOverlay({
       // sumber; dibatasi pesan terakhir & panjang karakter (buildChatTranscript).
       const transcript = buildChatTranscript(history ?? []);
       const baseText = intent.topic || prompt;
+      // Materi kosong = tidak ada riwayat DAN topik hanya sisa kata perintah
+      // (mis. "buatkan catatan" → topic "catatan"). Ditolak eksplisit di sini
+      // agar tidak membuat catatan null/sampah diam-diam.
+      const BARE_COMMAND_RE = /^(catatan|note|notes|ringkasan|rangkuman|buat|buatkan|bikin|generate)\s*$/i;
+      if (!transcript && BARE_COMMAND_RE.test(baseText.trim())) {
+        setError(
+          "Belum ada materi untuk dibuat catatan. Ceritakan dulu topiknya di chat, atau ketik topik spesifik (mis. \"buat catatan tentang fotosintesis\")."
+        );
+        return;
+      }
       const fileContent = transcript
         ? `${baseText}\n\n=== PERCAKAPAN (materi tambahan) ===\n${transcript}`
         : baseText;
@@ -162,7 +176,10 @@ export function NoteProgressOverlay({
         const p = JSON.parse(ev.data) as {
           percent?: number;
           message?: string;
+          step?: NoteStep;
         };
+        // Bangun daftar langkah dari event yang sama (idempoten utk replay).
+        handleEvent(p);
         if (typeof p.percent === "number") {
           percentRef.current = Math.max(percentRef.current, p.percent);
           setPercent(percentRef.current);
@@ -312,6 +329,9 @@ export function NoteProgressOverlay({
                     {Math.round(percent)}%
                   </span>
                 </div>
+
+                {/* Daftar langkah nyata dari event SSE (real-time, tanpa mock) */}
+                <NoteLoadingSteps steps={steps} />
 
                 {/* Langkah pipeline */}
                 <div className="mt-4 flex items-center gap-2">

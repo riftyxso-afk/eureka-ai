@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { BookMarked, Check, Copy, Paperclip, RefreshCw, Zap } from "lucide-react";
 import MarkdownView from "./MarkdownView";
@@ -8,14 +8,19 @@ import SourceChips from "./SourceChips";
 import EurekaOrb from "@/components/ui/EurekaOrb";
 import EurekaBlobAvatar from "@/components/asisten/EurekaBlobAvatar";
 import { YoutubeEmbed } from "@/components/video/YoutubeEmbed";
+import { modelDisplayName } from "@/lib/modelCatalog";
 import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
 import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type { AssistantChatMessage } from "@/lib/assistant/types";
+import ThinkingState from "@/components/thinking/ThinkingState";
+import LoadingState from "@/components/thinking/LoadingState";
+import StreamingText from "@/components/streaming/StreamingText";
 
 interface MessageBubbleProps {
   message: AssistantChatMessage;
   isStreaming?: boolean;
+  thinking?: string | null;
   onRetry?: () => void;
   /** Pesan user sebelumnya — dipakai hitung lama AI menjawab. */
   prevMessage?: AssistantChatMessage | null;
@@ -81,9 +86,17 @@ function answerDurationMs(
   return end - start;
 }
 
-function ThinkingDots() {
-  // Loading resmi: orb composing dari thinking-orbs (lihat spec orb-loading-system)
-  return <EurekaOrb variant="thinking" scale="inline" label="Eureka sedang berpikir" />;
+function ThinkingDots({ prevText, thinking, working }: { prevText?: string | null; thinking?: string | null; working?: boolean }) {
+  const isLink = prevText ? /https?:\/\//.test(prevText) : false;
+  let reasoningOn = true;
+  try {
+    const v = localStorage.getItem("eureka_reasoning");
+    if (v !== null) reasoningOn = v === "true";
+  } catch {}
+  if (!reasoningOn) {
+    return <LoadingState variant={isLink ? "Search" : "Drive"} />;
+  }
+  return <ThinkingState variant={isLink ? "Search" : "Steps"} thinking={thinking ?? undefined} working={working} />;
 }
 
 /**
@@ -93,11 +106,12 @@ function ThinkingDots() {
 export default function MessageBubble({
   message,
   isStreaming = false,
+  thinking,
   onRetry,
   prevMessage,
   onViewVideo,
   videoEnabled = true,
-}: MessageBubbleProps) {
+}: MessageBubbleProps & { thinking?: string | null }) {
   const isUser = message.role === "user";
   const empty = !message.content.trim();
   const duration = isUser
@@ -108,6 +122,16 @@ export default function MessageBubble({
   const userVideoUrl =
     (isUser && (message.videoUrl || findYoutubeLink(message.content)?.url)) ||
     null;
+
+  // Thinking terakhir yang sempat tampil — dipertahankan saat prop thinking
+  // hilang (mis. jawaban selesai) agar tidak kedip. Disimpan via state di
+  // efek (bukan mutasi ref saat render — bug + warning react-hooks/refs).
+  // Hooks WAJIB di atas early return agar urutannya stabil tiap render.
+  const [lastThinking, setLastThinking] = useState<string | null>(null);
+  useEffect(() => {
+    if (thinking) setLastThinking(thinking);
+  }, [thinking]);
+  const displayThinking = thinking ?? lastThinking;
 
   if (isUser) {
     return (
@@ -150,6 +174,9 @@ export default function MessageBubble({
     );
   }
 
+  // Thinking terakhir yang sempat tampil — dipertahankan saat prop thinking
+  // hilang (mis. jawaban selesai) agar tidak kedip. Ditulis di efek, bukan
+  // saat render (mutasi ref saat render = bug + warning react-hooks/refs).
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -158,26 +185,19 @@ export default function MessageBubble({
     >
       <EurekaBlobAvatar size={32} className="mt-1 shrink-0" />
       <div className="flex min-w-0 max-w-[85%] flex-col gap-1.5">
+        {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}
+        {!isStreaming && !empty && displayThinking && (
+          <div className="break-words rounded-clay-md border border-clay-borderLight/60 bg-clay-beige/20 px-3 py-2">
+            <ThinkingDots prevText={prevMessage?.content ?? null} thinking={displayThinking} working={false} />
+          </div>
+        )}
         <div className="break-words rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-clay-cream px-4 py-3 shadow-clay-sm">
           {isStreaming && empty ? (
-            <div className="flex items-center gap-2 py-0.5">
-              <ThinkingDots />
-              <span className="text-[13px] font-bold text-clay-muted">
-                Eureka sedang berpikir…
-              </span>
-            </div>
+            <ThinkingDots prevText={prevMessage?.content ?? null} thinking={thinking} working={isStreaming} />
           ) : isStreaming ? (
-            <div className="space-y-1">
-              <MarkdownView content={message.content} className="break-words text-[13.5px] leading-relaxed" />
-              <ThinkingDots />
-            </div>
+            <StreamingText content={message.content} sources={[]} followUps={[]} loop={false} fill />
           ) : empty ? (
-            <div className="flex items-center gap-2 py-0.5">
-              <ThinkingDots />
-              <span className="text-[13px] font-bold text-clay-muted">
-                Eureka sedang berpikir…
-              </span>
-            </div>
+            <ThinkingDots prevText={prevMessage?.content ?? null} thinking={thinking} working={false} />
           ) : (
             <MarkdownView content={message.content} className="break-words text-[13.5px] leading-relaxed" />
           )}
@@ -187,7 +207,7 @@ export default function MessageBubble({
         <div className="flex items-center gap-1.5 self-start">
           {message.model && (
             <span className="rounded-clay-full bg-clay-beige px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-wide text-clay-muted">
-              via {message.model}
+              via {modelDisplayName(message.model)}
             </span>
           )}
           {!isStreaming && !empty && <CopyButton content={message.content} />}

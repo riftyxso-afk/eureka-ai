@@ -35,6 +35,8 @@ export interface NoteJob {
   cancelled?: boolean;
   createdAt: number;
   updatedAt: number;
+  /** Rantai persist internal — JANGAN disentuh pemanggil. */
+  _chain?: Promise<void>;
 }
 
 export interface CreateJobOptions {
@@ -79,10 +81,17 @@ function fromDbStatus(status: string | null, cancelled: boolean): JobStatus {
   return "running";
 }
 
-/** Persist status ke tabel jobs Supabase. Gagal diam-diam (fallback memory). */
+/**
+ * Persist status ke tabel jobs Supabase. Gagal diam-diam (fallback memory).
+ *
+ * PENTING: persist di-RANTAI per job (persistOrdered) — tanpa rantai,
+ * beberapa write fire-and-forget bisa sampai ke DB URUT BALIK (network
+ * race) dan update terminal (status done) tertimpa update progress lama
+ * → job selamanya "processing" walau catatan sudah jadi.
+ */
 async function persist(job: NoteJob): Promise<void> {
   try {
-    await db()
+    const { error } = await db()
       .from("jobs")
       .upsert(
         {
@@ -102,9 +111,26 @@ async function persist(job: NoteJob): Promise<void> {
         },
         { onConflict: "id" }
       );
-  } catch {
-    // Supabase tidak terkonfigurasi — tetap jalan in-memory.
+    // Supabase-js mengembalikan error sebagai NILAI (bukan exception) —
+    // tanpa cek ini, tulis yang gagal (mis. constraint) diam seribu bahasa
+    // dan DB bisa basi selamanya.
+    if (error) {
+      console.warn("[jobQueue] persist gagal (fallback memory):", error.message ?? error);
+    }
+  } catch (e) {
+    // Supabase tidak terkonfigurasi / tulis gagal — tetap jalan in-memory,
+    // tapi JANGAN diam: catat agar operator tahu status DB bisa basi.
+    console.warn("[jobQueue] persist gagal (fallback memory):", e instanceof Error ? e.message : e);
   }
+}
+
+/** Jadwalkan persist menyusul rantai job ini (urutan tulis ke DB terjamin). */
+function persistOrdered(job: NoteJob): Promise<void> {
+  // Snapshot field yang ditulis persist DIBACA SAAT WRITE (bukan saat antre)
+  // karena persist membaca objek live — rantai menjamin urutan eksekusi.
+  const next = (job._chain ?? Promise.resolve()).then(() => persist(job));
+  job._chain = next;
+  return next;
 }
 
 async function loadFromDb(jobId: string): Promise<NoteJob | null> {
@@ -189,7 +215,7 @@ export function createJob(options: CreateJobOptions): string {
   };
   jobs.set(id, job);
   runners.set(id, options.run);
-  void persist(job);
+  void persistOrdered(job);
   return id;
 }
 
@@ -210,7 +236,8 @@ export async function updateJob(
   if (!job) return;
   Object.assign(job, patch, { updatedAt: Date.now() });
   jobs.set(jobId, job);
-  void persist(job);
+  // Kembalikan rantai agar pemanggil terminal bisa await penulisan terakhir.
+  return persistOrdered(job);
 }
 
 export async function getJob(jobId: string): Promise<NoteJob | null> {
@@ -231,7 +258,7 @@ export async function cancelJob(jobId: string): Promise<boolean> {
   job.message = "Proses dibatalkan.";
   job.updatedAt = Date.now();
   jobs.set(jobId, job);
-  void persist(job);
+  void persistOrdered(job);
   return true;
 }
 

@@ -28,11 +28,13 @@ export interface ChatSendInput extends ChatToolOptions {
 
 export interface StreamingState {
   content: string;
+  thinking: string;
   sources: AssistantChatMessage["sources"];
   error: string | null;
   /** Link upgrade (402 premium) — tampilkan tombol ke /pricing. */
   upgradeUrl: string | null;
   model: string | null;
+  skill: string | null;
   /** Pipeline web search (tool globe) — loading bertahap. */
   webStage: WebSearchStage | null;
   /** Hasil pencarian web yang ditampilkan dengan logo situs. */
@@ -56,10 +58,12 @@ function buildStoredQuestion(input: ChatSendInput): string {
 function newStreaming(): StreamingState {
   return {
     content: "",
+    thinking: "",
     sources: [],
     error: null,
     upgradeUrl: null,
     model: null,
+    skill: null,
     webStage: null,
     webResults: [],
   };
@@ -126,6 +130,62 @@ export function useAssistantChat(options: {
   // Input & sesi yang sedang menunggu jawaban klarifikasi (untuk kirim ulang).
   const pendingInputRef = useRef<ChatSendInput | null>(null);
   const pendingSessionRef = useRef<string | null>(null);
+  // Buffer teks streaming (token/thinking) — di-flush PALING CEPAT tiap
+  // FLUSH_MIN_MS agar puluhan event SSE per detik tidak memicu rantai
+  // re-render + efek pasif yang tak pernah reda (pemicu "Maximum update
+  // depth exceeded" + lag Markdown/KaTeX). Sisa buffer selalu ikut pada
+  // flush berikutnya / saat stream selesai, jadi tak ada token hilang.
+  const streamBufRef = useRef({ content: "", thinking: "" });
+  const streamFlushRef = useRef<number | null>(null);
+  const lastFlushRef = useRef(0);
+  const FLUSH_MIN_MS = 120;
+
+  /** Terapkan isi buffer ke state dalam SATU setState. */
+  const flushStreamBuffer = useCallback(() => {
+    streamFlushRef.current = null;
+    const content = streamBufRef.current.content;
+    const thinking = streamBufRef.current.thinking;
+    streamBufRef.current.content = "";
+    streamBufRef.current.thinking = "";
+    if (!content && !thinking) return;
+    lastFlushRef.current = Date.now();
+    setStreaming((s) => ({
+      ...s,
+      content: s.content + content,
+      thinking: s.thinking + thinking,
+      // Token mulai mengalir → tahap terakhir pipeline: menyusun jawaban.
+      webStage: content && s.webStage ? "writing" : s.webStage,
+    }));
+  }, []);
+
+  /** Buang buffer terjadwal (dipakai saat stop/kirim baru agar tak bocor). */
+  const clearStreamBuffer = useCallback(() => {
+    if (streamFlushRef.current !== null) {
+      // ID bisa dari rAF maupun setTimeout — batalkan keduanya (no-op aman).
+      cancelAnimationFrame(streamFlushRef.current);
+      clearTimeout(streamFlushRef.current);
+      streamFlushRef.current = null;
+    }
+    streamBufRef.current.content = "";
+    streamBufRef.current.thinking = "";
+  }, []);
+
+  /** Tampung teks, jadwalkan satu flush (segera atau tunda hingga throttle). */
+  const queueStreamText = useCallback(
+    (kind: "content" | "thinking", text: string) => {
+      streamBufRef.current[kind] += text;
+      if (streamFlushRef.current !== null) return; // sudah terjadwal
+      const wait = FLUSH_MIN_MS - (Date.now() - lastFlushRef.current);
+      if (wait <= 0) {
+        streamFlushRef.current = requestAnimationFrame(flushStreamBuffer);
+      } else {
+        // Tunda hingga jendela throttle lewat — trailing flush dijamin jalan
+        // walau tak ada token lagi sesudahnya.
+        streamFlushRef.current = window.setTimeout(flushStreamBuffer, wait) as unknown as number;
+      }
+    },
+    [flushStreamBuffer]
+  );
 
   const refreshSessions = useCallback(async () => {
     const userId = getUserId();
@@ -209,6 +269,7 @@ export function useAssistantChat(options: {
       stoppedRef.current = false;
       setSending(true);
       sendingRef.current = true;
+      clearStreamBuffer();
       setStreaming(newStreaming());
       setClarification(null);
 
@@ -252,22 +313,25 @@ export function useAssistantChat(options: {
           videoUrl,
           clarifications: input.clarifications,
           clarificationsSkipped: input.clarificationsSkipped,
+          reasoning: input.reasoning ?? true,
+          model: input.model,
         },
         (ev) => {
           if (ev.type === "token") {
-            setStreaming((s) => ({
-              ...s,
-              content: s.content + ev.text,
-              // Token mulai mengalir → tahap terakhir pipeline: menyusun jawaban.
-              webStage: s.webStage ? "writing" : s.webStage,
-            }));
+            queueStreamText("content", ev.text);
+          } else if (ev.type === "thinking") {
+            queueStreamText("thinking", ev.text);
           } else if (ev.type === "sources") {
+            flushStreamBuffer();
             setStreaming((s) => ({ ...s, sources: ev.sources }));
           } else if (ev.type === "meta") {
+            flushStreamBuffer();
             if (ev.model) setStreaming((s) => ({ ...s, model: ev.model ?? null }));
           } else if (ev.type === "pipeline") {
+            flushStreamBuffer();
             setStreaming((s) => ({ ...s, webStage: ev.stage }));
           } else if (ev.type === "web") {
+            flushStreamBuffer();
             setStreaming((s) => ({
               ...s,
               webResults: ev.results,
@@ -275,6 +339,7 @@ export function useAssistantChat(options: {
               webStage: s.webStage === "writing" ? s.webStage : "analyzing",
             }));
           } else if (ev.type === "error") {
+            flushStreamBuffer();
             setStreaming((s) => ({
               ...s,
               error: ev.message,
@@ -311,13 +376,25 @@ export function useAssistantChat(options: {
         }
       }
 
+      // Pastikan sisa buffer ikut tampil sebelum riwayat final dimuat.
+      flushStreamBuffer();
       setSending(false);
       sendingRef.current = false;
       // Ambil ulang pesan tersimpan dari server (sumber + history final).
       await loadMessages(targetSessionId);
       await refreshSessions();
+      // Judul sesi di-generate AI secara fire-and-forget di server — bisa
+      // selesai SETELAH refresh di atas. Bila sesi ini masih berjudul
+      // default, refresh sekali lagi beberapa detik kemudian agar judul
+      // baru muncul di sidebar tanpa reload.
+      const wasUntitled = !sessions.find(
+        (s) => s.id === targetSessionId && s.title && s.title !== "Percakapan baru"
+      );
+      if (wasUntitled) {
+        setTimeout(() => void refreshSessions(), 4000);
+      }
     },
-    [loadMessages, refreshSessions]
+    [loadMessages, refreshSessions, queueStreamText, flushStreamBuffer, clearStreamBuffer, sessions]
   );
 
   // Auto-kirim prompt dari /home — tunggu riwayat pertama selesai dimuat
@@ -364,10 +441,11 @@ export function useAssistantChat(options: {
   const handleStop = useCallback(() => {
     stoppedRef.current = true;
     abortRef.current();
+    clearStreamBuffer();
     setSending(false);
     sendingRef.current = false;
     setStreaming(newStreaming());
-  }, []);
+  }, [clearStreamBuffer]);
 
   const handleRetry = useCallback(() => {
     if (lastSendRef.current && sessionId) {

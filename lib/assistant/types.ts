@@ -23,6 +23,13 @@ export interface ChatToolOptions {
   /** Kecepatan jawaban AI: fast (Kilat) / normal (Seimbang) / deep (Mendalam). */
   speedMode?: "fast" | "normal" | "deep";
   /**
+   * Model spesifik pilihan user (Model Store) — server memvalidasi terhadap
+   * katalog; id asing diabaikan (mode tier normal).
+   */
+  model?: string;
+  /** Reasoning ON = tampilkan thinking real + pakai model thinking; OFF = loading pixel-grid + model biasa. */
+  reasoning?: boolean;
+  /**
    * Link YouTube pada pesan user (jika ada) — server mengekstrak transkrip
    * sebagai konteks jawaban AI dan sesi memakainya sebagai "video aktif".
    */

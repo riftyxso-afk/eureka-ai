@@ -151,10 +151,9 @@ function buildOtpEmailHtml(code: string, email: string): string {
 }
 
 async function sendOtpEmail(to: string, code: string): Promise<void> {
-  if (!isResendConfigured()) {
-    throw new Error(
-      "RESEND_API_KEY belum diisi. Tambahkan key asli (awalan re_) di .env.local & Vercel."
-    );
+  if (!isResendConfigured() || !process.env.RESEND_FROM_EMAIL) {
+    console.log(`\n[DEV OTP] Email: ${to}  Kode: ${code}\n`);
+    return;
   }
   const resend = new Resend(process.env.RESEND_API_KEY!);
   const { error } = await resend.emails.send({
@@ -186,12 +185,16 @@ export async function POST(req: NextRequest) {
 
   // Proteksi bot: wajib lolos CAPTCHA (Turnstile) untuk kirim kode & verifikasi.
   // Bila Turnstile belum dikonfigurasi, verifikasi dilewati (mode dev).
-  const captcha = await verifyTurnstileToken(String(body.captchaToken ?? ""));
-  if (!captcha.ok) {
-    return NextResponse.json(
-      { ok: false, error: captcha.error ?? "Verifikasi keamanan gagal." },
-      { status: 400 }
-    );
+  // Ekstensi browser (x-requested-with) juga di-skip karena tidak punya widget Turnstile.
+  const isExtension = req.headers.get("x-requested-with") === "eureka-extension";
+  if (!isExtension) {
+    const captcha = await verifyTurnstileToken(String(body.captchaToken ?? ""));
+    if (!captcha.ok) {
+      return NextResponse.json(
+        { ok: false, error: captcha.error ?? "Verifikasi keamanan gagal." },
+        { status: 400 }
+      );
+    }
   }
 
   if (action === "request") {

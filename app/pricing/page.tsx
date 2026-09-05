@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
+  Brain,
   CheckCircle2,
   CreditCard,
   Crown,
   Gift,
   History,
   Loader2,
+  Printer,
   Ticket,
   Zap,
 } from "lucide-react";
@@ -22,6 +24,11 @@ import type { ProductReview, ReviewStats } from "@/lib/reviews-store";
 import { getUserId } from "@/lib/identity";
 import { isLoggedIn, syncAuthSession } from "@/lib/auth";
 import { useI18n } from "@/context/LocaleContext";
+import { MODEL_CATALOG } from "@/lib/modelCatalog";
+
+/** Daftar model untuk bagian "Model AI yang kamu dapat" — dari katalog. */
+const FREE_MODELS = MODEL_CATALOG.filter((m) => !m.premiumOnly);
+const PRO_MODELS = MODEL_CATALOG.filter((m) => m.premiumOnly);
 
 const TIERS = [
   {
@@ -58,6 +65,7 @@ export default function PricingPage() {
   const { isPremium, tier, premiumUntil, loading, refresh } = usePremium();
   const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [printingId, setPrintingId] = useState<string | null>(null);
   // Ulasan nyata → JSON-LD Product (aggregateRating & review).
   const [reviewData, setReviewData] = useState<{
     reviews: ProductReview[];
@@ -304,6 +312,38 @@ export default function PricingPage() {
       });
     } catch {
       return "";
+    }
+  };
+
+  const printInvoice = async (orderId: string) => {
+    if (printingId) return;
+    setPrintingId(orderId);
+    try {
+      const token = await import("@/lib/supabase/client").then((m) => m.getAccessToken?.() ?? Promise.resolve(null)).catch(() => null);
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await apiFetch(
+        `/api/payments/invoice?orderId=${encodeURIComponent(orderId)}&userId=${encodeURIComponent(getUserId())}`,
+        { headers }
+      );
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        alert(j?.error ?? "Gagal mengunduh invoice");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice-${orderId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Gagal mengunduh invoice");
+    } finally {
+      setPrintingId(null);
     }
   };
 
@@ -645,6 +685,53 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
+
+              {/* Daftar model AI — diturunkan dari katalog (sumber tunggal). */}
+              <div className="mt-6 rounded-clay-md bg-clay-beige/60 px-4 py-4">
+                <p className="flex items-center gap-2 text-sm font-extrabold text-clay-dark">
+                  <Brain size={16} className="text-clay-primary" />
+                  {p.modelsTitle}
+                </p>
+                <p className="mt-2 text-[11px] font-extrabold uppercase tracking-wide text-clay-muted">
+                  {p.modelsFreeTitle}
+                </p>
+                <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                  {FREE_MODELS.map((m) => (
+                    <li
+                      key={m.id}
+                      className="flex items-center gap-1.5 rounded-clay-full bg-clay-cream px-2.5 py-1 text-[11px] font-bold text-clay-dark shadow-clay-sm"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={m.logo} alt="" className="h-3.5 w-3.5 rounded" />
+                      {m.name}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-clay-muted">
+                  <Crown size={12} className="text-clay-secondary" />
+                  {p.modelsProTitle}
+                </p>
+                <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                  {PRO_MODELS.map((m) => (
+                    <li
+                      key={m.id}
+                      className="flex items-center gap-1.5 rounded-clay-full bg-clay-cream px-2.5 py-1 text-[11px] font-bold text-clay-dark shadow-clay-sm"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={m.logo} alt="" className="h-3.5 w-3.5 rounded" />
+                      {m.name}
+                      {!m.available && (
+                        <span className="text-[9px] font-extrabold text-clay-muted">
+                          {p.modelsSoon}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2.5 text-[11px] font-semibold text-clay-muted">
+                  {p.modelsNote}
+                </p>
+              </div>
               <div className="mt-6 flex items-start gap-2 rounded-clay-md bg-clay-beige/60 px-4 py-3 text-xs font-semibold text-clay-muted">
                 <CreditCard size={15} className="mt-0.5 shrink-0" />
                 <span>{p.payNote}</span>
@@ -689,15 +776,15 @@ export default function PricingPage() {
                         {formatDate(h.paidAt ?? h.createdAt)}
                       </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-extrabold text-clay-dark">
                         {formatRupiah(h.amount)}
                       </span>
-                      <span className="rounded-clay-full bg-clay-primary/10 px-3 py-1 text-xs font-extrabold text-clay-primary">
+                      <span className="rounded-clay-full bg-clay-primary/10 px-2.5 py-1 text-xs font-extrabold text-clay-primary">
                         {h.tier}
                       </span>
                       <span
-                        className={`rounded-clay-full px-3 py-1 text-xs font-extrabold ${
+                        className={`rounded-clay-full px-2.5 py-1 text-xs font-extrabold ${
                           h.status === "paid"
                             ? "bg-clay-success/15 text-clay-success"
                             : "bg-clay-muted/10 text-clay-muted"
@@ -705,6 +792,19 @@ export default function PricingPage() {
                       >
                         {h.status === "paid" ? p.paid : p.unpaid}
                       </span>
+                      <button
+                        onClick={() => void printInvoice(h.orderId)}
+                        disabled={printingId === h.orderId}
+                        title="Cetak invoice PDF"
+                        className="inline-flex items-center gap-1 rounded-clay-full border-2 border-clay-borderLight bg-white px-2.5 py-1 text-xs font-extrabold text-clay-primary shadow-clay-sm transition-all hover:-translate-y-0.5 disabled:opacity-60"
+                      >
+                        {printingId === h.orderId ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Printer size={12} />
+                        )}
+                        PDF
+                      </button>
                     </div>
                   </li>
                 ))}

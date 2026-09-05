@@ -178,7 +178,14 @@ export default function DashboardPage() {
         );
         if (!res.ok) return;
         const payload = await res.json();
-        setNotes(payload.notes ?? []);
+        // Dedupe id — daftar bisa datang dobel (optimistic add + refresh
+        // berbarengan) dan key React harus unik.
+        const seen = new Set<string>();
+        setNotes(
+          (payload.notes ?? []).filter((n: Note) =>
+            seen.has(n.id) ? false : (seen.add(n.id), true)
+          )
+        );
       } catch {
         // biarkan daftar kosong
       } finally {
@@ -251,7 +258,8 @@ export default function DashboardPage() {
   };
 
   const handleCreate = (note: Note) => {
-    setNotes((prev) => [note, ...prev]);
+    // Jangan duplikat entri lama dgn id sama (optimistic + note-ready race).
+    setNotes((prev) => [note, ...prev.filter((n) => n.id !== note.id)]);
     setIsModalOpen(false);
   };
 

@@ -28,8 +28,12 @@ type Phase = "preparing" | "drawing" | "done" | "error";
 const PREPARING_STEPS = [
   "Membaca permintaanmu…",
   "Menyusun konsep sesuai topik…",
-  "Menggambar dengan AI (FLUX)…",
+  "Menggambar dengan AI…",
 ];
+
+/** Grid loading: kolom × baris kotak dengan shimmer bergelombang. */
+const GRID_COLS = 5;
+const GRID_ROWS = 3;
 
 /** Gaya loading ala DreamingOverlay: blob kabur + partikel + shimmer. */
 const DREAM_CSS = `
@@ -54,6 +58,21 @@ const DREAM_CSS = `
 @keyframes eureka-img-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
+}
+@keyframes eureka-img-cell-shimmer {
+  0% { transform: translateX(-160%) skewX(-14deg); }
+  55%, 100% { transform: translateX(260%) skewX(-14deg); }
+}
+@keyframes eureka-img-cell-pop {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eureka-img-grid-cell,
+  .eureka-img-grid-cell > div {
+    animation: none !important;
+    opacity: 0.6;
+  }
 }
 `;
 
@@ -244,27 +263,47 @@ export function ImageGenerationOverlay({
             <div className="px-4 py-4 sm:px-5 sm:py-5">
               {phase === "preparing" || phase === "drawing" ? (
                 <div className="flex flex-col items-center gap-4">
-                  {/* Kartu gambar shimmer — kotak melengkung ala dreaming */}
+                  {/* Grid loading — kotak shimmer bergelombang (khusus generate gambar) */}
                   <div
                     className="relative h-52 w-full max-w-xs overflow-hidden rounded-clay-md border-2 border-white/20 bg-clay-cream/5 shadow-clay"
                     style={{ animation: "eureka-img-float 3.5s ease-in-out infinite" }}
                   >
-                    {/* Shimmer bergerak */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent" />
                     <div
-                      className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/25 to-transparent"
-                      style={{ animation: "eureka-img-shimmer 1.5s ease-in-out infinite" }}
-                    />
-                    {/* Ikon tengah */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                      className="grid h-full w-full gap-2 p-3"
+                      style={{
+                        gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
+                        gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
+                      }}
+                    >
+                      {Array.from({ length: GRID_COLS * GRID_ROWS }).map((_, i) => {
+                        const row = Math.floor(i / GRID_COLS);
+                        const col = i % GRID_COLS;
+                        // Gelombang diagonal: sel yang lebih kanan/bawah telat lebih lama.
+                        const delay = (row + col) * 0.14;
+                        return (
+                          <div
+                            key={i}
+                            className="eureka-img-grid-cell relative overflow-hidden rounded-clay-md border border-white/10 bg-clay-cream/5"
+                            style={{ animation: `eureka-img-cell-pop 2.4s ease-in-out ${delay}s infinite` }}
+                          >
+                            <div
+                              className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/35 to-transparent"
+                              style={{ animation: `eureka-img-cell-shimmer 2.4s ease-in-out ${delay}s infinite` }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Ikon + langkah di tengah grid */}
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
                       <motion.div
                         animate={{ rotate: [0, 8, -8, 0], scale: [1, 1.06, 1] }}
                         transition={{ duration: 1.8, repeat: Infinity }}
-                        className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-clay-secondary/50 bg-clay-primary/20"
+                        className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-clay-secondary/50 bg-clay-primary/20 backdrop-blur-[2px]"
                       >
                         <Sparkles size={22} className="text-clay-secondary" />
                       </motion.div>
-                      <p className="px-4 text-[11px] font-bold text-white/60">
+                      <p className="rounded-clay-full bg-black/35 px-3 py-1 text-[11px] font-bold text-white/75">
                         {PREPARING_STEPS[stepIdx]}
                       </p>
                     </div>

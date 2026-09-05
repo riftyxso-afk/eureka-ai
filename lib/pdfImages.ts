@@ -15,6 +15,7 @@
  */
 import { isFirecrawlConfigured, scrapeWebUrl, searchWeb } from "./firecrawl";
 import type { WebImage } from "./firecrawl";
+import { findYoutubeLink } from "./assistant/videoUrl";
 import {
   buildIllustrationPrompt,
   generateAiIllustration,
@@ -175,7 +176,10 @@ export async function collectImagesForPdf(
 
   // 2) Firecrawl — cari halaman sumber lalu ambil gambarnya.
   if (isFirecrawlConfigured() && images.length < 8) {
-    let scrapeUrl: string | null = note.sourceUrl || null;
+    // Link YouTube bukan halaman artikel (tak ada gambar) — lewati scrape,
+    // fallback ke pencarian web di bawah.
+    let scrapeUrl: string | null =
+      note.sourceUrl && !findYoutubeLink(note.sourceUrl) ? note.sourceUrl : null;
     if (!scrapeUrl) {
       const query = `${note.title ?? ""} ${note.subject ?? ""}`.trim().slice(0, 150);
       if (query) {

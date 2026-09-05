@@ -40,6 +40,10 @@ import {
 } from "@/lib/webSearchEnrichment";
 import { clampChapterCount } from "@/lib/prompts/noteGeneration";
 import { isJobCancelled, JobCancelledError } from "@/lib/jobQueue";
+import { detectJailbreakHeuristic } from "@/lib/safety/patterns";
+import { checkJailbreak } from "@/lib/safety/nvidia-nim";
+import { SAFETY_BLOCK_THRESHOLD, isNvidiaNimConfigured } from "@/lib/safety/safety-config";
+import { logSafetyEvent } from "@/lib/safety/safety-log";
 import type { Note, SearchSource } from "@/lib/types";
 
 export interface NotePrefs {
@@ -201,6 +205,23 @@ async function extractAllSources(
       } else {
         throw new Error("Unggah file dulu.");
       }
+      // Guardrail 4.3: scan prompt-injection per sumber (heuristik, gratis).
+      // Kena → sumber dikarantina via kanal failures (user lihat warning,
+      // sumber lain tetap diproses). NIM menyusul sekali untuk teks gabungan.
+      if (detectJailbreakHeuristic(res.text)) {
+        const msg =
+          "Diblokir guardrail keamanan: materi terindikasi mengandung instruksi injeksi prompt.";
+        failures.push({ label, error: msg });
+        logSafetyEvent({
+          type: "jailbreak-detected",
+          severity: "high",
+          categories: ["jailbreak", "prompt-injection"],
+          snippet: res.text,
+          source: "heuristic",
+        });
+        console.warn(`[notesProcessor] Sumber dikarantina guardrail: ${label}`);
+        continue;
+      }
       results.push(res);
       parts.push(`[${i + 1}. ${label}]\n${res.text}`);
     } catch (e) {
@@ -221,14 +242,59 @@ async function extractAllSources(
     );
   }
 
+  // Guardrail 4.3 (lapis 2): satu panggilan NIM untuk teks gabungan.
+  // HANYA kategori injeksi (jailbreak/prompt-injection) yang memblokir —
+  // konten edukasi sah bisa memicu kategori lain (mis. sejarah perang →
+  // "violence") dan TIDAK boleh menggagalkan pembuatan catatan.
+  const INJECTION_CATS = new Set(["jailbreak", "prompt-injection"]);
+  const combinedText = parts.join("\n\n---\n\n");
+  if (isNvidiaNimConfigured()) {
+    try {
+      // Job latar belakang — boleh tunggu model lebih lama (bukan jalur chat).
+      const nimVerdict = await checkJailbreak(combinedText, 20_000);
+      const isInjection = nimVerdict.categories.some((c) => INJECTION_CATS.has(c));
+      if (
+        nimVerdict.ok &&
+        !nimVerdict.safe &&
+        isInjection &&
+        nimVerdict.confidence >= SAFETY_BLOCK_THRESHOLD
+      ) {
+        logSafetyEvent({
+          type: "input-blocked",
+          severity: "high",
+          categories: nimVerdict.categories,
+          snippet: combinedText,
+          source: "nim",
+        });
+        throw new Error(
+          "Materi diblokir guardrail keamanan: terdeteksi upaya injeksi prompt. " +
+            "Periksa kembali isi sumber lalu coba lagi."
+        );
+      }
+    } catch (e) {
+      // Kegagalan NIM tidak boleh menggagalkan job (fallback ke heuristik
+      // + prompt rules) — kecuali error-nya justru penolakan di atas.
+      if (e instanceof Error && e.message.startsWith("Materi diblokir guardrail")) {
+        throw e;
+      }
+      console.warn("[notesProcessor] Cek NIM materi dilewati:", e instanceof Error ? e.message : e);
+    }
+  }
+
   const first = results[0];
+  // Sumber YouTube di POSISI BERAPA PUN ikut jadi sourceUrl catatan —
+  // dulu hanya sumber pertama yang dibaca, sehingga catatan multi-sumber
+  // (mis. dokumen + YouTube) kehilangan embed video di halaman catatan.
+  const youtubeSourceUrl = sources.find(
+    (s) => s.type === "youtube" && (s.url ?? "").trim()
+  )?.url?.trim();
   return {
     extracted: {
-      text: parts.join("\n\n---\n\n"),
+      text: combinedText,
       title: first?.title,
       // Segmen subtitle hanya bermakna bila satu-satunya sumber adalah YouTube.
       segments: sources.length === 1 ? first?.segments : undefined,
-      sourceUrl: first?.sourceUrl,
+      sourceUrl: youtubeSourceUrl ?? first?.sourceUrl,
     },
     webImages,
     failures,

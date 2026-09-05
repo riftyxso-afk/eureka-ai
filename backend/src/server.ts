@@ -70,6 +70,8 @@ const resolveCorsOrigin: (origin: string) => string | null = (origin) => {
   if (!isProd && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return origin;
   }
+  // Chrome/Edge extensions: izinkan semua chrome-extension:// origins
+  if (/^chrome-extension:\/\//.test(origin)) return origin;
   return corsOrigins.includes(origin.replace(/\/+$/, "")) ? origin : null;
 };
 

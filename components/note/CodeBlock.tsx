@@ -88,9 +88,14 @@ export default function CodeBlock({ code, language, className }: CodeBlockProps)
           safeLang === "plaintext"
             ? escapeHtml(code)
             : hljs.highlight(code, { language: safeLang, ignoreIllegals: true }).value;
-        if (!cancelled) setHtml(value);
+        // Idempoten: effect yang jalan ulang tanpa perubahan hasil
+        // tidak boleh memicu render baru (pemicu "Maximum update depth").
+        if (!cancelled) setHtml((prev) => (prev === value ? prev : value));
       } catch {
-        if (!cancelled) setHtml(escapeHtml(code));
+        if (!cancelled) {
+          const fallback = escapeHtml(code);
+          setHtml((prev) => (prev === fallback ? prev : fallback));
+        }
       }
     })();
     return () => {

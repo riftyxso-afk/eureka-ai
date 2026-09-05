@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -19,7 +20,9 @@ interface MarkdownViewProps {
  * Render konten jawaban AI (markdown + GFM + math KaTeX).
  * Gaya dibungkus agar konsisten dengan tema clay Eureka.
  */
-export default function MarkdownView({ content, className = "" }: MarkdownViewProps) {
+// Memo: konten pesan selesai tidak berubah — lewati re-parse markdown/KaTeX
+// saat state streaming memicu re-render halaman berkali-kali per detik.
+function MarkdownView({ content, className = "" }: MarkdownViewProps) {
   // AI sering menulis rumus dengan \(...\), \[...\], atau \begin{align}...
   // yang tidak dikenali remark-math. Normalisasi dulu agar KaTeX merendernya.
   const normalized = normalizeMathDelimiters(content);
@@ -85,3 +88,5 @@ export default function MarkdownView({ content, className = "" }: MarkdownViewPr
     </div>
   );
 }
+
+export default memo(MarkdownView);

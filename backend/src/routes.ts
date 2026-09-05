@@ -32,10 +32,17 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const otp = await import("@/app/api/auth/otp/route");
   const verifyCaptcha = await import("@/app/api/auth/verify-captcha/route");
   const authNotify = await import("@/app/api/auth/notify/route");
+  const sessionExchange = await import("@/app/api/auth/session-exchange/route");
   mount(app, "/api/auth/otp", otp);
   mount(app, "/api/auth/verify-captcha", verifyCaptcha);
   mount(app, "/api/auth/notify", authNotify);
-  count += 3;
+  mount(app, "/api/auth/session-exchange", sessionExchange);
+  count += 4;
+
+  // ─── Safety (guardrails NVIDIA NIM) ─────────────────────
+  const safetyMetrics = await import("@/app/api/safety/metrics/route");
+  mount(app, "/api/safety/metrics", safetyMetrics);
+  count++;
 
   // ─── Chat ──────────────────────────────────────────────
   const chat = await import("@/app/api/chat/route");
@@ -93,6 +100,7 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
     "@/app/api/payments/validate-code/route"
   );
   const paymentsHistory = await import("@/app/api/payments/history/route");
+  const paymentsInvoice = await import("@/app/api/payments/invoice/route");
   mount(app, "/api/payments/checkout", paymentsCheckout);
   mount(app, "/api/payments/webhook", paymentsWebhook);
   mount(app, "/api/payments/status", paymentsStatus);
@@ -100,7 +108,8 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/payments/cancel", paymentsCancel);
   mount(app, "/api/payments/validate-code", paymentsValidateCode);
   mount(app, "/api/payments/history", paymentsHistory);
-  count += 7;
+  mount(app, "/api/payments/invoice", paymentsInvoice);
+  count += 8;
 
   // ─── Profile ───────────────────────────────────────────
   const profile = await import("@/app/api/profile/route");

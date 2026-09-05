@@ -6,11 +6,9 @@
  *
  * Melewatkan (no-op) bila FIRECRAWL_API_KEY belum diisi di .env.local.
  */
-import { promises as fs } from "fs";
-import path from "path";
-
 import { aiChatJson } from "./ai";
 import { isFirecrawlConfigured, scrapeWebUrl, searchWeb, type WebImage } from "./firecrawl";
+import { uploadNoteImage } from "./noteImageStorage";
 import type { Note, NoteChapter } from "./types";
 
 const MAX_PLACED_IMAGES = 4;
@@ -22,12 +20,15 @@ export interface EnrichedNote {
   keyPointsAdded: number;
 }
 
-/** Unduh gambar ke public/images/notes/<noteId>/ → kembalikan peta URL lokal. */
+/**
+ * Unduh gambar → unggah ke Supabase Storage (URL publik permanen,
+ * lintas-instance — tidak lagi ke disk lokal yang hilang saat redeploy
+ * dan tidak terbaca frontend Vercel) → kembalikan peta URL.
+ */
 async function downloadImagesToNote(
   noteId: string,
   images: { url: string; alt: string }[]
 ): Promise<Map<string, string>> {
-  const dir = path.join(process.cwd(), "public", "images", "notes", noteId);
   const localMap = new Map<string, string>();
   let index = 0;
 
@@ -52,9 +53,18 @@ async function downloadImagesToNote(
         fallback[contentType] ||
         "jpg";
       const filename = `enrich-${++index}.${ext}`;
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(path.join(dir, filename), buffer);
-      localMap.set(img.url, `/images/notes/${noteId}/${filename}`);
+      const url = await uploadNoteImage(
+        noteId,
+        filename,
+        buffer,
+        contentType.split(";")[0] || `image/${ext === "jpg" ? "jpeg" : ext}`
+      );
+      // Gagal unggah → jangan sisipkan markdown yang akan rusak.
+      if (!url) {
+        index--;
+        continue;
+      }
+      localMap.set(img.url, url);
     } catch {
       // gambar gagal → dilewati
     }

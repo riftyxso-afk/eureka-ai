@@ -1,32 +1,34 @@
 /**
  * Konfigurasi AI terpusat — multi-provider (semuanya OpenAI-compatible).
  *
- * Provider utama (env AI_PROVIDER):
- * - "openagentic" (default) → https://openagentic.id/api/v1 (37+ model, 1 key)
- * - "aimurah"               → https://aimurah.my.id/api/v1
- * - "openai"                → https://api.openai.com/v1
+ * ATURAN ROUTING (juan-router-provider-split, 2026-09-04):
+ * - SEMUA generate TEKS (chat, catatan, kuis, judul, prompt gambar,
+ *   enrichment) → Juan Router utama, fallback darurat OpenRouter.
+ * - OpenAgentic → KHUSUS text-to-image (lihat lib/image-gen.ts), TIDAK
+ *   pernah dipakai untuk teks.
+ * - Embedding & transkripsi → belum tersedia di Juan Router; tetap jalur
+ *   lama via getAiApiConfig()/getProviderConfig() (lihat design.md).
  *
- * Fallback otomatis: bila provider utama gagal (502/503/timeout/sibuk),
- * panggilan dialihkan ke OpenRouter (bila OPENROUTER_API_KEY diisi).
+ * Mode unified 9Router (env AI_PROVIDER=9router) menimpa rantai teks di atas.
  *
  * Auth: Authorization: Bearer <key>; endpoint: POST /chat/completions.
  *
  * Env:
- * - AI_PROVIDER             (default "openagentic")
- * - OPENAGENTIC_API_KEY     (key openagentic.id, awalan sk-…)
+ * - JUANROUTER_API_KEY      (WAJIB untuk semua teks; key router.juan.web.id, awalan sk-…)
+ * - JUANROUTER_BASE_URL     (default https://router.juan.web.id/v1)
+ * - JUANROUTER_MODEL        (default gemini-3.7-flash-low)
+ * - OPENROUTER_API_KEY      (key openrouter.ai, awalan sk-or-…; fallback darurat teks)
+ * - OPENROUTER_BASE_URL     (default https://openrouter.ai/api/v1)
+ * - OPENROUTER_MODEL        (default z-ai/glm-5.2:free)
+ * - OPENAGENTIC_API_KEY     (KHUSUS text-to-image; key openagentic.id, awalan sk-…)
  * - OPENAGENTIC_BASE_URL    (default https://openagentic.id/api/v1)
- * - OPENAGENTIC_MODEL       (default claude-sonnet-4.5)
+ * - OPENAGENTIC_MODEL       (default deepseek-v4-flash-free)
+ * - AI_PROVIDER             (default "openagentic"; dipakai embedding/transkripsi & getAiApiConfig)
  * - AI_API_KEY              (AIMurah; fallback ke OPENAI_API_KEY)
  * - AI_BASE_URL             (base URL AIMurah, default https://aimurah.my.id/api/v1)
- * - AI_MODEL                (model AIMurah, default deepseek-v4-flash)
+ * - AI_MODEL                (model AIMurah, default deepseek-v4-flash-free)
  * - OPENAI_API_KEY          (OpenAI resmi)
- * - OPENROUTER_API_KEY      (key openrouter.ai, awalan sk-or-…; fallback saat utama down)
- * - OPENROUTER_BASE_URL     (default https://openrouter.ai/api/v1)
- * - OPENROUTER_MODEL        (default openai/gpt-4o-mini)
- * - JUANROUTER_API_KEY      (key router.juan.web.id, awalan sk-…; fallback terakhir)
- * - JUANROUTER_BASE_URL     (default https://router.juan.web.id/v1)
- * - JUANROUTER_MODEL        (default deepseek-v4-flash)
- * - NINE_ROUTER_API_KEY     (key 9router, awalan sk-…; unified gateway)
+ * - NINE_ROUTER_API_KEY     (key 9router, awalan sk-…; unified gateway; mode 9router)
  * - NINE_ROUTER_BASE_URL    (default http://localhost:20128/v1)
  * - NINE_ROUTER_MODEL       (default relay-combo)
  */
@@ -34,39 +36,51 @@ export type AiProvider = "aimurah" | "openai" | "openagentic" | "openrouter" | "
 
 /**
  * Kecepatan jawaban AI yang bisa dipilih user di composer (/home & /chat):
- * - "fast"   → Kilat: model tercepat/ringan (gemini-3.7-flash-low, deepseek-v4-flash-vision-exp)
- * - "normal" → Seimbang: model balanced (deepseek-v4-pro, deepseek-v4-pro-0813, gemini-3.7-flash-high, minimax-m3, qwen3.8-max)
- * - "deep"   → Mendalam: model terpintar (claude-opus-5, gpt-5.6-terra, gpt-5.6-luna, grok-4.6, muse-spark-1.2)
+ * - "fast"   → Kilat: glm-5.3-flash, gemini-3.8-flash-high, gemini-3.7-flash-low, nemotron-3.5-lightning
+ * - "normal" → Seimbang: gpt-5.6-luna, minimax-m3, hy-4-preview, grok-4.5-high
+ * - "deep"   → Mendalam: gpt-5.6-sol, gpt-5.6-terra, claude-opus-5, qwen3.8-max, grok-4.6-xhigh
  *
- * Urutan = prioritas (paling pintar/cepat di depan per tier). Bila satu model error (400/404/503),
+ * Daftar definitif & metadata (logo, peringkat, deskripsi) ada di
+ * lib/modelCatalog.ts (modul data murni, aman diimpor komponen client).
+ * Urutan = prioritas (di depan di tier). Bila satu model error (400/404/503),
  * otomatis coba berikutnya, lalu provider fallback — tidak memutus chat.
  */
-export type AiSpeedMode = "fast" | "normal" | "deep";
+export type { AiSpeedMode, ModelCatalogEntry } from "./modelCatalog";
+export {
+  MODEL_CATALOG,
+  MODEL_CATALOG_IDS,
+  SPEED_MODEL_LISTS,
+  SPEED_MODEL_LISTS_PRO,
+} from "./modelCatalog";
+import {
+  MODEL_CATALOG,
+  MODEL_CATALOG_IDS,
+  SPEED_MODEL_LISTS,
+  SPEED_MODEL_LISTS_PRO,
+  type AiSpeedMode,
+} from "./modelCatalog";
+import { getAiPremiumContext } from "./aiContext";
 
-/** Daftar model per mode — Juan Router, disesuaikan ON + tambahan premium, urut terpintar di tier mendalam. */
-export const SPEED_MODEL_LISTS: Record<AiSpeedMode, string[]> = {
-  // Kilat — tercepat, ringan (cocok untuk ringkasan cepat/soal pendek)
-  fast: ["gemini-3.7-flash-low", "deepseek-v4-flash-vision-exp"],
-  // Seimbang — balance kecepatan & kualitas
-  normal: [
-    "deepseek-v4-pro",
-    "deepseek-v4-pro-0813",
-    "gemini-3.7-flash-high",
-    "minimax-m3",
-    "qwen3.8-max",
-  ],
-  // Mendalam — terpintar, untuk analisis mendalam (urut ON di depan: gpt-5.6-terra/luna ON, sisanya fallback 503/500)
-  deep: [
-    "gpt-5.6-terra",
-    "gpt-5.6-luna",
-    "grok-4.6",
-    "claude-opus-5",
-    "muse-spark-1.2",
-  ],
-};
+/**
+ * Model yang mengembalikan reasoning/thinking — disaring saat user mematikan
+ * toggle reasoning (dan saat menyusun rantai fallback model terpilih).
+ */
+const THINKING_SET = new Set([
+  "deepseek-v4-pro",
+  "deepseek-v4-pro-0813",
+  "qwen3.8-max",
+  "grok-4.6",
+  "claude-opus-5",
+  "muse-spark-1.2",
+]);
 
-/** Model free untuk OpenAgentic & AIMurah — hanya 2 ini sesuai instruksi. */
-export const OPENAGENTIC_FREE_MODELS = ["deepseek-v4-flash-free", "hy3-free"] as const;
+/** Model free untuk OpenAgentic & AIMurah (terverifikasi live dari /models OpenAgentic). */
+export const OPENAGENTIC_FREE_MODELS = [
+  "deepseek-v4-flash-free",
+  "hy3-free",
+  "qwen3.8-flash-free",
+  "muse-spark-1.3-free",
+] as const;
 export const AIMURAH_FREE_MODELS = ["deepseek-v4-flash-free", "hy3-free"] as const;
 
 /** Model free untuk OpenRouter — hanya yang :free sesuai instruksi (urut ON di depan, 429/timeout di belakang). */
@@ -216,7 +230,9 @@ function getProviderConfig(): ProviderConfig | null {
 }
 
 export function hasAiKey(): boolean {
-  return getProviderChain("normal", true).length > 0 || getProviderChain("normal", false).length > 0;
+  // Rantai teks baru (juan-router-provider-split): terisi bila kunci Juan
+  // Router ATAU OpenRouter tersedia (atau NINE_ROUTER_API_KEY di mode 9router).
+  return getProviderChain("normal", true, true).length > 0;
 }
 
 /** Semua provider OpenAI-compatible → embedding & transkripsi tersedia bila ada key. */
@@ -224,13 +240,26 @@ export function isOpenAICompatible(): boolean {
   return hasAiKey();
 }
 
+/** Peringatan sekali saat AI_FORCE_MODELS diisi tapi diabaikan untuk teks. */
+let forceModelsWarned = false;
+function warnOnceForceModelsIgnored() {
+  if (forceModelsWarned) return;
+  forceModelsWarned = true;
+  console.warn(
+    "[AI] AI_FORCE_MODELS diisi tapi DINONAKTIFKAN untuk teks (juan-router-provider-split): semua teks lewat Juan Router, OpenAgentic hanya text-to-image."
+  );
+}
+
 /**
  * Rantai model yang dicoba berurutan sesuai mode kecepatan.
  * Setiap model di daftar menjadi satu entri terpisah → saat satu model error,
  * loop provider otomatis mencoba model berikutnya (fallback antar model),
  * lalu ke provider fallback (mis. OpenRouter bila key tersedia).
+ *
+ * Diekspor untuk diagnostik/probe (scripts/) — jangan dipakai untuk request
+ * langsung; gunakan aiChat/aiChatStream.
  */
-function getProviderChain(speedMode: AiSpeedMode = "normal", forChat: boolean = false): ProviderConfig[] {
+export function getProviderChain(speedMode: AiSpeedMode = "normal", _forChat: boolean = false, reasoning: boolean = true, preferredModel?: string, premiumOverride?: boolean): ProviderConfig[] {
   const chain: ProviderConfig[] = [];
 
   const pushProvider = (
@@ -243,6 +272,19 @@ function getProviderChain(speedMode: AiSpeedMode = "normal", forChat: boolean = 
       chain.push({ baseURL, apiKey, name, model, defaultModel: model });
     }
   };
+
+  // ── Override via env AI_FORCE_MODELS: DINONAKTIFKAN untuk teks ───────
+  // (juan-router-provider-split, 2026-09-04) Semua generate teks kini WAJIB
+  // lewat Juan Router; OpenAgentic dikhususkan text-to-image (lib/image-gen.ts).
+  // Env & variabel dipertahankan agar mudah dikembalikan — cukup aktifkan lagi
+  // pushProvider di bawah ini bila aturan split dicabut.
+  const forcedModels = (process.env.AI_FORCE_MODELS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (forcedModels.length > 0) {
+    warnOnceForceModelsIgnored();
+  }
 
   // Mode unified 9Router: hanya 9Router yang aktif, semua provider lain dinonaktifkan (tidak dihapus)
   // Kecepatan dipetakan ke model spesifik via 9Router untuk latensi optimal (bench: fast 5.7s < deep 8.1s < relay-combo 12s)
@@ -260,39 +302,63 @@ function getProviderChain(speedMode: AiSpeedMode = "normal", forChat: boolean = 
 
   const juanKey = JUANROUTER_API_KEY;
   const openRouterKey = OPENROUTER_API_KEY;
-  const openAgenticKey = OPENAGENTIC_API_KEY;
 
-  // Chat → Juan Router ONLY (sesuai instruksi: untuk chat saja gunakan Juan)
-  if (forChat) {
-    if (juanKey) {
-      const tierModels = SPEED_MODEL_LISTS[speedMode];
-      pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", tierModels);
-      return chain;
+  // SEMUA generate teks (chat, catatan, kuis, judul, prompt gambar,
+  // enrichment) → Juan Router utama + OpenRouter fallback darurat
+  // (juan-router-provider-split). OpenAgentic TIDAK pernah masuk rantai
+  // teks — hanya untuk text-to-image di lib/image-gen.ts.
+  // Parameter _forChat dipertahankan demi kompatibilitas pemanggil, tapi
+  // tidak lagi membedakan provider.
+  if (!juanKey) {
+    console.warn(
+      "[AI] JUANROUTER_API_KEY tidak diisi — konfigurasi AI teks belum lengkap; rantai hanya berisi OpenRouter darurat."
+    );
+  }
+  // Rantai model mengikuti status premium (konteks AsyncLocalStorage dari
+  // titik masuk request): Pro → semua model (pintar di depan per tier);
+  // free → hanya model murah. Tier deep untuk free berisi model murah
+  // terbaik yang tersedia (semua model pintar deep = premiumOnly) →
+  // fallback ke daftar normal-tier free bila kosong.
+  const premium = premiumOverride ?? getAiPremiumContext() === true;
+  const lists = premium ? SPEED_MODEL_LISTS_PRO : SPEED_MODEL_LISTS;
+  let tierModels = lists[speedMode];
+  if (tierModels.length === 0) tierModels = lists.normal;
+  // Jika reasoning OFF, pakai model tanpa thinking di semua tier.
+  // (Probe live 2026-09-05: model baru di katalog TIDAK mengembalikan
+  // reasoning_content — hanya qwen3.8-max & claude-opus-5 yang thinking.)
+  if (reasoning === false) {
+    tierModels = tierModels.filter((m) => !THINKING_SET.has(m));
+    if (tierModels.length === 0) {
+      tierModels = ["gemini-3.7-flash-low", "gemini-3.5-flash-lite"];
     }
-    // Fallback bila Juan key kosong — pakai OpenAgentic
-    if (openAgenticKey) {
-      pushProvider(OPENAGENTIC_BASE_URL, openAgenticKey, "OpenAgentic", [...OPENAGENTIC_FREE_MODELS]);
+  }
+  // Model spesifik pilihan user (Model Store) → percobaan PERTAMA, disusul
+  // sisa daftar TIER MILIK MODEL ITU (bukan tier mode kecepatan aktif —
+  // mis. pilih Claude Opus 5 lalu gagal → fallback ke model Mendalam lain,
+  // bukan ke model Kilat). Id di luar katalog diabaikan (aman untuk klien
+  // lama / request asing); model premiumOnly tak bisa dipakai free (route
+  // sudah menolak 402 — di sini disaring lagi sebagai pertahanan lapis dua).
+  const preferredEntry =
+    preferredModel && MODEL_CATALOG_IDS.has(preferredModel)
+      ? MODEL_CATALOG.find((m) => m.id === preferredModel)
+      : undefined;
+  const preferred = preferredEntry && (!preferredEntry.premiumOnly || premium) ? preferredEntry.id : "";
+  if (preferred) {
+    const preferredTier = preferredEntry?.tier ?? speedMode;
+    const tierList = lists[preferredTier];
+    const filtered = reasoning === false ? tierList.filter((m) => !THINKING_SET.has(m)) : tierList;
+    tierModels = [preferred, ...filtered.filter((m) => m !== preferred)];
+    if (tierModels.length === 0) {
+      tierModels = [preferred];
     }
-    return chain;
   }
-
-  // Buat catatan → OPENAGENTIC + OPENROUTER ONLY (Juan dinonaktifkan, jangan hapus)
-  // OpenAgentic di depan karena JSON lebih reliable (deepseek-v4-flash-free / hy3-free ✓)
-  if (openAgenticKey) {
-    pushProvider(OPENAGENTIC_BASE_URL, openAgenticKey, "OpenAgentic", [...OPENAGENTIC_FREE_MODELS]);
-  }
-  if (openRouterKey) {
-    pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [...OPENROUTER_FREE_MODELS]);
-  }
-  // Fallback bila keduanya kosong — pakai Juan
-  if (chain.length === 0 && juanKey) {
-    const tierModels = SPEED_MODEL_LISTS[speedMode];
+  if (juanKey) {
     pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", tierModels);
   }
-  // Fallback: bila tidak ada key sama sekali, coba provider utama tunggal
-  if (chain.length === 0) {
-    const main = getProviderConfig();
-    if (main) pushProvider(main.baseURL, main.apiKey, main.name, [main.defaultModel]);
+  // Fallback darurat: OpenRouter free models — hanya dicapai bila SEMUA
+  // model Juan gagal (429/503/timeout). Bukan pengganti Juan saat key kosong.
+  if (openRouterKey) {
+    pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [...OPENROUTER_FREE_MODELS]);
   }
   return chain;
 }
@@ -316,8 +382,20 @@ export interface AiChatOptions {
    * mendukungnya. Bila provider menolak gambar, dicoba ulang tanpa gambar.
    */
   visionImage?: { dataUrl: string; filename: string } | null;
-  /** true = pakai Juan Router (chat), false/undefined = pakai OpenAgentic+OpenRouter (buat catatan). */
+  /** Riwayat label lama: dulu membedakan rantai chat vs catatan. Kini tidak mengubah provider (semua teks → Juan Router), dipertahankan untuk kompatibilitas pemanggil. */
   forChat?: boolean;
+  reasoning?: boolean;
+  /**
+   * Model spesifik pilihan user (Model Store) — percobaan pertama di rantai,
+   * fallback ke tier normal. Id di luar katalog diabaikan.
+   */
+  model?: string;
+  /**
+   * Status premium pemanggil — menentukan rantai model (Pro: semua model,
+   * pintar di depan; free: hanya model murah). Default: baca konteks
+   * AsyncLocalStorage (runWithPremium); false bila di luar bungkus.
+   */
+  premium?: boolean;
 }
 
 /** Ekstrak objek JSON dari teks AI (toleran terhadap ```markdown fence & trailing comma). */
@@ -430,16 +508,22 @@ export function isAiBusyError(e: unknown): boolean {
   return e instanceof AiBusyError;
 }
 
+/** Pesan error saat rantai provider teks kosong — Juan Router wajib untuk teks. */
+function noTextProviderError(): Error {
+  return new Error(
+    "Konfigurasi AI teks belum lengkap. Isi JUANROUTER_API_KEY di .env.local (router.juan.web.id) — semua generate teks memakai Juan Router."
+  );
+}
+
 /**
  * Panggil Chat Completions (OpenAI-compatible) → kembalikan teks jawaban.
  * - Retry otomatis untuk error transien (429, 5xx, timeout/putus jaringan);
- * - Fallback ke provider berikutnya (mis. OpenRouter) bila provider utama
- *   gagal terus-menerus;
+ * - Fallback darurat ke OpenRouter bila seluruh Juan Router gagal;
  * - Mendukung mode JSON (response_format), dengan retry tanpa response_format
  *   bila provider tidak mendukungnya.
  */
 export async function aiChat(options: AiChatOptions): Promise<string> {
-  const providers = getProviderChain(options.speedMode ?? "normal", !!options.forChat);
+  const providers = getProviderChain(options.speedMode ?? "normal", !!options.forChat, options.reasoning ?? true, options.model, options.premium);
   
   console.log('[AI] aiChat called with options:', {
     hasSystem: !!options.system,
@@ -451,17 +535,7 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
   
   if (providers.length === 0) {
     console.error('[AI Error] No providers available in chain');
-    const hint =
-      AI_PROVIDER === "openagentic"
-        ? "Isi OPENAGENTIC_API_KEY di .env.local (daftar & buat key di openagentic.id)."
-        : AI_PROVIDER === "openrouter"
-          ? "Isi OPENROUTER_API_KEY di .env.local (daftar & buat key di openrouter.ai/keys)."
-          : AI_PROVIDER === "9router"
-            ? "Isi NINE_ROUTER_API_KEY di .env.local."
-            : AI_PROVIDER === "openai"
-              ? "Isi OPENAI_API_KEY di .env.local."
-              : "Tambahkan AI_API_KEY di .env.local (daftar di aimurah.my.id).";
-    throw new Error(`API key AI belum diatur. ${hint}`);
+    throw noTextProviderError();
   }
 
   const body: Record<string, unknown> = {
@@ -610,15 +684,23 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
   const tried: string[] = [];
   // Kode HTTP yang pernah gagal — dipakai untuk pesan error "server sibuk".
   const codesSeen = new Set<number>();
+  // Provider pertama yang dicoba — penanda "fallback darurat" saat panggilan
+  // akhirnya dilayani provider lain (mis. Juan → OpenRouter).
+  const firstProviderName = providers[0]?.name ?? "";
   for (const provider of providers) {
     tried.push(`${provider.name}/${provider.model}`);
+    const darurat = provider.name !== firstProviderName;
     let useJsonFormat = Boolean(options.json);
     for (let attempt = 1; attempt <= attemptsPerProvider; attempt++) {
       if (useJsonFormat) body.response_format = { type: "json_object" };
       else delete body.response_format;
 
       try {
-        return await doRequest(provider);
+        const content = await doRequest(provider);
+        console.log(
+          `[AI] Rute akhir: ${provider.name}/${provider.model}${darurat ? " (FALLBACK DARURAT dari " + firstProviderName + ")" : ""}`
+        );
+        return content;
       } catch (e) {
         const retryable = isRetryable(e);
         if (retryable && attempt < attemptsPerProvider) {
@@ -631,7 +713,11 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
         if (Boolean(options.json) && useJsonFormat) {
           useJsonFormat = false;
           try {
-            return await doRequest(provider);
+            const content = await doRequest(provider);
+            console.log(
+              `[AI] Rute akhir: ${provider.name}/${provider.model}${darurat ? " (FALLBACK DARURAT dari " + firstProviderName + ")" : ""}`
+            );
+            return content;
           } catch {
             // jatuh ke provider berikutnya
           }
@@ -661,6 +747,7 @@ export interface AiStreamMeta {
 export type AiStreamEvent =
   | { type: "meta"; provider: string; model: string }
   | { type: "token"; text: string }
+  | { type: "thinking"; text: string }
   | { type: "error"; message: string };
 
 export interface AiChatStreamOptions extends AiChatOptions {
@@ -681,7 +768,7 @@ export interface AiChatStreamOptions extends AiChatOptions {
  * seperti ChatGPT/Claude.
  *
  * - Body `stream: true`, parse baris `data: {...}` → `choices[0].delta.content`.
- * - Memakai rantai provider yang sama dengan aiChat (utama → OpenRouter → Juan).
+ * - Memakai rantai provider yang sama dengan aiChat (Juan Router → OpenRouter darurat).
  * - Bila stream terputus SEBELUM token pertama dikirim (fetch error / 5xx),
  *   coba ulang ke attempt/provider berikutnya. Bila gugur SETELAH token
  *   mulai mengalir, lemparkan error (token parsial dibuang) agar UI menampilkan
@@ -696,19 +783,9 @@ export async function aiChatStream(
     else if (options.onEvent) options.onEvent(e);
   };
 
-  const providers = getProviderChain(options.speedMode ?? "normal", !!options.forChat);
+  const providers = getProviderChain(options.speedMode ?? "normal", !!options.forChat, options.reasoning ?? true, options.model, options.premium);
   if (providers.length === 0) {
-    const hint =
-      AI_PROVIDER === "openagentic"
-        ? "Isi OPENAGENTIC_API_KEY di .env.local (daftar & buat key di openagentic.id)."
-        : AI_PROVIDER === "openrouter"
-          ? "Isi OPENROUTER_API_KEY di .env.local (daftar & buat key di openrouter.ai/keys)."
-          : AI_PROVIDER === "9router"
-            ? "Isi NINE_ROUTER_API_KEY di .env.local."
-            : AI_PROVIDER === "openai"
-              ? "Isi OPENAI_API_KEY di .env.local."
-              : "Tambahkan AI_API_KEY di .env.local (daftar di aimurah.my.id).";
-    throw new Error(`API key AI belum diatur. ${hint}`);
+    throw noTextProviderError();
   }
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -751,7 +828,7 @@ export async function aiChatStream(
     return options.user;
   };
 
-  /** Coba seluruh rantai provider (utama → OpenRouter → Juan) dengan satu mode konten. */
+  /** Coba seluruh rantai provider (Juan Router → OpenRouter darurat) dengan satu mode konten. */
   const runChain = async (
     withVision: boolean
   ): Promise<{ provider: string; model: string; content: string }> => {
@@ -759,6 +836,8 @@ export async function aiChatStream(
       stream: true,
       temperature: options.temperature ?? 0.7,
       max_tokens: options.maxTokens ?? 2048,
+      // Aktifkan thinking hanya jika reasoning true (default true, OFF pakai model non-thinking)
+      ...(options.reasoning === false ? {} : options.speedMode === "fast" ? { reasoning: { effort: "low" }, reasoning_effort: "low" } : {}),
       messages: [
         ...(options.system ? [{ role: "system", content: options.system }] : []),
         ...(options.history ?? []),
@@ -849,6 +928,15 @@ export async function aiChatStream(
           ? (parsed.choices[0] as Record<string, unknown> | undefined)
           : undefined;
         const delta = choice?.delta as Record<string, unknown> | undefined;
+        // Real thinking/reasoning dari model (DeepSeek, Claude, dll.) — kirim sebagai thinking event, bukan token jawaban
+        const thinking =
+          (delta?.reasoning_content as string | undefined) ??
+          (delta?.reasoning as string | undefined) ??
+          (choice?.message as Record<string, unknown> | undefined)?.reasoning_content;
+        if (typeof thinking === "string" && thinking.length > 0) {
+          chainEmit({ type: "thinking", text: thinking });
+          return true;
+        }
         const text = delta?.content;
         if (typeof text === "string" && text.length > 0) {
           emitted = true;
@@ -887,6 +975,7 @@ export async function aiChatStream(
     };
 
     const tried: string[] = [];
+    const firstProviderName = providers[0]?.name ?? "";
     for (const provider of providers) {
       tried.push(`${provider.name}/${provider.model}`);
       for (let attempt = 1; attempt <= attemptsPerProvider; attempt++) {
@@ -896,7 +985,10 @@ export async function aiChatStream(
             "[aiChatStream] selesai:",
             provider.name,
             "tokens:",
-            result.content.length
+            result.content.length,
+            provider.name !== firstProviderName
+              ? `(FALLBACK DARURAT dari ${firstProviderName})`
+              : ""
           );
           return result;
         } catch (e) {

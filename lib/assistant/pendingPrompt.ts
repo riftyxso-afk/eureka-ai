@@ -13,4 +13,6 @@ export interface PendingPrompt {
   attachment?: ChatAttachment | null;
   /** Kecepatan jawaban AI yang dipilih user (fast/normal/deep). */
   speedMode?: "fast" | "normal" | "deep";
+  /** Model spesifik pilihan user (Model Store) — divalidasi ulang di server. */
+  model?: string;
 }

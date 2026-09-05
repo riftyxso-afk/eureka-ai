@@ -15,6 +15,8 @@ import { requireAuth } from "@/lib/assistant/auth";
 import { languageFromRequest } from "@/lib/locale";
 import { canStartGeneration, createJob, executeJob, updateJob } from "@/lib/jobQueue";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
+import { getPremiumStatus } from "@/lib/premium";
+import { runWithPremium } from "@/lib/aiContext";
 
 export const runtime = "nodejs";
 
@@ -86,10 +88,14 @@ export async function POST(
 
     const noteId = found.note.id;
 
+    // Status premium → konteks model AI job regenerate (Pro = model pintar).
+    const isPremiumUser = (await getPremiumStatus(userId)).isPremium;
+
     const jobId = createJob({
       sessionId: randomUUID(),
       userId,
-      run: async (id) => {
+      run: async (id) =>
+        runWithPremium(isPremiumUser, async () => {
         try {
           const chapters = await regenerateAllChapters(
             found.note,
@@ -122,7 +128,7 @@ export async function POST(
             percent: 100,
           });
         }
-      },
+      }),
     });
 
     // Jalankan setelah respons (serverless-safe), bukan setImmediate.

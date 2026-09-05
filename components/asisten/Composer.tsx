@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { BorderBeam } from "border-beam";
 import {
   AtSign,
   BookOpen,
+  Brain,
   Check,
   ChevronDown,
   ClipboardList,
@@ -16,13 +18,19 @@ import {
   Mic,
   Paperclip,
   PhoneCall,
+  Plus,
   Send,
   Square,
+  Sparkles,
   Terminal,
+  X,
   Zap,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import type { ChatAttachment } from "@/lib/assistant/types";
+import { ModelStore } from "@/components/asisten/ModelStore";
+import { MODEL_CATALOG, modelDisplayName } from "@/lib/modelCatalog";
+import { usePremium } from "@/lib/usePremium";
 import {
   NoteCreateWizardPanel,
   type NoteCreatePrefs,
@@ -87,6 +95,10 @@ export interface ComposerSendInput {
   attachment?: ChatAttachment | null;
   /** Kecepatan jawaban AI yang dipilih user di composer. */
   speedMode?: "fast" | "normal" | "deep";
+  /** Model spesifik pilihan user (Model Store) — opsional. */
+  model?: string;
+  reasoning?: boolean;
+  skill?: string | null;
 }
 
 /** 3 mode kecepatan AI — label & deskripsi untuk UI selector. */
@@ -120,6 +132,79 @@ const SPEED_OPTIONS = [
 type SpeedMode = (typeof SPEED_OPTIONS)[number]["value"];
 
 const SPEED_STORAGE_KEY = "eureka_chat_speed_mode";
+
+/**
+ * Tombol tool seragam gaya Soft Flat Pastel (prompt-box-refactor):
+ * latar lembut, transisi hover/active halus, tinggi konsisten compact/reguler.
+ */
+function ToolButton({
+  active,
+  activeClass,
+  compact,
+  className = "",
+  children,
+  ...rest
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  active?: boolean;
+  /** Kelas saat aktif — default soft clay. */
+  activeClass?: string;
+  compact?: boolean;
+}) {
+  return (
+    <button
+      {...rest}
+      className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-150 ease-out hover:-translate-y-px active:translate-y-0 active:scale-[0.97] ${
+        active
+          ? activeClass ?? "bg-clay-primary/15 text-clay-primary"
+          : "bg-clay-primary/10 text-clay-primary hover:bg-clay-primary/15"
+      } ${compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"} ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Baris menu "+" — ikon + label + deskripsi, dengan penanda aktif (toggle)
+ * bergaya soft-flat (pola Prompt Bar).
+ */
+function PlusRow({
+  icon,
+  label,
+  desc,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  desc: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors duration-100 ${
+        active ? "bg-clay-primary/10" : "hover:bg-clay-beige"
+      }`}
+    >
+      <span
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+          active ? "bg-clay-primary/15 text-clay-primary" : "bg-clay-beige text-clay-muted"
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[12.5px] font-extrabold text-clay-dark">{label}</span>
+        <span className="block truncate text-[10.5px] font-semibold text-clay-muted">{desc}</span>
+      </span>
+      {active && <Check size={13} className="shrink-0 text-clay-primary" />}
+    </button>
+  );
+}
 
 /**
  * Perintah cepat chat — muncul di popover saat user mengetik "/".
@@ -206,6 +291,14 @@ export default function Composer({
   const [attachError, setAttachError] = useState<string | null>(null);
   const [speedMode, setSpeedMode] = useState<SpeedMode>("normal");
   const [speedOpen, setSpeedOpen] = useState(false);
+  // Model spesifik pilihan user (Model Store) — "" = mode otomatis tier.
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [storeOpen, setStoreOpen] = useState(false);
+  // Menu "+" — semua tool (catatan, web, file, rekam, call, reasoning) di satu tempat.
+  const [plusOpen, setPlusOpen] = useState(false);
+  // Status premium — model premiumOnly (mis. GPT-6 Astra) dikunci untuk free.
+  const { isPremium } = usePremium();
+  const [reasoning, setReasoning] = useState(true);
   // ── Beta: rekam suara → transkripsi → masuk textarea ──
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
@@ -218,6 +311,7 @@ export default function Composer({
   const popoverRef = useRef<HTMLDivElement>(null);
   const commandRef = useRef<HTMLDivElement>(null);
   const speedRef = useRef<HTMLDivElement>(null);
+  const plusRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Muat daftar catatan user untuk autocomplete mention. Dimuat juga saat
@@ -287,18 +381,23 @@ export default function Composer({
       if (speedRef.current && !speedRef.current.contains(e.target as Node)) {
         setSpeedOpen(false);
       }
+      if (plusRef.current && !plusRef.current.contains(e.target as Node)) {
+        setPlusOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Baca pilihan kecepatan dari localStorage (setiap user punya preferensi sendiri).
+  // Baca pilihan kecepatan & reasoning dari localStorage
   useEffect(() => {
     try {
       const v = localStorage.getItem(SPEED_STORAGE_KEY);
       if (v === "fast" || v === "normal" || v === "deep") {
         setSpeedMode(v);
       }
+      const r = localStorage.getItem("eureka_reasoning");
+      if (r !== null) setReasoning(r === "true");
     } catch {
       // localStorage tidak tersedia — biarkan default
     }
@@ -567,7 +666,9 @@ export default function Composer({
       webSearch,
       attachment: attachment ?? null,
       speedMode,
-    });
+      model: selectedModel || undefined,
+      reasoning,
+    } as unknown as ComposerSendInput);
     // Prompt yang sudah terkirim tidak lagi muncul di composer.
     setText("");
     setMentionIds([]);
@@ -641,7 +742,22 @@ export default function Composer({
           {/* Catatan: TIDAK pakai overflow-hidden di kotak ini — kalau dipakai,
               popover kecepatan AI & mention akan terpotong. Clipping sudut
               wizard ditangani sendiri oleh panel wizard. */}
-          <div className="rounded-2xl border border-gray-200/80 bg-white shadow-sm transition-all duration-75 focus-within:border-clay-primary/40 focus-within:shadow-md dark:border-clay-borderLight/40 dark:bg-clay-cream">
+          {/* BorderBeam: garis cahaya beranimai mengelilingi tepi composer.
+              overflow dibuka saat popover aktif agar tidak terpotong. */}
+          <BorderBeam
+            size="md"
+            colorVariant="ocean"
+            strength={0.7}
+            theme="light"
+            className="rounded-2xl"
+            style={{
+              overflow:
+                speedOpen || mentionOpen || commandOpen || plusOpen || storeOpen
+                  ? "visible"
+                  : undefined,
+            }}
+          >
+          <div className="rounded-2xl border border-gray-200/80 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-75 focus-within:border-clay-primary/40 focus-within:shadow-[0_6px_24px_rgba(0,0,0,0.05)] dark:border-clay-borderLight/40 dark:bg-clay-cream">
             {/* Wizard F&Q menyatu DI DALAM kotak composer — memanjang ke atas
                 saat muncul, menyusut kembali setelah submit (posisi normal). */}
             <AnimatePresence initial={false}>
@@ -677,170 +793,196 @@ export default function Composer({
                 }`}
                 data-testid="asisten-composer"
               />
-              <div className={`flex items-center justify-between gap-2 ${compact ? "mt-1" : "mt-1.5"}`}>
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                {/* ── Beta: rekam suara → teks ── */}
-                {isBeta && (
-                  <button
-                    onClick={toggleMic}
-                    className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
-                      recording
-                        ? "animate-pulse bg-red-500 text-white"
-                        : "bg-clay-primary/10 text-clay-primary"
-                    } ${compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"}`}
-                    title={
-                      recording
-                        ? "Rekam — klik untuk berhenti"
-                        : transcribing
-                          ? "Mentranskripsikan…"
-                          : "Rekam suara → otomatis jadi teks"
-                    }
-                    aria-label="Rekam suara"
-                  >
-                    {transcribing ? (
-                      <Loader2 size={compact ? 14 : 16} className="animate-spin" />
-                    ) : (
-                      <Mic size={compact ? 14 : 16} />
-                    )}
-                    {!compact && (
-                      <span className="hidden whitespace-nowrap leading-none sm:inline">
-                        {recording ? "Berhenti" : transcribing ? "Memproses" : "Rekam"}
-                      </span>
-                    )}
-                  </button>
-                )}
-                {isBeta && micError && (
-                  <span className="inline-flex items-center gap-1 rounded-clay-full border-2 border-red-300 bg-red-50 px-2 py-1 text-[11px] font-extrabold text-red-600">
-                    {micError}
+              <div className={`flex min-w-0 items-center justify-between gap-3 ${compact ? "mt-1" : "mt-1.5"}`}>
+                <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                  {/* ── Tombol "+" — semua tool dalam satu menu (pola Prompt Bar) ── */}
+                  <div className="relative shrink-0" ref={plusRef}>
                     <button
-                      onClick={() => setMicError(null)}
-                      className="ml-0.5 text-red-400 hover:text-red-600"
-                      aria-label="Tutup error mic"
+                      type="button"
+                      onClick={() => setPlusOpen((v) => !v)}
+                      aria-expanded={plusOpen}
+                      aria-label="Tambah alat & lampiran"
+                      title="Alat: catatan, web, file, rekam, reasoning"
+                      className={`flex items-center justify-center rounded-clay-full font-extrabold transition-all duration-150 ease-out active:scale-[0.94] ${
+                        plusOpen
+                          ? "bg-clay-primary/15 text-clay-primary"
+                          : "bg-clay-primary/10 text-clay-primary hover:bg-clay-primary/15"
+                      } ${compact ? "!min-h-[32px] !min-w-[32px]" : "!min-h-[38px] !min-w-[38px]"}`}
                     >
-                      ×
+                      <Plus
+                        size={compact ? 15 : 17}
+                        strokeWidth={2.4}
+                        className={`transition-transform duration-200 ${plusOpen ? "rotate-45" : ""}`}
+                      />
                     </button>
-                  </span>
-                )}
 
-                {/* ── Beta: panggilan AI (realtime) ── */}
-                {isBeta && onCall && (
-                  <button
-                    onClick={onCall}
-                    className={`flex items-center justify-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
-                      compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"
-                    }`}
-                    title="Panggilan suara AI — tahan untuk bicara"
-                  >
-                    <PhoneCall size={compact ? 14 : 16} />
-                    {!compact && <span className="hidden whitespace-nowrap leading-none sm:inline">Call AI</span>}
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    if (!mentionOpen) {
-                      const el = textareaRef.current;
-                      const caret = el?.selectionStart ?? text.length;
-                      const before = text.slice(0, caret);
-                      if (before.endsWith("@") || /\s$/.test(before) || before === "") {
-                        setText((t) => t + "@");
-                        setMentionQuery("");
-                        setMentionOpen(true);
-                        requestAnimationFrame(() => {
-                          if (el) {
-                            el.focus();
-                            const pos = el.value.length;
-                            el.setSelectionRange(pos, pos);
-                          }
-                        });
-                      }
-                    }
-                  }}
-                  className={`flex items-center justify-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
-                    compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"
-                  }`}
-                  title="Lampirkan catatan (@)"
-                >
-                  <AtSign size={compact ? 14 : 16} />
-                  {/* Compact (halaman /home): cukup ikon saja — hindari @ ganda. */}
-                  {!compact && (
-                    <span className="hidden whitespace-nowrap leading-none sm:inline">Catatan</span>
-                  )}
-                </button>
+                    <AnimatePresence>
+                      {plusOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full left-0 z-40 mb-2 max-h-[60dvh] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-1.5 shadow-clay-lg"
+                        >
+                          {/* Lampirkan catatan */}
+                          <PlusRow
+                            icon={<AtSign size={15} />}
+                            label="Lampirkan catatan"
+                            desc="Ketik @ untuk memilih catatanmu"
+                            onClick={() => {
+                              setPlusOpen(false);
+                              const el = textareaRef.current;
+                              const caret = el?.selectionStart ?? text.length;
+                              const before = text.slice(0, caret);
+                              if (before.endsWith("@") || /\s$/.test(before) || before === "") {
+                                setText((t) => t + "@");
+                                setMentionQuery("");
+                                setMentionOpen(true);
+                                requestAnimationFrame(() => {
+                                  if (el) {
+                                    el.focus();
+                                    const pos = el.value.length;
+                                    el.setSelectionRange(pos, pos);
+                                  }
+                                });
+                              }
+                            }}
+                          />
+                          {/* Pencarian web — toggle */}
+                          <PlusRow
+                            icon={<Globe size={15} />}
+                            label="Pencarian web"
+                            desc="Cari info terbaru sebelum menjawab"
+                            active={webSearch}
+                            onClick={() => setWebSearch((v) => !v)}
+                          />
+                          {/* Upload file */}
+                          <PlusRow
+                            icon={<Paperclip size={15} />}
+                            label="Lampirkan file"
+                            desc="PDF, Word, PPT, gambar…"
+                            onClick={() => {
+                              setPlusOpen(false);
+                              fileInputRef.current?.click();
+                            }}
+                          />                          {/* Reasoning — toggle */}
+                          <PlusRow
+                            icon={<Brain size={15} />}
+                            label="Reasoning"
+                            desc={reasoning ? "Model thinking aktif" : "Model biasa — lebih cepat"}
+                            active={reasoning}
+                            onClick={() => {
+                              const v = !reasoning;
+                              setReasoning(v);
+                              try {
+                                localStorage.setItem("eureka_reasoning", String(v));
+                              } catch {}
+                            }}
+                          />
+                          {/* Rekam suara (beta) */}
+                          {isBeta && (
+                            <PlusRow
+                              icon={transcribing ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
+                              label={recording ? "Berhenti rekam" : "Rekam suara"}
+                              desc="Bicara → otomatis jadi teks"
+                              active={recording}
+                              onClick={() => {
+                                setPlusOpen(false);
+                                toggleMic();
+                              }}
+                            />
+                          )}
+                          {/* Panggilan AI (beta) */}
+                          {isBeta && onCall && (
+                            <PlusRow
+                              icon={<PhoneCall size={15} />}
+                              label="Panggilan AI"
+                              desc="Tanya jawab suara langsung"
+                              onClick={() => {
+                                setPlusOpen(false);
+                                onCall();
+                              }}
+                            />
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
 
-                {/* Tool: pencarian web */}
-                <button
-                  onClick={() => setWebSearch((v) => !v)}
-                  className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
-                    webSearch
-                      ? "bg-clay-primary text-white shadow-[0_3px_0_#8a5a2b]"
-                      : "bg-clay-primary/10 text-clay-primary"
-                  } ${compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"}`}
-                  title={
-                    webSearch
-                      ? "Pencarian web aktif — klik untuk matikan"
-                      : "Cari info tambahan di web sebelum menjawab"
-                  }
-                  aria-pressed={webSearch}
-                  data-testid="asisten-websearch"
-                >
-                  <Globe size={compact ? 14 : 16} />
-                  {!compact && (
-                    <span className="hidden whitespace-nowrap leading-none sm:inline">
-                      {webSearch ? "Web: ON" : "Web"}
+                  {isBeta && micError && (
+                    <span className="inline-flex min-w-0 items-center gap-1 rounded-clay-full border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-bold text-red-600">
+                      <span className="truncate">{micError}</span>
+                      <button
+                        onClick={() => setMicError(null)}
+                        className="shrink-0 text-red-400 hover:text-red-600"
+                        aria-label="Tutup error mic"
+                      >
+                        ×
+                      </button>
                     </span>
                   )}
-                </button>
 
-                {/* Tool: upload gambar/dokumen */}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`flex items-center justify-center gap-1 rounded-clay-full bg-clay-primary/10 font-extrabold text-clay-primary transition-all duration-75 hover:-translate-y-0.5 ${
-                    compact ? "!min-h-[32px] !min-w-[32px] !px-2 text-[10px]" : "!min-h-[38px] !min-w-[38px] !px-3 text-[11px]"
-                  }`}
-                  title="Lampirkan gambar atau dokumen (PDF, Word, PPT, Excel, TXT…)"
-                  data-testid="asisten-upload"
-                >
-                  <Paperclip size={compact ? 14 : 16} />
-                  {!compact && <span className="hidden whitespace-nowrap leading-none sm:inline">File</span>}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={ACCEPTED_TYPES}
-                  onChange={handleFileChange}
-                  className="hidden"
-                  data-testid="asisten-file-input"
-                />
+                  {/* Input file tersembunyi — dipicu dari menu "+". */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={ACCEPTED_TYPES}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    data-testid="asisten-file-input"
+                  />
 
-                {!compact && (
-                  <span className="hidden text-[11px] font-bold text-clay-muted sm:inline">
-                    Enter kirim · Shift+Enter baris baru · / perintah
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                {/* Pilihan kecepatan jawaban AI — di samping kiri tombol kirim */}
+                  {!compact && (
+                    <span className="hidden whitespace-nowrap text-[11px] font-semibold text-clay-muted/70 lg:inline">
+                      Enter kirim · Shift+Enter baris baru · / perintah
+                    </span>
+                  )}
+                </div>
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                {/* Pilihan kecepatan/model AI — di samping kiri tombol kirim */}
                 <div className="relative" ref={speedRef}>
                   {(() => {
                     const cur = SPEED_OPTIONS.find((o) => o.value === speedMode) ?? SPEED_OPTIONS[1];
+                    const manual = selectedModel
+                      ? MODEL_CATALOG.find((m) => m.id === selectedModel)
+                      : undefined;
                     return (
                       <button
                         onClick={() => setSpeedOpen((o) => !o)}
-                        aria-label={`Kecepatan AI: ${cur.label}`}
+                        aria-label={manual ? `Model manual: ${manual.name}` : `Kecepatan AI: ${cur.label}`}
                         aria-pressed={speedOpen}
-                        title={`Kecepatan AI: ${cur.label} — ${cur.desc}`}
-                        className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${cur.active} ${
+                        title={
+                          manual
+                            ? `Mode manual — ${manual.brand} ${manual.name} (klik untuk ubah)`
+                            : `Kecepatan AI: ${cur.label} — ${cur.desc}`
+                        }
+                        className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
+                          manual ? "bg-clay-primary/15 text-clay-primary" : cur.active
+                        } ${
                           compact ? "!min-h-[32px] !px-2 text-[10px]" : "!min-h-[38px] !px-2.5 text-[11px]"
                         }`}
                       >
-                        <cur.icon size={compact ? 14 : 16} />
-                        <span className="hidden whitespace-nowrap leading-none sm:inline">{cur.label}</span>
+                        {manual ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={manual.logo} alt="" className="h-3.5 w-3.5 rounded" />
+                            <span className="hidden max-w-[92px] truncate whitespace-nowrap leading-none sm:inline">
+                              {manual.name}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <cur.icon size={compact ? 14 : 16} />
+                            <span className="hidden whitespace-nowrap leading-none sm:inline">{cur.label}</span>
+                          </>
+                        )}
                         <ChevronDown size={10} />
                       </button>
                     );
                   })()}
 
-                  {/* Popover 3 mode kecepatan — ringkas & mobile-friendly */}
+                  {/* Popover: 3 mode kecepatan + Model Store */}
                   <AnimatePresence>
                     {speedOpen && (
                       <motion.div
@@ -848,15 +990,17 @@ export default function Composer({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -8, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute bottom-full right-0 z-40 mb-2 w-44 overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-1 shadow-clay-lg"
+                        className="absolute bottom-full right-0 z-40 mb-2 max-h-[60dvh] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-1 shadow-clay-lg"
                       >
                         {SPEED_OPTIONS.map((o) => {
-                          const active = speedMode === o.value;
+                          const active = speedMode === o.value && !selectedModel;
                           return (
                             <button
                               key={o.value}
                               onClick={() => {
                                 setSpeedMode(o.value);
+                                // Pilih mode tier = lepas model manual (kembali otomatis).
+                                setSelectedModel("");
                                 setSpeedOpen(false);
                                 try {
                                   localStorage.setItem(SPEED_STORAGE_KEY, o.value);
@@ -886,6 +1030,38 @@ export default function Composer({
                             </button>
                           );
                         })}
+
+                        {/* More models → buka popup Model Store */}
+                        <div className="mt-1 border-t-2 border-clay-borderLight/60 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSpeedOpen(false);
+                              setStoreOpen(true);
+                            }}
+                            className="flex w-full items-center justify-between rounded-clay-md px-2.5 py-2 text-left transition-colors hover:bg-clay-beige"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
+                                <Sparkles size={12} />
+                              </span>
+                              <span className="text-[12.5px] font-extrabold text-clay-dark">
+                                More models
+                              </span>
+                            </span>
+                            {selectedModel ? (
+                              <span className="flex items-center gap-1 rounded-full bg-clay-primary/10 px-1.5 py-px text-[9.5px] font-extrabold text-clay-primary">
+                              {(() => {
+                                const nm = modelDisplayName(selectedModel);
+                                return nm.length > 16 ? nm.slice(0, 16) + "…" : nm;
+                              })()}
+                                <X size={9} />
+                              </span>
+                            ) : (
+                              <ChevronDown size={12} className="-rotate-90 text-clay-muted" />
+                            )}
+                          </button>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -894,7 +1070,7 @@ export default function Composer({
                 {sending ? (
                   <button
                     onClick={onStop}
-                    className={`btn-clay-primary inline-flex items-center justify-center gap-1 ${compact ? "!min-h-[32px] !px-3 text-[10px]" : "!min-h-[38px] !px-4 text-[11px]"}`}
+                    className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-clay-full bg-clay-primary/15 font-extrabold text-clay-primary transition-all duration-150 ease-out hover:bg-clay-primary/20 active:scale-[0.97] ${compact ? "!min-h-[32px] !px-3 text-[10px]" : "!min-h-[38px] !px-4 text-[11px]"}`}
                     aria-label="Hentikan"
                     data-testid="asisten-stop"
                   >
@@ -905,7 +1081,7 @@ export default function Composer({
                   <button
                     onClick={submit}
                     disabled={!canSend}
-                    className={`btn-clay-primary inline-flex items-center justify-center ${
+                    className={`inline-flex shrink-0 items-center justify-center rounded-clay-full bg-clay-primary font-extrabold text-white shadow-[0_2px_10px_rgb(var(--clay-primary)/0.35)] transition-all duration-150 ease-out hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 ${
                       compact
                         ? "!min-h-[32px] !min-w-[32px] !px-2.5"
                         : "!min-h-[38px] !min-w-[38px] !px-4"
@@ -920,6 +1096,7 @@ export default function Composer({
               </div>
             </div>
           </div>
+          </BorderBeam>
 
           {/* Popover perintah "/" — kuis, flashcards */}
           <AnimatePresence>
@@ -930,13 +1107,13 @@ export default function Composer({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute bottom-full left-2 z-30 mb-2 w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
+                className="absolute bottom-full left-2 z-30 mb-2 max-h-[60dvh] w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
               >
                 <div className="flex items-center gap-2 border-b-2 border-clay-borderLight px-3.5 py-2.5 text-xs font-extrabold text-clay-muted">
                   <Terminal size={14} className="text-clay-primary" />
                   Perintah chat — pilih lalu tekan Enter
                 </div>
-                <div className="max-h-56 overflow-y-auto p-1.5">
+                <div className="max-h-[min(14rem,45dvh)] overflow-y-auto p-1.5">
                   {filteredCommands.length === 0 && (
                     <p className="px-3 py-3 text-xs font-bold text-clay-muted">
                       Tidak ada perintah cocok.
@@ -978,13 +1155,13 @@ export default function Composer({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute bottom-full left-2 z-30 mb-2 w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
+                className="absolute bottom-full left-2 z-30 mb-2 max-h-[60dvh] w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
               >
                 <div className="flex items-center gap-2 border-b-2 border-clay-borderLight px-3.5 py-2.5 text-xs font-extrabold text-clay-muted">
                   <BookOpen size={14} className="text-clay-primary" />
                   Lampirkan catatan{mentionQuery ? ` — "…${mentionQuery}"` : ""}
                 </div>
-                <div className="max-h-56 overflow-y-auto p-1.5">
+                <div className="max-h-[min(14rem,45dvh)] overflow-y-auto p-1.5">
                   {loadingNotes && (
                     <p className="px-3 py-3 text-xs font-bold text-clay-muted">
                       Memuat catatan…
@@ -1025,6 +1202,73 @@ export default function Composer({
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Popup Model Store — dibuka dari "More models" di selector kecepatan */}
+      <AnimatePresence>
+        {storeOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-clay-dark/40 p-3 sm:items-center"
+            onClick={() => setStoreOpen(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Model Store"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 24, scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 260, damping: 26 }}
+              className="w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b-2 border-clay-borderLight/60 px-4 py-3">
+                <div>
+                  <h2 className="text-sm font-extrabold text-clay-dark">
+                    <Sparkles size={14} className="mr-1.5 inline text-clay-primary" />
+                    Model Store
+                  </h2>
+                  <p className="mt-0.5 text-[11px] font-semibold text-clay-muted">
+                    Pilih model spesifik, atau kembali ke mode otomatis
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStoreOpen(false)}
+                  aria-label="Tutup"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-clay-beige text-clay-muted transition-colors hover:text-clay-dark"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              <div className="px-1 py-1">
+                <ModelStore
+                  selectedModel={selectedModel}
+                  isPremium={isPremium}
+                  onPick={(id) => {
+                    // Klik model terpilih lagi = lepas (kembali otomatis).
+                    setSelectedModel((cur) => (cur === id ? "" : id));
+                    setStoreOpen(false);
+                  }}
+                  onUpgrade={() => {
+                    setStoreOpen(false);
+                    window.location.href = "/pricing";
+                  }}
+                />
+              </div>
+              <div className="border-t-2 border-clay-borderLight/60 px-4 py-2.5">
+                <p className="text-[10.5px] font-semibold text-clay-muted">
+                  🧠 = peringkat kecerdasan (sedikit pintar → terpintar). Mode
+                  otomatis tetap memakai tier Kilat/Seimbang/Mendalam.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

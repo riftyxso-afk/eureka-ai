@@ -68,6 +68,7 @@ export async function saveNoteWithChunks(
         user_id: note.user_id,
         note_type: note.noteType ?? 'rangkuman',
         chapters: note.chapters ?? [],
+        source_url: note.sourceUrl ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -198,6 +199,7 @@ export async function getNoteWithChunks(
         subject: note.subject,
         user_id: note.user_id ?? null,
         noteType: note.note_type ?? 'rangkuman',
+        sourceUrl: note.source_url ?? undefined,
         chapters: note.chapters ?? [],
         createdAt: note.created_at,
         updatedAt: note.updated_at,

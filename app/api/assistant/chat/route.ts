@@ -5,6 +5,8 @@ import {
   aiChatStream,
   extractJsonObject,
   hasAiKey,
+  MODEL_CATALOG,
+  MODEL_CATALOG_IDS,
   type AiSpeedMode,
 } from "@/lib/ai";
 import { cleanSearchQuery, searchWeb } from "@/lib/firecrawl";
@@ -36,7 +38,12 @@ import {
   authorizeAssistantUser,
   isBetaTester,
 } from "@/lib/assistant/auth";
-import { enforcePremium } from "@/lib/premium";
+import { enforcePremium, getPremiumStatus, UPGRADE_URL } from "@/lib/premium";
+import {
+  SAFETY_REFUSAL_ID,
+  guardInput,
+  guardOutput,
+} from "@/lib/safety/guardrails";
 import { languageFromRequest } from "@/lib/locale";
 import type { RagHit } from "@/lib/assistant/context";
 
@@ -147,6 +154,9 @@ export async function POST(req: NextRequest) {
     clarificationsSkipped?: unknown;
     /** Link YouTube pada pesan user — video aktif sesi (konteks transkrip). */
     videoUrl?: unknown;
+    reasoning?: unknown;
+    /** Model spesifik pilihan user (Model Store) — divalidasi allowlist. */
+    model?: unknown;
   } | null;
 
   const rawSessionId = String(raw?.sessionId ?? "").trim();
@@ -207,6 +217,14 @@ export async function POST(req: NextRequest) {
     ? (speedModeRaw as AiSpeedMode)
     : "normal";
 
+  // Model spesifik pilihan user (Model Store) — allowlist katalog; id asing
+  // diabaikan (mode tier normal) tanpa menolak permintaan.
+  const modelRaw = String(raw?.model ?? "").trim();
+  const preferredModel = MODEL_CATALOG_IDS.has(modelRaw) ? modelRaw : undefined;
+
+  // Toggle reasoning dari composer (default ON = thinking real, OFF = model biasa + loading pixel-grid).
+  const reasoning = raw?.reasoning !== false;
+
   // Lampiran (upload gambar/dokumen) — validasi & batasi ukuran.
   const rawAttach = (raw?.attachment ?? null) as
     | { filename?: unknown; mimeType?: unknown; dataUrl?: unknown }
@@ -251,6 +269,23 @@ export async function POST(req: NextRequest) {
       premiumChat.status ?? 402
     );
   }
+  // Status premium → rantai model (Pro = model pintar di depan, free = model
+  // murah) + gerbang model premiumOnly.
+  const isPremiumUser = (await getPremiumStatus(userId)).isPremium;
+  // Model premiumOnly (mis. GPT-6 Astra) — khusus pengguna Pro. Free user yang
+  // mengirimnya (UI lama/klien iseng) ditolak dengan pesan upgrade yang jelas.
+  if (preferredModel) {
+    const entry = MODEL_CATALOG.find((m) => m.id === preferredModel);
+    if (entry?.premiumOnly && !isPremiumUser) {
+      return respondJson(
+        {
+          error: `Model ${entry.name} khusus pengguna Pro.`,
+          upgradeUrl: UPGRADE_URL,
+        },
+        402
+      );
+    }
+  }
   if (webSearch) {
     const premiumWeb = await enforcePremium(userId, "web-search");
     if (!premiumWeb.ok) {
@@ -287,6 +322,19 @@ export async function POST(req: NextRequest) {
       { error: "API key AI belum diatur di .env.local." },
       400
     );
+  }
+
+  // ── Guardrails keamanan AI (NVIDIA NIM + heuristik lokal) ──────────
+  // Input diblokir SEBELUM LLM dipanggil. Redirect topik juga ditolak
+  // di sini dengan pesan sopan (klien menampilkannya sebagai error toast).
+  try {
+    const inputVerdict = await guardInput(question);
+    if (!inputVerdict.allowed || inputVerdict.topicRedirect) {
+      return respondJson({ error: SAFETY_REFUSAL_ID }, 400);
+    }
+  } catch (e) {
+    // Guardrail tidak boleh memutus chat bila ia sendiri error.
+    console.error("[api/assistant/chat] guardInput:", e);
   }
 
   // ── Klarifikasi prompt ambigu ────────────────────────────────────────
@@ -373,6 +421,7 @@ export async function POST(req: NextRequest) {
           maxTokens: 400,
           temperature: 0.2,
           forChat: true,
+          premium: isPremiumUser,
         },
         (raw) =>
           extractJsonObject<{
@@ -587,29 +636,34 @@ export async function POST(req: NextRequest) {
           attachedDocument,
         });
 
-        // 6) Stream dari AI — maxTokens disesuaikan agar rangkuman tidak terpotong
+        // 6) Stream dari AI — maxTokens dinaikkan biar jawaban web search tidak kepotong (deepseek terpotong di 1400)
         emit({ type: "meta", mode: "assistant", model: "" });
         try {
           const maxTokensBySpeed: Record<AiSpeedMode, number> = {
-            fast: 900,
-            normal: 1400,
-            deep: 2000,
+            fast: 1800,
+            normal: 3200,
+            deep: 5000,
           };
           const result = await aiChatStream(
             {
               system,
               user: userPrompt,
               history,
-              maxTokens: maxTokensBySpeed[speedMode] ?? 1400,
+              maxTokens: maxTokensBySpeed[speedMode] ?? 3200,
               temperature: speedMode === "fast" ? 0.4 : 0.7,
               visionImage,
               speedMode,
               forChat: true,
+              reasoning,
+              model: preferredModel,
+              premium: isPremiumUser,
             },
             (ev) => {
               if (ev.type === "token") {
                 answer += ev.text;
                 emit({ type: "token", text: ev.text });
+              } else if (ev.type === "thinking") {
+                emit({ type: "thinking", text: ev.text });
               } else if (ev.type === "meta") {
                 modelUsed = ev.model;
               }
@@ -626,11 +680,23 @@ export async function POST(req: NextRequest) {
           return;
         }
 
+        // Guard output: audit + scrub salinan tersimpan. Batasan:
+        // stream sudah terkirim ke klien (SSE tak bisa ditarik), jadi
+        // penegakan utama ada di guardInput; di sini yang diamankan
+        // adalah riwayat tersimpan + pencatatan event.
+        let storedAnswer = answer;
+        try {
+          const outVerdict = await guardOutput(answer);
+          storedAnswer = outVerdict.allowed ? outVerdict.text : SAFETY_REFUSAL_ID;
+        } catch (e) {
+          console.error("[api/assistant/chat] guardOutput:", e);
+        }
+
         // Simpan jawaban asisten
         await appendMessage({
           sessionId,
           role: "assistant",
-          content: answer,
+          content: storedAnswer,
           sources,
           model: modelUsed || null,
         });

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Eureka.AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-dot" aria-hidden="true">E</span>
+      <span class="brand-name">Eureka</span>
+    </div>
+    <div id="streakBadge" class="streak-badge" hidden>
+      <span aria-hidden="true">🔥</span>
+      <span id="streakCount">0 hari</span>
+    </div>
+  </header>
+
+  <div id="notificationBadge" class="notification-badge hidden"></div>
+
+  <main id="app">
+    <!-- Login -->
+    <section id="view-login" class="view" hidden>
+      <div class="login-card">
+        <h1>Masuk dulu yuk</h1>
+        <p class="muted">Pakai email yang sama dengan akun Eureka.AI kamu.</p>
+        <label class="field">
+          <span>Email</span>
+          <input id="loginEmail" type="email" inputmode="email" autocomplete="email" placeholder="kamu@sekolah.id" />
+        </label>
+        <button id="btnSendCode" class="btn-primary" type="button">Kirim kode</button>
+        <div id="otpBlock" hidden>
+          <label class="field">
+            <span>Kode dari email</span>
+            <input id="loginCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6 digit" maxlength="6" />
+          </label>
+          <button id="btnVerifyCode" class="btn-primary" type="button">Masuk</button>
+        </div>
+        <p id="loginError" class="error" role="alert" hidden></p>
+      </div>
+    </section>
+
+    <!-- Chat -->
+    <section id="view-chat" class="view" hidden>
+      <div id="pendingBanner" class="pending-banner" hidden>
+        <span class="pending-dot" aria-hidden="true"></span>
+        <p id="pendingText"></p>
+      </div>
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <div id="typingIndicator" class="typing-indicator hidden">
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+      </div>
+      <div id="emptyState" class="empty-state">
+        <div class="blob" aria-hidden="true"></div>
+        <p><strong>Belum ada catatan.</strong></p>
+        <p class="muted">Highlight teks di halaman mana pun buat mulai.</p>
+      </div>
+      <div class="composer">
+        <textarea id="chatInput" rows="2" placeholder="tulis jawabanmu di sini..." class="shortcut-tooltip" data-shortcut="Ctrl+Enter untuk kirim"></textarea>
+        <div class="composer-actions">
+          <button id="btnAsk" class="btn-primary mode-active" type="button">💬 Tanya</button>
+          <button id="btnNote" class="btn-quiet" type="button">📝 Catat</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Draft catatan -->
+    <section id="view-draft" class="view" hidden>
+      <h1>Draft catatan</h1>
+      <p id="draftSource" class="muted small"></p>
+      <label class="field">
+        <span>Judul</span>
+        <input id="draftTitle" type="text" maxlength="160" />
+      </label>
+      <label class="field">
+        <span>Tag</span>
+        <input id="draftTag" type="text" maxlength="40" />
+      </label>
+      <label class="field">
+        <span>Isi (bisa diedit)</span>
+        <textarea id="draftBody" rows="8"></textarea>
+      </label>
+      <div id="draftLoading" class="draft-loading" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Meringkas halaman...</span>
+      </div>
+      <div class="row">
+        <button id="btnDraftCancel" class="btn-quiet" type="button">Batal</button>
+        <button id="btnDraftSave" class="btn-primary" type="button">Simpan</button>
+      </div>
+      <p id="draftStatus" class="muted small" role="status"></p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script src="config.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

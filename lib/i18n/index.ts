@@ -276,6 +276,12 @@ export const dictionaries = {
         "Tekan Enter atau tombol Pakai untuk menerapkan kode sebelum memilih paket.",
       remainingQuota: "Sisa kuota {n} dari 10 orang.",
       everything: "Semua yang kamu dapat",
+      modelsTitle: "Model AI yang kamu dapat",
+      modelsFreeTitle: "Gratis — model cepat & hemat",
+      modelsProTitle: "Pro — model terpintar (GPT-5.6/6, Claude, Grok, Qwen)",
+      modelsSoon: "segera",
+      modelsNote:
+        "Semua model bisa dipilih manual di Model Store; mode Kilat/Seimbang/Mendalam otomatis memilihkan yang terbaik untukmu.",
       payNote:
         "Pembayaran aman via Pakasir — QRIS, e-wallet, VA. Status premium aktif otomatis setelah pembayaran terverifikasi.",
       later: "Nanti aja",
@@ -491,6 +497,29 @@ export const dictionaries = {
       ],
       askEureka: "Mau lihat dulu seperti apa?",
       askCta: "Coba Tanya Eureka",
+      backHome: "Ke Beranda",
+    },
+    // ── Halaman /extension (download ekstensi browser) ─────
+    extension: {
+      chip: "Ekstensi Browser",
+      title: "Eureka di Mana Pun Kamu Belajar",
+      subtitle:
+        "Highlight teks di halaman mana pun untuk dialog Socratic, atau simpan tab jadi catatan — tanpa pindah tab.",
+      cta: "Download Ekstensi (.zip)",
+      ctaNote: "Gratis — untuk Chrome / Edge 116+. Versi Chrome Web Store segera hadir.",
+      featuresTitle: "Yang kamu dapat",
+      features: [
+        { title: "Highlight-to-Tanya", desc: "Seleksi teks → klik kanan → Eureka bertanya pemandu, bukan memberi jawaban." },
+        { title: "Tab-to-Note", desc: "Satu klik jadi draft catatan: ringkasan + pertanyaan reflektif, tersinkron ke dashboard." },
+        { title: "Side panel persisten", desc: "Chat nempel di browser, sesi tetap ada walau pindah tab." },
+        { title: "Streak badge", desc: "Streak harian tampil di toolbar — jaga kebiasaan belajarmu." },
+      ],
+      howTitle: "Cara pasang (1 menit)",
+      steps: [
+        { title: "Download & ekstrak", desc: "Download ZIP di atas lalu ekstrak ke satu folder." },
+        { title: "Buka chrome://extensions", desc: "Aktifkan Developer mode di kanan atas." },
+        { title: "Load unpacked", desc: "Pilih folder hasil ekstrak. Klik icon E ungu → masuk → selesai." },
+      ],
       backHome: "Ke Beranda",
     },
     // ── Halaman /dashboard/leaderboard ────────────────────
@@ -992,6 +1021,12 @@ export const dictionaries = {
         "Press Enter or the Apply button to redeem the code before choosing a plan.",
       remainingQuota: "{n} of 10 spots left.",
       everything: "Everything you get",
+      modelsTitle: "AI models you get",
+      modelsFreeTitle: "Free — fast & budget models",
+      modelsProTitle: "Pro — the smartest models (GPT-5.6/6, Claude, Grok, Qwen)",
+      modelsSoon: "soon",
+      modelsNote:
+        "Every model can be picked manually in the Model Store; Kilat/Seimbang/Mendalam modes automatically choose the best one for you.",
       payNote:
         "Secure payments via Pakasir — QRIS, e-wallet, VA. Premium activates automatically after payment is verified.",
       later: "Maybe later",
@@ -1201,6 +1236,28 @@ export const dictionaries = {
       ],
       askEureka: "Want to see it first?",
       askCta: "Try Asking Eureka",
+      backHome: "Back to Home",
+    },
+    extension: {
+      chip: "Browser Extension",
+      title: "Eureka Wherever You Study",
+      subtitle:
+        "Highlight text on any page for Socratic dialogue, or save tabs as notes — without switching tabs.",
+      cta: "Download Extension (.zip)",
+      ctaNote: "Free — for Chrome / Edge 116+. Chrome Web Store version coming soon.",
+      featuresTitle: "What you get",
+      features: [
+        { title: "Highlight-to-Ask", desc: "Select text → right-click → Eureka asks guiding questions, not answers." },
+        { title: "Tab-to-Note", desc: "One click to draft notes: summary + reflective questions, synced to dashboard." },
+        { title: "Persistent side panel", desc: "Chat docked in the browser; sessions survive tab switches." },
+        { title: "Streak badge", desc: "Daily streak on the toolbar — keep your study habit." },
+      ],
+      howTitle: "Install (1 minute)",
+      steps: [
+        { title: "Download & extract", desc: "Download the ZIP above and extract it to a folder." },
+        { title: "Open chrome://extensions", desc: "Enable Developer mode at the top right." },
+        { title: "Load unpacked", desc: "Pick the extracted folder. Click the purple E icon → log in → done." },
+      ],
       backHome: "Back to Home",
     },
     leaderboard: {

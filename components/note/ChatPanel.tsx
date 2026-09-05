@@ -31,13 +31,16 @@ const AVATAR_COLORS = [
 
 const POLL_MS = 4000;
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+function initials(name: string | null | undefined): string {
+  const s = typeof name === "string" ? name : "";
+  return (
+    s
+      .split(/\s+/)
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
 }
 
 function formatTime(iso: string): string {
@@ -46,9 +49,10 @@ function formatTime(iso: string): string {
   return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
 
-function colorIndex(name: string): number {
+function colorIndex(name: string | null | undefined): number {
+  const s = typeof name === "string" ? name : "";
   let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
   return Math.abs(h) % AVATAR_COLORS.length;
 }
 
@@ -99,10 +103,12 @@ export default function ChatPanel({
 
   const mentionCandidates = useMemo(() => {
     const q = (mentionQuery ?? "").trim().toLowerCase();
+    // Nama teman/pengirim bisa undefined dari API — saring dulu agar
+    // .toLowerCase() di bawah tidak pernah kena nilai non-string.
     const pool = [
       ...friends.map((f) => f.name),
-      ...Array.from(new Set(messages.map((m) => m.senderName))),
-    ];
+      ...messages.map((m) => m.senderName),
+    ].filter((n): n is string => typeof n === "string" && n.trim().length > 0);
     return Array.from(new Set(pool))
       .filter((n) => n.toLowerCase().includes(q))
       .slice(0, 6);
@@ -124,7 +130,17 @@ export default function ChatPanel({
       const res = await apiFetch(`/api/notes/${noteId}/chat${q}`);
       if (!res.ok) return;
       const data = await res.json();
-      const newMessages: ChatMessage[] = data.messages ?? [];
+      // Normalisasi batas API: baris lama/AI bisa tanpa senderName —
+      // jangan biarkan undefined masuk state (crash avatar & mention).
+      const newMessages: ChatMessage[] = (data.messages ?? []).map(
+        (m: ChatMessage) => ({
+          ...m,
+          senderName:
+            typeof m.senderName === "string" && m.senderName.trim()
+              ? m.senderName
+              : "Teman",
+        })
+      );
       if (newMessages.length === 0) return;
       lastTs.current = Math.max(
         ...newMessages.map((m) => Date.parse(m.createdAt)),

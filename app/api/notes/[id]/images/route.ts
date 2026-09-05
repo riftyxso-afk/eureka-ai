@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 
@@ -12,6 +11,7 @@ import {
   type ImageAlignment,
   type ImageSize,
 } from "@/lib/note-images-store";
+import { uploadNoteImage, deleteNoteImage } from "@/lib/noteImageStorage";
 
 export const runtime = "nodejs";
 
@@ -35,17 +35,6 @@ async function ensureOwner(
   return null;
 }
 
-/** Resolve path relative to project root (works in both Next.js and standalone backend) */
-function rootPath(...segments: string[]): string {
-  // In Next.js: process.cwd() = project root
-  // In backend/: process.cwd() = backend/ → go up one level
-  const root = process.cwd().endsWith("backend")
-    ? path.resolve(process.cwd(), "..")
-    : process.cwd();
-  return path.join(root, ...segments);
-}
-
-const IMAGES_DIR = rootPath("public", "images", "notes");
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
 
@@ -106,10 +95,14 @@ export async function POST(
     }
 
     const buffer = Buffer.from(await upload.arrayBuffer());
-    const noteDir = path.join(IMAGES_DIR, id);
-    await fs.mkdir(noteDir, { recursive: true });
     const filename = `${randomUUID()}${ext}`;
-    await fs.writeFile(path.join(noteDir, filename), buffer);
+    const url = await uploadNoteImage(id, filename, buffer, upload.type || "image/jpeg");
+    if (!url) {
+      return NextResponse.json(
+        { error: "Gagal menyimpan gambar ke penyimpanan." },
+        { status: 500 }
+      );
+    }
 
     const alignment: ImageAlignment =
       form.get("alignment") === "left" || form.get("alignment") === "right"
@@ -125,7 +118,7 @@ export async function POST(
     const image = await addImage({
       noteId: id,
       chapterId: Number.isFinite(chapterIdRaw) && chapterIdRaw > 0 ? chapterIdRaw : undefined,
-      url: `/images/notes/${id}/${filename}`,
+      url,
       caption: caption || undefined,
       alignment,
       size,
@@ -161,12 +154,8 @@ export async function DELETE(
     }
     const result = await removeImage(id, imageId);
     if (result.ok && result.url) {
-      try {
-        const filePath = rootPath("public", result.url);
-        await fs.unlink(filePath);
-      } catch {
-        // file mungkin sudah tidak ada
-      }
+      // Hapus objek Supabase Storage (URL absolut) — legacy path lokal no-op.
+      await deleteNoteImage(result.url);
     }
     return NextResponse.json({ ok: result.ok });
   } catch (e) {

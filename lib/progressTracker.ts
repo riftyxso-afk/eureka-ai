@@ -13,11 +13,32 @@ export type ProcessPhase =
   | "rag"
   | "study_tools";
 
+/**
+ * Info langkah (step) yang ikut pada event kemajuan — dipakai UI untuk
+ * menampilkan daftar langkah nyata yang sedang dikerjakan AI
+ * (note-loading-live-steps). Field opsional: klien lama yang hanya membaca
+ * percent/message tetap berfungsi.
+ */
+export interface StepInfo {
+  /** Identitas langkah = fase pipeline (satu baris per fase). */
+  id: ProcessPhase;
+  /** Label aksi dalam bahasa Indonesia. */
+  label: string;
+  /** Kunci ikon UI (dipetakan ke ikon lucide di komponen). */
+  icon: string;
+  /** Detail pendek: pesan pipeline terkini (mis. "Bab 2/4"). */
+  detail?: string;
+  /** active = sedang berjalan; done = selesai. */
+  status: "active" | "done";
+}
+
 export interface ProgressEvent {
   phase: ProcessPhase;
   percent: number;
   message: string;
   timestamp: number;
+  /** Langkah UI — aditif; absen pada event lama. */
+  step?: StepInfo;
 }
 
 /** Fraksi kemajuan (0..1) dalam satu fase, dipakai oleh fungsi kaitan AI. */
@@ -88,6 +109,18 @@ export function phaseDonePercent(phase: ProcessPhase): number {
   return phaseToPercent(phase, 1);
 }
 
+/**
+ * Label & ikon langkah per fase untuk UI daftar langkah (note-loading-live-steps).
+ * Label bahasa Indonesia; ikon adalah nama lucide yang dipetakan di komponen.
+ */
+export const PHASE_STEP_META: Record<ProcessPhase, { label: string; icon: string }> = {
+  extract: { label: "Mengambil materi", icon: "download" },
+  chapters: { label: "Menyusun bab catatan", icon: "pen" },
+  enrichment: { label: "Memperkaya dengan pencarian web", icon: "globe" },
+  rag: { label: "Menyiapkan pencarian cerdas", icon: "database" },
+  study_tools: { label: "Membuat kuis & kartu hafalan", icon: "layers" },
+};
+
 export class ProgressTracker {
   private readonly sessionId: string;
 
@@ -97,13 +130,21 @@ export class ProgressTracker {
     this.emit("extract", 0, "Menyiapkan proses...");
   }
 
-  /** Emit event dengan persen absolut 0-100. */
-  emit(phase: ProcessPhase, percent: number, message: string) {
+  /** Emit event dengan persen absolut 0-100; otomatis menyertakan step UI. */
+  emit(phase: ProcessPhase, percent: number, message: string, stepDone = false) {
+    const meta = PHASE_STEP_META[phase];
     publishProgress(this.sessionId, {
       phase,
       percent: Math.max(0, Math.min(100, Math.round(percent))),
       message,
       timestamp: Date.now(),
+      step: {
+        id: phase,
+        label: meta.label,
+        icon: meta.icon,
+        detail: message,
+        status: stepDone ? "done" : "active",
+      },
     });
   }
 
@@ -114,7 +155,7 @@ export class ProgressTracker {
 
   /** Tandai satu fase selesai. */
   done(phase: ProcessPhase, message: string) {
-    this.emit(phase, phaseDonePercent(phase), message);
+    this.emit(phase, phaseDonePercent(phase), message, true);
   }
 
   /** Wrapper fase: emit awal → jalankan kerja → emit selesai. */

@@ -215,6 +215,10 @@ async function autoTitleIfNeeded(sessionId: string): Promise<void> {
   if (!firstPrompt) return;
 
   // 1) Coba generate judul via AI (mode fast — cepat & ringan).
+  //    Model fast kadang mengeluarkan preamble thinking
+  //    ("Here's a thinking process: ...") sebelum jawaban — ambil baris
+  //    TERAKHIR yang berarti, lalu validasi; kalau masih mirip sampah,
+  //    anggap AI gagal → fallback potongan prompt (perilaku lama).
   let title = "";
   try {
     const raw = await aiChat({
@@ -225,11 +229,7 @@ async function autoTitleIfNeeded(sessionId: string): Promise<void> {
       temperature: 0.3,
       speedMode: "fast",
     });
-    title = raw
-      .replace(/["“”'‘’]/g, "")
-      .split(/\r?\n/)[0]
-      .trim()
-      .slice(0, 60);
+    title = sanitizeAiTitle(raw);
   } catch (e) {
     console.warn("[assistant/store] AI title gagal — pakai potongan prompt:", e);
   }
@@ -239,10 +239,42 @@ async function autoTitleIfNeeded(sessionId: string): Promise<void> {
     title = firstPrompt.slice(0, 60);
   }
 
-  await db()
-    .from("ai_chat_sessions")
-    .update({ title })
-    .eq("id", sessionId);
+  try {
+    const { error } = await db()
+      .from("ai_chat_sessions")
+      .update({ title })
+      .eq("id", sessionId);
+    if (error) console.warn("[assistant/store] simpan judul gagal:", error.message);
+  } catch (e) {
+    console.warn("[assistant/store] simpan judul gagal:", e);
+  }
+}
+
+/**
+ * Bersihkan keluaran model penamai: buang baris preamble thinking, ambil
+ * baris non-kosong terakhir (jawaban selalu setelah penalaran), validasi
+ * bentuk judul. Return "" bila hasil tidak layak → pemanggil fallback.
+ */
+export function sanitizeAiTitle(raw: string): string {
+  const lines = String(raw ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^[\s>*-]+/, "").trim())
+    .filter(Boolean);
+  // Buang baris preamble thinking & langkah bernomor ("1. Analisis ...")
+  // apa pun posisinya — keduanya bukan judul.
+  const PREAMBLE_RE =
+    /^(here'?s?\b|thinking|process|analisis|analysi|langkah|step|user.?s? (request|message)|pertama|kedua|marilah|i.?ll|i must|tentu,?|baik,?|\d+[.)]\s)/i;
+  const candidates = lines.filter((l) => !PREAMBLE_RE.test(l));
+  let title = (candidates[candidates.length - 1] ?? "").trim();
+  // Potong sisa kalimat penjelas: "Judul: X" → "X".
+  title = title.replace(/^(?:judul|title)\s*[:\-]\s*/i, "");
+  title = title.replace(/["“”'‘’]/g, "").replace(/[.!?;:,\s]+$/, "").trim();
+  if (!title) return "";
+  // Validasi: 1-10 kata, ≤60 char, bukan meta-preamble yang lolos regex.
+  const words = title.split(/\s+/).length;
+  if (words > 10 || title.length > 60) return "";
+  if (/thinking|process|preamble|instruction/i.test(title)) return "";
+  return title;
 }
 
 /**

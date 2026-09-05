@@ -41,7 +41,6 @@ import { NoteTOC } from "@/components/note/NoteTOC";
 import { NoteContent } from "@/components/note/NoteContent";
 import { NoteAIChat } from "@/components/note/NoteAIChat";
 import { YoutubeEmbed } from "@/components/video/YoutubeEmbed";
-import { useBeta } from "@/lib/useBeta";
 import { VideoViewOverlay } from "@/components/video/VideoViewOverlay";
 import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import { DreamingOverlay } from "@/components/note/DreamingOverlay";
@@ -217,8 +216,6 @@ export default function NoteDetailPage() {
   const [deleting, setDeleting] = useState(false);
   // Video yang sedang dilihat via tombol "View" (expand + poin isi video).
   const [viewVideo, setViewVideo] = useState<{ url: string; title?: string } | null>(null);
-  // Fitur video (embed + View) hanya untuk beta tester (akses lewat /join).
-  const { isBeta } = useBeta();
   const [showQuiz, setShowQuiz] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showPdfWorkflow, setShowPdfWorkflow] = useState(false);
@@ -290,6 +287,7 @@ export default function NoteDetailPage() {
           chapters: chaptersData,
           createdAt: data.note.createdAt,
           subject: data.note.subject,
+          sourceUrl: data.note.sourceUrl ?? undefined,
           keyPoints: data.note.keyPoints ?? [],
           noteType: data.note.noteType ?? "rangkuman",
         });
@@ -881,28 +879,24 @@ export default function NoteDetailPage() {
             </p>
           </div>
 
-          {/* Video sumber (catatan dari YouTube) — hanya beta tester (akses
-              lewat /join). Tonton sambil baca & tanya AI */}
-          {isBeta &&
-            data.subject === "YouTube" &&
-            (findYoutubeLink(data.sourceUrl ?? "")?.url ?? null) && (
-              <div className="card-clay mt-4 p-4 sm:p-6">
-                <h2 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-clay-muted">
-                  {l.sourceVideo}
-                </h2>
-                <YoutubeEmbed
-                  url={data.sourceUrl ?? ""}
-                  title={data.title}
-                  onView={(url) => {
-                    // Pertahanan berlapis: hanya beta bisa membuka View.
-                    if (isBeta) setViewVideo({ url, title: data.title });
-                  }}
-                />
-                <p className="mt-3 text-xs font-medium text-clay-muted/70">
-                  {l.sourceVideoDesc}
-                </p>
-              </div>
-            )}
+          {/* Video sumber (catatan dari YouTube) — untuk SEMUA pengguna:
+              cukup sourceUrl-nya link YouTube valid (spesifikasi
+              youtube-video-chat "Embed video di halaman catatan"). */}
+          {(findYoutubeLink(data.sourceUrl ?? "")?.url ?? null) && (
+            <div className="card-clay mt-4 p-4 sm:p-6">
+              <h2 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-clay-muted">
+                {l.sourceVideo}
+              </h2>
+              <YoutubeEmbed
+                url={data.sourceUrl ?? ""}
+                title={data.title}
+                onView={(url) => setViewVideo({ url, title: data.title })}
+              />
+              <p className="mt-3 text-xs font-medium text-clay-muted/70">
+                {l.sourceVideoDesc}
+              </p>
+            </div>
+          )}
 
           {/* Poin Penting */}
           {data.keyPoints && data.keyPoints.length > 0 && (

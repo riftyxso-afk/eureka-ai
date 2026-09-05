@@ -1,14 +1,21 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { headers } from "next/headers";
-import { Nunito } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-// Font self-hosted (next/font) — tanpa request render-blocking ke
-// fonts.googleapis.com (PageSpeed mobile: hemat ±2 detik LCP).
-const nunito = Nunito({
-  subsets: ["latin"],
+// Font self-hosted lokal — tidak perlu download dari Google Fonts saat build (offline/proxy aman).
+// File woff2 di public/fonts/ diunduh sekali dari fonts.gstatic.com (Nunito variable, 5 subset).
+const nunito = localFont({
+  src: [
+    { path: "../public/fonts/XRXV3I6Li01BKofINeaB.woff2", weight: "400 800", style: "normal" },
+    { path: "../public/fonts/XRXV3I6Li01BKofIO-aBXso.woff2", weight: "400 800", style: "normal" },
+    { path: "../public/fonts/XRXV3I6Li01BKofIOuaBXso.woff2", weight: "400 800", style: "normal" },
+    { path: "../public/fonts/XRXV3I6Li01BKofIMeaBXso.woff2", weight: "400 800", style: "normal" },
+    { path: "../public/fonts/XRXV3I6Li01BKofIOOaBXso.woff2", weight: "400 800", style: "normal" },
+  ],
   variable: "--font-nunito",
+  display: "swap",
 });
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { JobWatcherProvider } from "@/context/JobWatcherContext";

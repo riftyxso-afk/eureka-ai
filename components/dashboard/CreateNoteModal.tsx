@@ -36,6 +36,8 @@ import { emojiToIcon } from "@/lib/emojiIcon";
 import { playCompletionSound } from "@/lib/notifySound";
 import { ensurePushSetup } from "@/lib/push";
 import { addActiveJobId, removeActiveJobId } from "@/context/JobWatcherContext";
+import { useNoteSteps, type NoteStep } from "@/components/note/useNoteSteps";
+import { NoteLoadingSteps } from "@/components/note/NoteLoadingSteps";
 
 interface SourceOption {
   id: string;
@@ -300,6 +302,7 @@ export const CreateNoteModal = ({
   const doneHandledRef = useRef(false);
   const router = useRouter();
   const jobIdRef = useRef<string | null>(null);
+  const { steps, handleEvent, reset: resetSteps } = useNoteSteps();
 
   const loadSubjects = useCallback(async () => {
     try {
@@ -393,6 +396,7 @@ export const CreateNoteModal = ({
     setProgressPercent(0);
     progressPercentRef.current = 0;
     setProgressMessage("");
+    resetSteps();
     setAddingSubject(false);
     setNewSubjectName("");
     setSubjectError(null);
@@ -611,7 +615,10 @@ export const CreateNoteModal = ({
         const progress = JSON.parse(event.data) as {
           percent: number;
           message: string;
+          step?: NoteStep;
         };
+        // Bangun daftar langkah nyata dari event SSE (idempoten utk replay).
+        handleEvent(progress);
         setProgressPercent(progress.percent);
         progressPercentRef.current = Math.max(
           progressPercentRef.current,
@@ -841,6 +848,10 @@ export const CreateNoteModal = ({
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer" />
                       </motion.div>
                     </div>
+                  </div>
+                  {/* Daftar langkah nyata dari event SSE (real-time, tanpa mock) */}
+                  <div className="mt-2 w-full max-w-sm px-2">
+                    <NoteLoadingSteps steps={steps} />
                   </div>
                   <p className="mt-4 text-xs sm:text-sm font-semibold text-clay-muted px-4">
                     Berjalan di latar belakang — kamu boleh pindah halaman.

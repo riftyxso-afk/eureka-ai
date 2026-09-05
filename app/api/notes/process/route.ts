@@ -14,7 +14,7 @@ import { randomUUID } from "crypto";
 
 import { runAfter } from "@/lib/after";
 import { requireAuth } from "@/lib/assistant/auth";
-import { enforcePremium } from "@/lib/premium";
+import { enforcePremium, getPremiumStatus } from "@/lib/premium";
 import {
   canStartGeneration,
   createJob,
@@ -25,6 +25,7 @@ import {
 } from "@/lib/jobQueue";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { ProgressTracker, phaseToPercent } from "@/lib/progressTracker";
+import { runWithPremium } from "@/lib/aiContext";
 import {
   processNoteForBackground,
   SOURCE_LABEL,
@@ -157,6 +158,15 @@ async function parseSources(form: FormData): Promise<
           status: 400,
         };
       }
+      // Jaring pengaman lintas klien: materi <10 karakter (mis. kata perintah
+      // "catatan" doang) tidak bisa jadi catatan — tolak dengan pesan jelas.
+      if (buffer.toString("utf8").trim().length < 10) {
+        return {
+          ok: false,
+          error: `Materi pada file #${i + 1} terlalu pendek untuk dibuatkan catatan. Tambahkan topik atau riwayat percakapan.`,
+          status: 400,
+        };
+      }
       src.fileBuffer = buffer;
       src.fileName = upload.name;
     }
@@ -205,6 +215,9 @@ export async function POST(req: NextRequest) {
         { status: premiumNote.status ?? 402 }
       );
     }
+    // Status premium → konteks pemilihan model AI untuk seluruh job
+    // (Pro = model pintar, free = model murah — premium-model-tier).
+    const isPremiumUser = (await getPremiumStatus(userId)).isPremium;
 
     // ── Rate limit per user (proteksi token AI): maks 10 generate/jam (naik dari 3 untuk dev, cegah 429 saat testing).
     ensureRateLimitPrune();
@@ -271,7 +284,8 @@ export async function POST(req: NextRequest) {
     const jobId = createJob({
       sessionId: sessionId || "anonymous",
       userId,
-      run: async (id) => {
+      run: async (id) =>
+        runWithPremium(isPremiumUser, async () => {
         try {
           const { note, warnings } = await processNoteForBackground(
             {
@@ -282,7 +296,10 @@ export async function POST(req: NextRequest) {
             },
             jobProgress
           );
-          updateJob(id, {
+          // AWAIT: penulisan terminal harus mendarat di DB sebelum kerja
+          // lanjutan (notifikasi dll) — tanpa await, proses bisa restart
+          // sebelum persist selesai & job selamanya "processing".
+          await updateJob(id, {
             status: "done",
             percent: 100,
             message: "Selesai!",
@@ -332,7 +349,9 @@ export async function POST(req: NextRequest) {
           const baseMsg = "Terjadi kesalahan saat memproses materi.";
           const detail = e instanceof Error ? e.message : String(e);
           console.error("[api/notes/process] Job gagal:", detail, e);
-          updateJob(id, {
+          // AWAIT: penulisan terminal harus mendarat di DB walau proses
+          // langsung mati setelah ini (lihat update done di atas).
+          await updateJob(id, {
             status: "error",
             error: `${baseMsg} Detail: ${detail}`.slice(0, 1200),
             message: "Proses gagal.",
@@ -340,7 +359,7 @@ export async function POST(req: NextRequest) {
           });
           tracker.emit("extract", 100, `Proses gagal: ${detail.slice(0, 120)}`);
         }
-      },
+      }),
     });
     jobIdRef.current = jobId;
 

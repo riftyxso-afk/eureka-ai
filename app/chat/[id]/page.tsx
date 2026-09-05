@@ -13,7 +13,7 @@ import { detectNoteIntent } from "@/lib/assistant/noteIntent";
 import { detectImageIntent } from "@/lib/assistant/imageIntent";
 import { detectStudyCommand } from "@/lib/assistant/studyContext";
 import { NoteProgressOverlay } from "@/components/note/NoteProgressOverlay";
-import { ImageGenerationOverlay } from "@/components/note/ImageGenerationOverlay";
+import { ImageSketchBlock } from "@/components/chat/ImageSketchBlock";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import MessageBubble from "@/components/asisten/MessageBubble";
@@ -67,6 +67,7 @@ export default function ChatPage() {
     webSearch?: boolean;
     attachment?: ChatAttachment | null;
     speedMode?: "fast" | "normal" | "deep";
+    model?: string;
   } | null>(() => {
     const raw = sessionStorage.getItem(PENDING_PROMPT_KEY);
     if (!raw) return null;
@@ -89,6 +90,7 @@ export default function ChatPage() {
           parsed.speedMode === "fast" || parsed.speedMode === "deep"
             ? parsed.speedMode
             : "normal",
+        model: typeof parsed.model === "string" && parsed.model ? parsed.model : undefined,
       };
     } catch {
       return null;
@@ -109,6 +111,8 @@ export default function ChatPage() {
     { role: string; content: string }[]
   >([]);
   const [imagePrompt, setImagePrompt] = useState<string | null>(null);
+  // Naik tiap permintaan gambar baru — paksa remount blok walau prompt sama.
+  const [imageNonce, setImageNonce] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
   const [copiedAll, setCopiedAll] = useState(false);
   const [quizOpen, setQuizOpen] = useState(false);
@@ -375,6 +379,8 @@ export default function ChatPage() {
                     )}
                     <MessageBubble
                       message={m}
+                      isStreaming={chat.sending && idx === chat.renderedMessages.length - 1 && m.id.startsWith("stream-")}
+                      thinking={chat.sending && idx === chat.renderedMessages.length - 1 ? chat.streaming.thinking : null}
                       prevMessage={prevMsg}
                       videoEnabled={isBeta}
                       onViewVideo={(url) => {
@@ -385,6 +391,19 @@ export default function ChatPage() {
                   </div>
                 );
               })}
+              {/* Generate gambar — INLINE di stream (bukan modal): dot-matrix
+                  loading lalu crossfade ke hasil di posisi yang sama. */}
+              {imagePrompt && (
+                <ImageSketchBlock
+                  key={`${imagePrompt}-${imageNonce}`}
+                  prompt={imagePrompt}
+                  history={chat.renderedMessages
+                    .filter((m) => m.role === "user" || m.role === "assistant")
+                    .map((m) => ({ role: m.role, content: m.content }))
+                    .slice(-10)}
+                  onClose={() => setImagePrompt(null)}
+                />
+              )}
               {chat.clarification && chat.clarification.length > 0 && (
                 <ClarificationCard
                   questions={chat.clarification}
@@ -457,17 +476,22 @@ export default function ChatPage() {
             // "buat gambar" → generate gambar AI sesuai topik percakapan.
             if (detectImageIntent(input.question).isImageRequest) {
               setImagePrompt(input.question);
+              setImageNonce((n) => n + 1);
               return;
             }
             if (detectNoteIntent(input.question).isNoteRequest) {
               // Topik yang sedang dibahas di chat ikut jadi materi catatan —
               // hanya untuk beta tester (akses lewat /join). Non-beta tetap
               // bisa buat catatan seperti biasa (tanpa konteks percakapan).
+              // Pesan kosong (placeholder optimis/streaming) disaring di sini
+              // agar tidak pernah menjadi materi sumber null.
               setNoteHistory(
                 isBeta
                   ? chat.renderedMessages
                       .filter(
-                        (m) => m.role === "user" || m.role === "assistant"
+                        (m) =>
+                          (m.role === "user" || m.role === "assistant") &&
+                          m.content.trim().length > 0
                       )
                       .map((m) => ({ role: m.role, content: m.content }))
                   : []
@@ -492,17 +516,6 @@ export default function ChatPage() {
           setNotePrefs(null);
           setNoteHistory([]);
         }}
-      />
-
-      {/* Overlay generate gambar AI — pakai konteks percakapan agar sesuai topik */}
-      <ImageGenerationOverlay
-        open={!!imagePrompt}
-        prompt={imagePrompt ?? ""}
-        history={chat.renderedMessages
-          .filter((m) => m.role === "user" || m.role === "assistant")
-          .map((m) => ({ role: m.role, content: m.content }))
-          .slice(-10)}
-        onClose={() => setImagePrompt(null)}
       />
 
       {/* Modal bagikan chat (snapshot publik view-only) */}

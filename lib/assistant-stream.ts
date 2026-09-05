@@ -31,8 +31,9 @@ export interface ClarificationQuestion {
 }
 
 export type AssistantStreamEvent =
-  | { type: "meta"; mode?: string; model?: string }
+  | { type: "meta"; mode?: string; model?: string; skill?: string }
   | { type: "token"; text: string }
+  | { type: "thinking"; text: string }
   | { type: "sources"; sources: AssistantSource[] }
   | { type: "pipeline"; stage: WebSearchStage }
   | { type: "web"; results: WebSearchItem[] }
@@ -57,6 +58,12 @@ export interface AssistantChatInput extends ChatToolOptions {
    * prompt untuk klarifikasi (cegah loop klarifikasi berulang).
    */
   clarificationsSkipped?: boolean;
+  reasoning?: boolean;
+  /**
+   * Model spesifik pilihan user (Model Store) — server memvalidasi terhadap
+   * katalog; id asing diabaikan (mode tier normal).
+   */
+  model?: string;
 }
 
 /**
@@ -77,6 +84,8 @@ export function buildAssistantChatBody(
     videoUrl: input.videoUrl ?? null,
     clarifications: input.clarifications ?? [],
     clarificationsSkipped: input.clarificationsSkipped === true,
+    reasoning: input.reasoning ?? true,
+    model: input.model ?? null,
   };
 }
 

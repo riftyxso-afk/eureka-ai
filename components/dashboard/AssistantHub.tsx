@@ -64,6 +64,7 @@ export default function AssistantHub() {
       webSearch?: boolean;
       attachment?: ChatAttachment | null;
       speedMode?: "fast" | "normal" | "deep";
+      model?: string;
     }) => {
       if (launching) return;
 
@@ -105,6 +106,7 @@ export default function AssistantHub() {
           webSearch: input.webSearch === true,
           attachment: input.attachment ?? null,
           speedMode: input.speedMode ?? "normal",
+          model: input.model,
         })
       );
       await chat.refreshSessions();
@@ -185,7 +187,7 @@ export default function AssistantHub() {
                   setComposerKey((k) => k + 1);
                   setTimeout(() => setLoadingCard(null), 450);
                 }}
-                className="group flex items-start gap-3 rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-4 text-left shadow-clay-sm transition-all hover:-translate-y-0.5 hover:border-clay-primary/40 hover:shadow-[0_6px_0_rgb(var(--clay-shadow))] dark:border-clay-borderLight/50"
+                className="group flex items-start gap-3 rounded-clay-md border border-clay-borderLight/60 bg-clay-cream p-4 text-left shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-clay-primary/40 hover:shadow-[0_8px_28px_rgba(0,0,0,0.06)] active:translate-y-0 dark:border-clay-borderLight/40"
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-clay-md bg-clay-primary/10 text-clay-primary">
                   {loadingCard === "tanya" ? (
@@ -210,7 +212,7 @@ export default function AssistantHub() {
                   setComposerKey((k) => k + 1);
                   setTimeout(() => setLoadingCard(null), 450);
                 }}
-                className="group flex items-start gap-3 rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-4 text-left shadow-clay-sm transition-all hover:-translate-y-0.5 hover:border-clay-primary/40 hover:shadow-[0_6px_0_rgb(var(--clay-shadow))] dark:border-clay-borderLight/50"
+                className="group flex items-start gap-3 rounded-clay-md border border-clay-borderLight/60 bg-clay-cream p-4 text-left shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-clay-primary/40 hover:shadow-[0_8px_28px_rgba(0,0,0,0.06)] active:translate-y-0 dark:border-clay-borderLight/40"
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-clay-md bg-emerald-500/10 text-emerald-600">
                   {loadingCard === "tugas" ? (

@@ -1,24 +1,26 @@
 /**
- * POST /api/assistant/image — Generate gambar AI (Cloudflare Workers AI / FLUX).
+ * POST /api/assistant/image — Generate gambar AI.
  *
  * Dua langkah supaya gambar SELALU sesuai topik yang dibahas:
  *  1. Susun prompt ilustrasi yang jelas via AI: gabungkan deskripsi user
  *     ("buat gambar ...") + konteks percakapan (topik yang sedang dibahas).
  *     Kalau user cuma bilang "buat gambar aja", topik diambil dari riwayat
  *     chat (mis. sedang bahas sejarah → gambar sejarah, bukan topik lain).
- *  2. Generate via Cloudflare Workers AI (FLUX) → data URL PNG base64.
+ *  2. Generate via OpenAgentic (ali-qwen-image-2.0-pro, URL sementara
+ *     di-materialisasi jadi data URL di server) → fallback Cloudflare FLUX.
  *
  * Body: { prompt: string, history?: { role, content }[] }
  * Respon: { ok, dataUrl, alt } | { ok:false, error }
  */
 import { NextRequest } from "next/server";
 
-import { aiChat, hasAiKey } from "@/lib/ai";
+import { aiChat, hasAiKey, OPENAGENTIC_API_KEY } from "@/lib/ai";
 import {
   buildIllustrationPrompt,
   generateAiIllustration,
   isCloudflareImagesConfigured,
 } from "@/lib/cloudflareImages";
+import { generateImageViaOpenAgentic } from "@/lib/image-gen";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
 import { enforcePremium } from "@/lib/premium";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
@@ -98,11 +100,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!isCloudflareImagesConfigured()) {
+  // Provider gambar: OpenAgentic UTAMA, Cloudflare FLUX fallback.
+  // Tolak hanya bila keduanya tidak tersedia.
+  if (!OPENAGENTIC_API_KEY && !isCloudflareImagesConfigured()) {
     return Response.json(
       {
         error:
-          "Generate gambar belum aktif — tambahkan CLOUDFLARE_ACCOUNT_ID dan CLOUDFLARE_API_TOKEN di .env (gratis di Cloudflare).",
+          "Generate gambar belum aktif — isi OPENAGENTIC_API_KEY atau kredensial Cloudflare di .env.",
       },
       { status: 400 }
     );
@@ -145,8 +149,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2) Generate gambar.
-    const dataUrl = await generateAiIllustration(illustrationPrompt);
+    // 2) Generate gambar — OpenAgentic utama, Cloudflare FLUX fallback.
+    const dataUrl =
+      (await generateImageViaOpenAgentic(illustrationPrompt)) ??
+      (await generateAiIllustration(illustrationPrompt));
     if (!dataUrl) {
       return Response.json(
         { error: "Gagal membuat gambar. Coba lagi beberapa saat lagi." },

@@ -132,6 +132,35 @@
     }
   }
 
+  /* Thinking trace + streaming text + pixel-grid loader */
+  @keyframes shimmer-text {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  @keyframes star-shimmer {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(1.18); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes pixel-on {
+    0%, 100% { opacity: 0.15; }
+    50% { opacity: 1; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
   .animate-shimmer {
     animation: shimmer 2s infinite;
   }
@@ -606,4 +635,40 @@
 }
 .eureka-hljs .hljs-strong {
   font-weight: 700;
+}
+
+/* -- ImageSketchBlock — loading sketsa dot-matrix inline (generate gambar chat) --
+   Titik membesar & menghangat (clay-shadow-dark ? clay-secondary/amber) dalam
+   gelombang diagonal; durasi siklus tetap, ritme dari animation-delay per titik. */
+.eureka-sketch-dot {
+  background-color: rgb(var(--clay-shadow-dark));
+  animation: eureka-sketch-dot 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes eureka-sketch-dot {
+  0%, 100% { transform: scale(0.4); opacity: 0.3; background-color: rgb(var(--clay-shadow-dark)); }
+  45% { transform: scale(1.15); opacity: 1; background-color: rgb(var(--clay-secondary)); }
+  70% { transform: scale(0.9); opacity: 0.8; background-color: rgb(var(--clay-secondary) / 0.75); }
+}
+/* Crossfade halus hasil gambar di posisi kanvas yang sama. */
+.eureka-sketch-reveal {
+  animation: eureka-sketch-reveal 280ms ease-out both;
+}
+@keyframes eureka-sketch-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/* Hormati reduced motion: pulsing opacity sederhana, tanpa gerak/scale. */
+@media (prefers-reduced-motion: reduce) {
+  .eureka-sketch-dot {
+    animation: eureka-sketch-pulse 1.8s ease-in-out infinite !important;
+    transform: none !important;
+  }
+  .eureka-sketch-reveal {
+    animation: none !important;
+  }
+}
+@keyframes eureka-sketch-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.85; }
 }

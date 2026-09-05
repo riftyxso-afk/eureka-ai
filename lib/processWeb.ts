@@ -9,6 +9,7 @@ import { aiChatJson, hasAiKey } from "./ai";
 import type { WebImage } from "./firecrawl";
 import type { ProcessedContent } from "./processSubtitle";
 import type { PhaseProgressFn } from "./progressTracker";
+import { uploadNoteImage } from "./noteImageStorage";
 import {
   IMAGE_PLACEMENT_RULES,
   buildChapterContentGuide,
@@ -20,8 +21,6 @@ import {
   clampChapterCount,
   type NotePreferences,
 } from "./prompts/noteGeneration";
-import { promises as fs } from "fs";
-import path from "path";
 
 const MAX_CHAPTERS = 8;
 const MAX_IMAGES_PER_CHAPTER = 3;
@@ -319,12 +318,11 @@ Output JSON: {"summary": "...", "keyPoints": ["...", "..."]}`,
 
 const IMAGE_MARKER_RE = /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
 
-/** Unduh gambar web yang dipakai AI di bab → simpan lokal (public/images/notes/<noteId>/). */
+/** Unduh gambar web yang dipakai AI di bab → unggah ke Supabase Storage (URL publik permanen). */
 export async function downloadWebImages(
   noteId: string,
   chapters: NoteChapter[]
 ): Promise<NoteChapter[]> {
-  const dir = path.join(process.cwd(), "public", "images", "notes", noteId);
   const usedUrls = new Set<string>();
 
   for (const chapter of chapters) {
@@ -349,10 +347,16 @@ export async function downloadWebImages(
       const ext = (url.split("?")[0].match(/\.(png|jpe?g|webp|gif)$/i)?.[1] ?? "").toLowerCase();
       const fallback = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" } as Record<string, string>;
       const finalExt = ext || fallback[contentType] || "jpg";
-      const filename = `web-${++index}.${finalExt}`;
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(path.join(dir, filename), buffer);
-      localMap.set(url, `/images/notes/${noteId}/${filename}`);
+      const filename = `web-${index + 1}.${finalExt}`;
+      const publicUrl = await uploadNoteImage(
+        noteId,
+        filename,
+        buffer,
+        contentType.split(";")[0] || `image/${finalExt === "jpg" ? "jpeg" : finalExt}`
+      );
+      if (!publicUrl) continue; // gagal unggah → marker diganti teks di bawah
+      index++;
+      localMap.set(url, publicUrl);
     } catch {
       // gambar gagal diunduh → biarkan marker diganti teks di bawah
     }

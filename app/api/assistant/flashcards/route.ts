@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getMessages, getSession } from "@/lib/assistant/store";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
-import { enforcePremium, recordFeatureUsage } from "@/lib/premium";
+import { enforcePremium, getPremiumStatus, recordFeatureUsage } from "@/lib/premium";
+import { runWithPremium } from "@/lib/aiContext";
 import {
   buildStudyContext,
   collectMentionIds,
@@ -74,7 +75,10 @@ export async function POST(req: NextRequest) {
     const notes = await loadMentionedNotes(collectMentionIds(messages));
     const context = buildStudyContext(messages, notes);
 
-    const cards = await generateFlashcardsFromContext(context);
+    const cards = await runWithPremium(
+      (await getPremiumStatus(auth.userId)).isPremium,
+      () => generateFlashcardsFromContext(context)
+    );
     if (cards.length === 0) {
       return NextResponse.json(
         { error: "AI tidak menghasilkan kartu yang valid. Coba lagi." },
