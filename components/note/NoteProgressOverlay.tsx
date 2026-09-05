@@ -164,6 +164,8 @@ export function NoteProgressOverlay({
     form.append("bahasa", getClientLocale() === "en" ? "English" : "Bahasa Indonesia");
     form.append("chapterCount", String(prefs?.chapterCount ?? 3));
     form.append("noteType", prefs?.noteType ?? "rangkuman");
+    // Mata pelajaran pilihan user (wizard) — kosong = otomatis dari sumber.
+    form.append("mataPelajaran", prefs?.subject ?? "");
     form.append("userId", getUserId());
     form.append("sessionId", sessionId);
 

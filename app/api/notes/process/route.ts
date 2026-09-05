@@ -256,6 +256,9 @@ export async function POST(req: NextRequest) {
       assignment: form.get("assignment") === "1" || form.get("assignment") === "true",
       translate: form.get("translate") === "1" || form.get("translate") === "true",
       noteType: validateNoteType(form.get("noteType")),
+      // Mata pelajaran pilihan user (dipilih di modal/wizard) — kosong = auto
+      // dari jenis sumber (mata-pelajaran-subject).
+      subject: String(form.get("mataPelajaran") ?? "").trim().slice(0, 60) || undefined,
     };
 
     // Progress bawaan: tracker (SSE) + update status job.

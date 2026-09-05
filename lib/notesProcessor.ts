@@ -59,6 +59,12 @@ export interface NotePrefs {
   translate?: boolean;
   /** Jenis rangkuman: rangkuman | makalah | laporan | poin (mempengaruhi prompt AI). */
   noteType?: "rangkuman" | "makalah" | "laporan" | "poin";
+  /**
+   * Mata pelajaran pilihan user — menimpa label otomatis dari jenis sumber
+   * (mata-pelajaran-subject: user memilih mapel saat membuat catatan).
+   * Kosong = pakai label sumber seperti sebelumnya.
+   */
+  subject?: string;
 }
 
 /** Batas bab pada mode CEPAT — dijamin selesai cepat. */
@@ -443,7 +449,7 @@ export async function processNoteForBackground(
   const note: Note = {
     id: noteId,
     title: title || "Ringkasan Materi",
-    subject: SUBJECT_BY_SOURCE[sourceType] ?? "Materi",
+    subject: input.prefs.subject?.trim() || (SUBJECT_BY_SOURCE[sourceType] ?? "Materi"),
     user_id: input.userId || undefined,
     sourceUrl: extracted.sourceUrl,
     chunkCount: 0,

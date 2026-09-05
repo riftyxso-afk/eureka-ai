@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
   Check,
+  ChevronDown,
   FileText,
   Layers,
   ListChecks,
@@ -15,6 +16,8 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { apiFetch } from "@/lib/apiClient";
+import type { Subject } from "@/lib/subjects";
 
 /** Preferensi generate yang dikumpulkan wizard lalu diteruskan ke prosesor. */
 export interface NoteCreatePrefs {
@@ -23,6 +26,8 @@ export interface NoteCreatePrefs {
   studyMode: "ringkas" | "standar" | "lengkap";
   /** Jenis rangkuman: rangkuman | makalah | laporan | poin. */
   noteType: "rangkuman" | "makalah" | "laporan" | "poin";
+  /** Mata pelajaran pilihan user — kosong = otomatis dari jenis sumber. */
+  subject?: string;
 }
 
 interface NoteCreateWizardPanelProps {
@@ -136,6 +141,27 @@ export function NoteCreateWizardPanel({
   const [noteType, setNoteType] = useState<
     "rangkuman" | "makalah" | "laporan" | "poin"
   >("rangkuman");
+  // Mata pelajaran pilihan user (mata-pelajaran-subject) — dimuat dari API.
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subject, setSubject] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch("/api/subjects");
+        const data = await res.json().catch(() => null);
+        if (!cancelled && res.ok && Array.isArray(data?.subjects)) {
+          setSubjects(data.subjects as Subject[]);
+        }
+      } catch {
+        // gagal muat mapel — pemilih tetap tampil dengan opsi kosong
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="bg-clay-cream">
@@ -427,6 +453,39 @@ export function NoteCreateWizardPanel({
                 );
               })}
             </div>
+
+            {/* Mata pelajaran — catatan tersimpan sesuai mapel pilihan user
+                (mata-pelajaran-subject). Opsional: kosong = otomatis. */}
+            <div className="mt-4">
+              <h3 className="text-sm font-extrabold text-clay-dark">
+                Simpan ke mata pelajaran?
+              </h3>
+              <p className="mt-0.5 text-xs font-bold text-clay-muted">
+                Biar catatanmu rapi per mapel. Kosongkan untuk otomatis.
+              </p>
+              <div className="relative mt-2">
+                <BookOpen
+                  size={15}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-clay-primary"
+                />
+                <select
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full appearance-none rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream py-2.5 pl-10 pr-10 text-sm font-bold text-clay-dark outline-none transition-colors focus:border-clay-primary"
+                >
+                  <option value="">Otomatis (dari jenis materi)</option>
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={16}
+                  className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-clay-muted"
+                />
+              </div>
+            </div>
           </motion.div>
         )}
       </div>
@@ -459,6 +518,7 @@ export function NoteCreateWizardPanel({
                 chapterCount,
                 studyMode,
                 noteType,
+                subject: subject.trim() || undefined,
               };
               onStart(prefs);
             }}
