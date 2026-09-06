@@ -16,6 +16,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  Music,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
@@ -48,6 +49,7 @@ const menuItems: MenuItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { id: "jadwal", label: "Jadwal", icon: CalendarDays, href: "/dashboard/jadwal" },
   { id: "tugas", label: "Tugas & Ujian", icon: AlarmClock, href: "/dashboard/tugas" },
+  { id: "musik", label: "Musik", icon: Music, href: "/dashboard/musik" },
   { id: "misi", label: "Misi", icon: Flag, href: "/dashboard/misi" },
   {
     id: "mata-pelajaran",

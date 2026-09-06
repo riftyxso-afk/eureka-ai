@@ -67,6 +67,11 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/schedule/export", scheduleExport);
   count++;
 
+  // ─── Music Hub (music-hub) ─────────────────────────────
+  const musicSearch = await import("@/app/api/music/search/route");
+  mount(app, "/api/music/search", musicSearch);
+  count++;
+
   // ─── Feedback (survey performa Eureka) ─────────────────
   const feedbackNote = await import("@/app/api/feedback/note/route");
   mount(app, "/api/feedback/note", feedbackNote);
