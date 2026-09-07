@@ -427,6 +427,9 @@
   --subject-red: 185 28 28;
   --subject-lime: 77 124 15;
   --subject-indigo: 67 56 202;
+
+  /* Aksen khusus Mode "Eureka Multi Agent" (toggle ON) — PRD eureka-multi-agent-system */
+  --accent-coral: 249 115 98; /* Coral #F97362 */
 }
 
 .dark {
@@ -463,6 +466,9 @@
   --subject-red: 252 165 165;
   --subject-lime: 190 242 100;
   --subject-indigo: 165 180 252;
+
+  /* Aksen Multi Agent — tier gelap sedikit lebih terang agar tetap kontras. */
+  --accent-coral: 251 146 130; /* #FB9282 */
 }
 
 /* Nuansa hover di dark memang beda dari nilai token dasar

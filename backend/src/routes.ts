@@ -192,6 +192,11 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/assistant/sessions/:sessionId/share", assistantSessionsShare);
   count += 7;
 
+  // ─── Eureka Multi Agent (loop tutoring) ─────────────────
+  const agentsLoop = await import("@/app/api/agents/loop/route");
+  mount(app, "/api/agents/loop", agentsLoop);
+  count++;
+
   // ─── Video YouTube (panel View) ──────────────────────────
   const videoPoints = await import("@/app/api/video/points/route");
   const videoTranscript = await import("@/app/api/video/transcript/route");

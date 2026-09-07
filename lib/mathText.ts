@@ -52,6 +52,52 @@ export function normalizeMathDelimiters(text: string): string {
     return `$$${block}$$`;
   });
 
+  // 4) Rumus LaTeX tanpa tanda $ (misal di dalam tabel markdown atau baris persamaan).
+  //    Banyak model AI menulis `v = \frac{s}{t}` atau `\Sigma F = m \cdot a` mentah.
+  //    Bungkus dengan $...$ agar KaTeX dapat merendernya dengan baik.
+  out = out
+    .split("\n")
+    .map((line) => {
+      // 4a. Jika baris tabel (| Besaran | Rumus |)
+      if (line.includes("|")) {
+        const cells = line.split("|");
+        const wrapped = cells.map((c) => {
+          const t = c.trim();
+          // Sel mengandung command LaTeX tapi tidak diapit $
+          if (/\\[a-zA-Z]+/.test(t) && !t.startsWith("$") && !t.endsWith("$")) {
+            return ` $${t}$ `;
+          }
+          return c;
+        });
+        return wrapped.join("|");
+      }
+
+      // 4b. Jika baris tunggal adalah persamaan matematika dengan LaTeX tapi lupa diapit $
+      const trimmed = line.trim();
+      if (
+        /\\[a-zA-Z]+/.test(trimmed) &&
+        !trimmed.includes("$") &&
+        !trimmed.startsWith("```") &&
+        !trimmed.startsWith("#") &&
+        !trimmed.startsWith("http")
+      ) {
+        // Cek pola persamaan seperti v = ..., E_k = ..., dll.
+        if (/[=><≈]|\\approx|\\le|\\ge|\\pm/.test(trimmed)) {
+          // Jika diawali bullet list "- " atau "* "
+          const listMatch = trimmed.match(/^([-*]|\d+\.)\s+(.*)$/);
+          if (listMatch) {
+            const prefix = listMatch[1];
+            const mathPart = listMatch[2].trim();
+            return `${prefix} $${mathPart}$`;
+          }
+          return `$$${trimmed}$$`;
+        }
+      }
+
+      return line;
+    })
+    .join("\n");
+
   return out;
 }
 

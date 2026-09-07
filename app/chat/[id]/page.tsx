@@ -29,8 +29,10 @@ import {
   markFeedbackDismissedLocally,
 } from "@/lib/assistant/feedback";
 import WebSearchPipeline from "@/components/asisten/WebSearchPipeline";
+import StepLog from "@/components/asisten/StepLog";
 import AiErrorPopup from "@/components/asisten/AiErrorPopup";
 import Composer from "@/components/asisten/Composer";
+import ArtifactCanvas from "@/components/asisten/ArtifactCanvas";
 import { VideoViewOverlay } from "@/components/video/VideoViewOverlay";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
@@ -43,10 +45,12 @@ import {
   Check,
   Copy,
   Crown,
+  FileText,
   Hand,
   LayoutDashboard,
   Plus,
   Share2,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -228,27 +232,44 @@ export default function ChatPage() {
     if (chat.hasError) setErrorDismissed(false);
   }, [chat.hasError]);
 
+  // Fitur flag Mode "Eureka Multi Agent" — env NEXT_PUBLIC (baca sekali).
+  // Server tetap menolak bila flag backend FEATURE_MULTI_AGENT mati.
+  const multiAgentAvailable =
+    process.env.NEXT_PUBLIC_FEATURE_MULTI_AGENT === "1" || isBeta;
+
   const activeSession = chat.sessions.find((s) => s.id === sessionId);
 
   return (
-    <div className="flex h-dvh gap-0 bg-clay-beige p-0 sm:gap-4 sm:p-4">
-      <ChatSidebar
-        sessions={chat.sessions}
-        activeId={sessionId}
-        onNew={chat.handleNew}
-        onSelect={() => {}}
-        onRename={chat.renameSession}
-        onDelete={async (id) => {
-          const remaining = await chat.deleteSession(id);
-          if (id === sessionId) {
-            router.replace(
-              remaining.length > 0 ? `/chat/${remaining[0].id}` : "/dashboard"
-            );
-          }
-        }}
-      />
+    <div className="flex h-dvh overflow-hidden bg-clay-beige p-0">
+      <div className="flex h-full w-full overflow-hidden border-t border-clay-borderLight/60 sm:border-t-0">
+        <ChatSidebar
+          sessions={chat.sessions}
+          activeId={sessionId}
+          onNew={chat.handleNew}
+          onSelect={() => {}}
+          onRename={chat.renameSession}
+          onDelete={async (id) => {
+            const remaining = await chat.deleteSession(id);
+            if (id === sessionId) {
+              router.replace(
+                remaining.length > 0 ? `/chat/${remaining[0].id}` : "/dashboard"
+              );
+            }
+          }}
+        />
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-clay-cream sm:rounded-clay sm:border-2 sm:border-clay-borderLight sm:shadow-clay-sm">
+        {/* Artifact Canvas — panel terpisah dari bubble chat.
+            Desktop: kolom samping (flex sibling dari <main>), flush border.
+            Mobile: fixed bottom sheet di atas main (z-40). */}
+        <ArtifactCanvas
+          artifacts={chat.canvas.artifacts}
+          streamingId={chat.canvas.streamingId}
+          open={chat.canvas.open}
+          onClose={chat.closeCanvas}
+          onEditSave={chat.saveArtifactEdit}
+        />
+
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-clay-cream">
         {/* Topbar — auto-hide saat scroll ke bawah (slide up), muncul saat ke atas */}
         <AnimatePresence initial={false}>
           {!headerHidden && (
@@ -260,7 +281,7 @@ export default function ChatPage() {
               transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
               className="overflow-hidden"
             >
-              <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+              <div className="flex items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
                 <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                   <MobileSessionButton
                     sessions={chat.sessions}
@@ -285,45 +306,78 @@ export default function ChatPage() {
                       {l.hasAccess}
                     </p>
                   </div>
+                  {/* Indikator loop "Eureka Multi Agent" — "Iterasi x/8".
+                      Muncul hanya saat loop aktif; hilang otomatis saat
+                      keputusan exit tercapai (PRD §5.1). */}
+                  {multiAgentAvailable && chat.loop.toggleOn && chat.loop.status === "active" && (
+                    <span
+                      className="hidden shrink-0 items-center gap-1 rounded-clay-full bg-[rgb(var(--accent-coral))]/15 px-2.5 py-1 text-[10.5px] font-extrabold text-[rgb(var(--accent-coral))] sm:inline-flex"
+                      data-testid="loop-iteration-indicator"
+                    >
+                      <Sparkles size={11} className="fill-current" />
+                      Iterasi {Math.max(1, chat.loop.iteration)}/{chat.loop.maxIterations}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   {chat.renderedMessages.length > 0 && (
                     <>
+                      {/* Ikon Canvas — ghost minimal dengan badge count kecil
+                          (bukan pill berwarna; satu aksi primer = Bagikan). */}
+                      {chat.canvas.artifacts.length > 0 && (
+                        <button
+                          onClick={() => {
+                            if (chat.canvas.open) chat.closeCanvas();
+                            else chat.openCanvas();
+                          }}
+                          disabled={chat.sending}
+                          title={chat.canvas.open ? "Sembunyikan Canvas" : "Buka Canvas"}
+                          aria-label="Toggle Artifact Canvas"
+                          data-testid="chat-toggle-canvas"
+                          className="relative flex !min-h-[40px] !w-10 items-center justify-center rounded-clay-full text-clay-muted transition-all duration-75 hover:-translate-y-0.5 hover:bg-clay-beige hover:text-clay-dark disabled:opacity-50"
+                        >
+                          <FileText size={16} />
+                          <span
+                            className={`absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-extrabold ${
+                              chat.canvas.open
+                                ? "bg-[rgb(var(--accent-coral))] text-white"
+                                : "bg-clay-primary/15 text-clay-primary"
+                            }`}
+                          >
+                            {chat.canvas.artifacts.length}
+                          </span>
+                        </button>
+                      )}
                       <button
                         onClick={handleCopyAll}
                         disabled={chat.sending}
                         title={l.copyAllTitle}
                         aria-label={l.copyAll}
                         data-testid="chat-copy-all"
-                        className="btn-clay-ghost !min-h-[40px] !px-2.5 !py-2 text-xs disabled:opacity-50 sm:!px-3.5"
+                        className="flex !min-h-[40px] !w-10 items-center justify-center rounded-clay-full text-clay-muted transition-all duration-75 hover:-translate-y-0.5 hover:bg-clay-beige hover:text-clay-dark disabled:opacity-50"
                       >
-                        {copiedAll ? (
-                          <Check size={14} className="sm:mr-1.5" />
-                        ) : (
-                          <Copy size={14} className="sm:mr-1.5" />
-                        )}
-                        <span className="hidden sm:inline">
-                          {copiedAll ? l.copied : l.copyAll}
-                        </span>
+                        {copiedAll ? <Check size={16} className="text-clay-success" /> : <Copy size={16} />}
                       </button>
+                      {/* Aksi primer header — satu-satunya tombol solid. */}
                       <button
                         onClick={() => setShareOpen(true)}
                         disabled={chat.sending}
                         title={l.shareTitle}
                         aria-label={l.share}
                         data-testid="chat-share"
-                        className="btn-clay-ghost !min-h-[40px] !px-2.5 !py-2 text-xs disabled:opacity-50 sm:!px-3.5"
+                        className="inline-flex !min-h-[38px] items-center gap-1.5 rounded-clay-full bg-[rgb(var(--accent-coral))] px-3.5 py-2 text-xs font-extrabold text-white shadow-[0_2px_10px_rgb(249_115_98/0.35)] transition-all duration-150 hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:scale-[0.97] disabled:opacity-50"
                       >
-                        <Share2 size={14} className="sm:mr-1.5" />
+                        <Share2 size={14} />
                         <span className="hidden sm:inline">Bagikan</span>
                       </button>
                     </>
                   )}
                   <button
                     onClick={chat.handleNew}
-                    className="btn-clay-ghost !min-h-[40px] !px-3 !py-2 text-xs sm:!px-4"
+                    title={l.newChat}
                     aria-label={l.newChat}
                     data-testid="chat-new-top"
+                    className="flex !min-h-[40px] !w-10 items-center justify-center rounded-clay-full text-clay-muted transition-all duration-75 hover:-translate-y-0.5 hover:bg-clay-beige hover:text-clay-dark"
                   >
                     <Plus size={16} />
                   </button>
@@ -377,6 +431,24 @@ export default function ChatPage() {
                         completed={!chat.sending && !chat.hasError}
                       />
                     )}
+                    {/* Step-log Solve-then-Guide — tahap asli dari SSE backend.
+                        Tampil hanya di bubble streaming terakhir saat aktif. */}
+                    {chat.sending &&
+                      idx === chat.renderedMessages.length - 1 &&
+                      chat.stepLog.length > 0 && (
+                        <StepLog
+                          entries={chat.stepLog}
+                          terminal={
+                            chat.terminalLive
+                              ? {
+                                  title: "Verifikasi",
+                                  content: chat.terminalLive,
+                                  streaming: chat.sending,
+                                }
+                              : null
+                          }
+                        />
+                      )}
                     <MessageBubble
                       message={m}
                       isStreaming={chat.sending && idx === chat.renderedMessages.length - 1 && m.id.startsWith("stream-")}
@@ -479,12 +551,12 @@ export default function ChatPage() {
               setImageNonce((n) => n + 1);
               return;
             }
-            if (detectNoteIntent(input.question).isNoteRequest) {
+            if (detectNoteIntent(input.question).isNoteRequest && !chat.loop.toggleOn) {
               // Topik yang sedang dibahas di chat ikut jadi materi catatan —
               // hanya untuk beta tester (akses lewat /join). Non-beta tetap
               // bisa buat catatan seperti biasa (tanpa konteks percakapan).
-              // Pesan kosong (placeholder optimis/streaming) disaring di sini
-              // agar tidak pernah menjadi materi sumber null.
+              // Bila Eureka Multi Agent (loop) ON, biarkan dikirim ke loop agar
+              // agen Jejak menghasilkan artifact canvas langsung!
               setNoteHistory(
                 isBeta
                   ? chat.renderedMessages
@@ -502,8 +574,12 @@ export default function ChatPage() {
             chat.handleSend(input);
           }}
           onStop={chat.handleStop}
+          showMultiAgentToggle={multiAgentAvailable}
+          multiAgentOn={chat.loop.toggleOn}
+          onMultiAgentToggle={chat.setLoopToggle}
         />
       </main>
+      </div>
 
       {/* Overlay pembuatan catatan */}
       <NoteProgressOverlay

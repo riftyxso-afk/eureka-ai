@@ -35,6 +35,18 @@ export function db(): SupabaseClient<any, "public", any> {
   if (!adminClient) {
     adminClient = createClient(url, serviceKey, {
       auth: { persistSession: false },
+      global: {
+        // Supabase di balik Cloudflare: alamat IP pertama (104.18.38.10) kadang
+        // mengalami packet loss / connect timeout (10s default undici).
+        // Custom fetch dengan AbortSignal 25s memberi kesempatan fallback IP
+        // sebelum undici melempar ConnectTimeoutError ke handler.
+        fetch: (fetchUrl, opts) => {
+          return fetch(fetchUrl, {
+            ...opts,
+            signal: AbortSignal.timeout(25_000),
+          });
+        },
+      },
     });
   }
   return adminClient;

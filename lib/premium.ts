@@ -31,7 +31,8 @@ export type PremiumFeature =
   | "web-search"
   | "assistant-quiz"
   | "assistant-flashcards"
-  | "bab-regenerate";
+  | "bab-regenerate"
+  | "solve-then-guide";
 
 interface FeatureLimit {
   /** true = fitur hanya untuk premium (tanpa kuota free). */
@@ -50,6 +51,9 @@ export const FEATURE_LIMITS: Record<PremiumFeature, FeatureLimit> = {
   "assistant-quiz": { premiumOnly: false, limit: 2, period: "day" },
   "assistant-flashcards": { premiumOnly: false, limit: 2, period: "day" },
   "bab-regenerate": { premiumOnly: false, limit: 3, period: "month" },
+  // Solve-then-Guide (Eureka Multi Agent, PRD §6) — Pro only; cap biaya
+  // diterapkan terpisah via AGENT_ASTRA_DAILY_TOKEN_CAP (loopStore).
+  "solve-then-guide": { premiumOnly: true, limit: 0, period: "day" },
 };
 
 export const UPGRADE_URL = "/pricing";
@@ -323,6 +327,8 @@ function premiumFeatureLabel(feature: PremiumFeature): string {
       return "Flashcards AI";
     case "bab-regenerate":
       return "Tulis ulang bab";
+    case "solve-then-guide":
+      return "Solve-then-Guide (verifikasi soal sulit)";
   }
 }
 

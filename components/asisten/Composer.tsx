@@ -99,6 +99,8 @@ export interface ComposerSendInput {
   model?: string;
   reasoning?: boolean;
   skill?: string | null;
+  /** Solve-then-Guide manual (user Pro) — soal akan diverifikasi sandbox dulu. */
+  solveThenGuide?: boolean;
 }
 
 /** 3 mode kecepatan AI — label & deskripsi untuk UI selector. */
@@ -251,6 +253,13 @@ interface ComposerProps {
   isBeta?: boolean;
   /** User menekan tombol panggilan AI → parent membuka modal. */
   onCall?: () => void;
+  // ── Mode "Eureka Multi Agent" ──
+  /** Tampilkan pill toggle (user ber-flag & fitur aktif). */
+  showMultiAgentToggle?: boolean;
+  /** State toggle terkini (indikator iterasi dipakai dari loop state). */
+  multiAgentOn?: boolean;
+  /** Toggle berubah → parent menyimpan state (per sesi). */
+  onMultiAgentToggle?: (on: boolean) => void;
   onSend: (input: ComposerSendInput) => void;
   onStop?: () => void;
 }
@@ -272,6 +281,9 @@ export default function Composer({
   onNoteWizardClose,
   isBeta = false,
   onCall,
+  showMultiAgentToggle = false,
+  multiAgentOn = false,
+  onMultiAgentToggle,
   onSend,
   onStop,
 }: ComposerProps) {
@@ -299,6 +311,8 @@ export default function Composer({
   // Status premium — model premiumOnly (mis. GPT-6 Astra) dikunci untuk free.
   const { isPremium } = usePremium();
   const [reasoning, setReasoning] = useState(true);
+  // Solve-then-Guide manual (task 4.5) — sekali kirim lalu reset.
+  const [stgOnce, setStgOnce] = useState(false);
   // ── Beta: rekam suara → transkripsi → masuk textarea ──
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
@@ -403,13 +417,16 @@ export default function Composer({
     }
   }, []);
 
-  // Ukuran textarea menyesuaikan isi.
+  // Ukuran textarea menyesuaikan isi (compact default 28px/1 baris, auto grow ke scrollHeight).
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
-  }, [text]);
+    const minH = compact ? 28 : 28;
+    const maxH = compact ? 120 : 180;
+    const nextH = Math.max(minH, Math.min(el.scrollHeight, maxH));
+    el.style.height = `${nextH}px`;
+  }, [text, compact]);
 
   // Suggestion chip (initialValue berubah) → isi textarea + fokus.
   useEffect(() => {
@@ -668,12 +685,14 @@ export default function Composer({
       speedMode,
       model: selectedModel || undefined,
       reasoning,
+      solveThenGuide: stgOnce || undefined,
     } as unknown as ComposerSendInput);
     // Prompt yang sudah terkirim tidak lagi muncul di composer.
     setText("");
     setMentionIds([]);
     setAttachment(null);
     setAttachError(null);
+    setStgOnce(false);
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
@@ -779,21 +798,21 @@ export default function Composer({
               )}
             </AnimatePresence>
 
-            <div className={compact ? "px-3 py-2.5" : "px-4 py-3"}>
+            <div className={compact ? "px-3 py-2" : "px-4 py-2.5"}>
               <textarea
                 ref={textareaRef}
                 value={text}
                 onChange={(e) => handleChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
-                rows={2}
+                rows={1}
                 placeholder={placeholder ?? "Tanya apa saja… ketik @ untuk melampirkan catatanmu"}
-                className={`w-full resize-none bg-transparent font-semibold leading-relaxed text-clay-dark outline-none placeholder:text-clay-muted disabled:opacity-60 ${
-                  compact ? "max-h-[120px] text-[15px] min-h-[48px]" : "max-h-[180px] text-base min-h-[52px]"
+                className={`w-full resize-none bg-transparent font-semibold leading-normal text-clay-dark outline-none placeholder:text-clay-muted disabled:opacity-60 transition-[height] duration-75 ease-out ${
+                  compact ? "max-h-[120px] text-[14.5px] min-h-[26px]" : "max-h-[180px] text-[15px] min-h-[28px]"
                 }`}
                 data-testid="asisten-composer"
               />
-              <div className={`flex min-w-0 items-center justify-between gap-3 ${compact ? "mt-1" : "mt-1.5"}`}>
+              <div className="mt-1 flex min-w-0 items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                   {/* ── Tombol "+" — semua tool dalam satu menu (pola Prompt Bar) ──
                       Popover di-anchor ke tepi atas KARTU (bukan tombol) agar
@@ -868,7 +887,20 @@ export default function Composer({
                               setPlusOpen(false);
                               fileInputRef.current?.click();
                             }}
-                          />                          {/* Reasoning — toggle */}
+                          />
+                          {/* Mode Eureka Multi Agent (toggle loop) */}
+                          {showMultiAgentToggle && (
+                            <PlusRow
+                              icon={<Sparkles size={15} />}
+                              label="Eureka Multi Agent"
+                              desc={multiAgentOn ? "Mode loop tutoring aktif — klik untuk matikan" : "Aktifkan loop tutoring & artifact canvas"}
+                              active={multiAgentOn}
+                              onClick={() => {
+                                onMultiAgentToggle?.(!multiAgentOn);
+                              }}
+                            />
+                          )}
+                          {/* Reasoning — toggle */}
                           <PlusRow
                             icon={<Brain size={15} />}
                             label="Reasoning"
@@ -961,7 +993,9 @@ export default function Composer({
                             : `Kecepatan AI: ${cur.label} — ${cur.desc}`
                         }
                         className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
-                          manual ? "bg-clay-primary/15 text-clay-primary" : cur.active
+                          manual
+                            ? "bg-clay-beige text-clay-dark"
+                            : "border-2 border-clay-borderLight bg-clay-cream text-clay-muted hover:text-clay-dark"
                         } ${
                           compact ? "!min-h-[40px] !px-2.5 text-[11px]" : "!min-h-[38px] !px-2.5 text-[11px]"
                         }`}
@@ -976,7 +1010,9 @@ export default function Composer({
                           </>
                         ) : (
                           <>
-                            <cur.icon size={compact ? 14 : 16} />
+                            {/* Dot status tier kecil — warna tetap jadi penanda
+                                ringan, tombol utama tetap netral (task 5.1). */}
+                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${cur.dot}`} />
                             <span className="hidden whitespace-nowrap leading-none sm:inline">{cur.label}</span>
                           </>
                         )}

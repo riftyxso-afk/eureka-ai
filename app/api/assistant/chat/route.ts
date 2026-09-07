@@ -640,9 +640,9 @@ export async function POST(req: NextRequest) {
         emit({ type: "meta", mode: "assistant", model: "" });
         try {
           const maxTokensBySpeed: Record<AiSpeedMode, number> = {
-            fast: 1800,
-            normal: 3200,
-            deep: 5000,
+            fast: 3200,
+            normal: 4500,
+            deep: 8000,
           };
           const result = await aiChatStream(
             {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { BookMarked, Check, Copy, Paperclip, RefreshCw, Zap } from "lucide-react";
+import { BookMarked, Check, Copy, Info, Paperclip, RefreshCw } from "lucide-react";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
 import EurekaOrb from "@/components/ui/EurekaOrb";
@@ -34,6 +34,7 @@ interface MessageBubbleProps {
 /**
  * Tombol copy isi pesan dalam teks bersih (markdown di-strip).
  * Sembunyi saat konten kosong; feedback "Tersalin" ±2 detik.
+ * Muncul on-hover bubble (group-hover) — tetap tap-able di mobile.
  */
 function CopyButton({ content }: { content: string }) {
   const [copied, setCopied] = useState(false);
@@ -52,10 +53,9 @@ function CopyButton({ content }: { content: string }) {
       onClick={handleCopy}
       aria-label="Salin pesan"
       title="Salin pesan sebagai teks bersih"
-      className="inline-flex min-h-[26px] items-center gap-1 self-start rounded-clay-full border-2 border-clay-borderLight bg-clay-cream px-2 py-0.5 text-[11px] font-bold text-clay-muted shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 hover:text-clay-primary active:translate-y-1"
+      className="inline-flex h-7 w-7 items-center justify-center self-start rounded-clay-full text-clay-muted opacity-0 transition-all duration-100 hover:bg-clay-beige hover:text-clay-primary focus:opacity-100 group-hover:opacity-100 active:scale-95"
     >
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-      {copied ? "Tersalin" : "Salin"}
+      {copied ? <Check size={13} className="text-clay-success" /> : <Copy size={13} />}
     </button>
   );
 }
@@ -123,6 +123,15 @@ export default function MessageBubble({
     (isUser && (message.videoUrl || findYoutubeLink(message.content)?.url)) ||
     null;
 
+  // Bersihkan tag <artifact ...>...</artifact> dari tampilan bubble pesan chat
+  // agar isi artifact hanya tampil di panel Artifact Canvas terpisah.
+  const displayContent = isUser
+    ? message.content
+    : message.content
+        .replace(/<artifact\b[^>]*>([\s\S]*?)<\/artifact>/gi, "")
+        .replace(/<artifact\b[^>]*>[\s\S]*$/gi, "") // tag menggantung saat streaming
+        .trim();
+
   // Thinking terakhir yang sempat tampil — dipertahankan saat prop thinking
   // hilang (mis. jawaban selesai) agar tidak kedip. Disimpan via state di
   // efek (bukan mutasi ref saat render — bug + warning react-hooks/refs).
@@ -181,48 +190,50 @@ export default function MessageBubble({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-2.5"
+      className="group flex items-start gap-2.5"
     >
       <EurekaBlobAvatar size={32} className="mt-1 shrink-0" />
       <div className="flex min-w-0 max-w-[85%] flex-col gap-1.5">
         {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}
         {!isStreaming && !empty && displayThinking && (
-          <div className="break-words rounded-clay-md border border-clay-borderLight/60 bg-clay-beige/20 px-3 py-2">
+          <div className="break-words text-xs text-clay-muted">
             <ThinkingDots prevText={prevMessage?.content ?? null} thinking={displayThinking} working={false} />
           </div>
         )}
-        <div className="break-words rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-clay-cream px-4 py-3 shadow-clay-sm">
+        <div className="break-words text-clay-dark">
           {isStreaming && empty ? (
             <ThinkingDots prevText={prevMessage?.content ?? null} thinking={thinking} working={isStreaming} />
           ) : isStreaming ? (
-            <StreamingText content={message.content} sources={[]} followUps={[]} loop={false} fill />
-          ) : empty ? (
+            <StreamingText content={displayContent} sources={[]} followUps={[]} loop={false} fill />
+          ) : empty || !displayContent ? (
             <ThinkingDots prevText={prevMessage?.content ?? null} thinking={thinking} working={false} />
           ) : (
-            <MarkdownView content={message.content} className="break-words text-[13.5px] leading-relaxed" />
+            <MarkdownView content={displayContent} className="break-words text-[14px] leading-relaxed" />
           )}
         </div>
 
-        {/* Meta: model + salin — hanya saat jawaban lengkap (bukan streaming) */}
-        <div className="flex items-center gap-1.5 self-start">
-          {message.model && (
-            <span className="rounded-clay-full bg-clay-beige px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-wide text-clay-muted">
-              via {modelDisplayName(message.model)}
-            </span>
-          )}
-          {!isStreaming && !empty && <CopyButton content={message.content} />}
-        </div>
+        {/* Meta: salin muncul on-hover; model & durasi jadi tooltip ikon info
+            (metadata teknis tidak tampil default — chat-visual-hierarchy). */}
+        {!isStreaming && (!empty || displayContent) && (
+          <div className="flex items-center gap-1 self-start">
+            {message.model && (
+              <span
+                className="inline-flex h-6 w-6 cursor-help items-center justify-center rounded-clay-full text-clay-muted/50 opacity-0 transition-opacity duration-100 hover:text-clay-muted group-hover:opacity-100"
+                title={
+                  duration !== null && duration >= 0
+                    ? `${modelDisplayName(message.model)} · AI menjawab dalam ${formatDuration(duration)}`
+                    : modelDisplayName(message.model)
+                }
+              >
+                <Info size={13} />
+              </span>
+            )}
+            {displayContent && <CopyButton content={displayContent} />}
+          </div>
+        )}
 
         {!isStreaming && message.sources.length > 0 && (
           <SourceChips sources={message.sources} />
-        )}
-
-        {/* Lama AI menjawab — hanya saat jawaban sudah lengkap */}
-        {!isStreaming && !empty && duration !== null && duration >= 0 && (
-          <span className="self-start pl-1 text-[10px] font-bold text-clay-muted/70">
-            <Zap size={13} className="-mt-0.5 mr-1 inline text-clay-primary" />
-            AI menjawab dalam {formatDuration(duration)}
-          </span>
         )}
 
         {!isStreaming && empty && onRetry && (

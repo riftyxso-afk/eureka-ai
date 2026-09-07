@@ -5,7 +5,15 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Bot, MessageSquarePlus, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  Bot,
+  MessageSquarePlus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import type { AssistantChatSession } from "@/lib/assistant/types";
 
 interface ChatSidebarProps {
@@ -27,9 +35,26 @@ export default function ChatSidebar({
   onDelete,
 }: ChatSidebarProps) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const editRef = useRef<HTMLInputElement>(null);
+
+  // Baca preferensi collapsed dari localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("eureka_sidebar_collapsed");
+      if (saved !== null) setCollapsed(saved === "true");
+    } catch {}
+  }, []);
+
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem("eureka_sidebar_collapsed", String(next));
+    } catch {}
+  };
 
   useEffect(() => {
     setEditingId(null);
@@ -50,24 +75,74 @@ export default function ChatSidebar({
     }
   };
 
+  if (collapsed) {
+    return (
+      <div className="hidden h-full w-[60px] shrink-0 flex-col items-center gap-3 border-r border-clay-borderLight/60 bg-clay-cream py-3 transition-[width] duration-200 ease-in-out lg:flex">
+        {/* Tombol expand */}
+        <button
+          onClick={toggleCollapsed}
+          title="Buka sidebar riwayat chat"
+          aria-label="Expand sidebar"
+          className="flex h-9 w-9 items-center justify-center rounded-clay-full text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-dark"
+        >
+          <PanelLeftOpen size={18} />
+        </button>
+
+        {/* Tombol chat baru (compact) */}
+        <button
+          onClick={onNew}
+          title="Chat baru"
+          className="flex h-9 w-9 items-center justify-center rounded-clay-full bg-[rgb(var(--accent-coral))] text-white shadow-[0_2px_8px_rgb(249_115_98/0.3)] transition-transform hover:scale-105 active:scale-95"
+          aria-label="Chat baru"
+          data-testid="asisten-new-chat-collapsed"
+        >
+          <Plus size={16} />
+        </button>
+
+        <div className="my-1 h-px w-6 bg-clay-borderLight/60" />
+
+        {/* Ikon Dashboard di bawah strip */}
+        <Link
+          href="/dashboard"
+          title="Kembali ke Dashboard"
+          aria-label="Dashboard"
+          className="mt-auto flex h-9 w-9 items-center justify-center rounded-clay-full text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-primary"
+        >
+          <Bot size={18} />
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="sticky top-0 hidden max-h-[calc(100vh-2rem)] w-[260px] shrink-0 flex-col gap-2 self-start rounded-clay border-2 border-clay-borderLight bg-clay-cream p-3 shadow-clay-sm lg:flex">
-      {/* Header + tombol chat baru */}
-      <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight pb-2.5">
+    <div className="hidden h-full w-[260px] shrink-0 flex-col gap-2 border-r border-clay-borderLight/60 bg-clay-cream p-3 transition-[width] duration-200 ease-in-out lg:flex">
+      {/* Header + tombol chat baru & collapse */}
+      <div className="flex items-center justify-between gap-1 pb-1">
         <span className="flex items-center gap-2 text-sm font-extrabold text-clay-dark">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-clay-primary/15">
-            <Bot size={18} className="text-clay-primary" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-clay-beige text-clay-muted">
+            <Bot size={16} />
           </span>
           Riwayat Chat
         </span>
-        <button
-          onClick={onNew}
-          className="btn-clay-primary !min-h-[40px] !px-3 !py-2 text-xs"
-          aria-label="Chat baru"
-          data-testid="asisten-new-chat"
-        >
-          <Plus size={16} /> <span className="hidden xl:inline">Baru</span>
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onNew}
+            title="Chat baru"
+            className="inline-flex !min-h-[34px] items-center gap-1 rounded-clay-full bg-[rgb(var(--accent-coral))] px-2.5 py-1.5 text-xs font-extrabold text-white shadow-[0_2px_8px_rgb(249_115_98/0.3)] transition-all duration-150 hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:scale-[0.97]"
+            aria-label="Chat baru"
+            data-testid="asisten-new-chat"
+          >
+            <Plus size={15} /> <span className="hidden xl:inline">Baru</span>
+          </button>
+          <button
+            onClick={toggleCollapsed}
+            title="Tutup sidebar"
+            aria-label="Collapse sidebar"
+            className="flex h-8 w-8 items-center justify-center rounded-clay-full text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-dark"
+          >
+            <PanelLeftClose size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Daftar sesi */}
@@ -115,7 +190,7 @@ export default function ChatSidebar({
               key={s.id}
               className={`group flex items-center gap-1 rounded-clay-md pr-1.5 transition-all duration-75 ${
                 active
-                  ? "bg-clay-primary/15 shadow-[inset_4px_0_0_#8B5CF6]"
+                  ? "bg-[rgb(var(--accent-coral))]/12 shadow-[inset_4px_0_0_rgb(var(--accent-coral))]"
                   : "hover:bg-clay-beige"
               }`}
             >
@@ -156,7 +231,7 @@ export default function ChatSidebar({
       <Link
         href="/dashboard"
         data-tutorial-id="dashboard-nav"
-        className="border-t-[3px] border-clay-borderLight pt-2 text-center text-xs font-extrabold text-clay-muted hover:text-clay-primary"
+        className="border-t border-clay-borderLight/60 pt-2 text-center text-xs font-extrabold text-clay-muted hover:text-clay-primary"
       >
         ← Kembali ke Dashboard
       </Link>

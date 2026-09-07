@@ -34,6 +34,11 @@ export interface ChatToolOptions {
    * sebagai konteks jawaban AI dan sesi memakainya sebagai "video aktif".
    */
   videoUrl?: string | null;
+  /**
+   * Solve-then-Guide manual (fitur Pro, Eureka Multi Agent) — soal
+   * diselesaikan & diverifikasi di sandbox SEBELUM dialog Socratic.
+   */
+  solveThenGuide?: boolean;
 }
 
 /** Satu hasil pencarian web (tool globe) yang ditampilkan ke user. */

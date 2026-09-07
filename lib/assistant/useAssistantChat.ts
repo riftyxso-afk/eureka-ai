@@ -7,6 +7,16 @@ import {
   streamAssistantChat,
   type ClarificationQuestion,
 } from "@/lib/assistant-stream";
+import {
+  streamAgentLoop,
+  type LoopDecision,
+  type StepLogEntry,
+} from "@/lib/agents/loopStream";
+import {
+  ArtifactStreamParser,
+  type ArtifactParserEvent,
+} from "@/lib/agents/artifactParser";
+import type { Artifact } from "@/lib/agents/types";
 import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type {
   AssistantChatMessage,
@@ -24,6 +34,25 @@ export interface ChatSendInput extends ChatToolOptions {
   clarifications?: { id: string; question?: string; answer: string }[];
   /** User memilih "Langsung jawab saja" — lewati klarifikasi tanpa menilai ulang. */
   clarificationsSkipped?: boolean;
+}
+
+/** State loop "Eureka Multi Agent" yang tampil di UI (indikator iterasi). */
+export interface LoopUiState {
+  /** Toggle ON — dipertahankan saat ganti topik/sesi (PRD §5.1). */
+  toggleOn: boolean;
+  iteration: number;
+  maxIterations: number;
+  status: "active" | "goal_reached" | "max_iterations" | "user_stopped" | "manual_exit" | null;
+  decision: LoopDecision | null;
+}
+
+/** Artifact yang sedang dirender di canvas (live streaming included). */
+export interface CanvasState {
+  artifacts: Artifact[];
+  /** Artifact yang sedang menerima stream (terakhir dibuka). */
+  streamingId: string | null;
+  /** Panel canvas terbuka (dipakai toggle tombol). */
+  open: boolean;
 }
 
 export interface StreamingState {
@@ -92,6 +121,22 @@ export interface UseAssistantChatResult {
   answerClarification: (answers: { id: string; answer: string }[]) => Promise<void>;
   /** Lewati klarifikasi — langsung jawab dengan prompt apa adanya. */
   skipClarification: () => Promise<void>;
+  /** State Mode "Eureka Multi Agent" (toggle + iterasi untuk indikator). */
+  loop: LoopUiState;
+  /** Nyalakan/matikan toggle Multi Agent (dipanggil pill di Composer). */
+  setLoopToggle: (on: boolean) => void;
+  /** Artifact Canvas: daftar artifact + status streaming + open. */
+  canvas: CanvasState;
+  /** Buka panel canvas. */
+  openCanvas: () => void;
+  /** Tutup panel canvas. */
+  closeCanvas: () => void;
+  /** Simpan editan artifact markdown (version naik otomatis). */
+  saveArtifactEdit: (id: string, content: string) => void;
+  /** Step-log Solve-then-Guide (event asli; kosong saat tidak aktif). */
+  stepLog: StepLogEntry[];
+  /** Output terminal live (stdout/stderr asli sandbox). */
+  terminalLive: string;
 }
 
 /**
@@ -127,6 +172,53 @@ export function useAssistantChat(options: {
   const sendingRef = useRef(false);
   const lastSendRef = useRef<ChatSendInput | null>(null);
   const [clarification, setClarification] = useState<ClarificationQuestion[] | null>(null);
+  // ── Mode "Eureka Multi Agent" ──
+  // Toggle & iterasi per sesi; state terakhir dipertahankan saat ganti topik.
+  const [loop, setLoop] = useState<LoopUiState>({
+    toggleOn: false,
+    iteration: 0,
+    maxIterations: 6,
+    status: null,
+    decision: null,
+  });
+  // Ref agar handleSend membaca state toggle terbaru tanpa re-create callback.
+  const loopRef = useRef(loop);
+  useEffect(() => {
+    loopRef.current = loop;
+  }, [loop]);
+
+  // ── Artifact Canvas ──
+  const [canvas, setCanvas] = useState<CanvasState>({
+    artifacts: [],
+    streamingId: null,
+    open: false,
+  });
+  // Parser artifact hidup selama satu respons streaming (dibuat per send).
+  const parserRef = useRef<ArtifactStreamParser | null>(null);
+
+  // ── Step-log Solve-then-Guide (event SSE asli — PRD §8.4) ──
+  const [stepLog, setStepLog] = useState<StepLogEntry[]>([]);
+  const [terminalLive, setTerminalLive] = useState<string>("");
+
+  /** Buka panel canvas. */
+  const openCanvas = useCallback(() => {
+    setCanvas((c) => ({ ...c, open: true }));
+  }, []);
+
+  /** Tutup panel canvas & bersihkan artifact (mis. saat ganti sesi). */
+  const closeCanvas = useCallback(() => {
+    setCanvas((c) => ({ ...c, open: false }));
+  }, []);
+
+  /** Simpan editan artifact markdown — content baru + version bertambah. */
+  const saveArtifactEdit = useCallback((id: string, content: string) => {
+    setCanvas((c) => ({
+      ...c,
+      artifacts: c.artifacts.map((a) =>
+        a.id === id ? { ...a, content, version: a.version + 1 } : a
+      ),
+    }));
+  }, []);
   // Input & sesi yang sedang menunggu jawaban klarifikasi (untuk kirim ulang).
   const pendingInputRef = useRef<ChatSendInput | null>(null);
   const pendingSessionRef = useRef<string | null>(null);
@@ -187,6 +279,41 @@ export function useAssistantChat(options: {
     [flushStreamBuffer]
   );
 
+  /** Terapkan event parser artifact ke state canvas + teks chat. */
+  const applyParserEvents = useCallback(
+    (events: ArtifactParserEvent[]) => {
+      if (events.length === 0) return;
+      let chatText = "";
+      for (const ev of events) {
+        if (ev.kind === "chat") {
+          chatText += ev.text;
+        } else if (ev.kind === "artifact-open") {
+          setCanvas((c) => ({
+            ...c,
+            artifacts: [...c.artifacts, ev.artifact],
+            streamingId: ev.artifact.id,
+            open: true,
+          }));
+        } else if (ev.kind === "artifact-chunk") {
+          const { id, text } = ev;
+          setCanvas((c) => ({
+            ...c,
+            artifacts: c.artifacts.map((a) =>
+              a.id === id ? { ...a, content: a.content + text } : a
+            ),
+          }));
+        } else if (ev.kind === "artifact-close") {
+          setCanvas((c) => ({
+            ...c,
+            streamingId: c.streamingId === ev.id ? null : c.streamingId,
+          }));
+        }
+      }
+      if (chatText) queueStreamText("content", chatText);
+    },
+    [queueStreamText]
+  );
+
   const refreshSessions = useCallback(async () => {
     const userId = getUserId();
     if (!userId) return;
@@ -219,7 +346,41 @@ export function useAssistantChat(options: {
       const data = (await res.json()) as {
         messages?: AssistantChatMessage[];
       };
-      setMessages(data.messages ?? []);
+      const fetchedMsgs = data.messages ?? [];
+      setMessages(fetchedMsgs);
+
+      // Parse artifact dari riwayat percakapan terdahulu agar canvas terisi
+      // saat halaman di-load / di-refresh
+      if (fetchedMsgs.length > 0) {
+        let historyArtifacts: Artifact[] = [];
+        for (const msg of fetchedMsgs) {
+          if (msg.role === "assistant" && msg.content.includes("<artifact")) {
+            const historyParser = new ArtifactStreamParser();
+            const evs = historyParser.push(msg.content);
+            for (const ev of evs) {
+              if (ev.kind === "artifact-open") historyArtifacts.push(ev.artifact);
+              else if (ev.kind === "artifact-chunk") {
+                const target = historyArtifacts.find((a) => a.id === ev.id);
+                if (target) target.content += ev.text;
+              }
+            }
+            const flushEvs = historyParser.flush();
+            for (const ev of flushEvs) {
+              if (ev.kind === "artifact-chunk") {
+                const target = historyArtifacts.find((a) => a.id === ev.id);
+                if (target) target.content += ev.text;
+              }
+            }
+          }
+        }
+        if (historyArtifacts.length > 0) {
+          setCanvas({
+            artifacts: historyArtifacts,
+            streamingId: null,
+            open: true,
+          });
+        }
+      }
     } catch {
       // jaringan offline — tampilkan kosong
     } finally {
@@ -318,7 +479,8 @@ export function useAssistantChat(options: {
         },
         (ev) => {
           if (ev.type === "token") {
-            queueStreamText("content", ev.text);
+            // Artifact parser: pisahkan tag <artifact> dari teks chat.
+            applyParserEvents(parserRef.current?.push(ev.text) ?? []);
           } else if (ev.type === "thinking") {
             queueStreamText("thinking", ev.text);
           } else if (ev.type === "sources") {
@@ -377,6 +539,9 @@ export function useAssistantChat(options: {
       }
 
       // Pastikan sisa buffer ikut tampil sebelum riwayat final dimuat.
+      // Flush parser: tag artifact menggantung dilepas aman (PRD §7.3).
+      applyParserEvents(parserRef.current?.flush() ?? []);
+      parserRef.current = null;
       flushStreamBuffer();
       setSending(false);
       sendingRef.current = false;
@@ -394,7 +559,133 @@ export function useAssistantChat(options: {
         setTimeout(() => void refreshSessions(), 4000);
       }
     },
-    [loadMessages, refreshSessions, queueStreamText, flushStreamBuffer, clearStreamBuffer, sessions]
+    [loadMessages, refreshSessions, queueStreamText, flushStreamBuffer, clearStreamBuffer, sessions, applyParserEvents]
+  );
+
+  // ── Kirim via Mode "Eureka Multi Agent" (/api/agents/loop) ──────────────
+  // Satu request = satu fase loop; state persisten di server (tahan refresh).
+  const sendLoop = useCallback(
+    async (targetSessionId: string, input: ChatSendInput, turnToggleOn: boolean) => {
+      const userId = getUserId();
+      if (!userId) return;
+
+      lastSendRef.current = input;
+      stoppedRef.current = false;
+      setSending(true);
+      sendingRef.current = true;
+      clearStreamBuffer();
+      setStreaming(newStreaming());
+      setClarification(null);
+      // Parser artifact baru untuk respons ini (token-by-token, PRD §7.3).
+      parserRef.current = new ArtifactStreamParser();
+      // Step-log kosong di awal turn (event step datang dari backend saja).
+      setStepLog([]);
+      setTerminalLive("");
+
+      // Optimis: tampilkan pesan user + placeholder asisten (pola sendTo).
+      const nowIso = new Date().toISOString();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: "local-" + nowIso,
+          sessionId: targetSessionId,
+          role: "user",
+          content: input.question,
+          mentions: input.mentions,
+          sources: [],
+          model: null,
+          createdAt: nowIso,
+          attachmentName: input.attachment?.filename ?? null,
+          videoUrl: null,
+        },
+        {
+          id: "stream-" + nowIso,
+          sessionId: targetSessionId,
+          role: "assistant",
+          content: "",
+          mentions: [],
+          sources: [],
+          model: null,
+          createdAt: nowIso,
+        },
+      ]);
+
+      // Riwayat untuk konteks Socra/Kompas (12 pesan terakhir).
+      const history = messages
+        .filter((m) => m.content.trim().length > 0)
+        .slice(-12)
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const { abort, completed } = await streamAgentLoop(
+        {
+          sessionId: targetSessionId,
+          userId,
+          message: input.question,
+          toggleOn: turnToggleOn,
+          history,
+          solveThenGuide: input.solveThenGuide === true,
+        },
+        (ev) => {
+          if (ev.type === "token") {
+            applyParserEvents(parserRef.current?.push(ev.text ?? "") ?? []);
+          } else if (ev.type === "thinking") {
+            queueStreamText("thinking", ev.text ?? "");
+          } else if (ev.type === "loop_state") {
+            flushStreamBuffer();
+            setLoop((l) => ({
+              ...l,
+              iteration: ev.iteration ?? l.iteration,
+              maxIterations: ev.maxIterations ?? l.maxIterations,
+              status: (ev.status as LoopUiState["status"]) ?? null,
+              decision: ev.decision ?? null,
+            }));
+          } else if (ev.type === "step") {
+            // Step ASLI dari backend (PRD §8.4) — update/append by label.
+            flushStreamBuffer();
+            const label = ev.label ?? "";
+            const status = (ev.status ?? "running") as StepLogEntry["status"];
+            setStepLog((list) => {
+              const idx = list.findIndex((s) => s.label === label);
+              if (idx === -1) return [...list, { label, status }];
+              const next = [...list];
+              next[idx] = { label, status };
+              return next;
+            });
+          } else if (ev.type === "terminal_output") {
+            // stdout/stderr ASLI sandbox — baris demi baris.
+            setTerminalLive((t) => (t ? t + "\n" : "") + (ev.line ?? ""));
+          } else if (ev.type === "meta") {
+            flushStreamBuffer();
+            if (ev.model) setStreaming((s) => ({ ...s, model: ev.model ?? null }));
+          } else if (ev.type === "error") {
+            flushStreamBuffer();
+            setStreaming((s) => ({ ...s, error: ev.message ?? "Terjadi kesalahan." }));
+          }
+          // done → buffer di-flush setelah await completed.
+        }
+      );
+      abortRef.current = abort;
+
+      try {
+        await completed;
+      } catch {
+        if (!stoppedRef.current) {
+          setStreaming((s) => ({
+            ...s,
+            error: "Koneksi terputus. Coba lagi ya.",
+          }));
+        }
+      }
+
+      applyParserEvents(parserRef.current?.flush() ?? []);
+      parserRef.current = null;
+      flushStreamBuffer();
+      setSending(false);
+      sendingRef.current = false;
+      await loadMessages(targetSessionId);
+      await refreshSessions();
+    },
+    [loadMessages, refreshSessions, queueStreamText, flushStreamBuffer, clearStreamBuffer, messages, applyParserEvents]
   );
 
   // Auto-kirim prompt dari /home — tunggu riwayat pertama selesai dimuat
@@ -433,9 +724,19 @@ export function useAssistantChat(options: {
           return;
         }
       }
-      await sendTo(targetSessionId, input);
+      // Toggle ON → jalur loop multi-agent; OFF → chat asisten biasa.
+      // Catatan: toggle yang baru dimatikan tetap kirim via loop SEKALI
+      // agar server menandai stop instan (status user_stopped).
+      const turnToggleOn = loopRef.current.toggleOn;
+      const wasActive =
+        loopRef.current.status === "active" || loopRef.current.status === null;
+      if (turnToggleOn || (loopRef.current.status === "active" && !turnToggleOn) || (wasActive && !turnToggleOn && loopRef.current.iteration > 0)) {
+        await sendLoop(targetSessionId, input, turnToggleOn);
+      } else {
+        await sendTo(targetSessionId, input);
+      }
     },
-    [sessionId, onSessionCreated, sendTo]
+    [sessionId, onSessionCreated, sendTo, sendLoop]
   );
 
   const handleStop = useCallback(() => {
@@ -546,5 +847,22 @@ export function useAssistantChat(options: {
     clarification,
     answerClarification,
     skipClarification,
+    // Mode "Eureka Multi Agent"
+    loop,
+    setLoopToggle: (on: boolean) =>
+      setLoop((l) => ({
+        ...l,
+        toggleOn: on,
+        // Nyalakan ulang toggle setelah loop selesai → state bersih.
+        ...(on ? { status: null, decision: null } : {}),
+      })),
+    // Artifact Canvas
+    canvas,
+    openCanvas,
+    closeCanvas,
+    saveArtifactEdit,
+    // Step-log Solve-then-Guide
+    stepLog,
+    terminalLive,
   };
 }
