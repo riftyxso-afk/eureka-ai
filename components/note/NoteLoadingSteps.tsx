@@ -22,6 +22,9 @@ import type { NoteStep } from "@/components/note/useNoteSteps";
  * (tanpa timer/mock). Baris aktif berdenyut, baris selesai berceklis; tiap
  * baris bisa di-expand untuk melihat detail, dan seluruh daftar bisa
  * diciutkan dari header. Visual tema clay Eureka.
+ *
+ * Sub-steps (per-bab) ditampilkan di bawah langkah "chapters" dengan
+ * indentasi dan style lebih kecil.
  */
 
 const StepIcon = ({ icon, className }: { icon: string; className?: string }) => {
@@ -49,7 +52,8 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
   const [listOpen, setListOpen] = useState(true);
   const [openRows, setOpenRows] = useState<Set<string>>(new Set());
 
-  const doneCount = steps.filter((s) => s.status === "done").length;
+  const doneCount = steps.filter((s) => s.status === "done" && !s.isSubStep).length;
+  const totalParents = steps.filter((s) => !s.isSubStep).length;
 
   const toggleRow = (id: string) =>
     setOpenRows((cur) => {
@@ -77,7 +81,7 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
           }`}
         />
         <span className="tabular-nums">
-          {doneCount}/{steps.length} langkah selesai
+          {doneCount}/{totalParents} langkah selesai
         </span>
       </button>
 
@@ -94,6 +98,7 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
             <AnimatePresence initial={false}>
               {steps.map((step) => {
                 const isActive = step.status === "active";
+                const isSubStep = step.isSubStep;
                 const rowOpen = openRows.has(step.id);
                 return (
                   <motion.div
@@ -107,21 +112,23 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
                       aria-expanded={rowOpen}
                       onClick={() => step.detail && toggleRow(step.id)}
                       className={`flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1 text-left transition-colors ${
-                        step.detail ? "hover:bg-clay-cream" : ""
-                      }`}
+                        isSubStep ? "ml-5" : ""
+                      } ${step.detail ? "hover:bg-clay-cream" : ""}`}
                     >
                       {/* Ikon status langkah */}
                       <span
-                        className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                        className={`relative flex shrink-0 items-center justify-center rounded-full border ${
+                          isSubStep ? "h-4 w-4" : "h-5 w-5"
+                        } ${
                           step.status === "done"
                             ? "border-clay-success/40 bg-clay-success/15 text-clay-success"
                             : "border-clay-primary/40 bg-clay-primary/10 text-clay-primary"
                         }`}
                       >
                         {step.status === "done" ? (
-                          <Check size={11} strokeWidth={3} />
+                          <Check size={isSubStep ? 9 : 11} strokeWidth={3} />
                         ) : (
-                          <StepIcon icon={step.icon} />
+                          <StepIcon icon={step.icon} className={isSubStep ? "!h-3 !w-3" : ""} />
                         )}
                         {isActive && (
                           <span className="absolute inset-0 animate-ping rounded-full bg-clay-primary/20" />
@@ -130,7 +137,9 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
 
                       {/* Label aksi */}
                       <span
-                        className={`shrink-0 text-xs font-bold ${
+                        className={`shrink-0 font-bold ${
+                          isSubStep ? "text-[11px]" : "text-xs"
+                        } ${
                           step.status === "done"
                             ? "text-clay-muted"
                             : "text-clay-dark"
@@ -141,7 +150,7 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
 
                       {/* Chip detail baris aktif */}
                       {isActive && step.detail && (
-                        <span className="inline-flex min-w-0 flex-1 items-center truncate rounded-full bg-clay-inputBg px-2 py-0.5 text-[11px] font-semibold text-clay-muted">
+                        <span className="inline-flex min-w-0 flex-1 items-center truncate rounded-full bg-clay-inputBg px-2 py-0.5 text-[10px] font-semibold text-clay-muted">
                           {step.detail}
                         </span>
                       )}

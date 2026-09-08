@@ -9,6 +9,7 @@ import { aiChatJson, hasAiKey } from "./ai";
 import type { WebImage } from "./firecrawl";
 import type { ProcessedContent } from "./processSubtitle";
 import type { PhaseProgressFn } from "./progressTracker";
+import type { ProgressTracker } from "./progressTracker";
 import { uploadNoteImage } from "./noteImageStorage";
 import {
   IMAGE_PLACEMENT_RULES,
@@ -220,7 +221,8 @@ export async function processWebPageToChapters(
   text: string,
   images: WebImage[],
   prefs: WebPreferences = {},
-  onProgress?: PhaseProgressFn
+  onProgress?: PhaseProgressFn,
+  tracker?: ProgressTracker
 ): Promise<ProcessedContent> {
   const clean = text.trim();
   if (clean.length < 120) {
@@ -257,6 +259,8 @@ export async function processWebPageToChapters(
   const chapters: NoteChapter[] = [];
   for (let i = 0; i < outline.length; i++) {
     const item = outline[i];
+    // Emit chapter sub-step: generating
+    tracker?.chapterStep(i, outline.length, item.title, "active");
     onProgress?.(
       0.12 + (i / outline.length) * 0.78,
       `Menulis bab ${i + 1}/${outline.length}: ${item.title}`
@@ -269,6 +273,8 @@ export async function processWebPageToChapters(
       title: item.title,
       content,
     });
+    // Emit chapter sub-step: done
+    tracker?.chapterStep(i, outline.length, item.title, "done");
   }
 
   onProgress?.(0.94, "Membuat ringkasan & poin penting...");

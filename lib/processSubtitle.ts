@@ -10,6 +10,7 @@ import type { NoteChapter } from "./types";
 import type { TranscriptSegment } from "./rag/extract";
 import { aiChatJson, extractJsonObject, hasAiKey, isAiBusyError } from "./ai";
 import type { PhaseProgressFn } from "./progressTracker";
+import type { ProgressTracker } from "./progressTracker";
 import {
   buildChapterContentGuide,
   buildChapterCountRule,
@@ -774,7 +775,8 @@ async function summarizeWithAI(
   text: string,
   segments?: TranscriptSegment[],
   prefs: NotePreferences = {},
-  onProgress?: PhaseProgressFn
+  onProgress?: PhaseProgressFn,
+  tracker?: ProgressTracker
 ): Promise<ProcessedContent> {
   onProgress?.(0.08, "Membuat kerangka bab dengan AI...");
   const outline = await buildYoutubeOutline(text, prefs);
@@ -789,6 +791,8 @@ async function summarizeWithAI(
   const chapters: NoteChapter[] = [];
   for (let i = 0; i < outline.chapters.length; i++) {
     const item = outline.chapters[i];
+    // Emit chapter sub-step: generating
+    tracker?.chapterStep(i, outline.chapters.length, item.title, "active");
     onProgress?.(
       0.12 + (i / outline.chapters.length) * 0.78,
       `Menulis bab ${i + 1}/${outline.chapters.length}: ${item.title}`
@@ -802,6 +806,8 @@ async function summarizeWithAI(
         chapters
       );
       chapters.push(chapter);
+      // Emit chapter sub-step: done
+      tracker?.chapterStep(i, outline.chapters.length, item.title, "done");
     } catch (e) {
       // AI sibuk/kuota habis → gagalkan proses SEKARANG (jangan lanjut
       // menulis bab lain yang pasti gagal juga). Popup error akan muncul.
@@ -817,6 +823,8 @@ async function summarizeWithAI(
           excerpt ||
           `(Bab "${item.title}" gagal ditulis AI — coba buat catatan lagi.)`,
       });
+      // Emit chapter sub-step: done (with fallback content)
+      tracker?.chapterStep(i, outline.chapters.length, item.title, "done");
     }
   }
 
@@ -873,7 +881,8 @@ export async function processYouTubeSubtitle(
   segments?: TranscriptSegment[],
   prefs: NotePreferences = {},
   useAI: boolean = true,
-  onProgress?: PhaseProgressFn
+  onProgress?: PhaseProgressFn,
+  tracker?: ProgressTracker
 ): Promise<ProcessedContent> {
   const clean = subtitleText.trim();
   if (clean.length === 0) {
@@ -887,7 +896,7 @@ export async function processYouTubeSubtitle(
 
   if (useAI && hasAiKey() && clean.length > 400) {
     try {
-      const result = await summarizeWithAI(clean, segments, prefs, onProgress);
+      const result = await summarizeWithAI(clean, segments, prefs, onProgress, tracker);
       console.info(
         `[processYouTubeSubtitle] AI: ${result.chapters.length} bab, ${result.keyPoints.length} poin penting`
       );

@@ -230,6 +230,9 @@ Output HANYA JSON object, tanpa teks lain:
  * Enrichment utama: loop tiap bab → query → search (budget 5 sumber) →
  * ekstrak data → sisipkan inline. Bab yang gagal/tidak memenuhi syarat
  * dikembalikan apa adanya.
+ *
+ * Dioptimasi: chapter diproses PARALEL (max 3 concurrent) untuk mempercepat.
+ * Budget sumber dialokasikan per bab agar tidak melebihi MAX_TOTAL_SOURCES.
  */
 export async function enrichChaptersWithWebSearch(
   noteTitle: string,
@@ -242,54 +245,48 @@ export async function enrichChaptersWithWebSearch(
     return { chapters, references: [], totalSearches: 0 };
   }
 
-  const enriched: NoteChapter[] = [];
-  const references: SearchSource[] = [];
-  let totalSearches = 0;
-
+  // Filter chapter yang perlu enrichment
+  const candidates: { index: number; chapter: NoteChapter }[] = [];
   for (let i = 0; i < chapters.length; i++) {
     const chapter = chapters[i];
     const skip =
       chapter.content.length < MIN_CHAPTER_LENGTH ||
       /sumber|referensi|daftar pustaka|bibliografi/i.test(chapter.title);
+    if (!skip) candidates.push({ index: i, chapter });
+  }
 
-    if (skip || totalSearches >= MAX_TOTAL_SOURCES) {
-      enriched.push(chapter);
-      continue;
-    }
+  // Alokasi budget per chapter (bagi rata MAX_TOTAL_SOURCES)
+  const budgetPerChapter = Math.min(
+    MAX_SOURCES_PER_CHAPTER,
+    Math.floor(MAX_TOTAL_SOURCES / Math.max(candidates.length, 1))
+  );
 
+  // Proses paralel (max 3 concurrent)
+  const CONCURRENCY = 3;
+  const enrichedResults: Map<number, { chapter: NoteChapter; sources: SearchSource[] }> = new Map();
+  let doneCount = 0;
+
+  async function enrichOne(c: { index: number; chapter: NoteChapter }) {
+    onProgress?.(doneCount, candidates.length, `Memvalidasi: ${c.chapter.title}`);
     try {
-      onProgress?.(i, chapters.length, `Memvalidasi: ${chapter.title}`);
-      const allowed = Math.min(
-        MAX_SOURCES_PER_CHAPTER,
-        MAX_TOTAL_SOURCES - totalSearches
-      );
-      if (allowed <= 0) {
-        enriched.push(chapter);
-        continue;
-      }
+      const allowed = Math.min(budgetPerChapter, MAX_TOTAL_SOURCES);
+      if (allowed <= 0) return;
 
       const query = await generateSearchQuery(
         noteTitle,
-        chapter.title,
-        chapter.content.slice(0, 500),
+        c.chapter.title,
+        c.chapter.content.slice(0, 500),
         language
       );
       const results = await searchAndScrape(query, allowed);
-      if (results.length === 0) {
-        enriched.push(chapter);
-        continue;
-      }
-      totalSearches += results.length;
+      if (results.length === 0) return;
 
-      const data = await extractEnrichmentData(chapter.content, results, language);
+      const data = await extractEnrichmentData(c.chapter.content, results, language);
       const hasData =
         data.validationFacts.length > 0 ||
         data.enrichmentPoints.length > 0 ||
         data.examples.length > 0;
-      if (!hasData) {
-        enriched.push(chapter);
-        continue;
-      }
+      if (!hasData) return;
 
       const sources: SearchSource[] = results.map((r) => ({
         url: r.url,
@@ -297,12 +294,37 @@ export async function enrichChaptersWithWebSearch(
         snippet: r.content.trim().replace(/\s+/g, " ").slice(0, 240),
       }));
 
-      const newContent = await enrichChapterContent(chapter, data, sources, language);
-      enriched.push({ ...chapter, content: newContent, sources });
-      references.push(...sources);
+      const newContent = await enrichChapterContent(c.chapter, data, sources, language);
+      enrichedResults.set(c.index, {
+        chapter: { ...c.chapter, content: newContent, sources },
+        sources,
+      });
     } catch (e) {
-      console.warn(`[webSearchEnrichment] Bab "${chapter.title}" dilewati:`, e);
-      enriched.push(chapter);
+      console.warn(`[webSearchEnrichment] Bab "${c.chapter.title}" dilewati:`, e);
+    } finally {
+      doneCount++;
+    }
+  }
+
+  // Jalankan paralel dengan batas concurrency
+  for (let i = 0; i < candidates.length; i += CONCURRENCY) {
+    const batch = candidates.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(enrichOne));
+  }
+
+  // Susun hasil sesuai urutan asli
+  const enriched: NoteChapter[] = [];
+  const references: SearchSource[] = [];
+  let totalSearches = 0;
+
+  for (let i = 0; i < chapters.length; i++) {
+    const result = enrichedResults.get(i);
+    if (result) {
+      enriched.push(result.chapter);
+      references.push(...result.sources);
+      totalSearches += result.sources.length;
+    } else {
+      enriched.push(chapters[i]);
     }
   }
 

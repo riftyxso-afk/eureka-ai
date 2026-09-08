@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
       // pemilih bahasa), kecuali wizard mengirim preferensi eksplisit.
       bahasa: String(form.get("bahasa")?.toString().trim() || languageFromRequest(req)),
       chapterCount: clampChapterCount(form.get("chapterCount") ?? undefined),
-      generationMode: String(form.get("generationMode") ?? "lengkap") as NotePrefs["generationMode"],
+      generationMode: String(form.get("generationMode") ?? "cepat") as NotePrefs["generationMode"],
       assignment: form.get("assignment") === "1" || form.get("assignment") === "true",
       translate: form.get("translate") === "1" || form.get("translate") === "true",
       noteType: validateNoteType(form.get("noteType")),
@@ -296,6 +296,7 @@ export async function POST(req: NextRequest) {
               prefs,
               jobId: id,
               userId,
+              tracker,
             },
             jobProgress
           );

@@ -113,6 +113,8 @@ export interface NotesProcessorInput {
   jobId?: string;
   /** Pemilik catatan (UUID users) — wajib agar sesuai FK notes.user_id. */
   userId?: string;
+  /** Progress tracker untuk emit chapter sub-steps. */
+  tracker?: import("./progressTracker").ProgressTracker;
 }
 
 /** Label ramah user per jenis sumber. */
@@ -329,7 +331,7 @@ export async function processNoteForBackground(
     sources,
     report
   );
-  report("extract", 15, "Materi siap diproses.");
+  done("extract", "Materi siap diproses.");
 
   const noteId = randomUUID();
 
@@ -355,7 +357,8 @@ export async function processNoteForBackground(
       extracted.segments,
       prefs,
       true,
-      (fraction: number, label: string) => advance("chapters", fraction, label)
+      (fraction: number, label: string) => advance("chapters", fraction, label),
+      input.tracker
     );
     if (input.jobId && (await isJobCancelled(input.jobId))) {
       throw new JobCancelledError();
@@ -372,7 +375,8 @@ export async function processNoteForBackground(
       extracted.text,
       webImages,
       prefs,
-      (fraction: number, label: string) => advance("chapters", fraction, label)
+      (fraction: number, label: string) => advance("chapters", fraction, label),
+      input.tracker
     );
     if (input.jobId && (await isJobCancelled(input.jobId))) {
       throw new JobCancelledError();
@@ -472,10 +476,11 @@ export async function processNoteForBackground(
     }
   }
 
-  // Enrich pasca-rangkum (selain sumber web yang gambarnya dari halaman itu sendiri):
-  // cari materi terkait via Firecrawl → validasi, tambah poin penting, dan sisipkan
-  // gambar yang relevan ke bab — semuanya otomatis. Gagal tidak menggagalkan proses.
-  if (singleSource?.type !== "web" && !isFast) {
+  // Enrich pasca-rangkum: cari materi terkait via Firecrawl → validasi, tambah
+  // poin penting, dan sisipkan gambar yang relevan ke bab.
+  // SKIP bila mode cepat ATAU web search enrichment akan jalan (antisipasi redundant).
+  // Gambar dari sumber web sudah ditangkap di fase extract (processWeb.ts).
+  if (singleSource?.type !== "web" && !isFast && !isWebSearchEnrichmentAvailable()) {
     try {
       advance("enrichment", 0.03, "Mencari materi pendukung...");
       const enriched = await enrichNoteWithFirecrawl(note);

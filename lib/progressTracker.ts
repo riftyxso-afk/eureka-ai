@@ -21,7 +21,7 @@ export type ProcessPhase =
  */
 export interface StepInfo {
   /** Identitas langkah = fase pipeline (satu baris per fase). */
-  id: ProcessPhase;
+  id: ProcessPhase | string;
   /** Label aksi dalam bahasa Indonesia. */
   label: string;
   /** Kunci ikon UI (dipetakan ke ikon lucide di komponen). */
@@ -30,6 +30,8 @@ export interface StepInfo {
   detail?: string;
   /** active = sedang berjalan; done = selesai. */
   status: "active" | "done";
+  /** true = sub-step di dalam fase (mis. per-bab). */
+  isSubStep?: boolean;
 }
 
 export interface ProgressEvent {
@@ -123,6 +125,7 @@ export const PHASE_STEP_META: Record<ProcessPhase, { label: string; icon: string
 
 export class ProgressTracker {
   private readonly sessionId: string;
+  private lastPhase: ProcessPhase | null = null;
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -133,6 +136,27 @@ export class ProgressTracker {
   /** Emit event dengan persen absolut 0-100; otomatis menyertakan step UI. */
   emit(phase: ProcessPhase, percent: number, message: string, stepDone = false) {
     const meta = PHASE_STEP_META[phase];
+
+    // Otomatis mark phase sebelumnya sebagai "done" saat phase baru mulai
+    if (this.lastPhase && this.lastPhase !== phase && !stepDone) {
+      const prevMeta = PHASE_STEP_META[this.lastPhase];
+      publishProgress(this.sessionId, {
+        phase: this.lastPhase,
+        percent: phaseDonePercent(this.lastPhase),
+        message: `${prevMeta.label} selesai`,
+        timestamp: Date.now(),
+        step: {
+          id: this.lastPhase,
+          label: prevMeta.label,
+          icon: prevMeta.icon,
+          detail: `${prevMeta.label} selesai`,
+          status: "done",
+        },
+      });
+    }
+
+    if (!stepDone) this.lastPhase = phase;
+
     publishProgress(this.sessionId, {
       phase,
       percent: Math.max(0, Math.min(100, Math.round(percent))),
@@ -156,6 +180,35 @@ export class ProgressTracker {
   /** Tandai satu fase selesai. */
   done(phase: ProcessPhase, message: string) {
     this.emit(phase, phaseDonePercent(phase), message, true);
+    if (this.lastPhase === phase) this.lastPhase = null;
+  }
+
+  /**
+   * Emit sub-step per chapter — muncul sebagai baris terpisah di UI loading.
+   * @param chapterIndex indeks bab (0-based)
+   * @param totalJumlah total bab
+   * @param chapterTitle judul bab
+   * @param status "active" = generating, "done" = selesai
+   */
+  chapterStep(chapterIndex: number, totalJumlah: number, chapterTitle: string, status: "active" | "done") {
+    const stepId = `chapter-${chapterIndex}`;
+    const detail = status === "done"
+      ? `✓ ${chapterTitle}`
+      : `Menulis: ${chapterTitle}`;
+    publishProgress(this.sessionId, {
+      phase: "chapters",
+      percent: phaseToPercent("chapters", 0.12 + (chapterIndex / Math.max(totalJumlah, 1)) * 0.78),
+      message: `Bab ${chapterIndex + 1}/${totalJumlah}: ${chapterTitle}`,
+      timestamp: Date.now(),
+      step: {
+        id: stepId,
+        label: `Bab ${chapterIndex + 1}/${totalJumlah}`,
+        icon: "pen",
+        detail,
+        status,
+        isSubStep: true,
+      },
+    });
   }
 
   /** Wrapper fase: emit awal → jalankan kerja → emit selesai. */

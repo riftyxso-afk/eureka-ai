@@ -69,9 +69,13 @@ const THINKING_SET = new Set([
   "deepseek-v4-pro",
   "deepseek-v4-pro-0813",
   "qwen3.8-max",
-  "grok-4.6",
   "claude-opus-5",
   "muse-spark-1.2",
+  "gpt-5.6-luna",
+  "gpt-5.6-sol",
+  "gpt-5.6-terra",
+  "grok-4.5-high",
+  "grok-4.6-xhigh",
 ]);
 
 /** Model free untuk OpenAgentic & AIMurah (terverifikasi live dari /models OpenAgentic). */
@@ -444,6 +448,7 @@ export function extractContentFromResponse(resText: string): string {
 
   // Kasus 2: respons SSE (stream) — gabungkan choices[].delta.content.
   // Dipakai untuk gateway yang mengirim stream walau request non-stream.
+  // Thinking models: abaikan reasoning_content, ambil content saja.
   const sseParts: string[] = [];
   let hasSse = false;
   for (const line of resText.split(/\r?\n/)) {
@@ -456,11 +461,13 @@ export function extractContentFromResponse(resText: string): string {
     }
     try {
       const parsed = JSON.parse(payload) as {
-        choices?: { delta?: { content?: unknown }; message?: { content?: unknown } }[];
+        choices?: { delta?: { content?: unknown; reasoning_content?: unknown }; message?: { content?: unknown } }[];
       };
-      const delta = parsed?.choices?.[0]?.delta?.content;
+      const delta = parsed?.choices?.[0]?.delta;
       const message = parsed?.choices?.[0]?.message?.content;
-      const part = typeof delta === "string" ? delta : typeof message === "string" ? message : "";
+      // Ambil content (bukan reasoning_content) — thinking models
+      // mengirim reasoning_content di SSE tapi content tetap JSON yang diminta.
+      const part = typeof delta?.content === "string" ? delta.content : typeof message === "string" ? message : "";
       if (part.length > 0) {
         sseParts.push(part);
         hasSse = true;
@@ -692,7 +699,10 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
     const darurat = provider.name !== firstProviderName;
     let useJsonFormat = Boolean(options.json);
     for (let attempt = 1; attempt <= attemptsPerProvider; attempt++) {
-      if (useJsonFormat) body.response_format = { type: "json_object" };
+      // Thinking models: skip response_format untuk menghindari
+      // model return reasoning_content tanpa JSON content.
+      const isThinkingModel = THINKING_SET.has(provider.model);
+      if (useJsonFormat && !isThinkingModel) body.response_format = { type: "json_object" };
       else delete body.response_format;
 
       try {
@@ -710,7 +720,8 @@ export async function aiChat(options: AiChatOptions): Promise<string> {
         }
         // Gagal (error apa pun, termasuk 401/403 key invalid): coba sekali
         // tanpa response_format (bila mode JSON), lalu pindah ke provider lain.
-        if (Boolean(options.json) && useJsonFormat) {
+        // Thinking models sudah skip response_format, tidak perlu retry tanpa.
+        if (Boolean(options.json) && useJsonFormat && !THINKING_SET.has(provider.model)) {
           useJsonFormat = false;
           try {
             const content = await doRequest(provider);

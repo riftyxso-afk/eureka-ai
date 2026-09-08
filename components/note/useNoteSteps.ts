@@ -9,6 +9,7 @@ export interface NoteStep {
   icon: string;
   detail?: string;
   status: "active" | "done";
+  isSubStep?: boolean;
 }
 
 /** Payload event kemajuan dari SSE /api/notes/process-progress. */
@@ -26,6 +27,9 @@ export interface NoteProgressEvent {
  * state dibangun per id langkah — event duplikat hanya memperbarui, tidak
  * menambah baris. Urutan baris = urutan kedatangan pertama tiap id.
  * Tidak ada timer/mock: baris hanya berubah saat event SSE tiba.
+ *
+ * Sub-steps (chapter-0, chapter-1, ...) dikelompokkan di bawah
+ * langkah "chapters" sebagai children.
  */
 export function useNoteSteps() {
   const [steps, setSteps] = useState<NoteStep[]>([]);
@@ -40,12 +44,26 @@ export function useNoteSteps() {
     if (existing) {
       // Update di tempat — tidak menambah baris baru (aman untuk replay).
       seen.set(step.id, { ...step });
-      setSteps(orderRef.current.map((id) => seen.get(id)!));
     } else {
       seen.set(step.id, { ...step });
       orderRef.current = [...orderRef.current, step.id];
-      setSteps(orderRef.current.map((id) => seen.get(id)!));
     }
+    // Rebuild: parent steps dulu, lalu sub-steps per parent.
+    const allSteps: NoteStep[] = [];
+    for (const id of orderRef.current) {
+      const s = seen.get(id)!;
+      if (s.isSubStep) continue; // ditambahkan sebagai children
+      allSteps.push(s);
+      // Kumpulkan sub-steps untuk step ini (chapter-0, chapter-1, ...)
+      if (id === "chapters") {
+        const subSteps = orderRef.current
+          .filter((subId) => subId.startsWith("chapter-"))
+          .map((subId) => seen.get(subId)!)
+          .filter(Boolean);
+        allSteps.push(...subSteps);
+      }
+    }
+    setSteps(allSteps);
   }, []);
 
   const reset = useCallback(() => {
