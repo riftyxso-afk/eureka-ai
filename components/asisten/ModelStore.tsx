@@ -121,7 +121,7 @@ function ModelCard({
           ? `${model.name} — klik untuk lepas, kembali ke mode otomatis`
           : `${model.brand} · ${model.name}`
       }
-      className={`relative flex flex-col gap-1.5 rounded-clay-sm border-2 bg-white/70 p-2.5 text-left transition-all duration-100 ${
+      className={`relative flex flex-col gap-1.5 rounded-clay-sm border-2 bg-clay-beige/70 p-2.5 text-left transition-all duration-100 ${
         locked
           ? "border-clay-borderLight/60 opacity-70"
           : "hover:-translate-y-0.5"

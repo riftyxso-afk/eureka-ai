@@ -79,9 +79,9 @@ function buildStoredQuestion(input: ChatSendInput): string {
   const answers = input.clarifications ?? [];
   if (answers.length === 0) return input.question;
   const qa = answers
-    .map((c) => `Q: ${c.question || c.id}\nA: ${c.answer}`)
+    .map((c) => `Pilih: ${c.question || c.id} -> ${c.answer}`)
     .join("\n");
-  return `${input.question}\n\nKonteks tambahan dari jawaban pengguna (jadikan jawaban sesuai informasi ini):\n${qa}`;
+  return `${input.question}\n\nPilihan pengguna untuk pertanyaan klarifikasi:\n${qa}`;
 }
 
 function newStreaming(): StreamingState {

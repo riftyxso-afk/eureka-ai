@@ -197,9 +197,9 @@ export async function POST(req: NextRequest) {
   // Pertanyaan efektif: prompt asli + jawaban klarifikasi sebagai konteks,
   // dalam format Q/A agar AI menjawab sesuai pilihan user.
   const effectiveQuestion = hasClarifications
-    ? `${question}\n\nKonteks tambahan dari jawaban pengguna (jadikan jawaban sesuai informasi ini):\n${clarifications
+    ? `${question}\n\nPilihan pengguna untuk pertanyaan klarifikasi:\n${clarifications
         .map(
-          (c) => `Q: ${c.question || c.id}\nA: ${c.answer}`
+          (c) => `Pilih: ${c.question || c.id} -> ${c.answer}`
         )
         .join("\n")}`
     : question;

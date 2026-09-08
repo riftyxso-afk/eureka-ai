@@ -77,10 +77,21 @@ function shouldUseNim(): boolean {
   return isNvidiaNimConfigured() && !breakerOpen();
 }
 
+/** Bersihkan wrapper klarifikasi / format Q&A internal sebelum dikirim ke NIM safety classifier */
+function stripClarificationContext(text: string): string {
+  return text
+    .replace(/(?:Konteks tambahan dari jawaban pengguna[^\n]*|Pilihan pengguna untuk pertanyaan klarifikasi:?)[\s\S]*/i, "")
+    .replace(/^Q:\s*.*$/gm, "")
+    .replace(/^A:\s*.*$/gm, "")
+    .trim() || text;
+}
+
 /** Cek input user SEBELUM dikirim ke LLM. */
 export async function guardInput(text: string): Promise<GuardVerdict> {
   countInputCheck();
-  const clean = text.slice(0, 4000);
+  // Bersihkan teks dari format klarifikasi internal agar classifier tidak salah mendeteksi injeksi instruksi
+  const rawClean = text.slice(0, 4000);
+  const clean = stripClarificationContext(rawClean);
 
   // Lapisan 1: heuristik lokal (selalu jalan).
   if (detectJailbreakHeuristic(clean)) {

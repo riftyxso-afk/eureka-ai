@@ -84,6 +84,7 @@ export const TOPIC_WHITELIST = [
   "sejarah", "geografi", "ekonomi", "bahasa", "english", "indonesia",
   "pelajaran", "sekolah", "kuliah", "ujian", "tugas", "materi", "bab",
   "rumus", "soal", "kuis", "catatan", "belajar", "memahami", "jelaskan",
+  "semua catatan", "isi catatan", "rangkum", "ringkas", "baca", "tampilkan",
   "math", "physics", "chemistry", "biology", "science", "history",
   "lesson", "study", "exam", "homework", "formula", "quiz", "notes",
 ];
