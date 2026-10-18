@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -129,18 +128,17 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={`${nunito.variable} antialiased`}>
+      <head>
         {/* Anti-FOUC: terapkan class .dark sebelum paint berdasarkan
-            preferensi tersimpan / sistem (lihat context/ThemeContext.tsx).
-            next/script beforeInteractive → dirender di <head> sebelum
-            hydration (tanpa warning script-in-component React). */}
-        <Script
+            preferensi tersimpan / sistem (lihat context/ThemeContext.tsx). */}
+        <script
           id="theme-init"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem("eureka_theme");var d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark");}catch(e){}})();`,
           }}
         />
+      </head>
+      <body className={`${nunito.variable} antialiased`}>
         <LocaleProvider initialLocale={locale}>
           <ThemeProvider>
             <JobWatcherProvider>

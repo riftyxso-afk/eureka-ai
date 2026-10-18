@@ -70,15 +70,28 @@ export const dictionaries = {
       mulaiGratis: "Mulai Gratis",
       lihatHarga: "Lihat Harga",
       sayaSudahPunyaAkun: "Saya sudah punya akun",
+      announcement: "Kami baru saja mencapai 1.000.000 pengguna! 🎉",
+      ulasan: "Ulasan",
+      blog: "Blog",
+      panduan: "Panduan",
     },
     // ── Landing hero ──────────────────────────────────────
     hero: {
       chip: "AI Tutor untuk Semua Pelajar Indonesia",
       title1: "Bukan sekadar jawaban, tapi momen",
       title2: "Eureka!",
+      h1Line1: "Ubah 6 Jam Belajar",
+      h1Prefix: "Jadi",
+      h1Highlight: "1 Jam",
       subtitle:
-        "Eureka.AI adalah AI Tutor Socratic untuk pelajar: ubah video, artikel & PDF jadi catatan otomatis, tanya apa saja per bab, kerjakan kuis & kartu hafalan — dan temukan sendiri jawabannya.",
-      gratis: "Gratis selamanya untuk fitur dasar — tanpa kartu kredit",
+        "Upload materi apapun — PDF, video, bahkan link YouTube — dan dapatkan ringkasan, flashcard, serta kuis dalam sekejap.",
+      cta: "Mulai Gratis Sekarang",
+      gratis: "Tidak perlu kartu kredit. Batalkan kapan saja.",
+      mockupTitle: "Kenapa Indonesia Dijajah 350 Tahun?",
+      mockupMeta: "YouTube · Sejarah Indonesia · 14 menit video → ringkasan siap",
+      mockupChipFlashcard: "Flashcard (12)",
+      mockupChipQuiz: "Kuis (5 Soal)",
+      mockupChipSummary: "Ringkas (3 Bab)",
       noteTitle: "Turunan Fungsi — Konsep Dasar",
       noteMeta: "YouTube · 12 menit → catatan otomatis",
       noteBab: "Bab 1 · Limit",
@@ -88,6 +101,79 @@ export const dictionaries = {
       chatSiswa: "Siswa: “10 km/jam… Ooooh, itu turunan!”",
       streak: "Streak 7 hari",
       level: "Level 3 · 245 XP",
+    },
+    // ── Trust institutions ────────────────────────────────
+    trust: {
+      label: "DIPERCAYA OLEH PELAJAR DARI:",
+      items: ["SMA/SMK", "UI", "ITB", "UGM", "IPB", "UNPAD", "BINUS", "ITS"],
+    },
+    // ── Social Proof & Stats ──────────────────────────────
+    socialProof: {
+      eyebrow: "DIPERCAYA RATUSAN RIBU PELAJAR",
+      title: "Mereka Sudah Membuktikannya",
+      subtitle:
+        "Bergabung dengan 1.000.000+ pelajar dan mahasiswa di seluruh Indonesia yang sudah merasakan manfaat Eureka.AI.",
+      stats: [
+        { value: "1.0M+", label: "Pengguna Aktif" },
+        { value: "1.5M+", label: "Catatan Dibuat" },
+        { value: "4.9/5", label: "Rating Pengguna" },
+        { value: "1.0k+", label: "Sekolah & Kampus" },
+      ],
+      testimonials: [
+        {
+          name: "Ayu Prameswari",
+          role: "Mahasiswi Universitas Indonesia",
+          quote:
+            "Platform ini benar-benar mengubah cara saya belajar. Ringkasannya rapi dan mudah dipahami.",
+          initial: "A",
+          stars: 5,
+        },
+        {
+          name: "Bagas Pratama",
+          role: "Mahasiswa ITB",
+          quote:
+            "Flashcard dan kuisnya membuat saya jadi lebih aktif mengulang materi tiap hari.",
+          initial: "B",
+          stars: 5,
+        },
+        {
+          name: "Citra Lestari",
+          role: "Mahasiswi UGM",
+          quote:
+            "Tutor AI-nya sabar menjelaskan sampai saya benar-benar paham konsepnya.",
+          initial: "C",
+          stars: 5,
+        },
+        {
+          name: "Dimas Saputra",
+          role: "Siswa SMA Negeri 1 Jakarta",
+          quote:
+            "Saya bisa menyiapkan ujian dalam waktu jauh lebih singkat dari sebelumnya.",
+          initial: "D",
+          stars: 5,
+        },
+      ],
+    },
+    // ── Bento Grid Features ───────────────────────────────
+    featuresBento: {
+      eyebrow: "FITUR UNGGULAN",
+      title: "Semua yang Kamu Butuhkan",
+      subtitle:
+        "Satu platform untuk semua kebutuhan belajarmu. Hemat waktu, belajar lebih efektif.",
+      summaryTitle: "Ringkasan Otomatis",
+      summaryDesc:
+        "Ubah dokumen, video, atau tautan panjang menjadi ringkasan poin-poin penting yang mudah dipahami dalam hitungan detik.",
+      flashcardsTitle: "Smart Flashcards",
+      flashcardsDesc:
+        "Kartu pintar dengan pengulangan berjarak agar materi tetap terasa.",
+      quizTitle: "Kuis Interaktif",
+      quizDesc: "Uji pemahaman lewat kuis pilihan ganda yang dibuat otomatis.",
+      tutorTitle: "Tutor AI 24/7",
+      tutorDesc:
+        "Tanyakan apa saja tentang materimu. AI kami akan menjelaskan langkah demi langkah tanpa langsung memberi jawaban.",
+      tutorPrompt: "Jelaskan konsep ini dengan analogi sederhana...",
+      tutorNote: "Socratic Mode membimbingmu menemukan jawaban sendiri.",
+      tutorCta: "Coba Socratic Mode →",
     },
     // ── Landing model AI ──────────────────────────────────
     aiModels: {
@@ -189,6 +275,7 @@ export const dictionaries = {
     faq: {
       label: "FAQ",
       title: "Pertanyaan yang sering ditanyakan",
+      subtitle: "Hal-hal yang sering ditanyakan pengguna baru",
       items: [
         {
           q: "Apa itu Eureka.AI?",
@@ -233,9 +320,28 @@ export const dictionaries = {
       title: "Siap mengalami momen Eureka pertamamu?",
       desc: "Mulai gratis sekarang, tempel materi pertamamu, dan biarkan AI membimbingmu hingga benar-benar paham — bukan sekadar menghafal.",
     },
+    finalCta: {
+      title: "Siap Revolusi Cara Belajarmu?",
+      subtitle:
+        "Gabung dengan ribuan siswa cerdas lainnya. Mulai gratis, upgrade kapan saja.",
+      cta: "Mulai Gratis Sekarang",
+      note: "Tidak perlu kartu kredit. Batalkan kapan saja.",
+    },
     footer: {
-      tagline: "AI Tutor Socratic untuk pelajar Indonesia",
-      copyright: "AI Tutor Socratic untuk pelajar Indonesia",
+      tagline: "Platform belajar AI untuk siswa & mahasiswa Indonesia",
+      colProduct: "PRODUK",
+      colLegal: "LEGAL",
+      colContact: "KONTAK",
+      fitur: "Fitur",
+      harga: "Harga",
+      panduan: "Panduan",
+      ekstensi: "Ekstensi Browser",
+      privasi: "Kebijakan Privasi",
+      syarat: "Syarat Layanan",
+      kontak: "Kontak",
+      contactEmail: "halo@eureka-ai.web.id",
+      contactLocation: "Jakarta, Indonesia",
+      copyright: "© 2026 Eureka.AI. Seluruh hak cipta dilindungi.",
     },
     review: {
       label: "Ulasan Pengguna",
@@ -824,14 +930,27 @@ export const dictionaries = {
       mulaiGratis: "Start Free",
       lihatHarga: "See Pricing",
       sayaSudahPunyaAkun: "I already have an account",
+      announcement: "We just reached 1,000,000 users! 🎉",
+      ulasan: "Reviews",
+      blog: "Blog",
+      panduan: "Guide",
     },
     hero: {
       chip: "AI Tutor for Every Indonesian Student",
       title1: "Not just answers — the",
       title2: "Eureka!",
+      h1Line1: "Turn 6 Hours of Study",
+      h1Prefix: "Into",
+      h1Highlight: "1 Hour",
       subtitle:
-        "Eureka.AI is a Socratic AI Tutor for students: turn videos, articles & PDFs into auto-generated notes, ask anything per chapter, take quizzes & flashcards — and discover the answers yourself.",
-      gratis: "Free forever for core features — no credit card required",
+        "Upload any material — PDFs, videos, even YouTube links — and get summaries, flashcards, and quizzes in an instant.",
+      cta: "Start Free Now",
+      gratis: "No credit card required. Cancel anytime.",
+      mockupTitle: "Why Did the Colonial Era Last 350 Years?",
+      mockupMeta: "YouTube · Indonesian History · 14 min video → summary ready",
+      mockupChipFlashcard: "Flashcard (12)",
+      mockupChipQuiz: "Quiz (5 Questions)",
+      mockupChipSummary: "Summary (3 Chapters)",
       noteTitle: "Derivatives — Core Concepts",
       noteMeta: "YouTube · 12 min → auto notes",
       noteBab: "Chapter 1 · Limits",
@@ -841,6 +960,77 @@ export const dictionaries = {
       chatSiswa: "Student: “10 km/h… Oh, that's a derivative!”",
       streak: "7-day streak",
       level: "Level 3 · 245 XP",
+    },
+    trust: {
+      label: "TRUSTED BY STUDENTS FROM:",
+      items: ["SMA/SMK", "UI", "ITB", "UGM", "IPB", "UNPAD", "BINUS", "ITS"],
+    },
+    socialProof: {
+      eyebrow: "TRUSTED BY HUNDREDS OF THOUSANDS",
+      title: "They Have Already Proven It",
+      subtitle:
+        "Join 1,000,000+ students and college learners across Indonesia who study smarter with Eureka.AI.",
+      stats: [
+        { value: "1.0M+", label: "Active Learners" },
+        { value: "1.5M+", label: "Notes Created" },
+        { value: "4.9/5", label: "User Rating" },
+        { value: "1.0k+", label: "Schools & Campuses" },
+      ],
+      testimonials: [
+        {
+          name: "Ayu Prameswari",
+          role: "Student at Universitas Indonesia",
+          quote:
+            "This platform genuinely transformed how I study. The summaries are structured and easy to digest.",
+          initial: "A",
+          stars: 5,
+        },
+        {
+          name: "Bagas Pratama",
+          role: "Student at ITB",
+          quote:
+            "The flashcards and quizzes make me actively review materials every single day.",
+          initial: "B",
+          stars: 5,
+        },
+        {
+          name: "Citra Lestari",
+          role: "Student at UGM",
+          quote:
+            "The AI tutor is patient and guides me step by step until I truly grasp the concepts.",
+          initial: "C",
+          stars: 5,
+        },
+        {
+          name: "Dimas Saputra",
+          role: "High School Student, SMAN 1 Jakarta",
+          quote:
+            "I prepared for exams in a fraction of the time compared to reading thick textbooks.",
+          initial: "D",
+          stars: 5,
+        },
+      ],
+    },
+    featuresBento: {
+      eyebrow: "CORE FEATURES",
+      title: "Everything You Need",
+      subtitle:
+        "One platform for all your study needs. Save time, learn with deeper understanding.",
+      summaryTitle: "Automatic Summaries",
+      summaryDesc:
+        "Turn lengthy documents, videos, or web links into clean, chapter-by-chapter summaries in seconds.",
+      flashcardsTitle: "Smart Flashcards",
+      flashcardsDesc:
+        "Smart cards with spaced repetition so knowledge sticks for good.",
+      quizTitle: "Interactive Quizzes",
+      quizDesc:
+        "Test your understanding with automatically generated multiple-choice quizzes.",
+      tutorTitle: "24/7 Socratic AI Tutor",
+      tutorDesc:
+        "Ask anything about your material. Our AI guides you step by step without spoiling the answers.",
+      tutorPrompt: "Explain this concept with a simple analogy...",
+      tutorNote: "Socratic Mode guides you to discover answers yourself.",
+      tutorCta: "Try Socratic Mode →",
     },
     aiModels: {
       label: "Powered by Leading AI Models",
@@ -935,6 +1125,7 @@ export const dictionaries = {
     faq: {
       label: "FAQ",
       title: "Frequently asked questions",
+      subtitle: "Commonly asked questions by new users",
       items: [
         {
           q: "What is Eureka.AI?",
@@ -978,9 +1169,28 @@ export const dictionaries = {
       title: "Ready for your first Eureka moment?",
       desc: "Start free now, paste your first material, and let AI guide you until you truly understand — not just memorize.",
     },
+    finalCta: {
+      title: "Ready to Revolutionize How You Study?",
+      subtitle:
+        "Join thousands of smart learners. Start free, upgrade anytime.",
+      cta: "Start Free Now",
+      note: "No credit card required. Cancel anytime.",
+    },
     footer: {
-      tagline: "Socratic AI Tutor for Indonesian students",
-      copyright: "Socratic AI Tutor for Indonesian students",
+      tagline: "AI learning platform for Indonesian students & university learners",
+      colProduct: "PRODUCT",
+      colLegal: "LEGAL",
+      colContact: "CONTACT",
+      fitur: "Features",
+      harga: "Pricing",
+      panduan: "Guide",
+      ekstensi: "Browser Extension",
+      privasi: "Privacy Policy",
+      syarat: "Terms of Service",
+      kontak: "Contact",
+      contactEmail: "halo@eureka-ai.web.id",
+      contactLocation: "Jakarta, Indonesia",
+      copyright: "© 2026 Eureka.AI. All rights reserved.",
     },
     review: {
       label: "User Reviews",

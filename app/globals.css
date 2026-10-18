@@ -241,8 +241,66 @@
 .k-landing {
   font-family: var(--font-nunito), "SN Pro", "Inter", system-ui,
     -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: #ffffff;
-  color: #13102b;
+  background-color: #ffffff;
+  color: #1a1a2e;
+}
+
+.dark .k-landing {
+  background-color: #0e0d1b !important;
+  color: #f3f4f6 !important;
+}
+
+/* ── Animation Tokens & Utilities (Emil Kowalski Animation Philosophy) ── */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.anim-press {
+  transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.anim-press:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .anim-hover-lift {
+    transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out), border-color 200ms var(--ease-out);
+  }
+  .anim-hover-lift:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.anim-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 32s linear infinite;
+  will-change: transform;
+}
+
+.anim-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-press,
+  .anim-hover-lift {
+    transition: none !important;
+    transform: none !important;
+  }
+  .anim-marquee {
+    animation: none !important;
+  }
 }
 
 .k-btn-primary {
