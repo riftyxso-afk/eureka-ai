@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Eye,
   EyeOff,
-  Hand,
   KeyRound,
   Loader2,
   Lock,
@@ -15,13 +14,11 @@ import {
   Mail,
 } from "lucide-react";
 
-import ButtonClay from "@/components/ui/ButtonClay";
-import CardClay from "@/components/ui/CardClay";
-import InputClay from "@/components/ui/InputClay";
 import GoogleIcon from "@/components/ui/GoogleIcon";
 import TurnstileCaptcha from "@/components/ui/TurnstileCaptcha";
 import { isTurnstileClientConfigured } from "@/lib/captcha";
-import { PageLoader } from "@/components/ui/PageLoader";import { getSafeNext,
+import { PageLoader } from "@/components/ui/PageLoader";
+import { getSafeNext,
   isLoggedIn,
   loginUser,
   needsOnboarding,
@@ -88,6 +85,14 @@ export default function LoginPage() {
   if (!checked) {
     return <PageLoader title={a.pageLoader} />;
   }
+
+  const primaryBtn =
+    "flex w-full items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] px-6 py-4 text-base font-bold text-white shadow-[0_8px_22px_rgba(124,58,237,0.35)] transition-colors hover:bg-[#6D28D9] active:bg-[#5B21B6] disabled:opacity-60";
+  const fieldInput =
+    "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-sm font-semibold text-[#1A1A2E] outline-none transition-colors placeholder:text-gray-400 focus:border-[#7C3AED] focus:bg-white focus:ring-4 focus:ring-violet-400/20";
+  const fieldLabel = "mb-2 block text-sm font-bold text-[#1A1A2E]";
+  const errorBox =
+    "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600";
 
   const startCooldown = () => {
     setCooldown(60);
@@ -210,304 +215,247 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-clay-beige px-4 py-10">
-      <div className="w-full max-w-[440px]">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-3">
-          <img src="/logo.png" alt="Logo Eureka.AI" className="h-11 w-11 object-contain" />
-          <span className="text-2xl font-extrabold text-clay-dark">
-            Eureka<span className="text-clay-primary">.AI</span>
+    <div className="flex min-h-screen bg-white">
+      <aside className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-gradient-to-br from-[#7C3AED] via-[#6D28D9] to-[#5B21B6] p-12 text-white lg:flex">
+        <Link href="/" className="flex items-center gap-2.5">
+          <img src="/logo.png" alt="Logo Eureka.AI" className="h-9 w-9 rounded-full bg-white/90 object-contain p-1" />
+          <span className="text-lg font-extrabold tracking-tight">
+            eureka<span className="text-violet-200">.ai</span>
           </span>
         </Link>
+        <div className="max-w-md">
+          <p className="text-3xl font-extrabold leading-tight">{a.welcome}</p>
+          <p className="mt-4 text-base font-medium leading-relaxed text-violet-100">{a.welcomeSub}</p>
+        </div>
+        <p className="text-xs font-semibold text-violet-200">© 2026 Eureka.AI</p>
+      </aside>
 
-        <CardClay className="!p-8 sm:!p-10">
-          <h1 className="text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
-            {a.welcome}
-            <Hand size={26} className="ml-2 inline text-clay-primary" />
-          </h1>
-          <p className="mt-2 text-center text-base font-semibold text-clay-muted">
-            {a.welcomeSub}
-          </p>
-
-          {/* Login dengan Google */}
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={googleBusy}
-            className="mt-6 flex w-full items-center justify-center gap-2.5 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-4 py-3.5 text-sm font-extrabold text-clay-dark transition-all duration-75 hover:-translate-y-0.5 hover:shadow-clay-sm active:translate-y-0.5 disabled:opacity-60"
-          >
-            {googleBusy ? (
-              <Loader2 size={18} className="animate-spin text-clay-muted" />
-            ) : (
-              <GoogleIcon size={18} />
-            )}
-            {a.loginGoogle}
-          </button>
-
-          <div className="mt-5 flex items-center gap-3">
-            <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
-            <span className="text-xs font-extrabold uppercase tracking-wider text-clay-muted">
-              {a.or}
+      <main className="flex flex-1 items-center justify-center px-5 py-12">
+        <div className="w-full max-w-[420px]">
+          <Link href="/" className="mb-8 flex items-center justify-center gap-2.5 lg:hidden">
+            <img src="/logo.png" alt="Logo Eureka.AI" className="h-10 w-10 object-contain" />
+            <span className="text-2xl font-extrabold text-[#1A1A2E]">
+              eureka<span className="text-[#7C3AED]">.ai</span>
             </span>
-            <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
+          </Link>
+
+          <div className="rounded-3xl border border-gray-200 bg-white p-7 shadow-[0_12px_40px_rgba(17,24,39,0.08)] sm:p-9">
+            <h1 className="text-center text-2xl font-extrabold text-[#1A1A2E] sm:text-3xl">
+              {a.welcome}
+            </h1>
+            <p className="mt-2 text-center text-sm font-medium text-gray-500">{a.welcomeSub}</p>
+
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={googleBusy}
+              className="mt-7 flex w-full items-center justify-center gap-2.5 rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm font-bold text-[#1A1A2E] transition-colors hover:bg-gray-50 disabled:opacity-60"
+            >
+              {googleBusy ? (
+                <Loader2 size={18} className="animate-spin text-gray-400" />
+              ) : (
+                <GoogleIcon size={18} />
+              )}
+              {a.loginGoogle}
+            </button>
+
+            <div className="my-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-gray-200" />
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">{a.or}</span>
+              <span className="h-px flex-1 bg-gray-200" />
+            </div>
+
+            <div className="flex gap-1.5 rounded-2xl bg-gray-100 p-1">
+              {(
+                [
+                  { id: "password", label: a.tabPassword },
+                  { id: "otp", label: a.tabOtp },
+                ] as { id: LoginMode; label: string }[]
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setMode(tab.id);
+                    setError(null);
+                  }}
+                  className={`min-h-[42px] flex-1 rounded-xl text-sm font-bold transition-colors ${
+                    mode === tab.id
+                      ? "bg-[#7C3AED] text-white shadow-sm"
+                      : "text-gray-500 hover:text-[#1A1A2E]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {mode === "password" ? (
+              <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+                <div>
+                  <label className={fieldLabel}>{a.email}</label>
+                  <div className="relative">
+                    <Mail size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder={a.emailPlaceholder}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={fieldInput}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={fieldLabel}>{a.password}</label>
+                  <div className="relative">
+                    <Lock size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={`${fieldInput} pr-12`}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? a.hidePassword : a.showPassword}
+                      className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-[#7C3AED]"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && <p className={errorBox}>{error}</p>}
+
+                <div className="flex justify-center">
+                  <TurnstileCaptcha key={`pw-${captchaKey}`} onToken={setCaptchaToken} />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting || (captchaConfigured && !captchaToken)}
+                  className={primaryBtn}
+                >
+                  {submitting ? <Loader2 size={20} className="animate-spin" /> : <><LogIn size={18} />{a.login}</>}
+                </button>
+              </form>
+            ) : !otpSent ? (
+              <form onSubmit={handleSendOtp} className="mt-6 space-y-5">
+                <p className="rounded-xl bg-[#F5F3FF] px-4 py-3 text-center text-sm font-medium text-[#6D28D9]">
+                  {a.otpHint}
+                </p>
+                <div>
+                  <label className={fieldLabel}>{a.email}</label>
+                  <div className="relative">
+                    <Mail size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder={a.emailPlaceholder}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={fieldInput}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {error && <p className={errorBox}>{error}</p>}
+
+                <div className="flex justify-center">
+                  <TurnstileCaptcha key={`otp-${captchaKey}`} onToken={setCaptchaToken} />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={otpSending || (captchaConfigured && !captchaToken)}
+                  className={primaryBtn}
+                >
+                  {otpSending ? <Loader2 size={20} className="animate-spin" /> : <><KeyRound size={18} />{a.sendCode}</>}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyOtp} className="mt-6 space-y-5">
+                <button
+                  type="button"
+                  onClick={backToEmail}
+                  className="flex items-center gap-1 text-xs font-bold text-gray-500 transition-colors hover:text-[#7C3AED]"
+                >
+                  <ArrowLeft size={13} />
+                  {a.changeEmail}
+                </button>
+                <p className="rounded-xl bg-[#F5F3FF] px-4 py-3 text-center text-sm font-medium text-[#6D28D9]">
+                  {a.otpSent}{" "}
+                  <b className="text-[#1A1A2E]">{email.trim().toLowerCase()}</b>.
+                  {a.otpCheckInbox}
+                </p>
+                <div>
+                  <label className={fieldLabel}>{a.otpLabel}</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    autoFocus
+                    placeholder="••••••"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className="h-14 w-full rounded-xl border border-gray-200 bg-gray-50 text-center text-2xl font-extrabold tracking-[0.4em] text-[#1A1A2E] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white focus:ring-4 focus:ring-violet-400/20"
+                  />
+                </div>
+
+                {error && <p className={errorBox}>{error}</p>}
+
+                <div className="flex justify-center">
+                  <TurnstileCaptcha key={`otpv-${captchaKey}`} onToken={setCaptchaToken} />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting || otpCode.length !== 6 || (captchaConfigured && !captchaToken)}
+                  className={primaryBtn}
+                >
+                  {submitting ? <Loader2 size={20} className="animate-spin" /> : <><LogIn size={18} />{a.login}</>}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={otpSending || cooldown > 0}
+                  className="w-full text-center text-xs font-bold text-gray-500 transition-colors hover:text-[#7C3AED] disabled:opacity-50"
+                >
+                  {otpSending
+                    ? a.resending
+                    : cooldown > 0
+                      ? `${a.resendIn} ${cooldown}s`
+                      : a.resend}
+                </button>
+              </form>
+            )}
           </div>
 
-          {/* Pilih metode login */}
-          <div className="mt-6 flex gap-2 rounded-clay-full border-3 border-clay-shadow/40 bg-clay-inputBg p-1 shadow-clay-inset">
-            {(
-              [
-                { id: "password", label: a.tabPassword },
-                { id: "otp", label: a.tabOtp },
-              ] as { id: LoginMode; label: string }[]
-            ).map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setMode(tab.id);
-                  setError(null);
-                }}
-                className={`min-h-[44px] flex-1 rounded-clay-full border-2 text-sm font-extrabold transition-all duration-75 ${
-                  mode === tab.id
-                    ? "border-clay-primary bg-clay-primary text-white shadow-clay-sm"
-                    : "border-transparent text-clay-muted hover:text-clay-dark"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {mode === "password" ? (
-            <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  {a.email}
-                </label>
-                <div className="relative">
-                  <Mail
-                    size={18}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
-                  />
-                  <InputClay
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder={a.emailPlaceholder}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="!pl-11"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  {a.password}
-                </label>
-                <div className="relative">
-                  <Lock
-                    size={18}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
-                  />
-                  <InputClay
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="!pl-11 !pr-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? a.hidePassword : a.showPassword}
-                    className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-clay-muted transition-colors hover:text-clay-primary"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
-                  {error}
-                </p>
-              )}
-
-              <div className="flex justify-center">
-                <TurnstileCaptcha
-                  key={`pw-${captchaKey}`}
-                  onToken={setCaptchaToken}
-                />
-              </div>
-
-              <ButtonClay
-                type="submit"
-                fullWidth
-                disabled={submitting || (captchaConfigured && !captchaToken)}
-                className="!min-h-[56px]"
-              >
-                {submitting ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  <>
-                    <LogIn size={18} className="mr-2" />
-                    {a.login}
-                  </>
-                )}
-              </ButtonClay>
-            </form>
-          ) : !otpSent ? (
-            <form onSubmit={handleSendOtp} className="mt-6 space-y-5">
-              <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
-                {a.otpHint}
-              </p>
-              <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  {a.email}
-                </label>
-                <div className="relative">
-                  <Mail
-                    size={18}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
-                  />
-                  <InputClay
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder={a.emailPlaceholder}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="!pl-11"
-                    required
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
-                  {error}
-                </p>
-              )}
-
-              <div className="flex justify-center">
-                <TurnstileCaptcha
-                  key={`otp-${captchaKey}`}
-                  onToken={setCaptchaToken}
-                />
-              </div>
-
-              <ButtonClay
-                type="submit"
-                fullWidth
-                disabled={otpSending || (captchaConfigured && !captchaToken)}
-                className="!min-h-[56px]"
-              >
-                {otpSending ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  <>
-                    <KeyRound size={18} className="mr-2" />
-                    {a.sendCode}
-                  </>
-                )}
-              </ButtonClay>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOtp} className="mt-6 space-y-5">
-              <button
-                type="button"
-                onClick={backToEmail}
-                className="flex items-center gap-1 text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary"
-              >
-                <ArrowLeft size={13} />
-                {a.changeEmail}
-              </button>
-              <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
-                {a.otpSent}{" "}
-                <b className="text-clay-dark">{email.trim().toLowerCase()}</b>.
-                {a.otpCheckInbox}
-              </p>
-              <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
-                  {a.otpLabel}
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  autoFocus
-                  placeholder="••••••"
-                  value={otpCode}
-                  onChange={(e) =>
-                    setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  className="input-clay text-center !text-2xl !font-extrabold tracking-[0.4em]"
-                />
-              </div>
-
-              {error && (
-                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
-                  {error}
-                </p>
-              )}
-
-              <div className="flex justify-center">
-                <TurnstileCaptcha
-                  key={`otpv-${captchaKey}`}
-                  onToken={setCaptchaToken}
-                />
-              </div>
-
-              <ButtonClay
-                type="submit"
-                fullWidth
-                disabled={
-                  submitting || otpCode.length !== 6 || (captchaConfigured && !captchaToken)
-                }
-                className="!min-h-[56px]"
-              >
-                {submitting ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  <>
-                    <LogIn size={18} className="mr-2" />
-                    {a.login}
-                  </>
-                )}
-              </ButtonClay>
-
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                disabled={otpSending || cooldown > 0}
-                className="w-full text-center text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary disabled:opacity-50"
-              >
-                {otpSending
-                  ? a.resending
-                  : cooldown > 0
-                    ? `${a.resendIn} ${cooldown}s`
-                    : a.resend}
-              </button>
-            </form>
-          )}
-
-          <p className="mt-6 text-center text-sm font-bold text-clay-muted">
+          <p className="mt-6 text-center text-sm font-semibold text-gray-500">
             {a.noAccount}{" "}
-            <Link href="/register" className="font-extrabold text-clay-primary underline-offset-2 hover:underline">
+            <Link href="/register" className="font-bold text-[#7C3AED] underline-offset-2 hover:underline">
               {dict.nav.cobaGratis}
             </Link>
           </p>
-          <p className="mt-3 text-center text-xs font-semibold text-clay-muted">
-            <Link href="/" className="text-clay-muted underline-offset-2 hover:underline">
+          <p className="mt-3 text-center text-xs font-semibold text-gray-400">
+            <Link href="/" className="transition-colors hover:text-[#7C3AED]">
               {a.backHome}
             </Link>
           </p>
-        </CardClay>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

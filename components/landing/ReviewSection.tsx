@@ -163,72 +163,71 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
   const hasReviews = (stats?.count ?? 0) > 0;
 
   return (
-    <section
-      id="ulasan"
-      className="border-t-2 border-[#E5E5E5] py-16 sm:py-24"
+    <div
+      className="w-full pt-6"
       aria-label="Ulasan pengguna Eureka.AI"
     >
-      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+      <div className="mx-auto max-w-5xl">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-[#7B42F5]">
-            Ulasan Pengguna
+          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#7C3AED] dark:text-violet-400">
+            Ulasan Pengguna Nyata
           </p>
-          <h2 className="mt-3 text-4xl font-extrabold tracking-[-0.02em] text-[#13102B]">
+          <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1A1A2E] dark:text-white">
             Kata mereka yang sudah belajar di Eureka
-          </h2>
+          </h3>
         </div>
 
         {!data ? (
-          <p className="mt-10 flex items-center justify-center gap-2 text-sm font-bold text-[#B9B6C7]">
+          <p className="mt-8 flex items-center justify-center gap-2 text-sm font-medium text-gray-400">
             <Loader2 size={15} className="animate-spin" /> Memuat ulasan...
           </p>
         ) : hasReviews ? (
           <>
             {/* Ringkasan rating */}
-            <div className="mx-auto mt-10 flex max-w-md flex-col items-center gap-4 rounded-3xl border-2 border-[#E5E5E5] bg-clay-cream p-6 shadow-clay-sm sm:flex-row sm:justify-center">
-              <p className="text-6xl font-extrabold tracking-tight text-[#13102B]">
+            <div className="mx-auto mt-8 flex max-w-sm flex-col items-center gap-4 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#161528] p-5 shadow-sm sm:flex-row sm:justify-center">
+              <p className="text-5xl font-extrabold tracking-tight text-[#1A1A2E] dark:text-white">
                 {stats?.average?.toFixed(1).replace(".", ",")}
               </p>
               <div className="flex flex-col items-center gap-1 sm:items-start">
-                <Stars value={stats?.average ?? 0} size={20} />
-                <p className="text-sm font-bold text-[#5A5670]">
-                  {stats?.count} ulasan dari pengguna
+                <Stars value={stats?.average ?? 0} size={18} />
+                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {stats?.count} ulasan terverifikasi
                 </p>
               </div>
             </div>
 
             {/* Daftar ulasan */}
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {reviews.slice(0, 6).map((r) => (
                 <article
                   key={r.id}
-                  className="flex flex-col rounded-3xl border-2 border-[#E5E5E5] bg-clay-cream p-5 shadow-clay-sm"
+                  className="flex flex-col rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#161528] p-5 shadow-sm"
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${avatarColor(r.authorName)}`}
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${avatarColor(r.authorName)}`}
                     >
                       {initials(r.authorName)}
                     </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-extrabold text-[#13102B]">
+                    <div className="min-w-0 text-left">
+                      <p className="truncate text-xs sm:text-sm font-bold text-[#1A1A2E] dark:text-white">
                         {r.authorName}
                       </p>
-                      <Stars value={r.rating} size={13} />
+                      <Stars value={r.rating} size={12} />
                     </div>
                   </div>
                   {r.title && (
-                    <h3 className="mt-3 text-base font-extrabold text-[#13102B]">
+                    <h4 className="mt-3 text-sm font-bold text-[#1A1A2E] dark:text-white text-left">
                       {r.title}
-                    </h3>
+                    </h4>
                   )}
                   {r.content && (
-                    <p className="mt-1.5 flex-1 break-words text-sm font-medium leading-relaxed text-[#5A5670]">
+                    <p className="mt-1 flex-1 break-words text-xs sm:text-sm font-normal leading-relaxed text-gray-600 dark:text-gray-300 text-left">
                       {r.content}
                     </p>
                   )}
                   {r.createdAt && (
-                    <p className="mt-3 text-xs font-bold text-[#B9B6C7]">
+                    <p className="mt-3 text-[11px] font-medium text-gray-400 text-left">
                       {formatDate(r.createdAt)}
                     </p>
                   )}
@@ -237,18 +236,17 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
             </div>
           </>
         ) : (
-          <p className="mx-auto mt-10 max-w-md rounded-3xl border-2 border-dashed border-[#E5E5E5] p-8 text-center text-sm font-semibold text-[#5A5670]">
-            Belum ada ulasan. Jadilah yang pertama berbagi pengalaman
-            belajarmu dengan Eureka!
+          <p className="mx-auto mt-8 max-w-md rounded-2xl border border-dashed border-gray-200 dark:border-white/10 p-6 text-center text-xs sm:text-sm font-medium text-gray-500">
+            Belum ada ulasan. Jadilah yang pertama berbagi pengalaman belajarmu dengan Eureka!
           </p>
         )}
 
         {/* Tombol aksi */}
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           {loggedIn ? (
             <button
               onClick={() => setOpen(true)}
-              className="k-btn-primary text-sm"
+              className="h-10 px-6 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors"
             >
               {data?.myReview ? (
                 <>
@@ -259,7 +257,10 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
               )}
             </button>
           ) : (
-            <Link href="/register" className="k-btn-primary text-sm">
+            <Link
+              href="/register"
+              className="h-10 px-6 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6] text-white text-xs sm:text-sm font-semibold flex items-center justify-center shadow-sm transition-colors"
+            >
               Daftar & Beri Ulasan
             </Link>
           )}
@@ -267,7 +268,7 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
             <button
               onClick={remove}
               disabled={saving}
-              className="k-btn-secondary text-sm !text-red-500"
+              className="h-10 px-4 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs sm:text-sm font-medium hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-1.5 transition-colors"
             >
               <Trash2 size={15} /> Hapus
             </button>
@@ -278,7 +279,7 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
       {/* Modal ulasan */}
       {open && (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 backdrop-blur-sm p-0 sm:items-center sm:p-4"
           onClick={close}
         >
           <div
@@ -286,23 +287,23 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
             aria-modal="true"
             aria-label="Beri ulasan"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-t-3xl bg-clay-cream p-6 shadow-clay sm:rounded-3xl"
+            className="w-full max-w-md rounded-t-3xl bg-white dark:bg-[#161528] p-6 shadow-2xl sm:rounded-3xl border border-gray-200 dark:border-white/10"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-extrabold text-[#13102B]">
+              <h3 className="text-lg font-bold text-[#1A1A2E] dark:text-white">
                 {data?.myReview ? "Ubah ulasan" : "Beri ulasan"}
               </h3>
               <button
                 onClick={close}
                 aria-label="Tutup"
-                className="btn-clay-ghost !min-h-[44px] !min-w-[44px] !rounded-full !px-0"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Pilih bintang */}
-            <div className="mt-5 flex justify-center gap-1.5">
+            <div className="mt-5 flex justify-center gap-2">
               {[1, 2, 3, 4, 5].map((i) => (
                 <button
                   key={i}
@@ -311,14 +312,14 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
                   onMouseEnter={() => setHover(i)}
                   onMouseLeave={() => setHover(0)}
                   aria-label={`${i} bintang`}
-                  className="!min-h-[44px] !min-w-[44px] touch-manipulation"
+                  className="p-1 touch-manipulation focus:outline-none"
                 >
                   <Star
-                    size={30}
+                    size={28}
                     className={
                       i <= (hover || rating)
                         ? "fill-amber-400 text-amber-400"
-                        : "text-[#D8D5E0]"
+                        : "text-gray-300 dark:text-gray-600"
                     }
                   />
                 </button>
@@ -330,7 +331,7 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
               onChange={(e) => setTitle(e.target.value)}
               maxLength={80}
               placeholder="Judul singkat (opsional)"
-              className="input-clay mt-4 w-full"
+              className="mt-4 w-full h-11 px-3.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-[#1A1A2E] dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
             <textarea
               value={content}
@@ -338,17 +339,17 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
               maxLength={1000}
               rows={4}
               placeholder="Ceritakan pengalaman belajarmu... (opsional)"
-              className="input-clay mt-3 w-full resize-none"
+              className="mt-3 w-full p-3.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-[#1A1A2E] dark:text-white placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
 
             {error && (
-              <p className="mt-3 text-sm font-bold text-red-500">{error}</p>
+              <p className="mt-2 text-xs font-semibold text-red-500">{error}</p>
             )}
 
             <button
               onClick={submit}
               disabled={saving}
-              className="k-btn-primary mt-5 w-full text-sm"
+              className="mt-5 w-full h-11 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-colors"
             >
               {saving ? (
                 <>
@@ -361,6 +362,6 @@ export function ReviewSection({ data, loggedIn, onRefresh }: ReviewSectionProps)
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
