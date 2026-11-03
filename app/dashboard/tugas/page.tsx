@@ -236,7 +236,7 @@ export default function TugasPage() {
   const completedExams = exams.filter((e) => e.status === "completed");
 
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+    <div className="more-page more-tasks mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>

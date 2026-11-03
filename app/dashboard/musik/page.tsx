@@ -151,7 +151,7 @@ export default function MusicPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+    <div className="more-page more-music mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
       <div className="flex items-center gap-3">
         <span className="flex h-12 w-12 items-center justify-center rounded-clay-md bg-clay-primary/10">
           <Music2 size={24} className="text-clay-primary" />

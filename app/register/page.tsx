@@ -9,12 +9,11 @@ import {
   KeyRound,
   Loader2,
   Mail,
-  Rocket,
   User,
 } from "lucide-react";
 
 import ButtonClay from "@/components/ui/ButtonClay";
-import CardClay from "@/components/ui/CardClay";
+import AuthShell from "@/components/auth/AuthShell";
 import InputClay from "@/components/ui/InputClay";
 import GoogleIcon from "@/components/ui/GoogleIcon";
 import TurnstileCaptcha from "@/components/ui/TurnstileCaptcha";
@@ -211,19 +210,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-clay-beige px-4 py-10">
-      <div className="w-full max-w-[440px]">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-3">
-          <img src="/logo.png" alt="Logo Eureka.AI" className="h-11 w-11 object-contain" />
-          <span className="text-2xl font-extrabold text-clay-dark">
-            Eureka<span className="text-clay-primary">.AI</span>
-          </span>
-        </Link>
-
-        <CardClay className="!p-8 sm:!p-10">
+    <AuthShell mode="register">
+      <div className="auth-form">
           <h1 className="flex items-center justify-center gap-2 text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
             {a.regTitle}
-            <Rocket size={26} className="shrink-0 text-clay-secondary" />
           </h1>
           <p className="mt-2 text-center text-base font-semibold text-clay-muted">
             {step === "form" ? a.regSubForm : a.regSubOtp}
@@ -256,7 +246,7 @@ export default function RegisterPage() {
 
               <form onSubmit={handleSendOtp} className="mt-5 space-y-5">
               <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                <label htmlFor="auth-name" className="mb-2 block text-sm font-extrabold text-clay-dark">
                   {a.fullName}
                 </label>
                 <div className="relative">
@@ -265,6 +255,7 @@ export default function RegisterPage() {
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
                   />
                   <InputClay
+                    id="auth-name"
                     type="text"
                     autoComplete="name"
                     placeholder={a.namePlaceholder}
@@ -277,7 +268,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                <label htmlFor="auth-email" className="mb-2 block text-sm font-extrabold text-clay-dark">
                   {a.email}
                 </label>
                 <div className="relative">
@@ -286,6 +277,7 @@ export default function RegisterPage() {
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
                   />
                   <InputClay
+                    id="auth-email"
                     type="email"
                     inputMode="email"
                     autoComplete="email"
@@ -299,17 +291,17 @@ export default function RegisterPage() {
               </div>
 
               {error && (
-                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                <p role="alert" className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
                   {error}
                 </p>
               )}
 
-              <div className="flex justify-center">
+              {captchaConfigured && <div className="flex justify-center">
                 <TurnstileCaptcha
                   key={`reg-${captchaKey}`}
                   onToken={setCaptchaToken}
                 />
-              </div>
+              </div>}
 
               <ButtonClay
                 type="submit"
@@ -344,12 +336,14 @@ export default function RegisterPage() {
                 {a.regOtpSent}
               </p>
               <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                <label htmlFor="auth-otp" className="mb-2 block text-sm font-extrabold text-clay-dark">
                   {a.otpLabel}
                 </label>
                 <input
+                  id="auth-otp"
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   pattern="[0-9]*"
                   maxLength={6}
                   autoFocus
@@ -363,17 +357,17 @@ export default function RegisterPage() {
               </div>
 
               {error && (
-                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                <p role="alert" className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
                   {error}
                 </p>
               )}
 
-              <div className="flex justify-center">
+              {captchaConfigured && <div className="flex justify-center">
                 <TurnstileCaptcha
                   key={`regv-${captchaKey}`}
                   onToken={setCaptchaToken}
                 />
-              </div>
+              </div>}
 
               <ButtonClay
                 type="submit"
@@ -414,13 +408,7 @@ export default function RegisterPage() {
               {a.loginHere}
             </Link>
           </p>
-          <p className="mt-3 text-center text-xs font-semibold text-clay-muted">
-            <Link href="/" className="text-clay-muted underline-offset-2 hover:underline">
-              {a.backHome}
-            </Link>
-          </p>
-        </CardClay>
       </div>
-    </div>
+    </AuthShell>
   );
 }

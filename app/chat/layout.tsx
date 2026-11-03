@@ -1,6 +1,7 @@
 import AuthGuard from "@/components/auth/AuthGuard";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import "./chat-redesign.css";
 
 // Area login → jangan diindeks Google.
 export const metadata: Metadata = {
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function ChatLayout({ children }: { children: ReactNode }) {
-  return <AuthGuard>{children}</AuthGuard>;
+  return <AuthGuard hideLoader>{children}</AuthGuard>;
 }

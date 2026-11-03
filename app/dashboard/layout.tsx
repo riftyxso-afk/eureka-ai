@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { Sidebar } from "@/components/layout/Sidebar";
 import StudyBuddyProvider from "@/components/study-buddy/StudyBuddyProvider";
 import AuthGuard from "@/components/auth/AuthGuard";
+import "./dashboard-pages.css";
+import "./more-pages.css";
 
 // Dashboard = area login → jangan diindeks Google (buang crawl budget).
 export const metadata: Metadata = {

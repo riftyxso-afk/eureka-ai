@@ -1,0 +1,40 @@
+.more-page { max-width:1050px; color:#30263b; }
+.more-page h1 { color:#2c213b; letter-spacing:-.035em; line-height:1.2; }
+.more-page h2 { letter-spacing:-.02em; }
+.more-page h1 + p,.more-page > p:first-of-type { max-width:620px; color:#887c91; font-size:14px; line-height:1.55; font-weight:500; }
+.more-page .card-clay,.more-page [class*="shadow-clay-sm"][class*="bg-clay-cream"],.more-page [class*="shadow-clay-sm"][class*="bg-clay-beige"] { border:1px solid #eee7f2; border-radius:16px; background:#fff; box-shadow:none !important; }
+.more-page .card-clay { padding:22px; }
+.more-page input:not([type="checkbox"]):not([type="range"]),.more-page textarea,.more-page select { min-height:46px; border:1px solid #e7dfed; border-radius:11px; background:#fff; color:#352a40; box-shadow:none; font-size:14px; font-weight:500; }
+.more-page input:focus,.more-page textarea:focus,.more-page select:focus { border-color:#9a72d4; outline:2px solid #e6daf4; outline-offset:1px; }
+.more-page .btn-clay-primary,.more-page .btn-clay-secondary,.more-page .btn-clay-ghost { border:1px solid transparent; border-radius:11px; box-shadow:none; font-size:13px; transition:background-color 150ms,border-color 150ms; }
+.more-page .btn-clay-primary { background:#7744c6; color:#fff; }
+.more-page .btn-clay-primary:hover:not(:disabled) { background:#6432b1; transform:none; }
+.more-page .btn-clay-secondary,.more-page .btn-clay-ghost { background:#f2edf7; color:#694296; }
+.more-page button[aria-pressed] { border:1px solid #e7dfed; border-radius:11px; box-shadow:none; }
+.more-page button[aria-pressed="true"] { border-color:#ddcbed; background:#f1e9fb; color:#7040b9; }
+.more-page button[aria-pressed]:hover { transform:none; }
+.more-page [class*="shadow-clay-inset"] { box-shadow:none; }
+.more-page button:focus-visible,.more-page a:focus-visible { outline:3px solid #bf9ee8; outline-offset:2px; }
+.more-tasks > div:first-child,.more-music > div:first-child,.more-friends > div:first-child { border-radius:18px; background:#f3edf9; padding:22px 24px; }
+.more-streaks > h1,.more-guide > h1 { margin-top:4px; }
+.more-streaks > .card-clay:first-of-type { background:#f4eefb; border-color:#eee3f6; }
+.more-guide .card-clay section h2 > span { border-radius:11px; }
+.more-settings { max-width:none; background:transparent; }
+.more-settings > div:first-child { margin:0 auto; max-width:1020px; border:0; border-radius:18px; background:#f3edf9; backdrop-filter:none; }
+.more-settings .card-clay { border:1px solid #eee7f2; }
+.dark .more-page,.dark .more-page h1 { color:#f4edf9; }
+.dark .more-page .card-clay,.dark .more-page [class*="shadow-clay-sm"][class*="bg-clay-cream"] { background:#302639; border-color:#4a3d56; }
+.dark .more-page input:not([type="checkbox"]):not([type="range"]),.dark .more-page textarea,.dark .more-page select { background:#342b3d; border-color:#554560; color:#f4edf9; }
+.dark .more-tasks > div:first-child,.dark .more-music > div:first-child,.dark .more-friends > div:first-child,.dark .more-settings > div:first-child,.dark .more-streaks > .card-clay:first-of-type { background:#392c46; }
+.dark .more-page button[aria-pressed="true"] { background:#51376b; color:#f0e1ff; }
+@media (max-width:640px) { .more-page .card-clay { padding:16px; } .more-tasks > div:first-child,.more-music > div:first-child,.more-friends > div:first-child { padding:18px; } }
+@media (prefers-reduced-motion:reduce) { .more-page button { transition:none; } }
+.referral-dialog { border-radius:20px; background:#fff; box-shadow:0 20px 70px rgb(39 20 65 / 20%); }
+.referral-dialog > div:first-child { background:#7541c7; }
+.referral-dialog [class*="shadow-clay"] { box-shadow:none; }
+.referral-dialog input { border:1px solid #e7dfed; border-radius:10px; box-shadow:none; }
+.pricing-redesign { background:#f8f5f9; }
+.pricing-redesign .card-clay { border:1px solid #eee7f2; border-radius:20px; background:#fff; box-shadow:none; }
+.pricing-redesign [class*="shadow-clay"] { box-shadow:none; }
+.pricing-redesign .btn-clay-primary,.pricing-redesign .btn-clay-secondary { border-radius:11px; box-shadow:none; }
+.dark .referral-dialog,.dark .pricing-redesign .card-clay { background:#302639; border-color:#4a3d56; }

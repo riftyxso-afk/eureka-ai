@@ -113,7 +113,7 @@ export default function StreaksPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+    <div className="more-page more-streaks mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
       <h1 className="text-2xl font-extrabold sm:text-3xl">Streaks</h1>
       <p className="mt-2 text-base font-semibold text-clay-muted">
         Pertahankan ritme belajarmu setiap hari

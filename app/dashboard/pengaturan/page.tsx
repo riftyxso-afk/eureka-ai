@@ -39,7 +39,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-clay-beige dark:bg-[#171526]">
+    <div className="more-page more-settings min-h-screen bg-clay-beige dark:bg-[#171526]">
       {/* Header */}
       <div className="border-b-2 border-clay-shadow/20 bg-clay-cream/70 backdrop-blur-sm dark:bg-[#221F33]">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-6">

@@ -11,12 +11,14 @@ import {
   Crown,
   Flag,
   Flame,
+  FileText,
   HelpCircle,
   LayoutDashboard,
   LogOut,
   Menu,
   Moon,
   Music,
+  Trophy,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
@@ -28,13 +30,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SidebarItem } from "./SidebarItem";
+import SidebarIcon from "./SidebarIcon";
 import { logoutUser } from "@/lib/auth";
-import { getAvatar } from "@/lib/avatar";
-import { getUserName } from "@/lib/identity";
 import { usePremium } from "@/lib/usePremium";
-import { PlanBadge } from "@/components/PlanBadge";
 import { ReferralPopup } from "@/components/ReferralPopup";
 import { useTheme } from "@/context/ThemeContext";
+import "./sidebar.css";
 
 interface MenuItem {
   id: string;
@@ -46,7 +47,9 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   // Menu dipangkas agar ringkas — halaman yang dihapus dari daftar tetap
   // dapat diakses lewat URL/link internal (Home, Rencana, Ujian, Leaderboard).
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { id: "dashboard", label: "Belajar", icon: LayoutDashboard, href: "/dashboard" },
+  { id: "catatan", label: "Catatan", icon: FileText, href: "/dashboard/catatan" },
+  { id: "leaderboard", label: "Papan skor", icon: Trophy, href: "/dashboard/leaderboard" },
   { id: "jadwal", label: "Jadwal", icon: CalendarDays, href: "/dashboard/jadwal" },
   { id: "tugas", label: "Tugas & Ujian", icon: AlarmClock, href: "/dashboard/tugas" },
   { id: "musik", label: "Musik", icon: Music, href: "/dashboard/musik" },
@@ -71,15 +74,16 @@ const menuItems: MenuItem[] = [
  * menu sendiri (mis. /dashboard/note/<id>) menyorot menu induknya.
  */
 export function activeMenuId(pathname: string): string | null {
+  pathname = pathname.replace(/^\/(id|en)(?=\/|$)/, "") || "/";
   // Pemetaan halaman tanpa menu sendiri → menu induk yang relevan.
   // DICEK DULU sebelum prefix-match /dashboard agar tidak tertangkap
   // menu "Dashboard" (prefix /dashboard lebih pendek tapi match duluan
   // pada best-length loop — keduanya prefix, jadi urutan penting).
   const PARENT: [string, string][] = [
-    ["/dashboard/note", "dashboard"],
+    ["/dashboard/note", "catatan"],
     ["/dashboard/keamanan", "pengaturan"],
     ["/dashboard/ujian", "dashboard"],
-    ["/dashboard/leaderboard", "dashboard"],
+    ["/dashboard/leaderboard", "leaderboard"],
     ["/dashboard/rencana", "jadwal"],
   ];
   for (const [prefix, id] of PARENT) {
@@ -106,15 +110,7 @@ export const Sidebar = () => {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [referralOpen, setReferralOpen] = useState(false);
-  const [avatar, setAvatarState] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      return window.localStorage.getItem("eureka_avatar");
-    } catch {
-      return null;
-    }
-  });
-
+  const [showMore, setShowMore] = useState(false);
   // Sidebar desktop: mode collapse/expand tersimpan per perangkat (localStorage).
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
@@ -135,13 +131,6 @@ export const Sidebar = () => {
       return next;
     });
   };
-
-  // Segarkan foto profil setelah kembali dari halaman profil (storage event).
-  useEffect(() => {
-    const sync = () => setAvatarState(getAvatar());
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, []);
 
   useEffect(() => {
     setIsOpen(false);
@@ -173,147 +162,60 @@ export const Sidebar = () => {
   };
 
   const brand = (
-    <Link
-      href="/dashboard"
-      title={collapsed ? "Eureka.AI" : undefined}
-      className="block border-b-[3px] border-clay-borderLight pb-4"
-    >
-      <span className={`flex items-center ${collapsed ? "justify-center" : "gap-2"}`}>
-        <img
-          src="/logo.png"
-          alt="Logo Eureka.AI"
-          className="h-9 w-9 object-contain"
-        />
-        {!collapsed && (
-          <span className="text-2xl font-extrabold text-clay-primary">
-            Eureka<span className="text-clay-dark">.AI</span>
-          </span>
-        )}
-      </span>
+    <Link href="/dashboard" className="eureka-sidebar-brand" aria-label="Eureka, dashboard" title={collapsed ? "Eureka" : undefined}>
+      {collapsed ? "e!" : "eureka!"}
     </Link>
   );
 
-  const navBody = (onNavigate?: () => void) => (
-    <>
-      <div
-        className={`mb-1 flex items-center rounded-clay-md bg-clay-beige/70 py-2 shadow-clay-inset ${
-          collapsed ? "justify-center px-1" : "gap-2 px-3"
-        }`}
-      >
-        <Link
-          href="/dashboard/profil"
-          title={collapsed ? getUserName() : undefined}
-          className="flex items-center"
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-clay-primary/20 text-sm shadow-clay-sm">
-            {avatar ? (
-              <img src={avatar} alt="Foto profil" className="h-full w-full object-cover" />
-            ) : (
-              <span>{getUserName().charAt(0).toUpperCase()}</span>
-            )}
-          </span>
-        </Link>
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <Link
-              href="/dashboard/profil"
-              className="block truncate text-xs font-extrabold text-clay-dark hover:text-clay-primary"
-              onClick={onNavigate}
-            >
-              {getUserName().split(" ")[0]}
-            </Link>
-            <PlanBadge size="sm" className="mt-1" />
-          </div>
-        )}
-      </div>
-
-      <nav className="flex flex-col gap-1">
-        {menuItems.map((item) => (
-          <SidebarItem
-            key={item.id}
-            icon={item.icon}
-            label={item.label}
-            href={item.href}
-            active={activeMenuId(pathname) === item.id}
-            onClick={onNavigate}
-            collapsed={collapsed}
-          />
-        ))}
-      </nav>
-
-      <div className="mt-1 border-t-2 border-clay-shadow/30 pt-1">
-        <SidebarItem
-          icon={Crown}
-          label={isPremium ? "Top Up Pro" : "Tingkatkan Pro"}
-          href="/pricing"
-          variant="pro"
-          onClick={onNavigate}
-          collapsed={collapsed}
-        />
-      </div>
-
-      <div className="mt-1 flex flex-col gap-1 border-t-2 border-clay-shadow/30 pt-1">
-        <button
-          onClick={() => setReferralOpen(true)}
-          title={collapsed ? "Bagikan Link (Referral)" : undefined}
-          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-clay-primary hover:shadow-[0_4px_0_rgb(var(--clay-shadow))] ${
-            collapsed ? "justify-center px-1" : "gap-3 px-4"
-          }`}
-        >
-          <Share2 size={15} />
-          {!collapsed && "Bagikan Link (Referral)"}
-        </button>
-      </div>
-
-      <div className="mt-1 flex flex-col gap-1 border-t-2 border-clay-shadow/30 pt-1">
-        <button
-          onClick={() => {
-            toggleTheme();
-            showToast(
-              themeResolved === "dark"
-                ? "Mode terang diaktifkan"
-                : "Mode gelap diaktifkan"
-            );
-          }}
-          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:shadow-[0_4px_0_rgb(var(--clay-shadow))] ${
-            collapsed ? "justify-center px-1" : "gap-3 px-4"
-          }`}
-        >
-          {themeResolved === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-          {!collapsed && (themeResolved === "dark" ? "Mode Terang" : "Mode Gelap")}
-        </button>
-        <button
-          onClick={handleLogout}
-          className={`flex items-center rounded-clay-md py-1.5 text-left text-[14px] font-bold text-clay-dark transition-all duration-75 hover:bg-clay-beige hover:text-red-500 hover:shadow-[0_4px_0_rgb(var(--clay-shadow))] ${
-            collapsed ? "justify-center px-1" : "gap-3 px-4"
-          }`}
-        >
-          <LogOut size={15} />
-          {!collapsed && "Keluar"}
-        </button>
-      </div>
-    </>
-  );
+  const navBody = (onNavigate?: () => void, mobile = false) => {
+    const compact = collapsed && !mobile;
+    return (
+      <>
+        <nav className="eureka-sidebar-nav" aria-label="Navigasi utama">
+          {["dashboard", "catatan", "mata-pelajaran", "leaderboard", "misi", "jadwal", "profil"].map((id) => {
+            const item = menuItems.find((entry) => entry.id === id)!;
+            return <SidebarItem key={item.id} icon={item.icon} art={item.id} label={item.label} href={item.href} active={activeMenuId(pathname) === item.id} onClick={onNavigate} collapsed={compact} />;
+          })}
+          <button type="button" className={`eureka-sidebar-item eureka-sidebar-more ${compact ? "is-collapsed" : ""}`} aria-expanded={showMore} aria-label={compact ? "Lainnya" : undefined} title={compact ? "Lainnya" : undefined} onClick={() => setShowMore((value) => !value)}>
+            <SidebarIcon name="more" />{!compact && <span>Lainnya</span>}
+          </button>
+        </nav>
+        {showMore && <div className="eureka-sidebar-extra">
+          {menuItems.filter((item) => !["dashboard", "catatan", "mata-pelajaran", "leaderboard", "misi", "jadwal", "profil"].includes(item.id)).map((item) => (
+            <SidebarItem key={item.id} icon={item.icon} label={item.label} href={item.href} active={activeMenuId(pathname) === item.id} onClick={onNavigate} collapsed={compact} />
+          ))}
+        <div className="eureka-sidebar-actions">
+          <SidebarItem icon={Crown} label={isPremium ? "Top Up Pro" : "Tingkatkan Pro"} href="/pricing" variant="pro" onClick={onNavigate} collapsed={compact} />
+          <button type="button" onClick={() => setReferralOpen(true)} title={compact ? "Bagikan link referral" : undefined} aria-label={compact ? "Bagikan link referral" : undefined} className={`eureka-sidebar-item ${compact ? "is-collapsed" : ""}`}>
+            <Share2 size={19} aria-hidden="true" />{!compact && <span>Bagikan referral</span>}
+          </button>
+          <button type="button" onClick={() => { toggleTheme(); showToast(themeResolved === "dark" ? "Mode terang diaktifkan" : "Mode gelap diaktifkan"); }} title={compact ? (themeResolved === "dark" ? "Mode terang" : "Mode gelap") : undefined} aria-label={compact ? (themeResolved === "dark" ? "Mode terang" : "Mode gelap") : undefined} className={`eureka-sidebar-item ${compact ? "is-collapsed" : ""}`}>
+            {themeResolved === "dark" ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}{!compact && <span>{themeResolved === "dark" ? "Mode terang" : "Mode gelap"}</span>}
+          </button>
+          <button type="button" onClick={handleLogout} title={compact ? "Keluar" : undefined} aria-label={compact ? "Keluar" : undefined} className={`eureka-sidebar-item is-danger ${compact ? "is-collapsed" : ""}`}><LogOut size={19} aria-hidden="true" />{!compact && <span>Keluar</span>}</button>
+        </div>
+        </div>}
+      </>
+    );
+  };
 
   return (
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed left-4 top-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-clay-cream shadow-clay-sm transition-all duration-75 active:translate-y-1 lg:hidden"
+        className="eureka-sidebar-menu-toggle fixed left-4 top-4 z-40 lg:hidden"
         aria-label="Buka menu"
       >
         <Menu size={22} />
       </button>
 
       <div
-        className={`sticky top-0 hidden h-screen shrink-0 items-center transition-[width] duration-200 lg:flex ${
-          collapsed ? "w-[76px]" : "w-[220px]"
+        className={`eureka-sidebar-container sticky top-0 hidden h-screen shrink-0 items-center transition-[width] duration-200 lg:flex ${
+          collapsed ? "w-[76px]" : "w-[232px]"
         }`}
       >
         <aside
-          className={`flex max-h-full w-full -translate-y-10 flex-col gap-2 overflow-y-auto rounded-clay bg-clay-cream shadow-clay-sm ${
-            collapsed ? "p-2" : "p-3"
-          }`}
+          className={`eureka-sidebar ${collapsed ? "is-compact" : ""}`}
         >
           <div className="relative">
             {brand}
@@ -322,7 +224,7 @@ export const Sidebar = () => {
               onClick={toggleCollapsed}
               aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
               title={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
-              className="absolute -right-1.5 top-0 flex h-7 w-7 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset transition-colors hover:bg-clay-primary hover:text-white"
+              className="eureka-sidebar-collapse"
             >
               {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
             </button>
@@ -351,30 +253,13 @@ export const Sidebar = () => {
                 duration: 0.3,
                 ease: [0.32, 0.72, 0, 1],
               }}
-              className="fixed left-0 top-0 z-50 flex h-dvh w-[30%] min-w-[200px] max-w-[85vw] flex-col gap-2 overflow-y-auto overscroll-contain rounded-r-clay-md bg-clay-cream p-3 shadow-clay-lg lg:hidden before:absolute before:inset-0 before:pointer-events-none before:rounded-r-clay-md before:bg-gradient-to-b before:from-clay-primary/5 before:to-transparent"
+              className="eureka-sidebar eureka-sidebar-mobile fixed left-0 top-0 z-50 lg:hidden"
             >
-              <div className="flex items-center justify-between gap-2 border-b-[3px] border-clay-borderLight pb-2">
-                <Link href="/dashboard" onClick={() => setIsOpen(false)}>
-                  <span className="flex items-center gap-2">
-                    <img
-                      src="/logo.png"
-                      alt="Logo Eureka.AI"
-                      className="h-8 w-8 object-contain"
-                    />
-                    <span className="text-2xl font-extrabold text-clay-primary">
-                      Eureka<span className="text-clay-dark">.AI</span>
-                    </span>
-                  </span>
-                </Link>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-clay-beige text-clay-muted shadow-clay-inset"
-                  aria-label="Tutup menu"
-                >
-                  <X size={18} />
-                </button>
+              <div className="eureka-sidebar-mobile-header">
+                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="eureka-sidebar-brand">eureka!</Link>
+                <button type="button" onClick={() => setIsOpen(false)} className="eureka-sidebar-close" aria-label="Tutup menu"><X size={20} /></button>
               </div>
-              {navBody(() => setIsOpen(false))}
+              {navBody(() => setIsOpen(false), true)}
             </motion.aside>
           </>
         )}

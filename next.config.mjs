@@ -8,7 +8,7 @@ const isDev = process.env.NODE_ENV === "development";
 // untuk aplikasi ini — dicatat sebagai keputusan di change security-hardening).
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.youtube.com${isDev ? " 'unsafe-eval'" : ""};
+  script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://www.youtube.com${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
   font-src 'self' data: https://fonts.gstatic.com;
@@ -40,7 +40,7 @@ const nextConfig = {
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       {
         key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=(), payment=()",
+        value: "camera=(), microphone=(self), geolocation=(), payment=()",
       },
     ];
     // HSTS hanya untuk produksi (HTTPS sudah wajib di Vercel).

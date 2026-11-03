@@ -118,7 +118,7 @@ const SECTIONS: GuideSection[] = [
 
 export default function PanduanPage() {
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+    <div className="more-page more-guide mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
       <h1 className="text-2xl font-extrabold sm:text-3xl">Panduan</h1>
       <p className="mt-2 max-w-2xl text-base font-semibold text-clay-muted">
         Cara memakai fitur-fitur Eureka.AI — pilih topik yang mau kamu kuasai,

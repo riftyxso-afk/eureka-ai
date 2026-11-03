@@ -151,10 +151,6 @@ function buildOtpEmailHtml(code: string, email: string): string {
 }
 
 async function sendOtpEmail(to: string, code: string): Promise<void> {
-  if (!isResendConfigured() || !process.env.RESEND_FROM_EMAIL) {
-    console.log(`\n[DEV OTP] Email: ${to}  Kode: ${code}\n`);
-    return;
-  }
   const resend = new Resend(process.env.RESEND_API_KEY!);
   const { error } = await resend.emails.send({
     from: FROM_ADDRESS,
@@ -209,6 +205,12 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleRequest(email: string, name: string) {
+  if (!isResendConfigured()) {
+    return NextResponse.json(
+      { ok: false, error: "Layanan email belum dikonfigurasi. Silakan coba lagi nanti." },
+      { status: 503 }
+    );
+  }
   const now = new Date();
   const recent = await db()
     .from("otp_codes")

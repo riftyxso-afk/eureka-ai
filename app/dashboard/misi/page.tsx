@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   CheckCircle2,
-  Flag,
   Loader2,
   Plus,
   Sparkles,
@@ -132,11 +132,13 @@ export default function MisiPage() {
   const done = missions.filter((m) => m.status === "done");
 
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <h1 className="text-2xl font-extrabold sm:text-3xl">Misi Belajar</h1>
-      <p className="mt-2 text-base font-semibold text-clay-muted">
-        Tetapkan target besar — AI membimbingmu langkah demi langkah
-      </p>
+    <div className="eureka-dashboard-page eureka-page-misi mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+      <div className="eureka-page-heading">
+        <h1 className="text-2xl font-extrabold sm:text-3xl">Misi Belajar</h1>
+        <p className="mt-2 text-base font-semibold text-clay-muted">
+          Tetapkan target besar — AI membimbingmu langkah demi langkah
+        </p>
+      </div>
 
       <div className="mt-5 flex justify-end">
         <ButtonClay
@@ -236,11 +238,9 @@ export default function MisiPage() {
       )}
 
       {active.length === 0 && done.length === 0 && !showNew && (
-        <div className="card-clay mt-4 flex flex-col items-center py-14 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
-            <Flag size={30} className="text-clay-muted" />
-          </div>
-          <h3 className="mt-4 text-lg font-extrabold">Belum ada misi</h3>
+        <div className="study-empty mt-4">
+          <Image src="/landing/ei6Qn.png" alt="" width={180} height={180} />
+          <h3 className="mt-4 text-lg font-extrabold">Mulai misi pertamamu</h3>
           <p className="mt-1.5 max-w-sm text-sm font-semibold text-clay-muted">
             Contoh: mahasiswa kejar IPK dari 2 ke 3.5, atau siswa SMA kelas 12
             mengejar lulus SNBP/SNBT.

@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import "feral-blob/blob.css";
+
+const FormBlob = dynamic(() => import("feral-blob").then((mod) => mod.JellyBlobMascot), { ssr: false });
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Eye,
   EyeOff,
-  Hand,
   KeyRound,
   Loader2,
   Lock,
@@ -16,7 +19,7 @@ import {
 } from "lucide-react";
 
 import ButtonClay from "@/components/ui/ButtonClay";
-import CardClay from "@/components/ui/CardClay";
+import AuthShell from "@/components/auth/AuthShell";
 import InputClay from "@/components/ui/InputClay";
 import GoogleIcon from "@/components/ui/GoogleIcon";
 import TurnstileCaptcha from "@/components/ui/TurnstileCaptcha";
@@ -39,6 +42,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<LoginMode>("password");
   const [email, setEmail] = useState("");
+  const [focusedField, setFocusedField] = useState<"email" | "password" | null>(null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [otpCode, setOtpCode] = useState("");
@@ -210,19 +214,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-clay-beige px-4 py-10">
-      <div className="w-full max-w-[440px]">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-3">
-          <img src="/logo.png" alt="Logo Eureka.AI" className="h-11 w-11 object-contain" />
-          <span className="text-2xl font-extrabold text-clay-dark">
-            Eureka<span className="text-clay-primary">.AI</span>
-          </span>
-        </Link>
-
-        <CardClay className="!p-8 sm:!p-10">
+    <AuthShell mode="login">
+      <div className="auth-form" onFocusCapture={(event) => {
+        const target = event.target as HTMLElement;
+        setFocusedField(target.id === "auth-email" ? "email" : target.id === "auth-password" || target.dataset.passwordToggle === "true" ? "password" : null);
+      }} onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedField(null);
+      }}>
+          <div className={`auth-companion ${focusedField ? `is-${focusedField}` : ""}`} aria-hidden="true">
+            <FormBlob stillBody mood={focusedField === "password" ? "password" : focusedField === "email" ? "curious" : "neutral"} gaze={{ x: focusedField === "email" ? Math.min(24, email.length * 1.5 - 12) : 0, y: focusedField === "email" ? 12 : 0 }} />
+          </div>
           <h1 className="text-center text-2xl font-extrabold text-clay-dark sm:text-3xl">
             {a.welcome}
-            <Hand size={26} className="ml-2 inline text-clay-primary" />
           </h1>
           <p className="mt-2 text-center text-base font-semibold text-clay-muted">
             {a.welcomeSub}
@@ -262,6 +265,7 @@ export default function LoginPage() {
               <button
                 key={tab.id}
                 type="button"
+                aria-pressed={mode === tab.id}
                 onClick={() => {
                   setMode(tab.id);
                   setError(null);
@@ -280,7 +284,7 @@ export default function LoginPage() {
           {mode === "password" ? (
             <form onSubmit={handleSubmit} className="mt-6 space-y-5">
               <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                <label htmlFor="auth-email" className="mb-2 block text-sm font-extrabold text-clay-dark">
                   {a.email}
                 </label>
                 <div className="relative">
@@ -289,6 +293,7 @@ export default function LoginPage() {
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
                   />
                   <InputClay
+                    id="auth-email"
                     type="email"
                     inputMode="email"
                     autoComplete="email"
@@ -302,7 +307,7 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                <label htmlFor="auth-password" className="mb-2 block text-sm font-extrabold text-clay-dark">
                   {a.password}
                 </label>
                 <div className="relative">
@@ -311,6 +316,7 @@ export default function LoginPage() {
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
                   />
                   <InputClay
+                    id="auth-password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     placeholder="••••••••"
@@ -322,6 +328,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
+                    data-password-toggle="true"
                     aria-label={showPassword ? a.hidePassword : a.showPassword}
                     className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-clay-muted transition-colors hover:text-clay-primary"
                   >
@@ -331,17 +338,17 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                <p role="alert" className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
                   {error}
                 </p>
               )}
 
-              <div className="flex justify-center">
+              {captchaConfigured && <div className="flex justify-center">
                 <TurnstileCaptcha
                   key={`pw-${captchaKey}`}
                   onToken={setCaptchaToken}
                 />
-              </div>
+              </div>}
 
               <ButtonClay
                 type="submit"
@@ -365,7 +372,7 @@ export default function LoginPage() {
                 {a.otpHint}
               </p>
               <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                <label htmlFor="auth-email" className="mb-2 block text-sm font-extrabold text-clay-dark">
                   {a.email}
                 </label>
                 <div className="relative">
@@ -374,6 +381,7 @@ export default function LoginPage() {
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-clay-muted"
                   />
                   <InputClay
+                    id="auth-email"
                     type="email"
                     inputMode="email"
                     autoComplete="email"
@@ -387,17 +395,17 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                <p role="alert" className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
                   {error}
                 </p>
               )}
 
-              <div className="flex justify-center">
+              {captchaConfigured && <div className="flex justify-center">
                 <TurnstileCaptcha
                   key={`otp-${captchaKey}`}
                   onToken={setCaptchaToken}
                 />
-              </div>
+              </div>}
 
               <ButtonClay
                 type="submit"
@@ -431,12 +439,14 @@ export default function LoginPage() {
                 {a.otpCheckInbox}
               </p>
               <div>
-                <label className="mb-2 block text-sm font-extrabold text-clay-dark">
+                <label htmlFor="auth-otp" className="mb-2 block text-sm font-extrabold text-clay-dark">
                   {a.otpLabel}
                 </label>
                 <input
+                  id="auth-otp"
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   pattern="[0-9]*"
                   maxLength={6}
                   autoFocus
@@ -450,17 +460,17 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <p className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                <p role="alert" className="rounded-clay-md border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
                   {error}
                 </p>
               )}
 
-              <div className="flex justify-center">
+              {captchaConfigured && <div className="flex justify-center">
                 <TurnstileCaptcha
                   key={`otpv-${captchaKey}`}
                   onToken={setCaptchaToken}
                 />
-              </div>
+              </div>}
 
               <ButtonClay
                 type="submit"
@@ -495,19 +505,21 @@ export default function LoginPage() {
             </form>
           )}
 
+          {process.env.NODE_ENV === "development" && (
+            <p className="mt-5 text-center text-sm font-bold">
+              <Link href="/dashboard" className="text-clay-primary underline-offset-2 hover:underline">
+                Buka dashboard untuk pratinjau lokal →
+              </Link>
+            </p>
+          )}
+
           <p className="mt-6 text-center text-sm font-bold text-clay-muted">
             {a.noAccount}{" "}
             <Link href="/register" className="font-extrabold text-clay-primary underline-offset-2 hover:underline">
               {dict.nav.cobaGratis}
             </Link>
           </p>
-          <p className="mt-3 text-center text-xs font-semibold text-clay-muted">
-            <Link href="/" className="text-clay-muted underline-offset-2 hover:underline">
-              {a.backHome}
-            </Link>
-          </p>
-        </CardClay>
       </div>
-    </div>
+    </AuthShell>
   );
 }

@@ -349,7 +349,7 @@ export default function PricingPage() {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-clay-beige px-4 py-10">
+    <div className="pricing-redesign flex min-h-screen items-center justify-center bg-clay-beige px-4 py-10">
       {/* Data terstruktur untuk mesin pencari (Product/Offer, IDR) */}
       <script
         type="application/ld+json"

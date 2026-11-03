@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
-import { BookOpen, Plus, Trash2, X } from "lucide-react";
+import Image from "next/image";
+import { Plus, Trash2, X } from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
@@ -19,6 +20,7 @@ interface SubjectWithCount extends Subject {
 export default function MataPelajaranPage() {
   const [subjects, setSubjects] = useState<SubjectWithCount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,12 +28,12 @@ export default function MataPelajaranPage() {
   const load = useCallback(async () => {
     try {
       const res = await apiFetch("/api/subjects");
-      if (res.ok) {
-        const data = await res.json();
-        setSubjects(data.subjects ?? []);
-      }
+      if (!res.ok) throw new Error("Gagal memuat mata pelajaran");
+      const data = await res.json();
+      setSubjects(data.subjects ?? []);
+      setLoadError(false);
     } catch {
-      // biarkan kosong
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -78,8 +80,8 @@ export default function MataPelajaranPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="eureka-dashboard-page eureka-page-mata-pelajaran mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+      <div className="eureka-page-heading flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold sm:text-3xl">Mata Pelajaran</h1>
           <p className="mt-2 text-base font-semibold text-clay-muted">
@@ -126,18 +128,20 @@ export default function MataPelajaranPage() {
       )}
 
       {loading ? (
-        <div className="card-clay mt-6 flex items-center justify-center py-14 text-clay-muted">
-          <p className="text-base font-extrabold">Memuat...</p>
+        <div className="study-empty" role="status"><p>Memuat mata pelajaran…</p></div>
+      ) : loadError ? (
+        <div className="study-empty" role="status">
+          <Image src="/onboarding/eureka-welcome.png" alt="" width={136} height={136} />
+          <h2>Mata pelajaran belum bisa dimuat</h2>
+          <p>Periksa koneksi ke layanan Eureka, lalu coba lagi.</p>
+          <button type="button" className="study-primary" onClick={() => { setLoading(true); void load(); }}>Coba lagi</button>
         </div>
       ) : subjects.length === 0 ? (
-        <div className="card-clay mt-6 flex flex-col items-center py-14 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
-            <BookOpen size={36} className="text-clay-muted" />
-          </div>
-          <h3 className="mt-6 text-xl font-extrabold">Belum ada mata pelajaran</h3>
-          <p className="mt-2 max-w-sm text-base font-semibold text-clay-muted">
-            Tambahkan mata pelajaran pertamamu — otomatis muncul di menu Buat Catatan.
-          </p>
+        <div className="study-empty">
+          <Image src="/onboarding/eureka-welcome.png" alt="" width={136} height={136} />
+          <h2>Petualangan belajarmu dimulai di sini</h2>
+          <p>Tambahkan mata pelajaran pertama untuk mengumpulkan catatan dan memantau kemajuanmu.</p>
+          <button type="button" className="study-primary" onClick={() => { setError(null); setAdding(true); }}><Plus size={18} /> Tambah mata pelajaran</button>
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

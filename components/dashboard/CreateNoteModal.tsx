@@ -38,6 +38,7 @@ import { ensurePushSetup } from "@/lib/push";
 import { addActiveJobId, removeActiveJobId } from "@/context/JobWatcherContext";
 import { useNoteSteps, type NoteStep } from "@/components/note/useNoteSteps";
 import { NoteLoadingSteps } from "@/components/note/NoteLoadingSteps";
+import "./create-note-modal.css";
 
 interface SourceOption {
   id: string;
@@ -739,7 +740,7 @@ export const CreateNoteModal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={close}
-          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
+          className="create-note-backdrop fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
         >
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.95 }}
@@ -747,9 +748,13 @@ export const CreateNoteModal = ({
             exit={{ opacity: 0, y: 24, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
-            className="m-auto w-full max-w-lg max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] rounded-clay"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Buat catatan baru"
+            className="create-note-dialog m-auto w-full max-w-lg max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] rounded-clay"
           >
-            <CardClay className="!shadow-none !p-4 sm:!p-8">
+            <CardClay className="create-note-card !shadow-none !p-4 sm:!p-8">
+              {!processing && !createdNote && !jobError && <div className="create-note-progress" aria-label={`Langkah ${step} dari 5`}><span>BUAT CATATAN</span><div aria-hidden="true">{[1, 2, 3, 4, 5].map((number) => <i key={number} className={number <= step ? "is-current" : ""} />)}</div></div>}
               {jobError ? (
                 <div className="flex flex-col items-center px-4 py-8 sm:px-6 sm:py-12 text-center">
                   <motion.div
@@ -896,18 +901,18 @@ export const CreateNoteModal = ({
                   </div>
 
                   <div className="mt-4 sm:mt-6 grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
-                    {SOURCES.map((s) => (
+                    {SOURCES.filter((s) => !s.comingSoon).map((s) => (
                       <button
                         key={s.id}
                         onClick={() => addSource(s.id)}
                         data-tutorial-id={`source-card-${s.id}`}
-                        className={`relative card-clay flex flex-col items-start gap-2 border-clay-shadow/40 p-4 sm:p-5 text-left transition-all duration-75 hover:-translate-y-0.5 hover:border-clay-primary active:translate-y-1 min-h-[88px] ${
+                        className={`create-note-source relative card-clay flex flex-col items-start gap-2 border-clay-shadow/40 p-4 sm:p-5 text-left transition-all duration-75 hover:-translate-y-0.5 hover:border-clay-primary active:translate-y-1 min-h-[88px] ${
                           s.comingSoon ? "opacity-70" : ""
                         }`}
                       >
                         {s.comingSoon && (
                           <span className="absolute right-3 top-3 rounded-clay-full bg-amber-200 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-800 shadow-clay-inset">
-                            Soon
+                            Segera hadir
                           </span>
                         )}
                         <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
@@ -947,14 +952,15 @@ export const CreateNoteModal = ({
                   <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
                     {/* Mata Pelajaran */}
                     <div>
-                      <label className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
+                      <label htmlFor="note-subject" className="mb-2 block text-xs sm:text-sm font-extrabold text-clay-dark">
                         MATA PELAJARAN/KULIAH{" "}
                         <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <select
+                          id="note-subject"
                           className={selectClayClass}
-                          value={addingSubject ? "__add__" : mataPelajaran}
+                          value={mataPelajaran}
                           onChange={(e) => {
                             if (e.target.value === "__add__") {
                               setAddingSubject(true);
@@ -973,13 +979,14 @@ export const CreateNoteModal = ({
                               {s.name}
                             </option>
                           ))}
-                          <option value="__add__">Tambah mata pelajaran baru...</option>
                         </select>
                         <ChevronDown
                           size={18}
                           className="pointer-events-none absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-clay-muted"
                         />
                       </div>
+
+                      {!addingSubject && <button type="button" className="note-add-subject" onClick={() => { setAddingSubject(true); setSubjectError(null); }}><Plus size={15} /> Tambah mata pelajaran</button>}
 
                       {addingSubject && (
                         <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -1039,7 +1046,7 @@ export const CreateNoteModal = ({
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block text-sm font-extrabold text-clay-dark">
-                              {translateToIndo ? "Aktif — diterjemahkan ke Indonesia" : "Matikan terjemahan"}
+                              {translateToIndo ? "Terjemahan aktif" : "Terjemahan nonaktif"}
                             </span>
                             <span className="block text-xs font-bold text-clay-muted">
                               Cocok untuk artikel/link berbahasa asing (Inggris, dll).
@@ -1069,19 +1076,17 @@ export const CreateNoteModal = ({
                           return (
                             <button
                               key={mode.value}
+                              type="button"
+                              aria-pressed={active}
+                              className={`note-study-option ${active ? "is-selected" : ""}`}
                               onClick={() => setStudyMode(mode.value)}
-                              className={`flex flex-1 flex-col items-center rounded-clay-md border-3 p-2 sm:p-3 transition-all duration-75 min-h-[56px] ${
-                                active
-                                  ? "border-clay-borderLight bg-clay-primary text-white shadow-[0_6px_0_rgb(var(--clay-btn-shadow))]"
-                                  : "border-clay-shadow/50 bg-clay-cream text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
-                              }`}
                             >
                               <span className="text-xs sm:text-sm font-extrabold">
                                 {mode.label}
                               </span>
                               <span
                                 className={`text-[10px] sm:text-[11px] font-bold ${
-                                  active ? "text-white/85" : "text-clay-muted"
+                                  active ? "text-violet-700" : "text-clay-muted"
                                 }`}
                               >
                                 {mode.desc}
@@ -1163,7 +1168,7 @@ export const CreateNoteModal = ({
                           return (
                             <div
                               key={src.id}
-                              className="rounded-clay-md border-3 border-clay-shadow/40 bg-clay-cream p-3 sm:p-4"
+                              className="note-source-entry rounded-clay-md border-3 border-clay-shadow/40 bg-clay-cream p-3 sm:p-4"
                             >
                               <div className="mb-2 flex items-center justify-between gap-2">
                                 <span className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-clay-dark">
@@ -1416,7 +1421,7 @@ export const CreateNoteModal = ({
                             key={n}
                             type="button"
                             onClick={() => setChapterCount(n)}
-                            className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-clay-md border-2 text-lg sm:text-xl font-extrabold transition-all duration-75 min-h-[44px] min-w-[44px] ${
+                            className={`note-chapter flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-clay-md border-2 text-lg sm:text-xl font-extrabold transition-all duration-75 min-h-[44px] min-w-[44px] ${
                               active
                                 ? "border-clay-primary bg-clay-primary text-white shadow-clay-btn -translate-y-0.5"
                                 : "border-clay-shadow/40 bg-clay-inputBg text-clay-dark shadow-clay-inset hover:border-clay-primary"

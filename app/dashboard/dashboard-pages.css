@@ -1,0 +1,60 @@
+.eureka-dashboard-page { --page-purple:#7540d0; --page-ink:#30263e; --page-muted:#81778c; max-width:1060px; padding:36px 28px 88px; color:var(--page-ink); font-family:var(--font-nunito),sans-serif; }
+.eureka-dashboard-page h1 { font-size:clamp(26px,3vw,34px); line-height:1.2; letter-spacing:-.6px; font-weight:900; }
+.eureka-dashboard-page > p,.eureka-dashboard-page > div:first-child p { color:var(--page-muted); font-size:15px; font-weight:650; line-height:1.6; }
+.eureka-dashboard-page h1::before { content:""; display:block; width:46px; height:46px; margin-bottom:15px; border-radius:14px; background:#f0e8fb center/28px no-repeat; }
+.eureka-page-mata-pelajaran h1::before { background-image:url('/dashboard-icons/subjects.svg'); }
+.eureka-page-leaderboard h1::before { background-image:url('/dashboard-icons/leaderboard.svg'); }
+.eureka-page-misi h1::before { background-image:url('/dashboard-icons/missions.svg'); }
+.eureka-page-jadwal h1::before { background-image:url('/dashboard-icons/schedule.svg'); }
+.eureka-page-profil h1::before { background-image:url('/dashboard-icons/profile.svg'); }
+.eureka-dashboard-page .card-clay { border:2px solid #eee8f3; border-radius:18px; background:#fff; box-shadow:none !important; }
+.eureka-dashboard-page .btn-clay-primary { min-height:48px; border:0; border-bottom:4px solid #5426a1; border-radius:12px; background:#7540d0; color:#fff; box-shadow:none; font-size:13px; transition:background-color 150ms ease, transform 150ms ease; }
+.eureka-dashboard-page .btn-clay-secondary,.eureka-dashboard-page .btn-clay-ghost { min-height:46px; border:2px solid #e8def2; border-bottom-width:3px; border-radius:12px; background:#fff; color:#7540d0; box-shadow:none; }
+.eureka-dashboard-page .input-clay { min-height:48px; border:2px solid #eae3ef; border-radius:12px; background:#faf8fc; color:#30263e; box-shadow:none; }
+.eureka-dashboard-page :is(input,select,textarea):focus-visible { outline:3px solid #bc9aed; outline-offset:2px; }
+.eureka-dashboard-page :is(button,a):focus-visible { outline:3px solid #a77ce5; outline-offset:3px; }
+.eureka-dashboard-page .shadow-clay-inset,.eureka-dashboard-page .shadow-clay-sm,.eureka-dashboard-page .shadow-clay { box-shadow:none; }
+.eureka-page-leaderboard > div:first-child svg { display:none; }
+.eureka-page-mata-pelajaran > div:first-child,.eureka-page-leaderboard > div:first-child { align-items:flex-end; }
+.eureka-page-profil > .card-clay:first-of-type { background:#f8f4fe; border-color:#f1eafa; }
+.eureka-page-profil > .grid .card-clay { min-height:115px; justify-content:center; }
+.eureka-page-misi > h1,.eureka-page-jadwal > div:first-child h1 { margin-top:0; }
+@media (max-width:640px) { .eureka-dashboard-page { padding:20px 4px 80px; }.eureka-dashboard-page h1 { font-size:26px; }.eureka-dashboard-page h1::before { width:40px; height:40px; margin-bottom:12px; } }
+@media (hover:hover) and (pointer:fine) { .eureka-dashboard-page .btn-clay-primary:hover { background:#824ddb; transform:translateY(-1px); } }
+@media (prefers-reduced-motion:reduce) { .eureka-dashboard-page .btn-clay-primary { transition:none; } }
+.dark .eureka-dashboard-page { --page-ink:#f1ebf5; --page-muted:#b4a9bf; }
+.dark .eureka-dashboard-page .card-clay { background:#241d2d; border-color:#3e3349; }
+.dark .eureka-dashboard-page .input-clay { background:#292132; border-color:#51415f; color:#f1ebf5; }
+.eureka-page-heading { padding:23px 26px; border-radius:18px; background:#f7f2fd; }
+.eureka-page-heading h1::before { background-color:#fff; }
+.eureka-page-heading p { max-width:660px; color:var(--page-muted); }
+.eureka-page-heading > div { min-width:0; }
+.eureka-page-heading .btn-clay-primary { flex-shrink:0; }
+.dark .eureka-page-heading { background:#30243e; }
+@media (max-width:640px) { .eureka-page-heading { padding:18px; border-radius:15px; } }
+/* Align these pages with the learning path: generous white space, expressive empty states. */
+@media (min-width:1024px) { .flex.min-h-screen:has(.eureka-dashboard-page) { background:#fff; padding:0 24px 0 0; gap:0; } }
+.eureka-dashboard-page { max-width:920px; padding-top:54px; }
+.eureka-page-heading { background:transparent; padding:0; border-radius:0; }
+.eureka-page-heading h1::before { display:none; }
+.eureka-dashboard-page h1 { font-size:clamp(29px,3vw,36px); }
+.eureka-dashboard-page > p,.eureka-dashboard-page .eureka-page-heading p { color:#82788d; margin-top:8px; }
+.eureka-dashboard-page .study-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:390px; padding:35px 24px; background:#fff; text-align:center; }
+.eureka-dashboard-page .study-empty img { width:150px; height:150px; object-fit:contain; }
+.eureka-dashboard-page .study-empty h2,.eureka-dashboard-page .study-empty h3 { margin:12px 0 0; color:#30263e; font-size:21px; font-weight:900; line-height:1.3; }
+.eureka-dashboard-page .study-empty p { max-width:370px; margin-top:8px; color:#82788d; font-size:14px; font-weight:650; line-height:1.55; }
+.eureka-dashboard-page .study-primary { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; margin-top:22px; padding:11px 20px; border:0; border-bottom:4px solid #512597; border-radius:12px; background:#7540d0; color:#fff; font-size:13px; font-weight:900; }
+.eureka-page-leaderboard .study-empty img,.eureka-page-mata-pelajaran .study-empty img { width:136px; height:136px; }
+.eureka-page-leaderboard > .mt-6.flex { max-width:700px; margin-left:auto; margin-right:auto; }
+.eureka-page-mata-pelajaran > .grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); }
+.eureka-page-profil > .card-clay:first-of-type { background:#fff; border:0; padding:24px 0; }
+.dark .flex.min-h-screen:has(.eureka-dashboard-page) { background:#19141f; }
+.dark .eureka-dashboard-page .study-empty,.dark .eureka-page-profil > .card-clay:first-of-type { background:#19141f; }
+.dark .eureka-dashboard-page .study-empty h2,.dark .eureka-dashboard-page .study-empty h3 { color:#f1ebf5; }
+@media (max-width:640px) { .eureka-dashboard-page { padding-top:24px; }.eureka-dashboard-page .study-empty { min-height:320px; padding:24px 12px; } }
+@media (max-width:1023px) { .flex.min-h-screen:has(.eureka-dashboard-page) { background:#fff; } .dark .flex.min-h-screen:has(.eureka-dashboard-page) { background:#19141f; } }
+.eureka-page-profil .profile-hero { padding:32px 24px; border:0; background:#f7f2fd; }
+.eureka-page-profil > .grid .card-clay { border:0; background:#faf8fd; }
+.eureka-page-profil .profile-hero > p:first-of-type { font-size:24px; }
+.eureka-page-profil .profile-hero > span:last-child { border:0; background:#eee3fc; color:#7540d0; }
+.dark .eureka-page-profil .profile-hero,.dark .eureka-page-profil > .grid .card-clay { background:#30243e; }

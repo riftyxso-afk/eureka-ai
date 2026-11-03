@@ -339,14 +339,16 @@ export default function ProfilPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <h1 className="text-2xl font-extrabold sm:text-3xl">{l.title}</h1>
-      <p className="mt-2 text-base font-semibold text-clay-muted">
-        {l.desc}
-      </p>
+    <div className="eureka-dashboard-page eureka-page-profil mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+      <div className="eureka-page-heading">
+        <h1 className="text-2xl font-extrabold sm:text-3xl">{l.title}</h1>
+        <p className="mt-2 text-base font-semibold text-clay-muted">
+          {l.desc}
+        </p>
+      </div>
 
       {/* Avatar + info ringkas */}
-      <div className="card-clay mt-6 flex flex-col items-center py-8 text-center">
+      <div className="card-clay profile-hero mt-6 flex flex-col items-center py-8 text-center">
         <div className="relative">
           <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-clay-primary/20 text-5xl shadow-clay-sm">
             {avatar ? (

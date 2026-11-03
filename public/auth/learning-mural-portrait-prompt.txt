@@ -1,0 +1,2 @@
+Generated using built-in image generation, editing public/auth/learning-mural.png.
+Prompt: Recompose the Eureka educational mural as a clean tall portrait illustration with aspect ratio 2:3 for a login panel of about 500 x 750. Preserve the purple palette, painted texture, Indonesian students, books, and purple mascot. Place the main faces and mascot in the middle and lower two thirds, with calm space at the top for a text card. No text, UI, border, or watermark.

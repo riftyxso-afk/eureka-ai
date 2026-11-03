@@ -133,12 +133,12 @@ export const OPENROUTER_MODEL =
   process.env.OPENROUTER_MODEL ?? "z-ai/glm-5.2:free";
 
 export const JUANROUTER_BASE_URL =
-  process.env.JUANROUTER_BASE_URL ?? "https://router.juan.web.id/v1";
+  process.env.JUANROUTER_BASE_URL ?? "https://api.juanrouter.com/v1";
 
 export const JUANROUTER_API_KEY = process.env.JUANROUTER_API_KEY ?? "";
 
 export const JUANROUTER_MODEL =
-  process.env.JUANROUTER_MODEL ?? "gemini-3.7-flash-low";
+  process.env.JUANROUTER_MODEL ?? "deepseek-v4.1-flash";
 
 export const NINE_ROUTER_BASE_URL =
   process.env.NINE_ROUTER_BASE_URL ?? "http://localhost:20128/v1";
@@ -333,7 +333,7 @@ export function getProviderChain(speedMode: AiSpeedMode = "normal", _forChat: bo
   if (reasoning === false) {
     tierModels = tierModels.filter((m) => !THINKING_SET.has(m));
     if (tierModels.length === 0) {
-      tierModels = ["gemini-3.7-flash-low", "gemini-3.5-flash-lite"];
+      tierModels = ["gpt-4o", "deepseek-v4.1-flash"];
     }
   }
   // Model spesifik pilihan user (Model Store) → percobaan PERTAMA, disusul
@@ -346,7 +346,7 @@ export function getProviderChain(speedMode: AiSpeedMode = "normal", _forChat: bo
     preferredModel && MODEL_CATALOG_IDS.has(preferredModel)
       ? MODEL_CATALOG.find((m) => m.id === preferredModel)
       : undefined;
-  const preferred = preferredEntry && (!preferredEntry.premiumOnly || premium) ? preferredEntry.id : "";
+  const preferred = preferredEntry?.available && (!preferredEntry.premiumOnly || premium) ? preferredEntry.id : "";
   if (preferred) {
     const preferredTier = preferredEntry?.tier ?? speedMode;
     const tierList = lists[preferredTier];

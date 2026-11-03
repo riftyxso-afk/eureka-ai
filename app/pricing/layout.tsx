@@ -24,3 +24,4 @@ export default function PricingLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return children;
 }
+import "../dashboard/more-pages.css";

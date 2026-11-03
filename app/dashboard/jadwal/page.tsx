@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   CalendarDays,
@@ -167,8 +168,8 @@ export default function JadwalPage() {
   const sorted = sortedTasks(tasks);
 
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="eureka-dashboard-page eureka-page-jadwal mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+      <div className="eureka-page-heading flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold sm:text-3xl">Jadwal</h1>
           <p className="mt-2 text-base font-semibold text-clay-muted">
@@ -362,11 +363,9 @@ export default function JadwalPage() {
             )}
 
             {entries.length === 0 && !showForm ? (
-              <div className="card-clay mt-4 flex flex-col items-center py-12 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
-                  <CalendarDays size={30} className="text-clay-muted" />
-                </div>
-                <h3 className="mt-4 text-lg font-extrabold">Belum ada jadwal</h3>
+              <div className="study-empty mt-4">
+                <Image src="/landing/ei6Qn.png" alt="" width={180} height={180} />
+                <h3 className="mt-4 text-lg font-extrabold">Yuk, atur waktu belajarmu</h3>
                 <p className="mt-1.5 max-w-sm text-sm font-semibold text-clay-muted">
                   Tambahkan jadwal mata pelajaranmu agar jadwal belajar terpantau.
                 </p>

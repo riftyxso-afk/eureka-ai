@@ -17,7 +17,6 @@ import {
   History,
   Layers,
   Loader2,
-  Map,
   MessageCircleQuestion,
   PenTool,
   Pencil,
@@ -104,7 +103,6 @@ const ACTION_BUTTONS = [
   { id: "flashcards", icon: Layers },
   { id: "quiz", icon: ClipboardCheck },
   { id: "comprehension", icon: BookOpenCheck },
-  { id: "mindmap", icon: Map },
   { id: "doc", icon: FileText },
   { id: "share", icon: Share2 },
 ] as const;
@@ -115,7 +113,6 @@ const ACTION_LABEL_KEYS: Record<ActionId, keyof Dictionary["note"]> = {
   flashcards: "actionFlashcards",
   quiz: "actionQuiz",
   comprehension: "actionComprehension",
-  mindmap: "actionMindmap",
   doc: "actionDoc",
   share: "actionShare",
 };
@@ -708,7 +705,6 @@ export default function NoteDetailPage() {
       setShowPdfWorkflow(true);
       return;
     }
-    alert(l.comingSoon.replace("{feature}", l[ACTION_LABEL_KEYS[id]]));
   };
 
   const deleteNoteNow = async () => {

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BorderBeam } from "border-beam";
+import PromptBar, { type PromptSource } from "./reactbits/PromptBar";
+import VoicePill from "./reactbits/VoicePill";
 import {
   AtSign,
   BookOpen,
@@ -240,6 +242,10 @@ interface ComposerProps {
   initialMentions?: string[];
   /** Mode ringkas: padding & tombol lebih kecil (dipakai halaman /home). */
   compact?: boolean;
+  reactBits?: boolean;
+  initialMomoMode?: "fast" | "normal" | "deep";
+  onMomoModeChange?: (mode: "fast" | "normal" | "deep") => void;
+  onModelMenuHeightChange?: (height: number) => void;
   /**
    * Prompt "buat catatan" yang tertahan — memunculkan wizard F&Q yang
    * menyatu di atas composer (bukan popup). null = tidak tampil.
@@ -276,6 +282,10 @@ export default function Composer({
   initialValue = "",
   initialMentions = [],
   compact = false,
+  reactBits = false,
+  initialMomoMode = "normal",
+  onMomoModeChange,
+  onModelMenuHeightChange,
   noteWizardPrompt = null,
   onNoteWizardStart,
   onNoteWizardClose,
@@ -320,6 +330,7 @@ export default function Composer({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const discardVoiceRef = useRef(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -327,6 +338,7 @@ export default function Composer({
   const speedRef = useRef<HTMLDivElement>(null);
   const plusRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const notesRequestedRef = useRef(false);
 
   // Muat daftar catatan user untuk autocomplete mention. Dimuat juga saat
   // composer dibuka dengan mention awal (agar judul chip langsung tampil).
@@ -334,8 +346,10 @@ export default function Composer({
     if (
       (mentionOpen || initialMentions.length > 0) &&
       notes.length === 0 &&
-      !loadingNotes
+      !loadingNotes &&
+      (!reactBits || !notesRequestedRef.current)
     ) {
+      notesRequestedRef.current = true;
       setLoadingNotes(true);
       apiFetch(`/api/notes?userId=${encodeURIComponent(userId)}`)
         .then((res) => (res.ok ? res.json() : { notes: [] }))
@@ -351,7 +365,7 @@ export default function Composer({
         .catch(() => setNotes([]))
         .finally(() => setLoadingNotes(false));
     }
-  }, [mentionOpen, initialMentions.length, notes.length, loadingNotes, userId]);
+  }, [mentionOpen, initialMentions.length, notes.length, loadingNotes, userId, reactBits]);
 
   const filteredNotes = useMemo(() => {
     const q = mentionQuery.toLowerCase().trim();
@@ -695,6 +709,77 @@ export default function Composer({
     setStgOnce(false);
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
+
+  const beginVoicePill = ({ stream }: { source: string; stream?: MediaStream }) => {
+    setMicError(null);
+    if (!isBeta && process.env.NODE_ENV === "development") return;
+    if (!stream || typeof MediaRecorder === "undefined") {
+      setMicError("Perekaman suara tidak didukung di browser ini.");
+      return;
+    }
+    try {
+      const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "";
+      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      discardVoiceRef.current = false;
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (event) => { if (event.data.size) audioChunksRef.current.push(event.data); };
+      recorder.onstop = () => {
+        setRecording(false);
+        const blob = new Blob(audioChunksRef.current, { type: mime || "audio/webm" });
+        if (!discardVoiceRef.current && blob.size) void sendForTranscription(blob);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start(1000);
+      setRecording(true);
+    } catch { setMicError("Gagal memulai rekaman suara."); }
+  };
+
+  const endVoicePill = ({ reason }: { reason: string; duration: number }) => {
+    discardVoiceRef.current = ["cancel", "escape", "blur", "disabled", "unmount", "mic-denied"].includes(reason);
+    if (reason === "mic-denied") setMicError("Mikrofon tidak bisa diakses. Periksa izin browser.");
+    else if (!isBeta && process.env.NODE_ENV === "development" && !["cancel", "escape", "blur", "disabled", "unmount"].includes(reason)) setMicError("Pratinjau suara selesai. Transkripsi tersedia untuk beta tester.");
+    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
+  };
+
+  if (reactBits) {
+    const sources: PromptSource[] = [
+      { key: "file", name: "Foto & file", description: "Pilih dari perangkat", icon: <Paperclip size={16} />, attach: true },
+      { key: "web", name: "Pencarian web", description: webSearch ? "Aktif — pilih untuk mematikan" : "Cari informasi di web", icon: <Globe size={16} /> },
+      ...notes.filter((note) => !mentionIds.includes(note.id)).map((note) => ({ key: `note:${note.id}`, name: note.title, description: note.subject || "Catatan", icon: <BookOpen size={16} /> })),
+    ];
+    const models = [{ key: "auto", name: "Otomatis", tag: "Eureka" }, ...MODEL_CATALOG.filter((model) => !model.premiumOnly || isPremium).map((model) => ({ key: model.id, name: model.name, tag: model.available ? model.brand : "Tidak tersedia", logo: model.logo, disabled: !model.available }))];
+    return (
+      <div className="eureka-prompt-wrap">
+        {noteWizardPrompt && <div className="eureka-prompt-wizard"><NoteCreateWizardPanel prompt={noteWizardPrompt} onClose={() => onNoteWizardClose?.()} onStart={(prefs) => onNoteWizardStart?.(prefs)} /></div>}
+        {(mentionIds.length > 0 || attachment || attachError || webSearch || micError || transcribing) && <div className="eureka-prompt-chips">
+          {mentionIds.map((id) => <span key={id} className="eureka-prompt-chip">@{notes.find((note) => note.id === id)?.title ?? "Catatan"}<button type="button" aria-label="Hapus catatan" onClick={() => removeMention(id)}>×</button></span>)}
+          {attachment && <span className="eureka-prompt-chip">{attachment.filename}<button type="button" aria-label="Hapus lampiran" onClick={() => setAttachment(null)}>×</button></span>}
+          {webSearch && <span className="eureka-prompt-chip">Pencarian web<button type="button" aria-label="Matikan pencarian web" onClick={() => setWebSearch(false)}>×</button></span>}
+          {transcribing && <span className="eureka-prompt-chip" role="status">Mentranskripsi suara…</span>}
+          {(attachError || micError) && <span className="eureka-prompt-error" role="alert">{attachError || micError}<button type="button" aria-label="Tutup pesan" onClick={() => { setAttachError(null); setMicError(null); }}>×</button></span>}
+        </div>}
+        <input ref={fileInputRef} type="file" accept={ACCEPTED_TYPES} onChange={handleFileChange} className="hidden" data-testid="asisten-file-input" />
+        <PromptBar
+          onModelMenuHeightChange={onModelMenuHeightChange}
+          value={text} onDraftChange={setText} disabled={disabled} busy={sending} placeholder={placeholder ?? "Tanya Eureka apa saja…"}
+          sources={sources} commands={[{ key: "quiz", name: "/kuis", description: "Buat kuis dari percakapan" }, { key: "cards", name: "/card", description: "Buat kartu hafalan" }]}
+          models={models} defaultModel="auto" efforts={["Kilat", "Seimbang", "Mendalam"]} defaultEffort={initialMomoMode === "fast" ? "Kilat" : initialMomoMode === "deep" ? "Mendalam" : "Seimbang"}
+          onEffortChange={(effort) => onMomoModeChange?.(effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal")}
+          onSourcesOpen={() => setMentionOpen(true)} onAttach={() => fileInputRef.current?.click()}
+          onSourceSelect={(source) => { if (source.key === "web") setWebSearch((active) => !active); else if (source.key.startsWith("note:")) setMentionIds((ids) => [...new Set([...ids, source.key.slice(5)])]); setMentionOpen(false); }}
+          onSend={(question, options) => {
+            if (!question.trim() || disabled || sending) return;
+            onSend({ question, mentions: mentionIds, webSearch, attachment: attachment ?? null, speedMode: options.effort === "Kilat" ? "fast" : options.effort === "Mendalam" ? "deep" : "normal", model: options.model?.key === "auto" ? undefined : options.model?.key, reasoning, solveThenGuide: stgOnce || undefined } as ComposerSendInput);
+            setMentionIds([]); setAttachment(null); setAttachError(null); setStgOnce(false);
+          }}
+          onStop={onStop} background="#ffffff" color="#30263e" menuBackground="#ffffff" sparkColor="#a983e8" width={760} radius={18} maxRows={5}
+          voiceSlot={<span title={isBeta ? "Rekam suara" : "Pratinjau suara"}><VoicePill size={34} reactive="mic" disabled={(!isBeta && process.env.NODE_ENV !== "development") || disabled || sending || transcribing} ariaLabel={isBeta ? "Rekam suara" : "Pratinjau suara"} background="#f2ebfa" accentColor="#7540d0" iconColor="#7540d0" onStart={beginVoicePill} onStop={endVoicePill} /></span>}
+        />
+        {showMultiAgentToggle && <button type="button" className="eureka-prompt-multi" aria-pressed={multiAgentOn} onClick={() => onMultiAgentToggle?.(!multiAgentOn)}>Multi Agent: {multiAgentOn ? "Aktif" : "Nonaktif"}</button>}
+        {!isBeta && <p className="eureka-prompt-voice-hint">{process.env.NODE_ENV === "development" ? "Pratinjau suara aktif. Transkripsi tersedia untuk beta tester." : "Transkripsi suara tersedia untuk beta tester."}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className="sticky bottom-0 z-20 bg-gradient-to-t from-clay-beige via-clay-beige/95 to-transparent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-4 sm:pt-6">

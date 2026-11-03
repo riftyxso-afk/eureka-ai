@@ -27,23 +27,14 @@ export interface ModelCatalogEntry {
 }
 
 export const MODEL_CATALOG: ModelCatalogEntry[] = [
+  { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", brand: "DeepSeek", logo: "/images/ai-models/deepseek-official.svg", tier: "fast", smartness: 3, desc: "Model cepat untuk percakapan dan rangkuman.", available: true },
+  { id: "gpt-4o", name: "GPT-4o", brand: "OpenAI", logo: "/images/ai-models/openai-color.svg", tier: "fast", smartness: 4, desc: "Model serbaguna untuk belajar dan percakapan.", available: true },
+  { id: "qwen3.8-max-0902", name: "Qwen 3.8 Max", brand: "Qwen", logo: "/images/ai-models/qwen-official.jpg", tier: "normal", smartness: 4, desc: "Model untuk penjelasan dan analisis.", available: true },
+  { id: "gpt-6.1-terra", name: "GPT-6.1 Terra", brand: "OpenAI", logo: "/images/ai-models/openai-color.svg", tier: "deep", smartness: 5, desc: "Model untuk tugas yang lebih mendalam.", available: true },
+  { id: "claude-haiku-5-5", name: "Claude Haiku 5.5", brand: "Anthropic", logo: "/images/ai-models/claude-color.svg", tier: "normal", smartness: 4, desc: "Belum tersedia untuk key Juan Router saat ini.", available: false },
   // ── Kilat — cepat & ringan ──────────────────────────────────────────
-  { id: "glm-5.3-flash", name: "GLM 5.3 Flash", brand: "Zhipu AI", logo: "/images/ai-models/zhipu-color.svg", tier: "fast", smartness: 2, desc: "Ringkas dan gesit untuk pertanyaan sehari-hari.", available: true },
-  { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash", brand: "Google", logo: "/images/ai-models/gemini-color.svg", tier: "fast", smartness: 3, desc: "Generasi flash terbaru — cepat dengan penalaran lebih baik.", available: true },
-  { id: "gemini-3.7-flash-low", name: "Gemini 3.7 Flash", brand: "Google", logo: "/images/ai-models/gemini-color.svg", tier: "fast", smartness: 2, desc: "Paling ngebut di kelas Kilat, pas untuk cek cepat.", available: true },
-  { id: "nemotron-3.5-lightning", name: "Nemotron 3.5 Lightning", brand: "NVIDIA", logo: "/images/ai-models/nvidia-color.svg", tier: "fast", smartness: 2, desc: "Model kilat NVIDIA — segera tersedia.", available: false },
   // ── Seimbang — cepat & akurat ───────────────────────────────────────
-  { id: "gpt-5.6-luna", name: "GPT-5.6 Luna", brand: "OpenAI", logo: "/images/ai-models/openai-color.svg", tier: "normal", smartness: 4, desc: "Keseimbangan terbaik antara kecepatan dan kedalaman.", available: true, premiumOnly: true },
-  { id: "minimax-m3", name: "MiniMax M3", brand: "MiniMax", logo: "/images/ai-models/minimax-color.svg", tier: "normal", smartness: 3, desc: "Jawaban terstruktur, kuat untuk materi pelajaran.", available: true },
-  { id: "hy-4-preview", name: "Hunyuan 4 Preview", brand: "Tencent", logo: "/images/ai-models/tencent-color.svg", tier: "normal", smartness: 3, desc: "Preview Hunyuan — penalaran solid berbahasa Indonesia.", available: true },
-  { id: "grok-4.5-high", name: "Grok 4.5 High", brand: "xAI", logo: "/images/ai-models/xai-color.svg", tier: "normal", smartness: 4, desc: "Grok effort tinggi — akurat tanpa terlalu lambat.", available: true, premiumOnly: true },
   // ── Mendalam — terpintar untuk materi kompleks ──────────────────────
-  { id: "gpt-6-astra", name: "GPT-6 Astra", brand: "OpenAI", logo: "/images/ai-models/openai-color.svg", tier: "deep", smartness: 5, desc: "Model terdalam terbaru — khusus pengguna Pro.", available: true, premiumOnly: true },
-  { id: "gpt-5.6-sol", name: "GPT-5.6 Sol", brand: "OpenAI", logo: "/images/ai-models/openai-color.svg", tier: "deep", smartness: 5, desc: "Penalaran terdalam OpenAI — segera stabil kembali.", available: false, premiumOnly: true },
-  { id: "gpt-5.6-terra", name: "GPT-5.6 Terra", brand: "OpenAI", logo: "/images/ai-models/openai-color.svg", tier: "deep", smartness: 5, desc: "Andalan untuk analisis panjang & soal kompleks.", available: true, premiumOnly: true },
-  { id: "claude-opus-5", name: "Claude Opus 5", brand: "Anthropic", logo: "/images/ai-models/claude-color.svg", tier: "deep", smartness: 5, desc: "Claude Opus — penalaran paling halus. Segera tersedia.", available: false, premiumOnly: true },
-  { id: "qwen3.8-max", name: "Qwen 3.8 Max", brand: "Alibaba", logo: "/images/ai-models/qwen-color.svg", tier: "deep", smartness: 4, desc: "Qwen flagship — kuat untuk sains & matematika. Segera tersedia.", available: false, premiumOnly: true },
-  { id: "grok-4.6-xhigh", name: "Grok 4.6 XHigh", brand: "xAI", logo: "/images/ai-models/xai-color.svg", tier: "deep", smartness: 5, desc: "Grok effort ekstra-tinggi — paling teliti di kelasnya.", available: true, premiumOnly: true },
 ];
 
 /** Nama tampilan rapi untuk id model apa pun (fallback: id mentah). */
@@ -60,9 +51,9 @@ export const MODEL_CATALOG_IDS = new Set(MODEL_CATALOG.map((m) => m.id));
  * (`premiumOnly` dikecualikan). Urutan katalog = prioritas coba.
  */
 export const SPEED_MODEL_LISTS: Record<AiSpeedMode, string[]> = {
-  fast: MODEL_CATALOG.filter((m) => m.tier === "fast" && !m.premiumOnly).map((m) => m.id),
-  normal: MODEL_CATALOG.filter((m) => m.tier === "normal" && !m.premiumOnly).map((m) => m.id),
-  deep: MODEL_CATALOG.filter((m) => m.tier === "deep" && !m.premiumOnly).map((m) => m.id),
+  fast: ["deepseek-v4.1-flash", "gpt-4o"],
+  normal: ["qwen3.8-max-0902", "gpt-4o", "deepseek-v4.1-flash"],
+  deep: ["gpt-6.1-terra", "qwen3.8-max-0902", "gpt-4o"],
 };
 
 /**
@@ -71,16 +62,7 @@ export const SPEED_MODEL_LISTS: Record<AiSpeedMode, string[]> = {
  * terbaik; model murah tetap ikut sebagai cadangan bila yang pintar gagal.
  */
 export const SPEED_MODEL_LISTS_PRO: Record<AiSpeedMode, string[]> = {
-  fast: [
-    ...MODEL_CATALOG.filter((m) => m.tier === "fast" && m.premiumOnly).map((m) => m.id),
-    ...MODEL_CATALOG.filter((m) => m.tier === "fast" && !m.premiumOnly).map((m) => m.id),
-  ],
-  normal: [
-    ...MODEL_CATALOG.filter((m) => m.tier === "normal" && m.premiumOnly).map((m) => m.id),
-    ...MODEL_CATALOG.filter((m) => m.tier === "normal" && !m.premiumOnly).map((m) => m.id),
-  ],
-  deep: [
-    ...MODEL_CATALOG.filter((m) => m.tier === "deep" && m.premiumOnly).map((m) => m.id),
-    ...MODEL_CATALOG.filter((m) => m.tier === "deep" && !m.premiumOnly).map((m) => m.id),
-  ],
+  fast: [...SPEED_MODEL_LISTS.fast],
+  normal: [...SPEED_MODEL_LISTS.normal],
+  deep: [...SPEED_MODEL_LISTS.deep],
 };

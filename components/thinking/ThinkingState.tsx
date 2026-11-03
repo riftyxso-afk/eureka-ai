@@ -24,10 +24,10 @@ type Row = {
 };
 
 const VARIANTS: Record<string, { active: string; done: string; rows: Row[]; query?: string }> = {
-  Steps: { active: "Thinking", done: "Done", rows: [] },
-  Reasoning: { active: "Thinking", done: "Done", rows: [] },
-  Search: { active: "Searching the web", done: "Searched the web", rows: [] },
-  Coding: { active: "Running tools", done: "Done", rows: [] },
+  Steps: { active: "Sedang berpikir", done: "Selesai berpikir", rows: [] },
+  Reasoning: { active: "Sedang berpikir", done: "Selesai berpikir", rows: [] },
+  Search: { active: "Mencari di web", done: "Pencarian selesai", rows: [] },
+  Coding: { active: "Menjalankan alat", done: "Selesai", rows: [] },
 };
 
 function Dot({ tone }: { tone: string }) {
@@ -67,7 +67,7 @@ export default function ThinkingState({ variant = "Steps", thinking, working: wo
     onSettled?.();
   }, [working, onSettled]);
   return (
-    <div key={variant} className="flex w-full max-w-95 flex-col" style={{ minHeight: working || expanded ? 176 : undefined, transition: "min-height 400ms cubic-bezier(0.23,1,0.32,1)" }}>
+    <div key={variant} className="flex w-full max-w-95 flex-col">
       <button type="button" aria-expanded={expanded} onClick={() => setManualExpanded((current) => !(current ?? autoExpanded))} className="-mx-1.5 flex w-fit items-center gap-2 rounded-control px-1.5 py-1 transition-colors duration-100 hover:bg-clay-beige/60">
         <svg width="16" height="16" viewBox="0 0 24 24" fill={working ? "rgb(var(--clay-primary))" : "rgb(var(--clay-muted))"} style={working ? { animation: "spin 1.2s linear infinite" } : undefined}><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
         <span role="status" className="contents">
@@ -147,7 +147,6 @@ export default function ThinkingState({ variant = "Steps", thinking, working: wo
                     }
                     return <div key={row.primary} className={rowClass} style={animation}>{content}</div>;
                   })}
-                  {variant === "Search" && stage >= 3 && <span className="text-[12px] text-clay-muted" style={{ animation: "fade-in 300ms ease-out both" }}>+7 more</span>}
                 </>
               )}
             </div>

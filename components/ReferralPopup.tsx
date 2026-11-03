@@ -149,7 +149,7 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
             exit={{ scale: 0.92, y: 20 }}
             transition={{ type: "spring", stiffness: 260, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md overflow-hidden rounded-clay bg-clay-cream shadow-2xl"
+            className="referral-dialog relative w-full max-w-md overflow-hidden rounded-clay bg-clay-cream shadow-2xl"
           >
             {/* Header */}
             <div className="relative bg-gradient-to-br from-clay-primary via-clay-secondary to-amber-500 px-6 pb-7 pt-6 text-center">

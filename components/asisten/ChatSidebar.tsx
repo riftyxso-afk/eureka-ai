@@ -13,6 +13,8 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Search,
+  House,
 } from "lucide-react";
 import type { AssistantChatSession } from "@/lib/assistant/types";
 
@@ -38,12 +40,17 @@ export default function ChatSidebar({
   const [collapsed, setCollapsed] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const editRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const filteredSessions = sessions.filter((session) => (session.title || "Percakapan baru").toLowerCase().includes(query.trim().toLowerCase()));
+  useEffect(() => { if (searchOpen) searchRef.current?.focus(); }, [searchOpen]);
 
   // Baca preferensi collapsed dari localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("eureka_sidebar_collapsed");
+      const saved = localStorage.getItem("eureka_chat_sidebar_collapsed_v2");
       if (saved !== null) setCollapsed(saved === "true");
     } catch {}
   }, []);
@@ -52,7 +59,7 @@ export default function ChatSidebar({
     const next = !collapsed;
     setCollapsed(next);
     try {
-      localStorage.setItem("eureka_sidebar_collapsed", String(next));
+      localStorage.setItem("eureka_chat_sidebar_collapsed_v2", String(next));
     } catch {}
   };
 
@@ -77,7 +84,7 @@ export default function ChatSidebar({
 
   if (collapsed) {
     return (
-      <div className="hidden h-full w-[60px] shrink-0 flex-col items-center gap-3 border-r border-clay-borderLight/60 bg-clay-cream py-3 transition-[width] duration-200 ease-in-out lg:flex">
+      <div className="momo-sidebar momo-sidebar-compact hidden h-full w-[60px] shrink-0 flex-col items-center gap-3 border-r border-clay-borderLight/60 bg-clay-cream py-3 transition-[width] duration-200 ease-in-out lg:flex">
         {/* Tombol expand */}
         <button
           onClick={toggleCollapsed}
@@ -115,16 +122,15 @@ export default function ChatSidebar({
   }
 
   return (
-    <div className="hidden h-full w-[260px] shrink-0 flex-col gap-2 border-r border-clay-borderLight/60 bg-clay-cream p-3 transition-[width] duration-200 ease-in-out lg:flex">
+    <div className="momo-sidebar hidden h-full w-[260px] shrink-0 flex-col gap-2 border-r border-clay-borderLight/60 bg-clay-cream p-3 transition-[width] duration-200 ease-in-out lg:flex">
+      <div className="momo-sidebar-top"><Link href="/dashboard" className="momo-sidebar-brand" aria-label="Eureka dashboard">eureka<span>!</span></Link><button type="button" className="momo-sidebar-collapse" onClick={toggleCollapsed} aria-label="Tutup sidebar" title="Tutup sidebar"><PanelLeftClose size={18} /></button></div>
+      <button type="button" onClick={onNew} className="momo-sidebar-new" data-testid="momo-sidebar-new"><Plus size={17} /> Chat baru</button>
+      <Link href="/dashboard" className="momo-sidebar-nav-link"><House size={17} /> Dashboard</Link>
       {/* Header + tombol chat baru & collapse */}
-      <div className="flex items-center justify-between gap-1 pb-1">
-        <span className="flex items-center gap-2 text-sm font-extrabold text-clay-dark">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-clay-beige text-clay-muted">
-            <Bot size={16} />
-          </span>
-          Riwayat Chat
-        </span>
+      <div className="momo-sidebar-history-head">
+        {searchOpen ? <input ref={searchRef} className="momo-sidebar-search" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") { setSearchOpen(false); setQuery(""); } }} placeholder="Cari percakapan" aria-label="Cari percakapan" /> : <span>Riwayat</span>}
         <div className="flex items-center gap-1">
+          <button type="button" className="momo-sidebar-search-button" aria-label={searchOpen ? "Tutup pencarian" : "Cari percakapan"} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); setQuery(""); }}><Search size={16} /></button>
           <button
             onClick={onNew}
             title="Chat baru"
@@ -133,14 +139,6 @@ export default function ChatSidebar({
             data-testid="asisten-new-chat"
           >
             <Plus size={15} /> <span className="hidden xl:inline">Baru</span>
-          </button>
-          <button
-            onClick={toggleCollapsed}
-            title="Tutup sidebar"
-            aria-label="Collapse sidebar"
-            className="flex h-8 w-8 items-center justify-center rounded-clay-full text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-dark"
-          >
-            <PanelLeftClose size={16} />
           </button>
         </div>
       </div>
@@ -155,7 +153,8 @@ export default function ChatSidebar({
           </p>
         )}
 
-        {sessions.map((s) => {
+        {query && filteredSessions.length === 0 && <p className="momo-sidebar-empty-search">Tidak ada percakapan yang cocok.</p>}
+        {filteredSessions.map((s) => {
           const active = s.id === activeId;
           if (editingId === s.id) {
             return (

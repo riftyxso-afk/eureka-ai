@@ -17,8 +17,9 @@ import { ImageSketchBlock } from "@/components/chat/ImageSketchBlock";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import MessageBubble from "@/components/asisten/MessageBubble";
+import ResponseActivity from "@/components/asisten/ResponseActivity";
+import MomoCompanion, { type MomoMode } from "@/components/asisten/MomoCompanion";
 import ClarificationCard from "@/components/asisten/ClarificationCard";
-import ChatSkeleton from "@/components/asisten/ChatSkeleton";
 import ShareModal from "@/components/asisten/ShareModal";
 import ChatQuizModal from "@/components/asisten/ChatQuizModal";
 import ChatFlashcardModal from "@/components/asisten/ChatFlashcardModal";
@@ -100,6 +101,9 @@ export default function ChatPage() {
       return null;
     }
   });
+  const [momoMode, setMomoMode] = useState<MomoMode>(initialSend?.speedMode ?? "normal");
+  const [modelMenuHeight, setModelMenuHeight] = useState(0);
+  const [initialPending, setInitialPending] = useState(!!initialSend);
 
   // Hapus dari sessionStorage setelah dibaca (efek, aman untuk StrictMode).
   useEffect(() => {
@@ -225,6 +229,9 @@ export default function ChatPage() {
     onSessionCreated: (id) => router.replace(`/chat/${id}`),
     initialSend,
   });
+  useEffect(() => {
+    if (chat.sending || chat.hasError) setInitialPending(false);
+  }, [chat.sending, chat.hasError]);
 
   // Reset dismiss saat error baru muncul (hasError berubah false → true),
   // agar pop-up tampil lagi untuk error berikutnya.
@@ -238,21 +245,23 @@ export default function ChatPage() {
     process.env.NEXT_PUBLIC_FEATURE_MULTI_AGENT === "1" || isBeta;
 
   const activeSession = chat.sessions.find((s) => s.id === sessionId);
+  const latestAnswer = [...chat.renderedMessages].reverse().find((message) => message.role === "assistant")?.content ?? "";
+  const latestQuestion = [...chat.renderedMessages].reverse().find((message) => message.role === "user")?.content ?? "";
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-clay-beige p-0">
+    <div className="momo-session flex h-dvh overflow-hidden bg-clay-beige p-0">
       <div className="flex h-full w-full overflow-hidden border-t border-clay-borderLight/60 sm:border-t-0">
         <ChatSidebar
           sessions={chat.sessions}
           activeId={sessionId}
-          onNew={chat.handleNew}
+          onNew={() => router.push("/chat")}
           onSelect={() => {}}
           onRename={chat.renameSession}
           onDelete={async (id) => {
             const remaining = await chat.deleteSession(id);
             if (id === sessionId) {
               router.replace(
-                remaining.length > 0 ? `/chat/${remaining[0].id}` : "/dashboard"
+                remaining.length > 0 ? `/chat/${remaining[0].id}` : "/chat"
               );
             }
           }}
@@ -296,15 +305,10 @@ export default function ChatPage() {
                   >
                     <LayoutDashboard size={18} />
                   </Link>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/logo.png" alt="Logo Eureka.AI" className="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8" />
                   <div className="min-w-0">
                     <h1 className="truncate text-sm font-extrabold text-clay-dark sm:text-base">
                       {activeSession?.title ?? l.title}
                     </h1>
-                    <p className="hidden text-[11px] font-bold text-clay-muted sm:block">
-                      {l.hasAccess}
-                    </p>
                   </div>
                   {/* Indikator loop "Eureka Multi Agent" — "Iterasi x/8".
                       Muncul hanya saat loop aktif; hilang otomatis saat
@@ -373,7 +377,7 @@ export default function ChatPage() {
                     </>
                   )}
                   <button
-                    onClick={chat.handleNew}
+                    onClick={() => router.push("/chat")}
                     title={l.newChat}
                     aria-label={l.newChat}
                     data-testid="chat-new-top"
@@ -393,14 +397,18 @@ export default function ChatPage() {
           onScroll={handleScroll}
           className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6"
         >
-          {chat.loading && chat.messages.length === 0 ? (
-            <ChatSkeleton />
+          {initialSend && (initialPending || chat.loading || chat.sending) && chat.renderedMessages.length === 0 && !chat.hasError && !chat.clarification ? (
+            <div className="mx-auto w-full max-w-3xl space-y-4">
+              <MessageBubble message={{ id: "pending-user", sessionId, role: "user", content: initialSend.question, mentions: initialSend.mentions, sources: [], model: null, createdAt: new Date().toISOString() }} />
+              <ResponseActivity thinking={chat.streaming.thinking} />
+            </div>
+          ) : chat.loading && chat.messages.length === 0 && !chat.sending ? (
+            null
           ) : chat.renderedMessages.length === 0 &&
             !(chat.clarification && chat.clarification.length > 0) &&
             !chat.hasError ? (
             <div className="py-14 text-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Eureka" className="mx-auto h-16 w-16 object-contain" />
+              <MomoCompanion mode={momoMode} className="momo-chat-empty" />
               <h2 className="mt-4 flex items-center justify-center gap-2 text-lg font-extrabold text-clay-dark sm:text-xl">
                 {l.emptyTitle}{" "}
                 <Hand size={22} className="shrink-0 text-clay-primary" />
@@ -424,7 +432,7 @@ export default function ChatPage() {
                   idx > 0 ? chat.renderedMessages[idx - 1] : null;
                 return (
                   <div key={m.id} className="space-y-4">
-                    {showPipeline && (
+                    {showPipeline && !chat.sending && (
                       <WebSearchPipeline
                         stage={chat.streaming.webStage}
                         results={chat.streaming.webResults}
@@ -433,22 +441,6 @@ export default function ChatPage() {
                     )}
                     {/* Step-log Solve-then-Guide — tahap asli dari SSE backend.
                         Tampil hanya di bubble streaming terakhir saat aktif. */}
-                    {chat.sending &&
-                      idx === chat.renderedMessages.length - 1 &&
-                      chat.stepLog.length > 0 && (
-                        <StepLog
-                          entries={chat.stepLog}
-                          terminal={
-                            chat.terminalLive
-                              ? {
-                                  title: "Verifikasi",
-                                  content: chat.terminalLive,
-                                  streaming: chat.sending,
-                                }
-                              : null
-                          }
-                        />
-                      )}
                     <MessageBubble
                       message={m}
                       isStreaming={chat.sending && idx === chat.renderedMessages.length - 1 && m.id.startsWith("stream-")}
@@ -516,7 +508,13 @@ export default function ChatPage() {
         </div>
 
         {/* Composer — minta "buat catatan" → wizard F&Q menyatu, bukan chat */}
+        <div className="momo-session-composer">
+        {chat.renderedMessages.length > 0 && <div className="momo-composer-companion" style={{ transform: `translateY(-${modelMenuHeight}px)` }}><MomoCompanion mode={momoMode} question={latestQuestion} response={latestAnswer} thinking={chat.sending} error={chat.hasError} /></div>}
         <Composer
+          reactBits
+          onModelMenuHeightChange={setModelMenuHeight}
+          initialMomoMode={initialSend?.speedMode}
+          onMomoModeChange={setMomoMode}
           userId={getUserId()}
           sending={chat.sending}
           disabled={chat.loading || chat.sessionsLoading}
@@ -578,6 +576,7 @@ export default function ChatPage() {
           multiAgentOn={chat.loop.toggleOn}
           onMultiAgentToggle={chat.setLoopToggle}
         />
+        </div>
       </main>
       </div>
 

@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { BookMarked, Check, Copy, Info, Paperclip, RefreshCw } from "lucide-react";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
 import EurekaOrb from "@/components/ui/EurekaOrb";
-import EurekaBlobAvatar from "@/components/asisten/EurekaBlobAvatar";
+import MomoMessageAvatar from "@/components/asisten/MomoMessageAvatar";
+import ResponseActivity from "@/components/asisten/ResponseActivity";
 import { YoutubeEmbed } from "@/components/video/YoutubeEmbed";
 import { modelDisplayName } from "@/lib/modelCatalog";
 import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
 import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type { AssistantChatMessage } from "@/lib/assistant/types";
-import ThinkingState from "@/components/thinking/ThinkingState";
-import LoadingState from "@/components/thinking/LoadingState";
 import StreamingText from "@/components/streaming/StreamingText";
 
 interface MessageBubbleProps {
@@ -86,19 +85,6 @@ function answerDurationMs(
   return end - start;
 }
 
-function ThinkingDots({ prevText, thinking, working }: { prevText?: string | null; thinking?: string | null; working?: boolean }) {
-  const isLink = prevText ? /https?:\/\//.test(prevText) : false;
-  let reasoningOn = true;
-  try {
-    const v = localStorage.getItem("eureka_reasoning");
-    if (v !== null) reasoningOn = v === "true";
-  } catch {}
-  if (!reasoningOn) {
-    return <LoadingState variant={isLink ? "Search" : "Drive"} />;
-  }
-  return <ThinkingState variant={isLink ? "Search" : "Steps"} thinking={thinking ?? undefined} working={working} />;
-}
-
 /**
  * Satu pesan chat asisten: user (bubble ungu kanan) / asisten (kartu putih kiri)
  * dengan markdown, sumber, state streaming & error.
@@ -136,11 +122,6 @@ export default function MessageBubble({
   // hilang (mis. jawaban selesai) agar tidak kedip. Disimpan via state di
   // efek (bukan mutasi ref saat render — bug + warning react-hooks/refs).
   // Hooks WAJIB di atas early return agar urutannya stabil tiap render.
-  const [lastThinking, setLastThinking] = useState<string | null>(null);
-  useEffect(() => {
-    if (thinking) setLastThinking(thinking);
-  }, [thinking]);
-  const displayThinking = thinking ?? lastThinking;
 
   if (isUser) {
     return (
@@ -151,7 +132,7 @@ export default function MessageBubble({
       >
         <div className="flex items-end gap-1.5">
           <CopyButton content={message.content} />
-          <div className="max-w-[70%] break-words rounded-clay-md rounded-br-[8px] bg-clay-primary px-3.5 py-2.5 text-white shadow-clay-sm">
+          <div className="momo-message-user max-w-[70%] break-words px-3.5 py-2.5">
             <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed">
               {message.content}
             </p>
@@ -192,21 +173,15 @@ export default function MessageBubble({
       animate={{ opacity: 1, y: 0 }}
       className="group flex items-start gap-2.5"
     >
-      <EurekaBlobAvatar size={32} className="mt-1 shrink-0" />
+      <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} thinking={isStreaming} />
       <div className="flex min-w-0 max-w-[85%] flex-col gap-1.5">
+        {isStreaming && (!displayContent || thinking) && <ResponseActivity thinking={thinking} />}
         {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}
-        {!isStreaming && !empty && displayThinking && (
-          <div className="break-words text-xs text-clay-muted">
-            <ThinkingDots prevText={prevMessage?.content ?? null} thinking={displayThinking} working={false} />
-          </div>
-        )}
         <div className="break-words text-clay-dark">
-          {isStreaming && empty ? (
-            <ThinkingDots prevText={prevMessage?.content ?? null} thinking={thinking} working={isStreaming} />
-          ) : isStreaming ? (
+          {isStreaming && displayContent ? (
             <StreamingText content={displayContent} sources={[]} followUps={[]} loop={false} fill />
           ) : empty || !displayContent ? (
-            <ThinkingDots prevText={prevMessage?.content ?? null} thinking={thinking} working={false} />
+            null
           ) : (
             <MarkdownView content={displayContent} className="break-words text-[14px] leading-relaxed" />
           )}

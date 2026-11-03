@@ -25,7 +25,7 @@ function LoaderGrid({ delays, dur, round }: { delays: (number | null)[]; dur: nu
       {delays.map((delay, index) => (
         <span
           key={index}
-          className={`size-[4px] bg-clay-muted ${round ? "rounded-full" : "rounded-[1px]"}`}
+          className={`momo-loader-pixel size-[4px] bg-clay-muted ${round ? "rounded-full" : "rounded-[1px]"}`}
           style={{
             opacity: delay === null ? 0.07 : 0.15,
             animation: delay === null ? "none" : `pixel-on ${dur}ms ease-in-out ${delay}ms infinite`,
@@ -64,7 +64,7 @@ export default function LoadingState({
 
   const labelEl = (
     <span
-      className="bg-clip-text text-[13px] font-medium text-transparent"
+      className="momo-loader-label bg-clip-text text-[13px] font-medium text-transparent"
       style={{
         backgroundImage: "linear-gradient(90deg, rgb(var(--clay-muted)) 35%, rgb(var(--clay-dark)) 50%, rgb(var(--clay-muted)) 65%)",
         backgroundSize: "200% 100%",

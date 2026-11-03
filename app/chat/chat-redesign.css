@@ -1,0 +1,129 @@
+.momo-companion { display:block; border:0; background:transparent; width:100px; height:100px; pointer-events:none; }
+.momo-chat-shell { background:#fbfafc; }
+.momo-chat-sidebar { flex:none; height:100%; }
+.momo-chat-shell > main { background:#fff; }
+.momo-chat-hero { width:190px; height:190px; margin:0 auto 8px; }
+.momo-chat-empty { width:160px; height:160px; margin:0 auto; }
+.momo-session { background:#f9f7fb; }
+.momo-session > div > main { background:#fff; }
+.momo-session-companion { position:sticky; top:0; z-index:5; margin-left:auto; height:0; width:84px; pointer-events:none; }
+.momo-session-companion .momo-companion { width:84px; height:84px; }
+@media (max-width:1023px) { .momo-chat-sidebar { display:none; }.momo-chat-shell { min-height:100dvh; }.momo-chat-hero { width:150px; height:150px; } }
+@media (prefers-reduced-motion:reduce) { .momo-companion { transition:none; } }
+.momo-chat-header { min-height:66px; display:flex; align-items:center; gap:14px; padding:12px 26px; color:#352b40; }
+.momo-chat-header strong { flex:1; font-size:14px; font-weight:900; }
+.momo-chat-header > a { color:#8065a0; font-size:12px; font-weight:800; }
+.momo-mobile-history { display:none; }
+.momo-launch-error { margin-top:14px; padding:12px 16px; border-radius:12px; background:#fff0f0; color:#b83b45; font-size:13px; font-weight:700; }
+.momo-start-content { padding-bottom:145px; }
+.momo-preview-messages { width:100%; max-width:620px; display:flex; flex-direction:column; gap:10px; padding:8px 0 24px; }
+.momo-preview-label { color:#8b7b97; font-size:12px; text-align:center; }
+.momo-preview-message { max-width:85%; padding:11px 15px; border-radius:16px; color:#352b40; font-size:14px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.momo-preview-message.is-user { align-self:flex-end; background:#eee7f9; }
+.momo-preview-message.is-assistant { align-self:flex-start; background:#f5f3f7; }
+.momo-chat-shell .momo-start-composer { position:sticky; bottom:12px; z-index:2; }
+.momo-chat-shell .momo-chat-sidebar > div { background:#f8f6fa; }
+@media (max-width:1023px) { .momo-mobile-history { display:block; }.momo-chat-header { min-height:62px; padding:8px 16px; }.momo-start-content { padding-bottom:50px; } }
+@media (min-width:1024px) {
+  .momo-chat-shell > main { position:relative; }
+  .momo-chat-shell .momo-start-composer { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); width:min(720px,calc(100% - 48px)); margin:0; }
+}
+.momo-sidebar { background:#f7f5f9; border-color:#eee8f1; padding:20px 14px; }
+.momo-sidebar-brand { display:block; padding:0 8px 18px; color:#7540d0; font-size:25px; font-weight:900; letter-spacing:-1px; }
+.momo-sidebar-new { display:flex; align-items:center; gap:9px; width:100%; padding:11px 12px; margin-bottom:14px; border-radius:11px; background:#ece5f4; color:#62438c; font-size:13px; font-weight:900; text-align:left; }
+.momo-sidebar > div:first-of-type button[data-testid="asisten-new-chat"] { display:none; }
+.momo-sidebar nav > div { border-radius:10px; box-shadow:none; }
+.momo-sidebar a:focus-visible,.momo-sidebar button:focus-visible { outline:3px solid #b995e9; outline-offset:2px; }
+.dark .momo-sidebar { background:#221c29; border-color:#393041; }
+.dark .momo-sidebar-new { background:#3d304c; color:#e0ccf8; }
+.dark .momo-chat-shell,.dark .momo-session { background:#18131e; }
+.dark .momo-chat-shell > main,.dark .momo-session > div > main { background:#201925; }
+.dark .momo-chat-header { color:#f4eef8; }
+.dark .momo-chat-header > a { color:#c9a7f0; }
+.dark .momo-chat-shell .momo-chat-sidebar > div { background:#221c29; }
+.momo-companion { position:relative; }
+.momo-companion canvas,.momo-companion img { width:100%; height:100%; object-fit:contain; }
+.momo-canvas-mount { width:100%; height:100%; }
+.momo-canvas-mount canvas { display:block; width:100%; height:100%; }
+.momo-companion-loading { position:absolute; inset:auto 0 8px; color:#90809f; text-align:center; font-size:11px; font-weight:700; }
+.eureka-prompt-wrap { width:min(100%,760px); margin:0 auto; padding:0 0 max(12px, env(safe-area-inset-bottom)); }
+.eureka-prompt-wrap .prompt-bar { max-width:100%; }
+.eureka-prompt-wrap .prompt-bar__field { border:1px solid #e9e3ee; box-shadow:0 4px 18px #30233f0d; }
+.eureka-prompt-chips { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 7px; }
+.eureka-prompt-chip,.eureka-prompt-error { display:inline-flex; align-items:center; gap:6px; max-width:100%; border-radius:8px; padding:5px 9px; background:#f2ebfa; color:#7540d0; font-size:12px; font-weight:800; }
+.eureka-prompt-error { background:#fff1f1; color:#b93d4b; }
+.eureka-prompt-chip button,.eureka-prompt-error button { font-size:16px; line-height:1; }
+.eureka-prompt-wizard { background:#fff; border-radius:16px 16px 0 0; overflow:hidden; }
+.eureka-prompt-voice-hint { margin:5px 10px 0; color:#8f8499; font-size:11px; }
+.eureka-prompt-multi { margin:6px 8px 0; color:#7540d0; font-size:11px; font-weight:800; }
+.momo-session-composer { position:relative; flex-shrink:0; z-index:10; padding:0 16px; }
+.momo-composer-companion { position:absolute; bottom:calc(100% - 10px); left:max(24px, calc((100% - 760px)/2)); width:100px; height:100px; pointer-events:none; transition:transform 220ms cubic-bezier(0.23, 1, 0.32, 1); }
+@media (prefers-reduced-motion:reduce) { .momo-composer-companion { transition:none; } }
+.momo-composer-companion .momo-companion { width:100px; height:100px; }
+.dark .eureka-prompt-wrap .prompt-bar__field { border-color:#4b3e55; }
+@media (max-width:640px) { .momo-session-composer { padding:0 10px; }.momo-composer-companion,.momo-composer-companion .momo-companion { width:76px; height:76px; }.momo-composer-companion { left:18px; } }
+
+/* Chat: keep the conversation readable and the companion near the composer. */
+.momo-chat-shell .momo-start-content.has-preview { justify-content:flex-start; align-items:stretch; max-width:768px; padding-top:30px; padding-bottom:190px; }
+.momo-chat-shell .momo-preview-messages { max-width:none; gap:16px; padding:0 0 24px; }
+.momo-chat-shell .momo-preview-label { text-align:left; color:#8a7c98; font-size:12px; }
+.momo-chat-shell .momo-preview-message { max-width:min(85%, 560px); padding:13px 17px; font-size:14px; line-height:1.6; }
+.momo-chat-shell .momo-preview-message.is-user { border-radius:18px 18px 5px 18px; background:#eee8fa; color:#3c2858; }
+.momo-chat-shell .momo-preview-message.is-assistant { border-radius:5px 18px 18px 18px; background:#f5f3f7; }
+.momo-preview-reply { display:flex; align-items:flex-start; gap:8px; }
+.momo-preview-reply .momo-preview-message { max-width:min(85%, 560px); }
+.momo-preview-reply > [role="status"] { margin-top:14px; }
+.momo-message-avatar { display:block; width:48px; height:48px; flex:none; object-fit:contain; }
+.momo-message-user { border-radius:18px 18px 5px 18px; background:#eee8fa; color:#3c2858; }
+.response-activity { padding:12px 14px; color:#776985; font-size:13px; line-height:1.6; }
+.response-activity-label { display:flex; align-items:center; gap:16px; font-weight:650; }
+.response-activity-orbit { position:relative; display:inline-block; width:5px; height:5px; margin:0 8px; flex:none; border-radius:50%; background:#8762bf; }
+.response-activity-orbit i { position:absolute; inset:0; border-radius:50%; background:currentColor; color:#8762bf; animation:response-orbit 1s ease infinite; }
+.response-activity-orbit i:last-child { animation-delay:-.5s; }
+.response-activity-shimmer { color:#8d7d9a; background:linear-gradient(90deg,#8d7d9a 25%,#5f3c97 50%,#8d7d9a 75%) 100% center / 250% 100%; background-clip:text; -webkit-text-fill-color:transparent; animation:response-shimmer 2s linear infinite; }
+.response-activity-thinking { margin-top:8px; max-height:150px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; color:#82768e; }
+@keyframes response-orbit { from { transform:rotate(0deg) translate(155%); } to { transform:rotate(360deg) translate(155%); } }
+@keyframes response-shimmer { to { background-position:0% center; } }
+@media (prefers-reduced-motion:reduce) { .response-activity-orbit i,.response-activity-shimmer { animation:none; } .response-activity-shimmer { background:none; -webkit-text-fill-color:currentColor; } }
+.dark .momo-message-user { background:#4d3867; color:#f4ecff; }
+.momo-preview-companion { position:absolute; bottom:calc(100% - 8px); left:12px; width:100px; height:100px; pointer-events:none; }
+.momo-travelling-companion { position:fixed; left:0; top:0; z-index:20; width:190px; height:190px; pointer-events:none; transform-origin:top left; }
+.momo-travelling-companion .momo-companion { width:190px; height:190px; }
+.momo-preview-companion .momo-companion { width:100px; height:100px; }
+.momo-chat-shell .momo-start-composer { z-index:5; }
+.momo-sidebar:not(.momo-sidebar-compact) { padding:24px 16px 16px; background:#f8f6fa; }
+.momo-sidebar-top { display:flex; align-items:center; justify-content:space-between; padding:0 4px 22px; }
+.momo-sidebar .momo-sidebar-brand { padding:0; color:#7040c7; font-size:25px; letter-spacing:-1.2px; }
+.momo-sidebar-brand span { color:#a878df; }
+.momo-sidebar-collapse { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; color:#8d7b99; }
+.momo-sidebar-collapse:hover { background:#eee8f3; color:#6535aa; }
+.momo-sidebar .momo-sidebar-new { margin-bottom:20px; padding:12px; border:1px solid #e1d6ed; background:#f0eaf7; color:#69409c; }
+.momo-sidebar .momo-sidebar-new { margin-bottom:4px; border-color:transparent; background:transparent; color:#493e53; font-weight:650; }
+.momo-sidebar-nav-link { display:flex; align-items:center; gap:9px; margin:0 0 22px; padding:11px 12px; border-radius:9px; color:#695c73; font-size:13px; font-weight:650; }
+.momo-sidebar-nav-link:hover { background:#eee8f3; color:#6535aa; }
+.momo-sidebar-history-head { display:flex; align-items:center; justify-content:space-between; min-height:34px; margin:0 4px 5px; padding-left:8px; color:#91839b; font-size:12px; font-weight:700; }
+.momo-sidebar-history-head button[data-testid="asisten-new-chat"] { display:none; }
+.momo-sidebar-search { width:100%; min-width:0; padding:7px 8px; border:1px solid #e6ddec; border-radius:8px; background:white; color:#40364a; font-size:12px; outline:none; }
+.momo-sidebar-search:focus-visible { outline:2px solid #a77dde; }
+.momo-sidebar-search-button { display:grid; place-items:center; width:32px; height:32px; border-radius:8px; color:#8f8099; }
+.momo-sidebar-search-button:hover { background:#eee8f3; }
+.momo-sidebar-empty-search { color:#94879d; font-size:12px; }
+.momo-sidebar .momo-sidebar-new:hover { background:#e9dff4; }
+.momo-sidebar nav > p { padding:16px 12px; text-align:left; line-height:1.6; color:#9b8fa4; }
+.momo-sidebar nav > div { min-height:38px; }
+.momo-sidebar nav a { font-size:13px; font-weight:650; }
+.momo-sidebar-compact { padding:16px 0; background:#f8f6fa; }
+.momo-sidebar-compact button[data-testid="asisten-new-chat-collapsed"] { background:#7540c8; box-shadow:none; }
+.dark .momo-chat-shell .momo-preview-message.is-user { color:#f4ecff; background:#4d3867; }
+.dark .momo-chat-shell .momo-preview-message.is-assistant { color:#f2eaf7; background:#342a3d; }
+.dark .momo-sidebar:not(.momo-sidebar-compact) { background:#221c29; }
+.dark .momo-sidebar .momo-sidebar-new { background:#3d304c; border-color:#574366; color:#eadcf8; }
+@media (max-width:1023px) {
+  .momo-chat-shell .momo-start-content.has-preview { padding-top:20px; padding-bottom:130px; }
+  .momo-chat-shell .momo-start-content.has-preview .momo-start-composer { position:sticky; margin-top:auto; }
+  .momo-preview-companion { width:76px; height:76px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .momo-loader-pixel, .momo-loader-label { animation:none !important; }
+  .momo-loader-label { background:none !important; color:rgb(var(--clay-muted)); }
+}

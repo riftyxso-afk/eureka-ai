@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { Crown, Medal, Trophy, Users } from "lucide-react";
 import { getUserId, getUserName } from "@/lib/identity";
 import { apiFetch } from "@/lib/apiClient";
@@ -34,6 +36,7 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [currentUser, setCurrentUser] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -42,12 +45,13 @@ export default function LeaderboardPage() {
       const res = await apiFetch(
         `/api/leaderboard?userId=${encodeURIComponent(userId)}&name=${encodeURIComponent(userName)}`
       );
-      if (!res.ok) return;
+      if (!res.ok) throw new Error("Gagal memuat papan skor");
       const data = await res.json();
       if (Array.isArray(data.entries)) setEntries(data.entries);
-      if (data.currentUser) setCurrentUser(data.currentUser);
+      setCurrentUser(data.currentUser ?? null);
+      setLoadError(false);
     } catch {
-      // biarkan
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -59,12 +63,12 @@ export default function LeaderboardPage() {
     return () => clearInterval(timer);
   }, [load]);
 
-  const displayEntries = [...entries].sort((a, b) => b.xp - a.xp);
+  const displayEntries = entries.filter((entry) => view === "all" || entry.id !== currentUser?.id).sort((a, b) => b.xp - a.xp);
   const showTop3 = view === "all";
 
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="eureka-dashboard-page eureka-page-leaderboard mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+      <div className="eureka-page-heading flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Trophy size={24} className="text-clay-primary sm:hidden" />
           <Trophy size={28} className="hidden text-clay-primary sm:block" />
@@ -129,10 +133,20 @@ export default function LeaderboardPage() {
           <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
             {l.loading}
           </p>
+        ) : loadError ? (
+          <div className="study-empty" role="status">
+            <Image src="/onboarding/eureka-welcome.png" alt="" width={136} height={136} />
+            <h2>Papan skor belum bisa dimuat</h2>
+            <p>Periksa koneksi ke layanan Eureka, lalu coba lagi.</p>
+            <button type="button" className="study-primary" onClick={() => { setLoading(true); void load(); }}>Coba lagi</button>
+          </div>
         ) : displayEntries.length === 0 ? (
-          <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
-            {l.empty}
-          </p>
+          <div className="study-empty">
+            <Image src="/onboarding/eureka-welcome.png" alt="" width={136} height={136} />
+            <h2>Belajar lebih seru bersama</h2>
+            <p>{view === "friends" ? l.empty : "Belum ada peringkat yang tersedia. Mulai belajar untuk mengumpulkan XP."}</p>
+            <Link href="/dashboard/teman" className="study-primary">Cari teman belajar</Link>
+          </div>
         ) : (
           displayEntries.map((entry) => {
             const isTop3 = showTop3 && entry.rank <= 3;

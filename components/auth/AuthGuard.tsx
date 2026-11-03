@@ -10,12 +10,17 @@ import { PageLoader } from "@/components/ui/PageLoader";
  * Menyinkronkan sesi Supabase, lalu mengarahkan ke /login bila belum masuk,
  * atau ke /onboarding bila profil belum lengkap.
  */
-export default function AuthGuard({ children }: { children: React.ReactNode }) {
+export default function AuthGuard({ children, hideLoader = false }: { children: React.ReactNode; hideLoader?: boolean }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    // Local development preview only; deployed builds retain the normal guard.
+    if (process.env.NODE_ENV === "development" && ["localhost", "127.0.0.1", "::1", "[::1]"].includes(window.location.hostname)) {
+      setReady(true);
+      return;
+    }
     (async () => {
       try {
         await syncAuthSession();
@@ -42,6 +47,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   if (!ready) {
+    if (hideLoader) return null;
     return <PageLoader title="Memeriksa sesi kamu..." />;
   }
 

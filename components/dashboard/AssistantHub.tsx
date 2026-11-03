@@ -7,14 +7,16 @@
  * intent buat catatan/gambar, lampiran, panggilan AI (beta), tutorial.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 import { Brain, PenLine } from "lucide-react";
 import EurekaOrb from "@/components/ui/EurekaOrb";
 import TutorialHost from "@/components/tutorial/TutorialHost";
 import { apiFetch } from "@/lib/apiClient";
-import { getUserId } from "@/lib/identity";
+import { getUserId, setUserId } from "@/lib/identity";
+import { supabase } from "@/lib/supabase/client";
 import { PENDING_PROMPT_KEY } from "@/lib/assistant/pendingPrompt";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { useAssistantChat } from "@/lib/assistant/useAssistantChat";
@@ -23,15 +25,21 @@ import { detectImageIntent } from "@/lib/assistant/imageIntent";
 import { NoteProgressOverlay } from "@/components/note/NoteProgressOverlay";
 import { ImageGenerationOverlay } from "@/components/note/ImageGenerationOverlay";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
-import ChatSidebar from "@/components/asisten/ChatSidebar";
+import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
+import MomoCompanion, { type MomoMode } from "@/components/asisten/MomoCompanion";
 import Composer from "@/components/asisten/Composer";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
 import { useI18n } from "@/context/LocaleContext";
 
-export default function AssistantHub() {
+export default function AssistantHub({ standalone = false }: { standalone?: boolean }) {
   const router = useRouter();
+  const [launchError, setLaunchError] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [launching, setLaunching] = useState<{ prompt: string } | null>(null);
+  const [momoMode, setMomoMode] = useState<MomoMode>("normal");
+  const [momoMoving, setMomoMoving] = useState(false);
+  const [modelMenuHeight, setModelMenuHeight] = useState(0);
   const [notePrompt, setNotePrompt] = useState<string | null>(null);
   const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
   const [notePrefs, setNotePrefs] = useState<NoteCreatePrefs | null>(null);
@@ -43,18 +51,34 @@ export default function AssistantHub() {
   const { isBeta } = useBeta();
   const { dict } = useI18n();
   const l = dict.home;
-  const launchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heroAnchor = useRef<HTMLDivElement>(null);
+  const composerAnchor = useRef<HTMLDivElement>(null);
+  const [momoPosition, setMomoPosition] = useState<{ x: number; y: number; scale: number } | null>(null);
+  const reduceMotion = useReducedMotion();
+
+  useLayoutEffect(() => {
+    if (!standalone) return;
+    const anchor = momoMoving ? composerAnchor.current : heroAnchor.current;
+    if (!anchor) return;
+    const measure = () => {
+      const rect = anchor.getBoundingClientRect();
+      setMomoPosition((previous) => {
+        const next = { x: rect.left, y: rect.top, scale: rect.width / 190 };
+        return previous && previous.x === next.x && previous.y === next.y && previous.scale === next.scale ? previous : next;
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(anchor);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => { observer.disconnect(); window.removeEventListener("resize", measure); window.removeEventListener("scroll", measure, true); };
+  }, [standalone, momoMoving]);
 
   const chat = useAssistantChat({
     sessionId: null,
     onSessionCreated: (id) => router.push(`/chat/${id}`),
   });
-
-  useEffect(() => {
-    return () => {
-      if (launchTimer.current) clearTimeout(launchTimer.current);
-    };
-  }, []);
 
   /** Buat sesi → simpan prompt → animasi → pindah ke /chat/[id]. */
   const launchChat = useCallback(
@@ -67,6 +91,8 @@ export default function AssistantHub() {
       model?: string;
     }) => {
       if (launching) return;
+      setLaunchError(null);
+      setNeedsLogin(false);
 
       // Permintaan "buat gambar" → generate gambar AI (sesuai deskripsi/topik).
       if (detectImageIntent(input.question).isImageRequest) {
@@ -81,22 +107,41 @@ export default function AssistantHub() {
         return;
       }
 
-      const userId = getUserId();
-      if (!userId) return;
+      if (standalone) setMomoMoving(true);
+      setLaunching({ prompt: input.question });
 
       let sessionId: string | null = null;
       try {
+        const { data: authData } = await supabase?.auth.getSession() ?? { data: { session: null } };
+        const userId = authData.session?.user.id;
+        if (!userId) {
+          setLaunchError("Masuk ke akunmu untuk menggunakan AI dan menyimpan riwayat percakapan.");
+          setNeedsLogin(true);
+          setComposerPrefill(input.question);
+          setComposerKey((key) => key + 1);
+          setMomoMoving(false);
+          setLaunching(null);
+          return;
+        }
+        setUserId(userId);
         const res = await apiFetch("/api/assistant/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId }),
         });
-        const data = (await res.json()) as { session?: { id: string } };
+        const data = (await res.json()) as { session?: { id: string }; error?: string };
+        if (!res.ok) throw new Error(data.error || "Percakapan belum bisa dibuat.");
         sessionId = data.session?.id ?? null;
-      } catch {
-        // gagal membuat sesi — biarkan pengguna mencoba lagi
+      } catch (error) {
+        setLaunchError(error instanceof Error ? error.message : "Percakapan belum bisa dibuat. Periksa koneksi lalu coba lagi.");
       }
-      if (!sessionId) return;
+      if (!sessionId) {
+        setComposerPrefill(input.question);
+        setComposerKey((key) => key + 1);
+        setMomoMoving(false);
+        setLaunching(null);
+        return;
+      }
 
       sessionStorage.setItem(
         PENDING_PROMPT_KEY,
@@ -109,25 +154,20 @@ export default function AssistantHub() {
           model: input.model,
         })
       );
-      await chat.refreshSessions();
-      setLaunching({ prompt: input.question });
-      if (launchTimer.current) clearTimeout(launchTimer.current);
-      launchTimer.current = setTimeout(() => {
-        router.push(`/chat/${sessionId}`);
-      }, 900);
+      router.push(`/chat/${sessionId}`);
     },
-    [launching, chat, router]
+    [launching, router, standalone]
   );
 
   return (
-    <div className="flex h-full min-h-[560px] flex-col overflow-hidden bg-transparent">
+    <div className={standalone ? "momo-chat-shell flex h-dvh overflow-hidden" : "flex h-full min-h-[560px] flex-col overflow-hidden bg-transparent"}>
       {/* ChatSidebar desktop rail disembunyikan di dalam Dashboard agar kolom chat dapat lebar penuh;
           riwayat tetap via MobileSessionButton di topbar */}
-      <div className="hidden">
+      <div className={standalone ? "momo-chat-sidebar" : "hidden"}>
         <ChatSidebar
           sessions={chat.sessions}
           activeId={null}
-          onNew={chat.handleNew}
+          onNew={() => { setLaunchError(null); setNeedsLogin(false); setMomoMoving(false); setComposerPrefill(""); setComposerKey((key) => key + 1); }}
           onSelect={(id) => router.push(`/chat/${id}`)}
           onRename={chat.renameSession}
           onDelete={async (id) => {
@@ -137,17 +177,22 @@ export default function AssistantHub() {
       </div>
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
+        {standalone && momoPosition && <motion.div className="momo-travelling-companion" aria-hidden="true" initial={false}
+          animate={{ ...momoPosition, y: momoPosition.y - (momoMoving ? modelMenuHeight : 0) }}
+          transition={reduceMotion ? { duration: 0 } : { type: "spring", duration: 0.7, bounce: 0.2 }}>
+          <MomoCompanion mode={momoMode} question={launching?.prompt ?? ""} thinking={!!launching} />
+        </motion.div>}
+        {standalone && <header className="momo-chat-header"><div className="momo-mobile-history"><MobileSessionButton sessions={chat.sessions} onSelect={(id) => router.push(`/chat/${id}`)} /></div><strong>Chat baru</strong><Link href="/dashboard">← Dashboard</Link></header>}
 
         {/* Minimal Perplexity-style landing */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <div className="mx-auto flex min-h-full w-full max-w-[720px] flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
+          <div className="momo-start-content mx-auto flex min-h-full w-full max-w-[720px] flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
             {/* Heading */}
+            {standalone && !momoMoving && <div ref={heroAnchor} className="momo-chat-hero" aria-hidden="true" />}
             <div className="w-full text-center">
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-clay-muted">
-                Belajar
-              </p>
+              {!standalone && <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-clay-muted">Belajar</p>}
               <h2 className="mt-2 text-[28px] font-extrabold leading-none tracking-tight text-clay-dark sm:text-[36px]">
-                Apa yang mau kamu pelajari?
+                {standalone ? "Apa yang ingin kamu tanyakan?" : "Apa yang mau kamu pelajari?"}
               </h2>
               <p className="mx-auto mt-3 max-w-md text-[13px] font-semibold leading-relaxed text-clay-muted">
                 Tanya apa saja, kerjakan tugas, atau buat ringkasan materi — Eureka siap membantu.
@@ -155,13 +200,17 @@ export default function AssistantHub() {
             </div>
 
             {/* Composer — focal point */}
-            <div className="mt-8 w-full">
+            <div className="momo-start-composer mt-8 w-full">
+              {momoMoving && <div ref={composerAnchor} className="momo-preview-companion" aria-hidden="true" />}
               <Composer
+                reactBits={standalone}
+                onModelMenuHeightChange={setModelMenuHeight}
+                onMomoModeChange={setMomoMode}
                 key={composerKey}
                 userId={getUserId()}
-                sending={false}
-                disabled={!!launching || chat.sessionsLoading}
-                placeholder="Ketik @ untuk fitur"
+                sending={!!launching}
+                disabled={!!launching || (!standalone && chat.sessionsLoading)}
+                placeholder={standalone ? "Tanya Eureka apa saja…" : "Ketik @ untuk fitur"}
                 initialValue={composerPrefill}
                 isBeta={isBeta}
                 onCall={() => setCallOpen(true)}
@@ -176,7 +225,9 @@ export default function AssistantHub() {
               />
             </div>
 
+            {launchError && <p role="alert" className="momo-launch-error">{launchError}{needsLogin && <> <Link href="/login?next=%2Fchat">Masuk</Link></>}</p>}
             {/* Two suggestion tiles only — isi ke composer, tidak langsung kirim */}
+            {!standalone && (
             <div className="mt-4 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
@@ -229,6 +280,7 @@ export default function AssistantHub() {
                 </span>
               </button>
             </div>
+            )}
           </div>
         </div>
       </main>
@@ -257,36 +309,6 @@ export default function AssistantHub() {
       {/* Tutorial realtime untuk pengguna baru (spotlight) */}
       <TutorialHost />
 
-      {/* Animasi kirim: bubble prompt terbang dari composer → layar penuh */}
-      <AnimatePresence>
-        {launching && (
-          <motion.div
-            key="launch-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-clay-beige px-6"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 90, scale: 0.6, borderRadius: 24 }}
-              animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 16 }}
-              transition={{ type: "spring", stiffness: 240, damping: 24 }}
-              className="w-full max-w-xl rounded-clay-md border-3 border-clay-primary/30 bg-clay-cream px-6 py-5 shadow-clay-lg"
-            >
-              <p className="whitespace-pre-wrap text-base font-semibold leading-6 text-clay-dark">
-                {launching.prompt}
-              </p>
-            </motion.div>
-            <div className="flex items-center gap-3">
-              <div className="h-5 w-5 animate-spin rounded-full border-[3px] border-clay-primary/30 border-t-clay-primary" />
-              <p className="text-sm font-bold text-clay-muted">
-                {l.connecting}
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

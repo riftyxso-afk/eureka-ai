@@ -221,7 +221,7 @@ export default function FriendsPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+    <div className="more-page more-friends mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
       <div className="flex items-center gap-3">
         <Users size={28} className="text-clay-primary" />
         <h1 className="text-2xl font-extrabold sm:text-3xl">{l.title}</h1>
