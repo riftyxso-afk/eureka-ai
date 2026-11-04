@@ -20,6 +20,8 @@ const PRODUCTION_API_FALLBACK = "https://eureka-api.kapibara.ai.id";
 /** URL dasar backend API */
 function getApiBase(): string {
   const envUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+  // Migrate the retired API hostname even if an older Vercel env is still set.
+  if (envUrl === "https://api-eureka.web.id") return PRODUCTION_API_FALLBACK;
   if (envUrl) return envUrl;
 
   // Default: backend di port 3001 saat development
