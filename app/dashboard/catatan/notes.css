@@ -279,6 +279,18 @@
   .note-reader-book { overflow-y:auto; overflow-x:hidden; }
   .note-reader-page { max-height:none; flex-shrink:0; }
 }
+@media (max-width:639px) {
+  .notes-page { padding:20px 0 44px; }
+  .notes-page-header { align-items:stretch; flex-direction:column; gap:16px; padding:18px; }
+  .notes-page-header > div { grid-template-columns:42px minmax(0,1fr); }
+  .notes-page-icon { width:42px; height:42px; }
+  .notes-page-header > button { align-self:flex-start; }
+  .notes-overview { gap:8px; }
+  .notes-overview > div { padding:12px 8px; }
+  .notes-library { padding:12px; }
+  .notes-tools .notes-page-search { flex-basis:100%; }
+  .note-flip-controls button { width:44px; height:44px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .note-shelf-book,
   .note-shelf-book.is-active { transition: none; }

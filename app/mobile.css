@@ -1,0 +1,64 @@
+@media (max-width: 1023px) {
+  body {
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  }
+
+  html:has(.dashboard-shell) {
+    scroll-padding-block-start: calc(72px + env(safe-area-inset-top));
+  }
+
+  .dashboard-main {
+    padding-block-end: max(24px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 639px), (hover: none) and (pointer: coarse) {
+  /* iOS zooms the page when an editable control has a smaller font. */
+  :is(input:not([type]), input[type="text"], input[type="search"],
+      input[type="email"], input[type="password"], input[type="url"],
+      input[type="tel"], input[type="number"], input[type="date"],
+      input[type="time"], textarea, select) {
+    font-size: 16px !important;
+  }
+
+  :is(button, summary, a[href]) {
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 639px) {
+  .dashboard-main :is(h1, h2, h3),
+  .asisten-md,
+  .note-reader-page {
+    overflow-wrap: anywhere;
+  }
+
+  .k-landing > header {
+    padding-block-start: env(safe-area-inset-top);
+  }
+
+  .k-landing > header > div {
+    gap: 4px 16px;
+    padding-inline: 16px;
+  }
+
+  .k-landing > header nav {
+    gap: 0 14px;
+  }
+
+  .k-landing > header nav :is(a, select) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .k-landing > main > section:first-child {
+    min-height: auto;
+    padding-block: 24px 32px;
+    overflow: clip;
+  }
+
+  .k-landing > main > section:first-child > div:first-child {
+    max-width: min(290px, 78vw, 48svh);
+  }
+}

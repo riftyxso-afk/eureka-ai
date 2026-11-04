@@ -36,6 +36,60 @@
 }
 .eureka-sidebar-brand { padding-bottom:32px; }
 .eureka-sidebar-nav { gap:7px; }
+
+.eureka-mobile-bar, .eureka-sidebar-mobile:not([open]) { display:none; }
+
+@media (max-width:1023px) {
+  .eureka-mobile-bar {
+    position:sticky;
+    z-index:35;
+    top:0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:calc(6px + env(safe-area-inset-top)) 16px 6px;
+    background:rgb(var(--clay-cream));
+    border-bottom:1px solid rgb(var(--clay-border-light) / .65);
+  }
+  .eureka-mobile-brand {
+    color:rgb(var(--clay-primary));
+    font-size:24px;
+    font-weight:900;
+    letter-spacing:-.04em;
+  }
+  .eureka-mobile-shortcuts { display:flex; align-items:center; gap:4px; }
+  .eureka-mobile-shortcuts :is(a,button) {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    min-width:44px;
+    min-height:44px;
+    padding-inline:7px;
+    border-radius:10px;
+    color:rgb(var(--clay-dark));
+    font-size:12px;
+    font-weight:800;
+  }
+  .eureka-mobile-shortcuts :is([aria-current], button, :active) {
+    color:rgb(var(--clay-primary));
+    background:rgb(var(--clay-primary) / .10);
+  }
+  .eureka-mobile-bar :focus-visible { outline:2px solid rgb(var(--clay-primary)); outline-offset:2px; }
+  html:has(.eureka-sidebar-mobile[open]) { overflow:hidden; }
+  .eureka-sidebar-mobile[open] {
+    position:fixed;
+    inset:0 auto 0 0;
+    margin:0;
+    padding:calc(14px + env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  .eureka-sidebar-mobile::backdrop { background:#21162b66; }
+  .eureka-sidebar-mobile-header { align-items:center; margin-bottom:12px; }
+  .eureka-sidebar-mobile-header .eureka-sidebar-brand { padding-block:0; }
+  .eureka-sidebar-close { width:44px; height:44px; }
+  .eureka-sidebar-mobile .eureka-sidebar-item { min-height:46px; }
+}
 .eureka-sidebar-nav > .eureka-sidebar-item { min-height:52px; gap:16px; padding:8px 12px; font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.025em; }
 .eureka-sidebar-nav > .eureka-sidebar-item.is-collapsed { justify-content:center; padding:8px; }
 .eureka-sidebar-nav > .eureka-sidebar-item.is-active { background:#f2eafa; color:#7540d0; box-shadow:inset 0 0 0 2px #decdf4; }

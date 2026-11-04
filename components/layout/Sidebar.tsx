@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageCircle,
   Moon,
   Music,
   Trophy,
@@ -108,7 +109,7 @@ export const Sidebar = () => {
   const pathname = usePathname();
   const { isPremium } = usePremium();
   const { resolved: themeResolved, toggle: toggleTheme } = useTheme();
-  const [isOpen, setIsOpen] = useState(false);
+  const mobileMenu = useRef<HTMLDialogElement>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [referralOpen, setReferralOpen] = useState(false);
@@ -135,16 +136,17 @@ export const Sidebar = () => {
   };
 
   useEffect(() => {
-    setIsOpen(false);
+    mobileMenu.current?.close();
   }, [pathname]);
 
-  // Kunci scroll body saat drawer mobile terbuka (anti geser-geser).
   useEffect(() => {
-    if (isOpen) {
-      document.body.classList.add("scroll-lock");
-      return () => document.body.classList.remove("scroll-lock");
-    }
-  }, [isOpen]);
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) mobileMenu.current?.close();
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -169,14 +171,14 @@ export const Sidebar = () => {
     </Link>
   );
 
-  const navBody = (onNavigate?: () => void, mobile = false) => {
+  const navBody = (mobile = false) => {
     const compact = collapsed && !mobile;
     return (
       <>
         <nav className="eureka-sidebar-nav" aria-label="Navigasi utama">
           {["dashboard", "catatan", "kursus", "mata-pelajaran", "leaderboard", "misi", "jadwal", "profil"].map((id) => {
             const item = menuItems.find((entry) => entry.id === id)!;
-            return <SidebarItem key={item.id} icon={item.icon} art={item.id} label={item.label} href={item.href} active={activeMenuId(pathname) === item.id} onClick={onNavigate} collapsed={compact} />;
+            return <SidebarItem key={item.id} icon={item.icon} art={item.id} label={item.label} href={item.href} active={activeMenuId(pathname) === item.id} collapsed={compact} />;
           })}
           <button type="button" className={`eureka-sidebar-item eureka-sidebar-more ${compact ? "is-collapsed" : ""}`} aria-expanded={showMore} aria-label={compact ? "Lainnya" : undefined} title={compact ? "Lainnya" : undefined} onClick={() => setShowMore((value) => !value)}>
             <SidebarIcon name="more" />{!compact && <span>Lainnya</span>}
@@ -184,11 +186,11 @@ export const Sidebar = () => {
         </nav>
         {showMore && <div className="eureka-sidebar-extra">
           {menuItems.filter((item) => !["dashboard", "catatan", "kursus", "mata-pelajaran", "leaderboard", "misi", "jadwal", "profil"].includes(item.id)).map((item) => (
-            <SidebarItem key={item.id} icon={item.icon} label={item.label} href={item.href} active={activeMenuId(pathname) === item.id} onClick={onNavigate} collapsed={compact} />
+            <SidebarItem key={item.id} icon={item.icon} label={item.label} href={item.href} active={activeMenuId(pathname) === item.id} collapsed={compact} />
           ))}
         <div className="eureka-sidebar-actions">
-          <SidebarItem icon={Crown} label={isPremium ? "Top Up Pro" : "Tingkatkan Pro"} href="/pricing" variant="pro" onClick={onNavigate} collapsed={compact} />
-          <button type="button" onClick={() => setReferralOpen(true)} title={compact ? "Bagikan link referral" : undefined} aria-label={compact ? "Bagikan link referral" : undefined} className={`eureka-sidebar-item ${compact ? "is-collapsed" : ""}`}>
+          <SidebarItem icon={Crown} label={isPremium ? "Top Up Pro" : "Tingkatkan Pro"} href="/pricing" variant="pro" collapsed={compact} />
+          <button type="button" onClick={() => { if (mobile) mobileMenu.current?.close(); setReferralOpen(true); }} title={compact ? "Bagikan link referral" : undefined} aria-label={compact ? "Bagikan link referral" : undefined} className={`eureka-sidebar-item ${compact ? "is-collapsed" : ""}`}>
             <Share2 size={19} aria-hidden="true" />{!compact && <span>Bagikan referral</span>}
           </button>
           <button type="button" onClick={() => { toggleTheme(); showToast(themeResolved === "dark" ? "Mode terang diaktifkan" : "Mode gelap diaktifkan"); }} title={compact ? (themeResolved === "dark" ? "Mode terang" : "Mode gelap") : undefined} aria-label={compact ? (themeResolved === "dark" ? "Mode terang" : "Mode gelap") : undefined} className={`eureka-sidebar-item ${compact ? "is-collapsed" : ""}`}>
@@ -203,13 +205,18 @@ export const Sidebar = () => {
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="eureka-sidebar-menu-toggle fixed left-4 top-4 z-40 lg:hidden"
-        aria-label="Buka menu"
-      >
-        <Menu size={22} />
-      </button>
+      <header className="eureka-mobile-bar">
+        <Link href="/dashboard" className="eureka-mobile-brand" aria-label="Eureka, dashboard">eureka!</Link>
+        <nav aria-label="Akses cepat" className="eureka-mobile-shortcuts">
+          <Link href="/dashboard/catatan" aria-current={activeMenuId(pathname) === "catatan" ? "true" : undefined}>
+            <FileText size={18} aria-hidden="true" /><span>Catatan</span>
+          </Link>
+          <Link href="/chat"><MessageCircle size={18} aria-hidden="true" /><span>Chat</span></Link>
+          <button type="button" onClick={() => mobileMenu.current?.showModal()} aria-label="Buka menu" aria-haspopup="dialog">
+            <Menu size={22} aria-hidden="true" />
+          </button>
+        </nav>
+      </header>
 
       <div
         className={`eureka-sidebar-container sticky top-0 hidden h-screen shrink-0 items-center transition-[width] duration-200 lg:flex ${
@@ -235,37 +242,26 @@ export const Sidebar = () => {
         </aside>
       </div>
 
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[3px] lg:hidden"
-            />
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{
-                type: "tween",
-                duration: 0.3,
-                ease: [0.32, 0.72, 0, 1],
-              }}
-              className="eureka-sidebar eureka-sidebar-mobile fixed left-0 top-0 z-50 lg:hidden"
-            >
-              <div className="eureka-sidebar-mobile-header">
-                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="eureka-sidebar-brand">eureka!</Link>
-                <button type="button" onClick={() => setIsOpen(false)} className="eureka-sidebar-close" aria-label="Tutup menu"><X size={20} /></button>
-              </div>
-              {navBody(() => setIsOpen(false), true)}
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      <dialog
+        ref={mobileMenu}
+        className="eureka-sidebar eureka-sidebar-mobile"
+        aria-label="Menu Eureka"
+        onClick={(event) => {
+          if (event.target instanceof Element && event.target.closest("a[href]")) {
+            event.currentTarget.close();
+            return;
+          }
+          if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (event.clientX < bounds.left || event.clientX > bounds.right) mobileMenu.current?.close();
+        }}
+      >
+        <div className="eureka-sidebar-mobile-header">
+          <Link href="/dashboard" className="eureka-sidebar-brand">eureka!</Link>
+          <button type="button" onClick={() => mobileMenu.current?.close()} className="eureka-sidebar-close" aria-label="Tutup menu"><X size={20} /></button>
+        </div>
+        {navBody(true)}
+      </dialog>
 
       <AnimatePresence>
         {toast && (

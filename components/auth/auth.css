@@ -76,5 +76,13 @@
   .auth-page:has(.auth-content[aria-label="Daftar"]) .auth-visual,
   .auth-page:has(.auth-content[aria-label="Sign up"]) .auth-visual { display: block; min-height: 0; height: 132px; padding: 0; border-radius: 18px; background: #ece4fa url('/auth/learning-mural.png') center 48% / cover no-repeat; }
   .auth-page .auth-visual-copy, .auth-page .auth-visual-caption, .auth-page .auth-visual .auth-illustration { display: none; }
-  .auth-page .auth-content { padding-top: 28px; }
+  .auth-header { min-height: calc(60px + env(safe-area-inset-top)); height: auto; padding-top: env(safe-area-inset-top); }
+  .auth-home { display: inline-flex; align-items: center; min-height: 44px; }
+  .auth-layout { min-height: 0; padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+  .auth-page .auth-visual { height: clamp(72px, 15svh, 120px); }
+  .auth-page .auth-content { padding-block: 20px 0; }
+  .auth-page .auth-companion { margin-top: 0; }
+}
+@media (max-width: 350px) {
+  .auth-layout { padding-inline: 10px; }
 }

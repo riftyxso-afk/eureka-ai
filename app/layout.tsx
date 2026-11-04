@@ -3,6 +3,7 @@ import Script from "next/script";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
 import "./globals.css";
+import "./mobile.css";
 
 // Font self-hosted lokal — tidak perlu download dari Google Fonts saat build (offline/proxy aman).
 // File woff2 di public/fonts/ diunduh sekali dari fonts.gstatic.com (Nunito variable, 5 subset).
@@ -36,6 +37,8 @@ const SITE_URL = "https://www.eureka-ai.web.id";
 
 export const viewport: Viewport = {
   themeColor: "#7C3AED",
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 /** Baca locale aktif dari header x-locale yang diset middleware. */

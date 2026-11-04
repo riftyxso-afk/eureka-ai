@@ -106,7 +106,7 @@ export default function LandingPage() {
       <main>
         <section className="mx-auto grid min-h-[calc(100svh-70px)] max-w-5xl content-center items-center gap-6 px-6 py-10 text-center sm:py-14 md:grid-cols-2 md:gap-12">
           <div className="relative mx-auto aspect-square w-full max-w-[360px] md:max-w-[424px]">
-            <Image src="/landing/BtO1T.png" alt="" unoptimized width={424} height={424} className={`h-auto w-full ${heroVideoFailed ? "" : "hidden motion-reduce:block"}`} />
+            <Image src="/landing/BtO1T.png" alt="" unoptimized loading="eager" width={424} height={424} className={`h-auto w-full ${heroVideoFailed ? "" : "hidden motion-reduce:block"}`} />
             {playHero && !heroVideoFailed && (
               <video
                 src="/landing/hero-motion.mp4"

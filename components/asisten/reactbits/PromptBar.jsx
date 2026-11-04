@@ -205,6 +205,9 @@ export default function PromptBar({
   const maxed = efforts.length > 1 && effortIndex === efforts.length - 1;
 
   const focusInput = () => inputRef.current?.focus({ preventScroll: true });
+  const focusInputForMenu = () => {
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) focusInput();
+  };
   const closeMenus = useCallback(() => {
     setPlusOpen(false);
     setModelOpen(false);
@@ -593,7 +596,9 @@ export default function PromptBar({
         onPointerDown={e => {
           if (e.target === e.currentTarget || e.target === inputRef.current) closeMenus();
         }}
-        onClick={focusInput}
+        onClick={e => {
+          if (e.target === e.currentTarget) focusInput();
+        }}
       >
         <canvas ref={sparkRef} className="prompt-bar__sparks" aria-hidden="true" />
         {attachments.length > 0 ? (
@@ -645,12 +650,12 @@ export default function PromptBar({
             data-on={plusOpen ? '' : undefined}
             onMouseDown={e => e.preventDefault()}
             onClick={() => {
+              focusInputForMenu();
               setModelOpen(false);
               setEffortOpen(false);
               setActive(0);
-              setPlusOpen(v => !v);
+              setPlusOpen(!plusOpen);
               if (!plusOpen) onSourcesOpen?.();
-              focusInput();
             }}
           >
             <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} />
@@ -659,20 +664,20 @@ export default function PromptBar({
             <button
               type="button"
               className="prompt-bar__pick"
-              aria-label="Choose model"
+              aria-label={`Choose model: ${model.name}`}
               aria-expanded={modelOpen}
               data-on={modelOpen ? '' : undefined}
               onMouseDown={e => e.preventDefault()}
               onClick={() => {
+                focusInputForMenu();
                 setPlusOpen(false);
                 setEffortOpen(false);
                 setActive(Math.max(0, models.indexOf(model)));
-                setModelOpen(v => !v);
-                focusInput();
+                setModelOpen(!modelOpen);
               }}
             >
               {model.logo ? <span className="prompt-bar__model-logo" aria-hidden="true" style={{ backgroundImage: `url(${model.logo})`, backgroundSize: model.logo.includes('official') ? 'auto 100%' : 'contain' }} /> : null}
-              <span>{model.name}</span>
+              <span className="prompt-bar__pick-label">{model.name}</span>
               <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.4} />
             </button>
           ) : null}
@@ -680,20 +685,20 @@ export default function PromptBar({
             <button
               type="button"
               className="prompt-bar__pick"
-              aria-label="Choose effort"
+              aria-label={`Choose effort: ${level}`}
               aria-expanded={effortOpen}
               data-on={effortOpen ? '' : undefined}
               data-max={maxed ? '' : undefined}
               onMouseDown={e => e.preventDefault()}
               onClick={() => {
+                focusInputForMenu();
                 setPlusOpen(false);
                 setModelOpen(false);
-                setEffortOpen(v => !v);
-                focusInput();
+                setEffortOpen(!effortOpen);
               }}
             >
               <HugeiconsIcon icon={SparklesIcon} size={13} strokeWidth={2} />
-              <span>{level}</span>
+              <span className="prompt-bar__effort-label">{level}</span>
             </button>
           ) : null}
           <span className="prompt-bar__spacer" />
