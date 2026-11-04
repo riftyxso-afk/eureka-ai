@@ -15,7 +15,7 @@ import { getAccessToken } from "./supabase/client";
  * Fallback URL backend untuk production bila NEXT_PUBLIC_API_URL tidak di-set
  * saat build. Sesuaikan dengan domain backend kamu (mis. "https://api-eureka.web.id").
  */
-const PRODUCTION_API_FALLBACK = "https://api-eureka.web.id";
+const PRODUCTION_API_FALLBACK = "https://eureka-api.kapibara.ai.id";
 
 /** URL dasar backend API */
 function getApiBase(): string {
