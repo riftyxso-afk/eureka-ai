@@ -99,6 +99,12 @@ export async function authorizeAssistantUser(
  * query gagal, dianggap BUKAN beta tester.
  */
 export async function isBetaTester(userId: string): Promise<boolean> {
+  if (
+    process.env.EUREKA_DEV_ALL_ACCESS === "true" &&
+    process.env.NODE_ENV !== "production"
+  ) {
+    return true;
+  }
   try {
     const { data } = await db()
       .from("users")

@@ -41,6 +41,15 @@ export interface ChatToolOptions {
   solveThenGuide?: boolean;
 }
 
+export type AssistantSuggestionKind = "send" | "quiz" | "flashcards";
+
+export interface AssistantSuggestion {
+  label: string;
+  kind: AssistantSuggestionKind;
+  /** Pertanyaan lengkap untuk aksi kirim; diabaikan oleh generator belajar. */
+  prompt?: string;
+}
+
 /** Satu hasil pencarian web (tool globe) yang ditampilkan ke user. */
 export interface WebSearchItem {
   url: string;

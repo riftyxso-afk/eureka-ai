@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAssistantChat } from "@/lib/assistant/useAssistantChat";
+import { useAssistantSuggestions } from "@/lib/assistant/useAssistantSuggestions";
 import { getUserId } from "@/lib/identity";
 import {
   PENDING_PROMPT_KEY,
@@ -18,6 +19,7 @@ import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import MessageBubble from "@/components/asisten/MessageBubble";
 import ResponseActivity from "@/components/asisten/ResponseActivity";
+import FollowUpActions from "@/components/asisten/FollowUpActions";
 import MomoCompanion, { type MomoMode } from "@/components/asisten/MomoCompanion";
 import ClarificationCard from "@/components/asisten/ClarificationCard";
 import ShareModal from "@/components/asisten/ShareModal";
@@ -56,6 +58,7 @@ import {
 import Link from "next/link";
 
 export default function ChatPage() {
+  const reduceMotion = useReducedMotion();
   const params = useParams<{ id: string }>();
   const sessionId = params.id;
   const router = useRouter();
@@ -130,7 +133,7 @@ export default function ChatPage() {
   // Video yang sedang dilihat via tombol "View" pada embed (expand + poin).
   const [viewVideo, setViewVideo] = useState<{ url: string; title?: string } | null>(null);
   const { isBeta } = useBeta();
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const l = dict.chat;
   // Pop-up error AI — muncul saat model down; "Tutup" menyembunyikan sampai
   // error BARU datang (di-reset lewat useEffect di bawah).
@@ -210,25 +213,12 @@ export default function ChatPage() {
     setTimeout(() => setCopiedAll(false), 2000);
   };
 
-  // Header auto-hide saat scroll ke bawah (mobile) — tampil lagi saat ke atas.
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const lastScrollY = useRef(0);
-  const [headerHidden, setHeaderHidden] = useState(false);
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const y = el.scrollTop;
-    const delta = y - lastScrollY.current;
-    if (delta > 4 && y > 64) setHeaderHidden(true);
-    else if (delta < -4) setHeaderHidden(false);
-    lastScrollY.current = y;
-  };
-
   const chat = useAssistantChat({
     sessionId,
     onSessionCreated: (id) => router.replace(`/chat/${id}`),
     initialSend,
   });
+  const suggestions = useAssistantSuggestions(sessionId, chat.renderedMessages, chat.sending, chat.hasError);
   useEffect(() => {
     if (chat.sending || chat.hasError) setInitialPending(false);
   }, [chat.sending, chat.hasError]);
@@ -249,7 +239,7 @@ export default function ChatPage() {
   const latestQuestion = [...chat.renderedMessages].reverse().find((message) => message.role === "user")?.content ?? "";
 
   return (
-    <div className="momo-session flex h-dvh overflow-hidden bg-clay-beige p-0">
+    <div className={`momo-session flex h-dvh overflow-hidden bg-clay-beige p-0 ${chat.sending ? "is-generating" : ""}`}>
       <div className="flex h-full w-full overflow-hidden border-t border-clay-borderLight/60 sm:border-t-0">
         <ChatSidebar
           sessions={chat.sessions}
@@ -271,25 +261,18 @@ export default function ChatPage() {
             Desktop: kolom samping (flex sibling dari <main>), flush border.
             Mobile: fixed bottom sheet di atas main (z-40). */}
         <ArtifactCanvas
+          key={sessionId ?? "new"}
           artifacts={chat.canvas.artifacts}
           streamingId={chat.canvas.streamingId}
+          sending={chat.sending}
           open={chat.canvas.open}
           onClose={chat.closeCanvas}
           onEditSave={chat.saveArtifactEdit}
         />
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-clay-cream">
-        {/* Topbar — auto-hide saat scroll ke bawah (slide up), muncul saat ke atas */}
-        <AnimatePresence initial={false}>
-          {!headerHidden && (
-            <motion.header
-              key="chat-topbar"
-              initial={{ height: 0, opacity: 0, y: -16 }}
-              animate={{ height: "auto", opacity: 1, y: 0 }}
-              exit={{ height: 0, opacity: 0, y: -16 }}
-              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-              className="overflow-hidden"
-            >
+        {/* Header tetap di luar area scroll agar tidak mengubah posisi pesan. */}
+        <header className="shrink-0">
               <div className="flex items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
                 <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                   <MobileSessionButton
@@ -387,23 +370,32 @@ export default function ChatPage() {
                   </button>
                 </div>
               </div>
-            </motion.header>
-          )}
-        </AnimatePresence>
+        </header>
 
         {/* Area pesan — scroll di sini */}
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6"
-        >
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6">
           {initialSend && (initialPending || chat.loading || chat.sending) && chat.renderedMessages.length === 0 && !chat.hasError && !chat.clarification ? (
             <div className="mx-auto w-full max-w-3xl space-y-4">
               <MessageBubble message={{ id: "pending-user", sessionId, role: "user", content: initialSend.question, mentions: initialSend.mentions, sources: [], model: null, createdAt: new Date().toISOString() }} />
               <ResponseActivity thinking={chat.streaming.thinking} />
             </div>
           ) : chat.loading && chat.messages.length === 0 && !chat.sending ? (
-            null
+            <div role="status" className="mx-auto w-full max-w-3xl space-y-7">
+              <span className="sr-only">{locale === "en" ? "Loading conversation…" : "Memuat percakapan…"}</span>
+              {[0, 1].map((row) => (
+                <div key={row} aria-hidden="true" className="space-y-5 motion-safe:animate-pulse">
+                  <div className="ml-auto h-10 w-2/5 rounded-2xl rounded-br-sm bg-violet-100 dark:bg-violet-900/50" />
+                  <div className="flex items-start gap-3">
+                    <div className="size-8 shrink-0 rounded-full bg-violet-100 dark:bg-violet-900/50" />
+                    <div className="w-4/5 space-y-2 pt-1">
+                      <div className="h-3 rounded-full bg-violet-100 dark:bg-violet-900/50" />
+                      <div className="h-3 w-5/6 rounded-full bg-violet-100 dark:bg-violet-900/50" />
+                      <div className="h-3 w-3/5 rounded-full bg-violet-100 dark:bg-violet-900/50" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : chat.renderedMessages.length === 0 &&
             !(chat.clarification && chat.clarification.length > 0) &&
             !chat.hasError ? (
@@ -446,12 +438,23 @@ export default function ChatPage() {
                       isStreaming={chat.sending && idx === chat.renderedMessages.length - 1 && m.id.startsWith("stream-")}
                       thinking={chat.sending && idx === chat.renderedMessages.length - 1 ? chat.streaming.thinking : null}
                       prevMessage={prevMsg}
+                      onOpenArtifacts={chat.openCanvas}
                       videoEnabled={isBeta}
                       onViewVideo={(url) => {
                         // Pertahanan berlapis: hanya beta bisa membuka View.
                         if (isBeta) setViewVideo({ url });
                       }}
                     />
+                    {idx === chat.renderedMessages.length - 1 && m.role === "assistant" && !chat.sending && !chat.hasError && m.content.trim() && (suggestions.loading || suggestions.items.length > 0) && (
+                      <FollowUpActions
+                        suggestions={suggestions.items}
+                        loading={suggestions.loading}
+                        disabled={chat.loading || chat.sessionsLoading}
+                        onSend={(question) => chat.handleSend({ question, mentions: [] })}
+                        onQuiz={() => setQuizOpen(true)}
+                        onFlashcards={() => setCardsOpen(true)}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -509,7 +512,28 @@ export default function ChatPage() {
 
         {/* Composer — minta "buat catatan" → wizard F&Q menyatu, bukan chat */}
         <div className="momo-session-composer">
-        {chat.renderedMessages.length > 0 && <div className="momo-composer-companion" style={{ transform: `translateY(-${modelMenuHeight}px)` }}><MomoCompanion mode={momoMode} question={latestQuestion} response={latestAnswer} thinking={chat.sending} error={chat.hasError} /></div>}
+        {chat.renderedMessages.length > 0 && (
+          <div className="momo-composer-companion">
+            <motion.div
+              className="momo-composer-companion-motion"
+              layout={!reduceMotion}
+              transition={{ duration: 0.22, ease: [0.77, 0, 0.175, 1] }}
+            >
+              <div
+                className="momo-composer-companion-offset"
+                style={{ transform: `translateY(-${modelMenuHeight}px)` }}
+              >
+                <MomoCompanion
+                  mode={momoMode}
+                  question={latestQuestion}
+                  response={latestAnswer}
+                  thinking={chat.sending}
+                  error={chat.hasError}
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
         <Composer
           reactBits
           onModelMenuHeightChange={setModelMenuHeight}

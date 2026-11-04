@@ -1,0 +1,41 @@
+.note-generation { color:#30263b; text-align:left; }
+.note-generation-top { display:flex; align-items:center; justify-content:space-between; }
+.note-generation-eyebrow { color:#8a6ba8; font-size:10px; font-weight:800; letter-spacing:.11em; }
+.note-generation-close { display:grid; place-items:center; width:38px; height:38px; border:0; border-radius:12px; background:#f6f3f8; color:#786e80; cursor:pointer; }
+.note-generation-close:hover { background:#eee7f4; color:#693aab; }
+.note-generation-intro { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:132px; padding:4px 0 14px; }
+.note-generation-copy { min-width:0; max-width:340px; }
+.note-generation-copy h2 { margin:0; font-size:clamp(22px, 3vw, 27px); font-weight:800; line-height:1.18; letter-spacing:-.035em; }
+.note-generation-copy p { margin:10px 0 0; color:#81758b; font-size:13px; line-height:1.55; font-weight:500; }
+.note-generation-mascot { width:130px; height:130px; flex:none; display:grid; place-items:center; border-radius:36px; background:#f5effc; overflow:hidden; }
+.note-generation-mascot .momo-companion { position:relative; width:120px; height:120px; }
+.note-generation-mascot .momo-canvas-mount, .note-generation-mascot canvas { display:block; width:100%; height:100%; }
+.note-generation-mascot .momo-companion-loading { position:absolute; inset:auto 0 6px; font-size:10px; color:#8b789b; text-align:center; }
+.note-generation-progress-card { border:1px solid #eee8f3; border-radius:16px; padding:17px 18px; background:#fcfbfd; }
+.note-generation-progress-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; color:#685b73; font-size:12px; font-weight:700; }
+.note-generation-progress-heading strong { color:#7541c7; font-size:16px; font-variant-numeric:tabular-nums; }
+.note-generation-track { height:8px; margin-top:11px; overflow:hidden; border-radius:8px; background:#eae3f1; }
+.note-generation-fill { height:100%; border-radius:inherit; background:#8251d1; transition:width .35s ease-out; }
+.note-generation-current { display:flex; align-items:flex-start; gap:9px; margin:13px 0 0; color:#74667f; font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+.note-generation-pulse { width:7px; height:7px; margin-top:5px; flex:none; border-radius:50%; background:#a774df; animation:note-generation-breathe 1.8s ease-in-out infinite; }
+.note-generation-steps { max-height:165px; overflow-y:auto; margin-top:4px; }
+.note-generation-steps > div { margin-top:12px; }
+.note-generation-hint { margin:18px 0 14px; color:#8c7f94; font-size:12px; line-height:1.5; }
+.note-generation-actions { display:flex; align-items:center; gap:10px; }
+.note-generation-actions button { min-height:44px; display:inline-flex; justify-content:center; align-items:center; gap:8px; border-radius:11px; padding:10px 15px; font-size:12px; font-weight:750; cursor:pointer; }
+.note-generation-background { flex:1; border:1px solid #7541c7; background:#7541c7; color:#fff; }
+.note-generation-background:hover { background:#6333ae; }
+.note-generation-stop { border:1px solid #eee1e5; background:#fff; color:#a95a69; }
+.note-generation-stop:hover:not(:disabled) { background:#fff5f5; }
+.note-generation-stop:disabled { opacity:.5; cursor:not-allowed; }
+.dark .note-generation { color:#f6effa; }
+.dark .note-generation-copy p,.dark .note-generation-current,.dark .note-generation-hint { color:#baaac6; }
+.dark .note-generation-mascot { background:#3e3050; }
+.dark .note-generation-progress-card { background:#30283a; border-color:#50425d; }
+.dark .note-generation-progress-heading { color:#d0bfd9; }
+.dark .note-generation-progress-heading strong { color:#c49af4; }
+.dark .note-generation-track { background:#51405e; }
+.dark .note-generation-stop { background:#322a3b; border-color:#62434e; color:#efa6ad; }
+@keyframes note-generation-breathe { 50% { opacity:.45; } }
+@media (max-width:480px) { .note-generation-intro { min-height:110px; } .note-generation-mascot { width:100px; height:100px; border-radius:28px; } .note-generation-mascot .momo-companion { width:96px; height:96px; } .note-generation-copy h2 { font-size:21px; } .note-generation-actions { flex-direction:column; align-items:stretch; } }
+@media (prefers-reduced-motion:reduce) { .note-generation-fill { transition:none; } .note-generation-pulse { animation:none; } }

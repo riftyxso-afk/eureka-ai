@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { parseArtifactMessage } from "@/lib/assistant/artifacts";
 import { motion } from "framer-motion";
-import { BookMarked, Check, Copy, Info, Paperclip, RefreshCw } from "lucide-react";
+import { BookMarked, Check, Copy, FileText, Info, Paperclip, RefreshCw } from "lucide-react";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
-import EurekaOrb from "@/components/ui/EurekaOrb";
+import { citedNoteSources } from "@/lib/assistant/citedSources";
 import MomoMessageAvatar from "@/components/asisten/MomoMessageAvatar";
 import ResponseActivity from "@/components/asisten/ResponseActivity";
 import { YoutubeEmbed } from "@/components/video/YoutubeEmbed";
@@ -14,13 +15,13 @@ import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
 import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type { AssistantChatMessage } from "@/lib/assistant/types";
-import StreamingText from "@/components/streaming/StreamingText";
 
 interface MessageBubbleProps {
   message: AssistantChatMessage;
   isStreaming?: boolean;
   thinking?: string | null;
   onRetry?: () => void;
+  onOpenArtifacts?: () => void;
   /** Pesan user sebelumnya — dipakai hitung lama AI menjawab. */
   prevMessage?: AssistantChatMessage | null;
   /** Klik "View" pada embed video → buka tampilan expand (overlay di halaman). */
@@ -52,7 +53,7 @@ function CopyButton({ content }: { content: string }) {
       onClick={handleCopy}
       aria-label="Salin pesan"
       title="Salin pesan sebagai teks bersih"
-      className="inline-flex h-7 w-7 items-center justify-center self-start rounded-clay-full text-clay-muted opacity-0 transition-all duration-100 hover:bg-clay-beige hover:text-clay-primary focus:opacity-100 group-hover:opacity-100 active:scale-95"
+      className="chat-message-copy inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-clay-full text-clay-muted transition-opacity duration-100 hover:bg-clay-beige hover:text-clay-primary focus-visible:opacity-100 active:scale-95"
     >
       {copied ? <Check size={13} className="text-clay-success" /> : <Copy size={13} />}
     </button>
@@ -94,6 +95,7 @@ export default function MessageBubble({
   isStreaming = false,
   thinking,
   onRetry,
+  onOpenArtifacts,
   prevMessage,
   onViewVideo,
   videoEnabled = true,
@@ -111,28 +113,21 @@ export default function MessageBubble({
 
   // Bersihkan tag <artifact ...>...</artifact> dari tampilan bubble pesan chat
   // agar isi artifact hanya tampil di panel Artifact Canvas terpisah.
-  const displayContent = isUser
-    ? message.content
-    : message.content
-        .replace(/<artifact\b[^>]*>([\s\S]*?)<\/artifact>/gi, "")
-        .replace(/<artifact\b[^>]*>[\s\S]*$/gi, "") // tag menggantung saat streaming
-        .trim();
-
-  // Thinking terakhir yang sempat tampil — dipertahankan saat prop thinking
-  // hilang (mis. jawaban selesai) agar tidak kedip. Disimpan via state di
-  // efek (bukan mutasi ref saat render — bug + warning react-hooks/refs).
-  // Hooks WAJIB di atas early return agar urutannya stabil tiap render.
+  const parsedContent = useMemo(
+    () => isUser ? null : parseArtifactMessage(message.content, isStreaming),
+    [isUser, message.content, isStreaming]
+  );
+  const displayContent = isUser ? message.content : (parsedContent?.chat ?? "").trim();
 
   if (isUser) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex justify-end"
+        className="group chat-message chat-message--user"
       >
-        <div className="flex items-end gap-1.5">
-          <CopyButton content={message.content} />
-          <div className="momo-message-user max-w-[70%] break-words px-3.5 py-2.5">
+        <div className="chat-message-user-stack">
+          <div className="momo-message-user chat-message-user-content px-3.5 py-2.5">
             <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed">
               {message.content}
             </p>
@@ -159,6 +154,9 @@ export default function MessageBubble({
               </div>
             )}
           </div>
+          <div className="chat-message-actions self-end">
+            <CopyButton content={message.content} />
+          </div>
         </div>
       </motion.div>
     );
@@ -171,21 +169,29 @@ export default function MessageBubble({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group flex items-start gap-2.5"
+      className="group chat-message chat-message--assistant"
     >
       <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} thinking={isStreaming} />
-      <div className="flex min-w-0 max-w-[85%] flex-col gap-1.5">
+      <div className="chat-message-assistant-content flex min-w-0 flex-col gap-1.5">
         {isStreaming && (!displayContent || thinking) && <ResponseActivity thinking={thinking} />}
         {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}
         <div className="break-words text-clay-dark">
-          {isStreaming && displayContent ? (
-            <StreamingText content={displayContent} sources={[]} followUps={[]} loop={false} fill />
-          ) : empty || !displayContent ? (
+          {empty || !displayContent ? (
             null
           ) : (
             <MarkdownView content={displayContent} className="break-words text-[14px] leading-relaxed" />
           )}
         </div>
+
+        {!isStreaming && (parsedContent?.artifacts.length ?? 0) > 0 && onOpenArtifacts && (
+          <button
+            type="button"
+            onClick={onOpenArtifacts}
+            className="inline-flex items-center gap-2 self-start rounded-clay-md border border-clay-borderLight px-3 py-2 text-sm font-semibold text-clay-primary hover:bg-clay-beige focus-visible:outline-2 focus-visible:outline-clay-primary"
+          >
+            <FileText size={16} /> Buka artifact
+          </button>
+        )}
 
         {/* Meta: salin muncul on-hover; model & durasi jadi tooltip ikon info
             (metadata teknis tidak tampil default — chat-visual-hierarchy). */}
@@ -208,7 +214,7 @@ export default function MessageBubble({
         )}
 
         {!isStreaming && message.sources.length > 0 && (
-          <SourceChips sources={message.sources} />
+          <SourceChips sources={citedNoteSources(message.content, message.sources)} />
         )}
 
         {!isStreaming && empty && onRetry && (

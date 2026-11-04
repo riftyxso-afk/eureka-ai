@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     if (askNotes && userId && lastQuestion.trim().length > 3) {
       try {
         const [embedding] = await embedTexts([lastQuestion], "query");
-        const results = await searchChunks(embedding, 5, undefined, userId);
+        const results = await searchChunks(embedding, 5, undefined, userId, lastQuestion);
         if (results.length > 0) {
           notesContext = results
             .map(

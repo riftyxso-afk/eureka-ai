@@ -153,6 +153,14 @@ const NOT_CONFIGURED: PremiumStatus = {
   premiumUntil: null,
 };
 
+/** Bypass eksplisit untuk mencoba semua fitur chat saat development. */
+export function isDevAllAccessEnabled(): boolean {
+  return (
+    process.env.EUREKA_DEV_ALL_ACCESS === "true" &&
+    process.env.NODE_ENV !== "production"
+  );
+}
+
 /**
  * Baca status premium user dari DB. Bila Supabase belum dikonfigurasi
  * (mode dev), semua user dianggap non-premium. Status murni dari
@@ -161,6 +169,13 @@ const NOT_CONFIGURED: PremiumStatus = {
 export async function getPremiumStatus(
   userId: string
 ): Promise<PremiumStatus> {
+  if (isDevAllAccessEnabled()) {
+    return {
+      isPremium: true,
+      tier: "normal",
+      premiumUntil: null,
+    };
+  }
   let client;
   try {
     client = db();

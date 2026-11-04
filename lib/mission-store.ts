@@ -5,7 +5,7 @@
  *  - Mahasiswa: kejar IPK dari 2.0 ke 3.5
  *  - Siswa SMA: kejar lulus SNBP / SNBT (seleksi masuk PTN)
  *
- * Disimpan di localStorage per-user (pola sama seperti schedule-store).
+ * Disimpan di localStorage perangkat agar misi lama tetap bisa dibuka.
  */
 
 export type MissionType = "ipk" | "snbp" | "snbt" | "umum";
@@ -26,6 +26,9 @@ export interface Mission {
   guide?: string;
   /** Langkah-langkah bimbingan dari AI. */
   steps?: string[];
+  completedSteps?: string[];
+  completedAt?: number;
+  planSource?: "ai" | "starter";
   createdAt: number;
 }
 
@@ -123,12 +126,37 @@ export function deleteMission(id: string): void {
   save(getMissions().filter((m) => m.id !== id));
 }
 
-/** Kira-kira progress misi (0-100) dari nilai sekarang vs target. */
+/** Progres checkpoint. Nilai target diperiksa terpisah saat menutup misi. */
 export function missionProgress(m: Mission): number {
-  if (m.currentValue == null || m.targetValue == null) return 0;
-  if (m.targetValue <= 0) return 0;
-  const ratio = m.currentValue / m.targetValue;
-  return Math.max(0, Math.min(100, Math.round(ratio * 100)));
+  if (m.status === "done") return 100;
+  const count = new Set(m.steps).size;
+  return count ? Math.floor(100 * completedMissionSteps(m).length / count) : 0;
+}
+
+export function completedMissionSteps(m: Mission): string[] {
+  const completed = new Set(m.completedSteps);
+  return [...new Set(m.steps)].filter(step => completed.has(step));
+}
+
+export function missionXp(m: Mission): number {
+  return completedMissionSteps(m).length * 10 + (m.completedAt ? 30 : 0);
+}
+
+export function toggleMissionCheckpoint(id: string, step: string) {
+  const mission = getMissions().find(m => m.id === id);
+  if (!mission || mission.status !== "active" || !mission.steps?.includes(step)) return;
+  const completed = new Set(completedMissionSteps(mission));
+  if (completed.has(step)) completed.delete(step);
+  else completed.add(step);
+  updateMission(id, { completedSteps: [...completed] });
+}
+
+export function finishMission(id: string): boolean {
+  const mission = getMissions().find(m => m.id === id);
+  if (!mission || mission.status !== "active" || missionProgress(mission) !== 100) return false;
+  if (mission.targetValue != null && (mission.currentValue ?? -1) < mission.targetValue) return false;
+  updateMission(id, { status: "done", completedAt: Date.now() });
+  return true;
 }
 
 /** Nama friendly per tipe misi. */

@@ -93,6 +93,17 @@ export async function getMessages(
   return (data ?? []).map(mapMessage);
 }
 
+export async function updateArtifactMessage(
+  sessionId: string, messageId: string, previousContent: string, content: string
+): Promise<boolean> {
+  const { data, error } = await db().from("ai_chat_messages")
+    .update({ content })
+    .eq("id", messageId).eq("session_id", sessionId).eq("role", "assistant")
+    .eq("content", previousContent).select("id");
+  if (error) throw error;
+  return (data?.length ?? 0) === 1;
+}
+
 /** Parse kolom JSONB yang mungkin kosong/null/opaque → bentuk array. */
 function asArray<T>(raw: unknown): T[] {
   if (Array.isArray(raw)) return raw as T[];
@@ -151,9 +162,9 @@ export async function appendMessage(data: {
   });
   if (error) throw error;
 
-  // Judul otomatis dari pesan user pertama (jika masih default).
-  // Fire-and-forget: generate judul via AI tidak menunda stream jawaban.
-  if (data.role === "user") {
+  // Judul dibuat setelah jawaban selesai agar panggilannya tidak bersaing
+  // dengan stream jawaban utama pada provider yang sama.
+  if (data.role === "assistant") {
     void autoTitleIfNeeded(data.sessionId);
   }
 
@@ -225,9 +236,11 @@ async function autoTitleIfNeeded(sessionId: string): Promise<void> {
       system:
         "Kamu adalah penamai percakapan. Buat judul SINGKAT (3-6 kata) dalam bahasa Indonesia yang merangkum topik utama pesan user. Balas HANYA dengan judul — tanpa tanda kutip, tanpa tanda baca berlebihan, tanpa kata pengantar.",
       user: firstPrompt.slice(0, 800),
-      maxTokens: 40,
+      maxTokens: 120,
       temperature: 0.3,
       speedMode: "fast",
+      reasoning: false,
+      model: "gpt-4o",
     });
     title = sanitizeAiTitle(raw);
   } catch (e) {

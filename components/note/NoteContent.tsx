@@ -60,9 +60,9 @@ export const NoteContent = forwardRef<HTMLDivElement, NoteContentProps>(
       <div
         ref={ref}
         id={`chapter-${chapter.id}`}
-        className="scroll-mt-28 min-w-0 max-w-full overflow-hidden rounded-clay bg-clay-cream p-5 shadow-clay-sm sm:p-6"
+        className="note-chapter-card scroll-mt-28 min-w-0 max-w-full overflow-hidden rounded-clay bg-clay-cream p-5 sm:p-6"
       >
-        <div className="mb-4 border-b-2 border-clay-shadow/20 pb-4">
+        <div className="note-chapter-heading mb-4 pb-3">
           {/* Mobile: judul paling atas (nomor bab di samping kiri), lalu tombol aksi di bawahnya. */}
           {/* Desktop: tetap sejajar dalam satu baris. */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -119,7 +119,7 @@ export const NoteContent = forwardRef<HTMLDivElement, NoteContentProps>(
               {previewText(items)}
             </p>
             <span className="mt-2 inline-flex items-center gap-1 text-xs font-extrabold text-clay-primary">
-              Klik untuk membuka bab ini
+              Lihat isi bab
               <ChevronDown size={14} />
             </span>
           </button>

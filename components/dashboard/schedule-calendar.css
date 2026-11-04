@@ -1,0 +1,546 @@
+.quest-calendar {
+  min-width: 0;
+  color: var(--quest-text);
+}
+
+.quest-calendar *,
+.quest-calendar *::before,
+.quest-calendar *::after {
+  box-sizing: border-box;
+}
+
+.quest-calendar button {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.quest-calendar button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.quest-calendar button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid var(--quest-accent);
+  outline-offset: 3px;
+}
+
+.quest-calendar-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.quest-calendar-heading {
+  min-width: 0;
+}
+
+.quest-calendar-heading h2 {
+  margin: 0;
+  font-size: clamp(21px, 3vw, 26px);
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: -.025em;
+}
+
+.quest-calendar-heading h2 span {
+  color: var(--quest-muted);
+  font-weight: 700;
+}
+
+.quest-calendar-heading p {
+  margin: 7px 0 0;
+  color: var(--quest-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.quest-calendar-navigation {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.quest-calendar-nav-button,
+.quest-calendar-today-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--quest-border);
+  border-radius: 11px;
+  background: var(--quest-surface);
+  color: var(--quest-text);
+}
+
+.quest-calendar-nav-button {
+  width: 44px;
+}
+
+.quest-calendar-today-button {
+  padding: 9px 15px;
+  color: var(--quest-accent);
+  font-size: 13px !important;
+  font-weight: 850 !important;
+}
+
+.quest-calendar-nav-button:active,
+.quest-calendar-today-button:active {
+  background: var(--quest-soft);
+  border-color: var(--quest-accent);
+}
+
+.quest-calendar-month {
+  overflow: hidden;
+  border: 1px solid var(--quest-border);
+  border-radius: 17px;
+  background: var(--quest-border);
+}
+
+.quest-calendar-weekdays,
+.quest-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+}
+
+.quest-calendar-weekdays {
+  border-bottom: 1px solid var(--quest-border);
+  background: var(--quest-soft);
+}
+
+.quest-calendar-weekdays > span {
+  padding: 11px 3px;
+  color: var(--quest-muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.quest-calendar-day,
+.quest-calendar-padding {
+  min-width: 0;
+  min-height: 96px;
+  background: var(--quest-surface);
+}
+
+.quest-calendar-padding {
+  background: var(--quest-soft);
+}
+
+.quest-calendar-day {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px;
+  border: 0;
+  border-radius: 0;
+  color: var(--quest-text);
+  text-align: start;
+}
+
+.quest-calendar-date {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.quest-calendar-day-today .quest-calendar-date {
+  border-color: var(--quest-accent);
+  color: var(--quest-accent);
+}
+
+.quest-calendar-day-selected {
+  background: var(--quest-soft);
+  box-shadow: inset 0 0 0 2px var(--quest-accent);
+}
+
+.quest-calendar-day-selected .quest-calendar-date {
+  background: var(--quest-accent);
+  color: var(--quest-surface);
+}
+
+.quest-calendar button.quest-calendar-day:focus-visible {
+  outline-offset: -4px;
+}
+
+.quest-calendar-day:active {
+  background: var(--quest-soft);
+  box-shadow: inset 0 0 0 3px var(--quest-accent);
+}
+
+.quest-calendar-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-inline: 4px;
+}
+
+.quest-calendar-indicator-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quest-calendar-class-dot,
+.quest-calendar-task-dot,
+.quest-calendar-subject-dot {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  vertical-align: middle;
+}
+
+.quest-calendar-class-dot {
+  border-radius: 50%;
+  background: var(--quest-accent);
+}
+
+.quest-calendar-task-dot {
+  border: 2px solid var(--quest-success);
+  border-radius: 2px;
+}
+
+.quest-calendar-cell-label {
+  color: var(--quest-muted);
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.quest-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px 18px;
+  margin-block: 13px 22px;
+  color: var(--quest-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.quest-calendar-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quest-calendar-legend-today {
+  margin-inline-start: auto;
+}
+
+.quest-calendar-agenda {
+  border: 1px solid var(--quest-border);
+  border-radius: 17px;
+  background: var(--quest-surface);
+}
+
+.quest-calendar-agenda-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 19px 20px;
+  border-bottom: 1px solid var(--quest-border);
+}
+
+.quest-calendar-agenda-header > div {
+  min-width: 0;
+}
+
+.quest-calendar-agenda-header p {
+  margin: 0 0 5px;
+  color: var(--quest-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.quest-calendar-agenda-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.quest-calendar-today-label {
+  flex: none;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: var(--quest-soft);
+  color: var(--quest-accent);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.quest-calendar-agenda-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quest-calendar-agenda-section {
+  min-width: 0;
+  padding: 20px;
+}
+
+.quest-calendar-agenda-section + .quest-calendar-agenda-section {
+  border-inline-start: 1px solid var(--quest-border);
+}
+
+.quest-calendar-agenda-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.quest-calendar-agenda-section h4 svg {
+  flex: none;
+  color: var(--quest-muted);
+}
+
+.quest-calendar-agenda-section h4 > span {
+  margin-inline-start: auto;
+  color: var(--quest-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.quest-calendar-empty {
+  max-width: 45ch;
+  margin: 0;
+  padding-block: 3px;
+  color: var(--quest-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.quest-calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quest-calendar-class-item,
+.quest-calendar-task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px;
+  border-radius: 11px;
+  background: var(--quest-soft);
+}
+
+.quest-calendar-time {
+  flex: none;
+  padding-inline-end: 10px;
+  border-inline-end: 1px solid var(--quest-border);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.quest-calendar-time > span {
+  display: block;
+  color: var(--quest-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quest-calendar-item-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.quest-calendar-item-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.quest-calendar-subject-dot {
+  margin-inline-end: 6px;
+  border-radius: 50%;
+  background: var(--quest-calendar-subject, var(--quest-accent));
+  box-shadow: 0 0 0 1px var(--quest-border);
+}
+
+.quest-calendar-item-meta {
+  margin: 3px 0 0;
+  color: var(--quest-muted);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.quest-calendar-task-status {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: var(--quest-success);
+}
+
+.quest-calendar-task-state {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--quest-muted);
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.quest-calendar-task-done {
+  background: var(--quest-success-soft);
+}
+
+.quest-calendar-task-done .quest-calendar-item-title {
+  text-decoration: line-through;
+}
+
+.quest-calendar-task-done .quest-calendar-task-state {
+  color: var(--quest-success);
+}
+
+@media (hover: hover) {
+  .quest-calendar-nav-button:hover,
+  .quest-calendar-today-button:hover {
+    border-color: var(--quest-accent);
+    background: var(--quest-soft);
+  }
+
+  .quest-calendar-day:hover {
+    background: var(--quest-soft);
+    box-shadow: inset 0 0 0 1px var(--quest-accent);
+  }
+
+  .quest-calendar-day-selected:hover {
+    box-shadow: inset 0 0 0 2px var(--quest-accent);
+  }
+}
+
+@media (max-width: 600px) {
+  .quest-calendar-header {
+    gap: 14px;
+  }
+
+  .quest-calendar-navigation {
+    width: 100%;
+  }
+
+  .quest-calendar-today-button {
+    flex: 1;
+  }
+
+  .quest-calendar-weekdays > span {
+    padding-block: 10px;
+    font-size: 11px;
+  }
+
+  .quest-calendar-day,
+  .quest-calendar-padding {
+    min-height: 69px;
+  }
+
+  .quest-calendar-day {
+    align-items: center;
+    gap: 9px;
+    padding: 8px 2px;
+  }
+
+  .quest-calendar-date {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  .quest-calendar-activity {
+    min-height: 7px;
+    flex-direction: row;
+    gap: 5px;
+    padding: 0;
+  }
+
+  .quest-calendar-cell-label {
+    display: none;
+  }
+
+  .quest-calendar-legend {
+    gap: 7px 14px;
+    margin-bottom: 18px;
+    font-size: 11px;
+  }
+
+  .quest-calendar-legend-today {
+    width: 100%;
+    margin: 0;
+  }
+
+  .quest-calendar-agenda-header {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .quest-calendar-agenda-header h3 {
+    font-size: 15px;
+  }
+
+  .quest-calendar-agenda-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quest-calendar-agenda-section {
+    padding: 16px;
+  }
+
+  .quest-calendar-agenda-section + .quest-calendar-agenda-section {
+    border-inline-start: 0;
+    border-top: 1px solid var(--quest-border);
+  }
+}
+
+@media (forced-colors: active) {
+  .quest-calendar-day-selected {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .quest-calendar-class-dot,
+  .quest-calendar-task-dot {
+    border: 2px solid CanvasText;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest-calendar *,
+  .quest-calendar *::before,
+  .quest-calendar *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

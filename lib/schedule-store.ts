@@ -58,10 +58,12 @@ export const SCHEDULE_COLORS: string[] = SUBJECT_ACCENTS.map((a) => a.light);
 interface ScheduleStorage {
   entries: ScheduleEntry[];
   tasks: TaskItem[];
+  /** Key `${tanggal}:${entryId}` agar kelas mingguan dapat selesai per hari. */
+  completedSessions: string[];
 }
 
 function empty(): ScheduleStorage {
-  return { entries: [], tasks: [] };
+  return { entries: [], tasks: [], completedSessions: [] };
 }
 
 export function getSchedule(): ScheduleStorage {
@@ -73,6 +75,9 @@ export function getSchedule(): ScheduleStorage {
     return {
       entries: Array.isArray(parsed.entries) ? parsed.entries : [],
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+      completedSessions: Array.isArray(parsed.completedSessions)
+        ? parsed.completedSessions.filter((key): key is string => typeof key === "string")
+        : [],
     };
   } catch {
     return empty();
@@ -120,7 +125,24 @@ export function updateScheduleEntry(
 export function deleteScheduleEntry(id: string): void {
   const storage = getSchedule();
   storage.entries = storage.entries.filter((e) => e.id !== id);
+  storage.completedSessions = storage.completedSessions.filter((key) => !key.endsWith(`:${id}`));
   save(storage);
+}
+
+export function scheduleSessionKey(date: string, entryId: string): string {
+  return `${date}:${entryId}`;
+}
+
+/** Toggle satu kehadiran kelas pada tanggal tertentu, bukan seluruh jadwal mingguan. */
+export function toggleScheduleSession(date: string, entryId: string): boolean {
+  const storage = getSchedule();
+  const key = scheduleSessionKey(date, entryId);
+  const completed = storage.completedSessions.includes(key);
+  storage.completedSessions = completed
+    ? storage.completedSessions.filter((item) => item !== key)
+    : [...storage.completedSessions, key];
+  save(storage);
+  return !completed;
 }
 
 export function addTask(input: Omit<TaskItem, "id" | "done" | "createdAt">): TaskItem {

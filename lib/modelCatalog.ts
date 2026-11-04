@@ -51,8 +51,10 @@ export const MODEL_CATALOG_IDS = new Set(MODEL_CATALOG.map((m) => m.id));
  * (`premiumOnly` dikecualikan). Urutan katalog = prioritas coba.
  */
 export const SPEED_MODEL_LISTS: Record<AiSpeedMode, string[]> = {
-  fast: ["deepseek-v4.1-flash", "gpt-4o"],
-  normal: ["qwen3.8-max-0902", "gpt-4o", "deepseek-v4.1-flash"],
+  // GPT-4o di depan untuk time-to-first-token tercepat; model lain tetap
+  // menjadi fallback bila provider menolak atau responsnya kosong.
+  fast: ["gpt-4o", "deepseek-v4.1-flash"],
+  normal: ["gpt-4o", "qwen3.8-max-0902", "deepseek-v4.1-flash"],
   deep: ["gpt-6.1-terra", "qwen3.8-max-0902", "gpt-4o"],
 };
 

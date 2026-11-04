@@ -10,6 +10,7 @@ import "katex/dist/katex.min.css";
 import rehypeKatex from "rehype-katex";
 import { normalizeMathDelimiters } from "@/lib/mathText";
 import CodeBlock from "@/components/note/CodeBlock";
+import { causalChainSteps, remarkAnswerLineBreaks, remarkTextTimelines } from "@/lib/assistant/answerFormatting";
 
 interface MarkdownViewProps {
   content: string;
@@ -29,7 +30,7 @@ function MarkdownView({ content, className = "" }: MarkdownViewProps) {
   return (
     <div className={`asisten-md ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
+        remarkPlugins={[remarkGfm, remarkMath, remarkAnswerLineBreaks, remarkTextTimelines]}
         rehypePlugins={[rehypeKatex]}
         components={{
           a: ({ ...props }) => (
@@ -79,7 +80,27 @@ function MarkdownView({ content, className = "" }: MarkdownViewProps) {
           h1: ({ ...props }) => <h1 {...props} className="mb-2 mt-4 text-xl font-extrabold" />,
           h2: ({ ...props }) => <h2 {...props} className="mb-2 mt-4 text-lg font-extrabold" />,
           h3: ({ ...props }) => <h3 {...props} className="mb-1.5 mt-3 text-base font-extrabold" />,
-          p: ({ ...props }) => <p {...props} className="my-2 leading-relaxed" />,
+          p: ({ node, children, ...props }) => {
+            // Only plain text chains are promoted: preserve formulas, links and rich markdown.
+            const plain = node?.children.every((child) => child.type === "text");
+            const text = plain ? node?.children.map((child) => "value" in child ? child.value : "").join("") : "";
+            const steps = text ? causalChainSteps(text) : null;
+            if (!steps) return <p {...props} className="my-2 leading-relaxed">{children}</p>;
+            return (
+              <figure className="my-4 min-w-0" aria-label="Diagram alur sebab-akibat">
+                <figcaption className="mb-3 text-xs font-semibold text-clay-muted">Alur sebab-akibat</figcaption>
+                <ol className="m-0 list-none p-0">
+                  {steps.map((step, index) => (
+                    <li key={index} className="relative flex min-w-0 gap-3 pb-3 last:pb-0">
+                      {index < steps.length - 1 && <span aria-hidden="true" className="absolute bottom-0 left-3 top-6 border-l-2 border-clay-primary/25" />}
+                      <span aria-hidden="true" className="relative mt-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-xs font-bold text-clay-primary">{index + 1}</span>
+                      <span className="min-w-0 flex-1 rounded-clay-md bg-clay-beige px-3 py-2.5 text-sm font-medium leading-relaxed text-clay-dark [overflow-wrap:anywhere]">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </figure>
+            );
+          },
           hr: ({ ...props }) => <hr {...props} className="my-4 border-clay-shadow/30" />,
         }}
       >

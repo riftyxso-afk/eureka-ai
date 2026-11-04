@@ -1,609 +1,545 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import {
+  ArrowRight,
+  BookOpen,
   CalendarDays,
+  CalendarPlus,
   CalendarRange,
+  Check,
   CheckCircle2,
-  ChevronDown,
-  ClipboardList,
+  ChevronRight,
+  ClipboardCheck,
+  Clock3,
   Download,
+  Flag,
+  ListChecks,
+  Info,
+  Map,
   Plus,
+  Target,
   Trash2,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import { ScheduleCalendar } from "@/components/dashboard/ScheduleCalendar";
 import { ScheduleExportModal } from "@/components/dashboard/ScheduleExportModal";
-import CardClay from "@/components/ui/CardClay";
-import ButtonClay from "@/components/ui/ButtonClay";
-import InputClay from "@/components/ui/InputClay";
 import { apiFetch } from "@/lib/apiClient";
+import { getMissions } from "@/lib/mission-store";
 import {
-  SCHEDULE_DAYS,
   SCHEDULE_COLORS,
+  SCHEDULE_DAYS,
   addScheduleEntry,
   addTask,
   deleteScheduleEntry,
   deleteTask,
   getSchedule,
+  scheduleSessionKey,
   sortedTasks,
+  toggleScheduleSession,
   toggleTask,
-  type ScheduleEntry,
   type ScheduleDay,
+  type ScheduleEntry,
   type TaskItem,
 } from "@/lib/schedule-store";
+import {
+  agendaProgress,
+  dateFromIso,
+  formatDue,
+  formatQuestDate,
+  isoDate,
+  scheduleDayForDate,
+  weekDates,
+  weeklyQuestProgress,
+  withPercent,
+} from "@/lib/schedule-quest";
 import { accentForSubject, readableTextColor } from "@/lib/palette";
+import "./schedule-quest.css";
 
-type Tab = "jadwal" | "kalender" | "tugas";
+type Tab = "peta" | "jadwal" | "kalender" | "tugas";
 
-function formatDue(dueDate?: string): string {
-  if (!dueDate) return "Tanpa tenggat";
-  const d = new Date(`${dueDate}T23:59:59`);
-  if (Number.isNaN(d.getTime())) return dueDate;
-  return d.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
+  { id: "peta", label: "Peta Misi", icon: Map },
+  { id: "jadwal", label: "Jadwal Mingguan", icon: CalendarDays },
+  { id: "kalender", label: "Kalender", icon: CalendarRange },
+  { id: "tugas", label: "Tantangan", icon: ClipboardCheck },
+];
+
+function QuestProgressRing({ value, label }: { value: number; label: string }) {
+  const circumference = 2 * Math.PI * 44;
+  return (
+    <div className="quest-progress-ring" role="img" aria-label={`${label}: ${value} persen`}>
+      <svg viewBox="0 0 104 104" aria-hidden="true">
+        <circle className="quest-ring-track" cx="52" cy="52" r="44" />
+        <circle
+          className="quest-ring-value"
+          cx="52"
+          cy="52"
+          r="44"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - value / 100)}
+        />
+      </svg>
+      <strong>{value}%</strong>
+    </div>
+  );
 }
 
 export default function JadwalPage() {
-  const [tab, setTab] = useState<Tab>("jadwal");
+  const [tab, setTab] = useState<Tab>("peta");
+  const [ready, setReady] = useState(false);
+  const [today, setToday] = useState(() => isoDate(new Date()));
+  const [serverTaskState, setServerTaskState] = useState<"loading" | "ready" | "unavailable">("loading");
   const [entries, setEntries] = useState<ScheduleEntry[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [completedSessions, setCompletedSessions] = useState<string[]>([]);
+  const [activeMissions, setActiveMissions] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(() => isoDate(new Date()));
   const [toast, setToast] = useState<string | null>(null);
-  // Modal ekspor jadwal (schedule-export).
+  const [celebrating, setCelebrating] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  // Tugas dari fitur Tugas & Ujian (server) — tampil di kalender sebagai chip.
-  const [serverTasks, setServerTasks] = useState<
-    { id: string; title: string; dueDate: string; subject?: string }[]
-  >([]);
-
-  // Form jadwal
+  const [confirmDelete, setConfirmDelete] = useState("");
+  const [serverTasks, setServerTasks] = useState<{ id: string; title: string; dueDate: string; subject?: string }[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [day, setDay] = useState<ScheduleDay>("Senin");
   const [start, setStart] = useState("07:30");
   const [end, setEnd] = useState("09:00");
   const [subject, setSubject] = useState("");
   const [room, setRoom] = useState("");
-  // Warna kegiatan — kosong = otomatis (giliran palet).
   const [entryColor, setEntryColor] = useState<string | null>(null);
-
-  // Form tugas
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskSubject, setTaskSubject] = useState("");
   const [taskDue, setTaskDue] = useState("");
+  const subjectInput = useRef<HTMLInputElement>(null);
+  const taskInput = useRef<HTMLInputElement>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const celebrationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const reload = () => {
+  const reload = useCallback(() => {
     const storage = getSchedule();
     setEntries(storage.entries);
     setTasks(storage.tasks);
-  };
+    setCompletedSessions(storage.completedSessions);
+    setActiveMissions(getMissions().filter((mission) => mission.status === "active").length);
+    setReady(true);
+  }, []);
 
   useEffect(() => {
     reload();
-    // Muat tugas server (fitur Tugas & Ujian) untuk kalender — best effort.
+    window.addEventListener("storage", reload);
+    let disposed = false;
+    const dateTimer = window.setInterval(() => setToday(isoDate(new Date())), 60_000);
     void (async () => {
       try {
         const res = await apiFetch("/api/tasks");
-        if (res.ok) {
-          const data = await res.json().catch(() => null);
-          const list = Array.isArray(data?.tasks) ? data.tasks : [];
-          setServerTasks(
-            list
-              .filter((t: { dueDate?: string; status?: string }) => t.dueDate && t.status !== "selesai")
-              .map((t: { id: string; title: string; dueDate: string; subject?: string }) => ({
-                id: t.id,
-                title: t.title,
-                dueDate: t.dueDate,
-                subject: t.subject,
-              }))
-          );
-        }
+        if (!res.ok) throw new Error("server_tasks_unavailable");
+        const data = await res.json().catch(() => null);
+        if (disposed) return;
+        setServerTaskState("ready");
+        const list = Array.isArray(data?.tasks) ? data.tasks : [];
+        setServerTasks(list
+          .filter((item: { dueDate?: string; status?: string }) => item.dueDate && item.status !== "selesai")
+          .map((item: { id: string; title: string; dueDate: string; subject?: string }) => ({
+            id: item.id, title: item.title, dueDate: item.dueDate, subject: item.subject,
+          })));
       } catch {
-        // kalender tetap tampil dengan data lokal
+        if (!disposed) setServerTaskState("unavailable");
       }
     })();
+    return () => {
+      disposed = true;
+      window.clearInterval(dateTimer);
+      window.removeEventListener("storage", reload);
+    };
+  }, [reload]);
+
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
   }, []);
 
-  const notify = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2200);
+  useEffect(() => { if (showForm) subjectInput.current?.focus(); }, [showForm]);
+  useEffect(() => { if (showTaskForm) taskInput.current?.focus(); }, [showTaskForm]);
+
+  const notify = useCallback((message: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(message);
+    toastTimer.current = setTimeout(() => setToast(null), 2800);
+  }, []);
+
+  const celebrate = useCallback(() => {
+    if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
+    setCelebrating(true);
+    celebrationTimer.current = setTimeout(() => setCelebrating(false), 4200);
+  }, []);
+
+  const daysThisWeek = useMemo(() => weekDates(dateFromIso(today)), [today]);
+  const selectedDay = scheduleDayForDate(selectedDate);
+  const dayEntries = entries.filter((entry) => entry.day === selectedDay).sort((a, b) => a.start.localeCompare(b.start));
+  const dayTasks = sortedTasks(tasks.filter((task) => task.dueDate === selectedDate));
+  const dayProgress = agendaProgress(selectedDate, entries, tasks, completedSessions);
+  const weekProgress = weeklyQuestProgress(dateFromIso(today), entries, tasks, completedSessions);
+  const nextEntry = dayEntries.find((entry) => !completedSessions.includes(scheduleSessionKey(selectedDate, entry.id)));
+  const pending = tasks.filter((task) => !task.done).length;
+  const taskProgress = withPercent({ total: tasks.length, done: tasks.filter((task) => task.done).length });
+  const sorted = sortedTasks(tasks);
+
+  const openEntryForm = (forDay = selectedDay) => {
+    setDay(forDay);
+    setShowForm(true);
+    setTab("jadwal");
   };
 
-  const submitEntry = () => {
-    const name = subject.trim();
-    if (!name) {
-      notify("Nama mata pelajaran tidak boleh kosong");
-      return;
+  const changeTab = (next: Tab) => {
+    setTab(next);
+    setConfirmDelete("");
+  };
+
+  const toggleSession = (entry: ScheduleEntry) => {
+    const wasComplete = dayProgress.total > 0 && dayProgress.done === dayProgress.total;
+    const done = toggleScheduleSession(selectedDate, entry.id);
+    const nextCompleted = getSchedule().completedSessions;
+    setCompletedSessions(nextCompleted);
+    notify(done ? `Misi ${entry.subject} selesai` : `Misi ${entry.subject} dibuka kembali`);
+    const nextProgress = agendaProgress(selectedDate, entries, tasks, nextCompleted);
+    if (!wasComplete && nextProgress.total > 0 && nextProgress.done === nextProgress.total) celebrate();
+  };
+
+  const handleTaskToggle = (task: TaskItem) => {
+    const wasComplete = dayProgress.total > 0 && dayProgress.done === dayProgress.total;
+    toggleTask(task.id);
+    const nextTasks = getSchedule().tasks;
+    setTasks(nextTasks);
+    notify(task.done ? "Tantangan dibuka kembali" : "Tantangan selesai. Kerja bagus!");
+    if (!task.done && !wasComplete) {
+      const nextProgress = agendaProgress(selectedDate, entries, nextTasks, completedSessions);
+      if (nextProgress.total > 0 && nextProgress.done === nextProgress.total) celebrate();
     }
-    addScheduleEntry({
-      day,
-      start: start || "07:30",
-      end: end || "09:00",
-      subject: name,
-      room: room.trim() || undefined,
-      color: entryColor ?? undefined,
-    });
+  };
+
+  const submitEntry = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const name = subject.trim();
+    if (!name) return notify("Tulis nama mata pelajaran terlebih dahulu");
+    if (end <= start) return notify("Jam selesai harus setelah jam mulai");
+    addScheduleEntry({ day, start, end, subject: name, room: room.trim() || undefined, color: entryColor ?? undefined });
     setSubject("");
     setRoom("");
     setEntryColor(null);
     setShowForm(false);
     reload();
-    notify("Jadwal ditambahkan");
+    setSelectedDate(daysThisWeek.find((date) => scheduleDayForDate(date) === day) ?? today);
+    notify(`Kelas ${name} ditambahkan ke hari ${day}`);
   };
 
-  const submitTask = () => {
+  const submitTask = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     const title = taskTitle.trim();
-    if (!title) {
-      notify("Nama tugas tidak boleh kosong");
-      return;
-    }
-    addTask({
-      title,
-      subject: taskSubject.trim() || undefined,
-      dueDate: taskDue || undefined,
-    });
+    if (!title) return notify("Tulis nama tantangan terlebih dahulu");
+    addTask({ title, subject: taskSubject.trim() || undefined, dueDate: taskDue || undefined });
     setTaskTitle("");
     setTaskSubject("");
     setTaskDue("");
     setShowTaskForm(false);
     reload();
-    notify("Tugas ditambahkan");
+    notify("Tantangan baru ditambahkan");
   };
 
-  const pending = tasks.filter((t) => !t.done).length;
+  const removeEntry = (entry: ScheduleEntry) => {
+    if (confirmDelete !== entry.id) return setConfirmDelete(entry.id);
+    deleteScheduleEntry(entry.id);
+    setConfirmDelete("");
+    reload();
+    notify(`Jadwal ${entry.subject} dihapus`);
+  };
 
-  const groupByDay = (e: ScheduleEntry[]) =>
-    SCHEDULE_DAYS.map((d) => ({
-      day: d,
-      items: e
-        .filter((x) => x.day === d)
-        .sort((a, b) => a.start.localeCompare(b.start)),
-    }));
+  const removeTask = (task: TaskItem) => {
+    if (confirmDelete !== task.id) return setConfirmDelete(task.id);
+    deleteTask(task.id);
+    setConfirmDelete("");
+    reload();
+    notify("Tantangan dihapus");
+  };
 
-  const sorted = sortedTasks(tasks);
+  if (!ready) return <div className="schedule-quest" role="status"><div className="quest-loading">Menyiapkan peta belajarmu…</div></div>;
 
   return (
-    <div className="eureka-dashboard-page eureka-page-jadwal mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <div className="eureka-page-heading flex flex-wrap items-end justify-between gap-3">
+    <div className="schedule-quest eureka-page-jadwal">
+      <header className="schedule-heading">
         <div>
-          <h1 className="text-2xl font-extrabold sm:text-3xl">Jadwal</h1>
-          <p className="mt-2 text-base font-semibold text-clay-muted">
-            Atur jadwal mata pelajaran &amp; pantau tugas-tugasmu
-          </p>
+          <span className="schedule-kicker"><Flag size={15} aria-hidden="true" /> Peta belajar</span>
+          <h1>Jadwal petualanganmu</h1>
+          <p>Ubah rutinitas belajar menjadi misi yang bisa kamu taklukkan.</p>
         </div>
-        <button
-          onClick={() => setExportOpen(true)}
-          className="inline-flex min-h-[44px] items-center gap-2 rounded-clay-md border-2 border-clay-borderLight bg-clay-cream px-4 text-sm font-extrabold text-clay-dark shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
-          title="Ekspor jadwal sebagai PDF atau gambar"
-        >
-          <Download size={16} /> Ekspor
+        <button type="button" className="quest-button quest-button-secondary" onClick={() => setExportOpen(true)}>
+          <Download size={17} aria-hidden="true" /> Ekspor jadwal
         </button>
-      </div>
+      </header>
 
-      {/* Modal ekspor PDF / PNG / share (schedule-export) */}
-      <ScheduleExportModal
-        open={exportOpen}
-        onClose={() => setExportOpen(false)}
-        entries={entries}
-        tasks={tasks}
-      />
+      <ScheduleExportModal open={exportOpen} onClose={() => setExportOpen(false)} entries={entries} tasks={tasks} />
 
-      {/* Tab */}
-      <div className="mt-5 flex gap-2">
-        {(
-          [
-            { id: "jadwal", label: "Jadwal Mapel", icon: CalendarDays },
-            { id: "kalender", label: "Kalender", icon: CalendarRange },
-            { id: "tugas", label: `Tugas${pending > 0 ? ` (${pending})` : ""}`, icon: ClipboardList },
-          ] as { id: Tab; label: string; icon: LucideIcon }[]
-        ).map((t) => (
+      <nav className="schedule-tabs" aria-label="Tampilan jadwal">
+        {TABS.map((item) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-clay-full border-3 px-4 text-xs font-extrabold transition-all duration-75 active:translate-y-0.5 sm:min-h-[40px] sm:px-4 sm:text-sm ${
-              tab === t.id
-                ? "border-clay-primary bg-clay-primary text-white shadow-clay-sm"
-                : "border-clay-shadow/50 bg-clay-cream text-clay-dark shadow-clay-sm hover:-translate-y-0.5"
-            }`}
+            type="button"
+            key={item.id}
+            aria-pressed={tab === item.id}
+            onClick={() => changeTab(item.id)}
+            className="schedule-tab"
           >
-            <t.icon size={15} />
-            {t.label}
+            <item.icon size={17} aria-hidden="true" />
+            <span>{item.label}</span>
+            {item.id === "tugas" && pending > 0 && <span className="schedule-tab-count" aria-label={`${pending} belum selesai`}>{pending}</span>}
           </button>
         ))}
-      </div>
+      </nav>
 
-      <AnimatePresence mode="wait">
-        {tab === "jadwal" ? (
-          <motion.div
-            key="jadwal"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.18 }}
-            className="mt-5"
-          >
-            <div className="flex justify-end">
-              <ButtonClay
-                onClick={() => setShowForm((v) => !v)}
-                className="min-h-[44px] px-4 py-2 text-sm"
-              >
-                <Plus size={16} className="mr-2" />
-                Tambah Jadwal
-              </ButtonClay>
+      {tab === "peta" && (
+        <div className="schedule-panel">
+          <section className="quest-hero" aria-labelledby="quest-hero-title">
+            <div className="quest-hero-copy">
+              <span className="quest-hero-date">{formatQuestDate(selectedDate)}</span>
+              <h2 id="quest-hero-title">Satu hari.<br />Satu petualangan.</h2>
+              <p>{dayProgress.total ? `${dayProgress.done} dari ${dayProgress.total} misi sudah kamu taklukkan.` : "Belum ada misi di hari ini. Pilih hari lain atau buat misi pertamamu."}</p>
+              {!dayProgress.total && <button type="button" className="quest-button quest-button-light" onClick={() => openEntryForm()}><Plus size={17} aria-hidden="true" /> Buat misi belajar</button>}
             </div>
-
-            {showForm && (
-              <CardClay className="mt-4 !p-4 sm:!p-6">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                      HARI
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={day}
-                        onChange={(e) => setDay(e.target.value as ScheduleDay)}
-                        className="w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-4 py-3 pr-10 text-sm font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[44px]"
-                      >
-                        {SCHEDULE_DAYS.map((d) => (
-                          <option key={d} value={d}>
-                            {d}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown
-                        size={16}
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-clay-muted"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                      MATA PELAJARAN
-                    </label>
-                    <InputClay
-                      placeholder="contoh: Matematika"
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                        MULAI
-                      </label>
-                      <input
-                        type="time"
-                        value={start}
-                        onChange={(e) => setStart(e.target.value)}
-                        className="w-full rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-3 py-3 text-sm font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[44px]"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                        SELESAI
-                      </label>
-                      <input
-                        type="time"
-                        value={end}
-                        onChange={(e) => setEnd(e.target.value)}
-                        className="w-full rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-3 py-3 text-sm font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[44px]"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                      RUANG (opsional)
-                    </label>
-                    <InputClay
-                      placeholder="contoh: A-101"
-                      value={room}
-                      onChange={(e) => setRoom(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Pilihan warna kegiatan — dari palet resmi aplikasi */}
-                <div className="mt-4">
-                  <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                    WARNA
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {SCHEDULE_COLORS.map((c) => {
-                      const selected = entryColor === c;
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          aria-label={`Warna ${c}`}
-                          aria-pressed={selected}
-                          onClick={() =>
-                            setEntryColor(selected ? null : c)
-                          }
-                          className={`h-9 w-9 rounded-full border-3 transition-transform duration-75 ${
-                            selected
-                              ? "scale-110 border-clay-dark"
-                              : "border-transparent hover:scale-105"
-                          }`}
-                          style={{ background: c }}
-                        >
-                          {selected && (
-                            <CheckCircle2
-                              size={16}
-                              className="mx-auto"
-                              style={{ color: readableTextColor(c) }}
-                            />
-                          )}
-                        </button>
-                      );
-                    })}
-                    <span className="ml-1 text-[11px] font-bold text-clay-muted">
-                      Tanpa pilih = warna otomatis
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-4 flex gap-3">
-                  <ButtonClay
-                    variant="secondary"
-                    onClick={() => setShowForm(false)}
-                    className="flex-1"
-                  >
-                    Batal
-                  </ButtonClay>
-                  <ButtonClay onClick={submitEntry} className="flex-1">
-                    Simpan Jadwal
-                  </ButtonClay>
-                </div>
-              </CardClay>
-            )}
-
-            {entries.length === 0 && !showForm ? (
-              <div className="study-empty mt-4">
-                <Image src="/landing/ei6Qn.png" alt="" width={180} height={180} />
-                <h3 className="mt-4 text-lg font-extrabold">Yuk, atur waktu belajarmu</h3>
-                <p className="mt-1.5 max-w-sm text-sm font-semibold text-clay-muted">
-                  Tambahkan jadwal mata pelajaranmu agar jadwal belajar terpantau.
-                </p>
-                <ButtonClay
-                  onClick={() => setShowForm(true)}
-                  className="mt-5 min-h-[44px] px-5 py-2 text-sm"
-                >
-                  <Plus size={16} className="mr-2" /> Tambah Jadwal Pertama
-                </ButtonClay>
-              </div>
-            ) : (
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {groupByDay(entries).map(
-                  (g) =>
-                    g.items.length > 0 && (
-                      <CardClay key={g.day} className="!p-4">
-                        <h3 className="text-sm font-extrabold uppercase tracking-wide text-clay-primary">
-                          {g.day}
-                        </h3>
-                        <div className="mt-2 space-y-2">
-                          {g.items.map((e) => (
-                            <div
-                              key={e.id}
-                              className="rounded-clay-md border-2 border-clay-shadow/30 bg-clay-beige/60 p-3"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p
-                                    className="w-fit max-w-full truncate rounded-full px-2.5 py-0.5 text-sm font-extrabold"
-                                    style={{
-                                      background: e.color,
-                                      color: readableTextColor(e.color),
-                                    }}
-                                  >
-                                    {e.subject}
-                                  </p>
-                                  <p className="mt-0.5 text-xs font-bold text-clay-muted">
-                                    {e.start} – {e.end}
-                                    {e.room ? ` · ${e.room}` : ""}
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    deleteScheduleEntry(e.id);
-                                    reload();
-                                    notify("Jadwal dihapus");
-                                  }}
-                                  aria-label="Hapus jadwal"
-                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-clay-muted transition-colors hover:bg-red-100 hover:text-red-500"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-clay-inputBg shadow-clay-inset">
-                                <div
-                                  className="h-full rounded-full"
-                                  style={{ width: "100%", background: e.color }}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardClay>
-                    )
-                )}
-              </div>
-            )}
-          </motion.div>
-        ) : tab === "kalender" ? (
-          <motion.div
-            key="kalender"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.18 }}
-            className="mt-5"
-          >
-            <ScheduleCalendar
-              entries={entries}
-              tasks={tasks}
-              serverTasks={serverTasks}
-              accentOf={(subjectName) => accentForSubject(subjectName).light}
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="tugas"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.18 }}
-            className="mt-5"
-          >
-            <div className="flex justify-end">
-              <ButtonClay
-                onClick={() => setShowTaskForm((v) => !v)}
-                className="min-h-[44px] px-4 py-2 text-sm"
-              >
-                <Plus size={16} className="mr-2" />
-                Tambah Tugas
-              </ButtonClay>
+            <div className="quest-hero-visual">
+              <Image src="/landing/ei6Qn.png" alt="" width={132} height={132} priority />
+              <QuestProgressRing value={dayProgress.percent} label="Progres misi harian" />
             </div>
+          </section>
 
-            {showTaskForm && (
-              <CardClay className="mt-4 !p-4 sm:!p-6">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="sm:col-span-1">
-                    <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                      NAMA TUGAS
-                    </label>
-                    <InputClay
-                      placeholder="contoh: PR Trigonometri"
-                      value={taskTitle}
-                      onChange={(e) => setTaskTitle(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                      MAPEL (opsional)
-                    </label>
-                    <InputClay
-                      placeholder="contoh: Matematika"
-                      value={taskSubject}
-                      onChange={(e) => setTaskSubject(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                      TENGGAT (opsional)
-                    </label>
-                    <input
-                      type="date"
-                      value={taskDue}
-                      onChange={(e) => setTaskDue(e.target.value)}
-                      className="w-full rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-3 py-3 text-sm font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[44px]"
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 flex gap-3">
-                  <ButtonClay
-                    variant="secondary"
-                    onClick={() => setShowTaskForm(false)}
-                    className="flex-1"
-                  >
-                    Batal
-                  </ButtonClay>
-                  <ButtonClay onClick={submitTask} className="flex-1">
-                    Simpan Tugas
-                  </ButtonClay>
-                </div>
-              </CardClay>
-            )}
-
-            {sorted.length === 0 ? (
-              <div className="card-clay mt-4 flex flex-col items-center py-12 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
-                  <ClipboardList size={30} className="text-clay-muted" />
-                </div>
-                <h3 className="mt-4 text-lg font-extrabold">Belum ada tugas</h3>
-                <p className="mt-1.5 max-w-sm text-sm font-semibold text-clay-muted">
-                  Catat tugas dari guru/dosen agar tidak ada yang terlewat.
-                </p>
-                <ButtonClay
-                  onClick={() => setShowTaskForm(true)}
-                  className="mt-5 min-h-[44px] px-5 py-2 text-sm"
+          <div className="quest-week-strip" aria-label="Pilih hari minggu ini">
+            {daysThisWeek.map((date, index) => {
+              const progress = agendaProgress(date, entries, tasks, completedSessions);
+              const selected = selectedDate === date;
+              return (
+                <button
+                  type="button"
+                  key={date}
+                  className="quest-day-button"
+                  aria-pressed={selected}
+                  aria-label={`Pilih agenda ${formatQuestDate(date)}${progress.total ? `, ${progress.done} dari ${progress.total} selesai` : ", belum ada agenda"}`}
+                  onClick={() => setSelectedDate(date)}
                 >
-                  <Plus size={16} className="mr-2" /> Tambah Tugas Pertama
-                </ButtonClay>
-              </div>
-            ) : (
-              <div className="mt-4 space-y-2.5">
-                {sorted.map((t) => {
-                  const overdue =
-                    !t.done && t.dueDate && new Date(`${t.dueDate}T23:59:59`) < new Date();
-                  return (
-                    <div
-                      key={t.id}
-                      className={`card-clay flex items-center gap-3 !p-4 transition-all ${
-                        t.done ? "opacity-60" : ""
-                      }`}
-                    >
-                      <button
-                        onClick={() => {
-                          toggleTask(t.id);
-                          reload();
-                        }}
-                        aria-label={t.done ? "Tandai belum selesai" : "Tandai selesai"}
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-3 transition-all duration-75 active:scale-90 ${
-                          t.done
-                            ? "border-clay-success bg-clay-success text-white"
-                            : "border-clay-shadow/50 bg-clay-cream text-transparent hover:border-clay-primary"
-                        }`}
-                      >
-                        <CheckCircle2 size={18} />
-                      </button>
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className={`truncate text-sm font-extrabold text-clay-dark ${
-                            t.done ? "line-through" : ""
-                          }`}
-                        >
-                          {t.title}
-                        </p>
-                        <p className="mt-0.5 text-xs font-bold text-clay-muted">
-                          {t.subject ? `${t.subject} · ` : ""}
-                          {formatDue(t.dueDate)}
-                          {overdue && (
-                            <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-extrabold text-red-600">
-                              Terlambat!
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          deleteTask(t.id);
-                          reload();
-                          notify("Tugas dihapus");
-                        }}
-                        aria-label="Hapus tugas"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-clay-muted transition-colors hover:bg-red-100 hover:text-red-500"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  <span>{SCHEDULE_DAYS[index].slice(0, 3)}</span>
+                  <strong>{dateFromIso(date).getDate()}</strong>
+                  <span className={`quest-day-status${progress.total && progress.done === progress.total ? " is-complete" : ""}`} aria-hidden="true">
+                    {progress.total && progress.done === progress.total ? <Check size={11} /> : progress.total || "·"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn">
-          {toast}
+          <div className="quest-map-layout">
+            <section className="quest-surface quest-map" aria-labelledby="quest-map-title">
+              <div className="quest-section-heading">
+                <div>
+                  <span className="quest-section-kicker"><Map size={15} aria-hidden="true" /> Jalur misi</span>
+                  <h2 id="quest-map-title">{selectedDay}{selectedDate === today ? ", hari ini" : ""}</h2>
+                </div>
+                {selectedDate !== today && <button type="button" className="quest-text-button" onClick={() => setSelectedDate(today)}>Kembali ke hari ini</button>}
+              </div>
+
+              {celebrating && dayProgress.total > 0 && dayProgress.done === dayProgress.total && (
+                <div className="quest-celebration" role="status">
+                  <div className="quest-confetti" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <i key={index} />)}</div>
+                  <Trophy size={28} aria-hidden="true" />
+                  <div><strong>Wilayah hari ini ditaklukkan!</strong><span>Semua agenda selesai. Istirahat juga bagian dari petualangan.</span></div>
+                </div>
+              )}
+
+              {dayEntries.length === 0 && dayTasks.length === 0 ? (
+                <div className="quest-empty">
+                  <span className="quest-empty-icon"><CalendarPlus size={30} aria-hidden="true" /></span>
+                  <h3>Jalur ini masih kosong</h3>
+                  <p>Tambahkan kelas atau tantangan dengan tenggat {formatQuestDate(selectedDate)}.</p>
+                  <div className="quest-empty-actions">
+                    <button type="button" className="quest-button quest-button-primary" onClick={() => openEntryForm()}><Plus size={17} aria-hidden="true" /> Tambah kelas</button>
+                    <button type="button" className="quest-button quest-button-secondary" onClick={() => { setTaskDue(selectedDate); setShowTaskForm(true); setTab("tugas"); }}>Buat tantangan</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="quest-path">
+                  {dayEntries.map((entry, index) => {
+                    const done = completedSessions.includes(scheduleSessionKey(selectedDate, entry.id));
+                    const isNext = nextEntry?.id === entry.id;
+                    return (
+                      <label
+                        key={entry.id}
+                        className={`quest-stop${done ? " is-done" : ""}${isNext ? " is-next" : ""}`}
+                        style={{ "--stop-color": entry.color } as CSSProperties}
+                      >
+                        <input
+                          className="quest-check-input"
+                          type="checkbox"
+                          checked={done}
+                          onChange={() => toggleSession(entry)}
+                          aria-label={`Tandai kelas ${entry.subject} ${done ? "belum selesai" : "selesai"}`}
+                        />
+                        <span className="quest-stop-node" aria-hidden="true">{done ? <Check size={21} /> : <BookOpen size={20} />}</span>
+                        <span className="quest-stop-copy">
+                          <span className="quest-stop-meta">{isNext ? "Misi berikutnya" : `Misi ${index + 1}`} · {entry.start}–{entry.end}</span>
+                          <strong>{entry.subject}</strong>
+                          <span>{entry.room || "Ruang belajarmu"}{isNext && !done ? " · Siap dimulai" : ""}</span>
+                        </span>
+                        <span className="quest-stop-action">{done ? <><CheckCircle2 size={16} aria-hidden="true" /> Selesai</> : <>Tandai selesai <ChevronRight size={16} aria-hidden="true" /></>}</span>
+                      </label>
+                    );
+                  })}
+                  {dayTasks.map((task) => (
+                    <label key={task.id} className={`quest-stop quest-stop-task${task.done ? " is-done" : ""}`}>
+                      <input className="quest-check-input" type="checkbox" checked={task.done} onChange={() => handleTaskToggle(task)} aria-label={`Tandai tantangan ${task.title} ${task.done ? "belum selesai" : "selesai"}`} />
+                      <span className="quest-stop-node" aria-hidden="true">{task.done ? <Check size={21} /> : <ListChecks size={20} />}</span>
+                      <span className="quest-stop-copy">
+                        <span className="quest-stop-meta">Tantangan{task.subject ? ` · ${task.subject}` : ""}</span>
+                        <strong>{task.title}</strong>
+                        <span>Tenggat {formatDue(task.dueDate)}</span>
+                      </span>
+                      <span className="quest-stop-action">{task.done ? <><CheckCircle2 size={16} aria-hidden="true" /> Selesai</> : <>Taklukkan <ChevronRight size={16} aria-hidden="true" /></>}</span>
+                    </label>
+                  ))}
+                  <div className={`quest-finish${dayProgress.total > 0 && dayProgress.done === dayProgress.total ? " is-reached" : ""}`}>
+                    <Flag size={22} aria-hidden="true" />
+                    <div><strong>Garis akhir</strong><span>{dayProgress.done === dayProgress.total ? "Semua misi selesai" : `${dayProgress.total - dayProgress.done} misi lagi menuju garis akhir`}</span></div>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <aside className="quest-sidebar" aria-label="Ringkasan petualangan">
+              <section className="quest-surface quest-guide">
+                <span className="quest-section-kicker"><Target size={15} aria-hidden="true" /> Panduan Momo</span>
+                <Image src="/landing/ei6Qn.png" alt="" width={82} height={82} />
+                <h2>{dayProgress.total > 0 && dayProgress.done === dayProgress.total ? "Kerja bagus, penjelajah!" : nextEntry ? `Berikutnya: ${nextEntry.subject}` : dayTasks.some((task) => !task.done) ? "Ada tantangan menunggu" : "Rencanakan langkah kecil"}</h2>
+                <p>{dayProgress.total > 0 && dayProgress.done === dayProgress.total ? "Semua target hari ini tuntas. Simpan tenaga untuk petualangan berikutnya." : nextEntry ? `${nextEntry.start}–${nextEntry.end}. Fokus pada satu kelas dulu, lalu tandai saat selesai.` : "Jadwal yang realistis lebih mudah ditaklukkan daripada target yang terlalu padat."}</p>
+              </section>
+
+              <section className="quest-surface quest-week-progress">
+                <div className="quest-section-heading"><h2>Progres minggu ini</h2><strong>{weekProgress.percent}%</strong></div>
+                <progress max={100} value={weekProgress.percent} aria-label="Progres agenda minggu ini" />
+                <p>{weekProgress.done} dari {weekProgress.total} agenda selesai. Tugas dengan tenggat minggu ini ikut dihitung.</p>
+              </section>
+
+              <Link href="/dashboard/misi" className="quest-mission-link">
+                <span className="quest-mission-icon"><Trophy size={21} aria-hidden="true" /></span>
+                <span><strong>Misi belajar jangka panjang</strong><small>{activeMissions ? `${activeMissions} misi aktif menantimu` : "Buat target besar dan bagi menjadi checkpoint"}</small></span>
+                <ChevronRight size={18} aria-hidden="true" />
+              </Link>
+            </aside>
+          </div>
         </div>
       )}
+
+      {tab === "jadwal" && (
+        <section className="schedule-panel quest-surface quest-manage" aria-labelledby="schedule-manage-title">
+          <div className="quest-section-heading">
+            <div><span className="quest-section-kicker"><CalendarDays size={15} aria-hidden="true" /> Markas jadwal</span><h2 id="schedule-manage-title">Susun wilayah mingguanmu</h2><p>Kelas berulang setiap minggu. Kehadiran ditandai terpisah di Peta Misi.</p></div>
+            <button type="button" className="quest-button quest-button-primary" onClick={() => setShowForm((value) => !value)} aria-expanded={showForm}><Plus size={17} aria-hidden="true" /> Tambah kelas</button>
+          </div>
+
+          {showForm && (
+            <form className="quest-form" onSubmit={submitEntry}>
+              <div className="quest-form-heading"><h3>Misi kelas baru</h3><button type="button" className="quest-text-button" onClick={() => setShowForm(false)}>Tutup form</button></div>
+              <div className="quest-form-grid">
+                <label htmlFor="schedule-subject">Mata pelajaran<input ref={subjectInput} id="schedule-subject" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Contoh: Matematika" maxLength={80} /></label>
+                <label htmlFor="schedule-day">Hari<select id="schedule-day" value={day} onChange={(event) => setDay(event.target.value as ScheduleDay)}>{SCHEDULE_DAYS.map((item) => <option key={item}>{item}</option>)}</select></label>
+                <label htmlFor="schedule-start">Jam mulai<input id="schedule-start" type="time" value={start} onChange={(event) => setStart(event.target.value)} required /></label>
+                <label htmlFor="schedule-end">Jam selesai<input id="schedule-end" type="time" value={end} onChange={(event) => setEnd(event.target.value)} required /></label>
+                <label htmlFor="schedule-room">Ruang <span>(opsional)</span><input id="schedule-room" value={room} onChange={(event) => setRoom(event.target.value)} placeholder="Contoh: Lab 2" maxLength={80} /></label>
+                <fieldset className="quest-color-field"><legend>Warna penanda</legend><div>{SCHEDULE_COLORS.map((color, index) => <button key={color} type="button" className="quest-color-button" style={{ background: color }} aria-label={`Pilih warna ${index + 1}`} aria-pressed={entryColor === color} onClick={() => setEntryColor(entryColor === color ? null : color)}>{entryColor === color && <Check size={16} color={readableTextColor(color)} aria-hidden="true" />}</button>)}</div></fieldset>
+              </div>
+              <div className="quest-form-actions"><button type="button" className="quest-button quest-button-secondary" onClick={() => setShowForm(false)}>Batal</button><button type="submit" className="quest-button quest-button-primary">Simpan kelas <ArrowRight size={17} aria-hidden="true" /></button></div>
+            </form>
+          )}
+
+          {entries.length === 0 && !showForm ? (
+            <div className="quest-empty"><span className="quest-empty-icon"><CalendarDays size={30} aria-hidden="true" /></span><h3>Markasmu belum memiliki jadwal</h3><p>Tambahkan kelas pertamamu. Kelas itu akan muncul sebagai misi pada hari yang sama setiap minggu.</p><button type="button" className="quest-button quest-button-primary" onClick={() => openEntryForm("Senin")}><Plus size={17} aria-hidden="true" /> Tambah kelas pertama</button></div>
+          ) : (
+            <div className="quest-week-list">
+              {SCHEDULE_DAYS.map((dayName) => {
+                const items = entries.filter((entry) => entry.day === dayName).sort((a, b) => a.start.localeCompare(b.start));
+                if (!items.length) return null;
+                return (
+                  <section className="quest-day-group" key={dayName} aria-labelledby={`day-${dayName}`}>
+                    <div className="quest-day-group-heading"><h3 id={`day-${dayName}`}>{dayName}</h3><span>{items.length} kelas</span></div>
+                    <div className="quest-class-list">
+                      {items.map((entry) => (
+                        <article className="quest-class-row" key={entry.id} style={{ "--stop-color": entry.color } as CSSProperties}>
+                          <span className="quest-class-time"><Clock3 size={15} aria-hidden="true" />{entry.start}<span>–</span>{entry.end}</span>
+                          <div className="quest-class-copy"><strong>{entry.subject}</strong><span>{entry.room || "Ruang belum diatur"}</span></div>
+                          <div className="quest-row-actions">
+                            {confirmDelete === entry.id && <button type="button" className="quest-text-button" onClick={() => setConfirmDelete("")}>Batal</button>}
+                            <button type="button" className={`quest-icon-button${confirmDelete === entry.id ? " is-confirming" : ""}`} aria-label={`${confirmDelete === entry.id ? "Konfirmasi hapus" : "Hapus"} kelas ${entry.subject}`} onClick={() => removeEntry(entry)}><Trash2 size={16} aria-hidden="true" />{confirmDelete === entry.id && <span>Hapus</span>}</button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab === "kalender" && (
+        <section className="schedule-panel quest-surface quest-calendar-panel" aria-label="Kalender belajar">
+          {serverTaskState !== "ready" && <p className="quest-service-note" role="status">{serverTaskState === "loading" ? "Memuat tenggat dari Tugas & Ujian…" : "Tenggat dari Tugas & Ujian belum dapat dimuat. Jadwal dan tantangan lokal tetap tersedia. Muat ulang halaman untuk mencoba lagi."}</p>}
+          <ScheduleCalendar entries={entries} tasks={tasks} serverTasks={serverTasks} accentOf={(name) => accentForSubject(name).light} />
+        </section>
+      )}
+
+      {tab === "tugas" && (
+        <section className="schedule-panel quest-surface quest-manage" aria-labelledby="task-board-title">
+          <div className="quest-section-heading">
+            <div><span className="quest-section-kicker"><ClipboardCheck size={15} aria-hidden="true" /> Papan tantangan</span><h2 id="task-board-title">Taklukkan tugas satu per satu</h2><p>{taskProgress.total ? `${taskProgress.done} dari ${taskProgress.total} tantangan selesai.` : "Tugas dengan tenggat akan muncul di Peta Misi dan Kalender."}</p></div>
+            <button type="button" className="quest-button quest-button-primary" onClick={() => setShowTaskForm((value) => !value)} aria-expanded={showTaskForm}><Plus size={17} aria-hidden="true" /> Buat tantangan</button>
+          </div>
+
+          {taskProgress.total > 0 && <div className="quest-task-progress"><progress max={100} value={taskProgress.percent} aria-label="Progres semua tantangan" /><strong>{taskProgress.percent}%</strong></div>}
+
+          {showTaskForm && (
+            <form className="quest-form" onSubmit={submitTask}>
+              <div className="quest-form-heading"><h3>Tantangan baru</h3><button type="button" className="quest-text-button" onClick={() => setShowTaskForm(false)}>Tutup form</button></div>
+              <div className="quest-form-grid quest-task-form-grid">
+                <label htmlFor="task-title">Nama tugas<input ref={taskInput} id="task-title" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Contoh: Latihan bab 3" maxLength={120} /></label>
+                <label htmlFor="task-subject">Mata pelajaran <span>(opsional)</span><input id="task-subject" value={taskSubject} onChange={(event) => setTaskSubject(event.target.value)} placeholder="Contoh: Biologi" maxLength={80} /></label>
+                <label htmlFor="task-due">Tenggat <span>(opsional)</span><input id="task-due" type="date" value={taskDue} onChange={(event) => setTaskDue(event.target.value)} /></label>
+              </div>
+              <div className="quest-form-actions"><button type="button" className="quest-button quest-button-secondary" onClick={() => setShowTaskForm(false)}>Batal</button><button type="submit" className="quest-button quest-button-primary">Simpan tantangan <ArrowRight size={17} aria-hidden="true" /></button></div>
+            </form>
+          )}
+
+          {sorted.length === 0 && !showTaskForm ? (
+            <div className="quest-empty"><span className="quest-empty-icon"><ClipboardCheck size={30} aria-hidden="true" /></span><h3>Belum ada tantangan</h3><p>Buat tugas pertamamu. Centang saat selesai dan lihat progresmu bertumbuh.</p><button type="button" className="quest-button quest-button-primary" onClick={() => setShowTaskForm(true)}><Plus size={17} aria-hidden="true" /> Buat tantangan pertama</button></div>
+          ) : (
+            <div className="quest-task-list">
+              {sorted.map((task) => (
+                <article className={`quest-task-row${task.done ? " is-done" : ""}`} key={task.id}>
+                  <label className="quest-task-check">
+                    <input type="checkbox" checked={task.done} onChange={() => handleTaskToggle(task)} aria-label={`Tandai ${task.title} ${task.done ? "belum selesai" : "selesai"}`} />
+                    <span aria-hidden="true">{task.done && <Check size={17} />}</span>
+                  </label>
+                  <div className="quest-task-copy"><strong>{task.title}</strong><span>{task.subject || "Umum"} · {formatDue(task.dueDate)}</span></div>
+                  <span className={`quest-task-status${task.done ? " is-done" : ""}`}>{task.done ? <><CheckCircle2 size={15} aria-hidden="true" /> Ditaklukkan</> : "Menunggu"}</span>
+                  <div className="quest-row-actions">
+                    {confirmDelete === task.id && <button type="button" className="quest-text-button" onClick={() => setConfirmDelete("")}>Batal</button>}
+                    <button type="button" className={`quest-icon-button${confirmDelete === task.id ? " is-confirming" : ""}`} aria-label={`${confirmDelete === task.id ? "Konfirmasi hapus" : "Hapus"} tantangan ${task.title}`} onClick={() => removeTask(task)}><Trash2 size={16} aria-hidden="true" />{confirmDelete === task.id && <span>Hapus</span>}</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {toast && <div className="schedule-toast" role="status"><Info size={18} aria-hidden="true" />{toast}</div>}
     </div>
   );
 }

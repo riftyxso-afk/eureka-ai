@@ -1,5 +1,6 @@
 "use client";
 
+import "./note-detail.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
@@ -36,6 +37,7 @@ import EditNoteModal from "@/components/note/EditNoteModal";
 import QuizModal from "@/components/note/QuizModal";
 import FlashcardModal from "@/components/note/FlashcardModal";
 import HighlightToolbar from "@/components/note/HighlightToolbar";
+import SelectionActions from "@/components/note/SelectionActions";
 import { NoteTOC } from "@/components/note/NoteTOC";
 import { NoteContent } from "@/components/note/NoteContent";
 import { NoteAIChat } from "@/components/note/NoteAIChat";
@@ -587,7 +589,7 @@ export default function NoteDetailPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+      <div className="note-detail mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
         <div className="card-clay flex items-center justify-center py-16 text-clay-muted">
           <p className="text-base font-extrabold">{l.loading}</p>
         </div>
@@ -602,7 +604,7 @@ export default function NoteDetailPage() {
 
   if (!note) {
     return (
-      <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
+      <div className="note-detail mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
         <div className="card-clay flex flex-col items-center py-16 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-beige shadow-clay-inset">
             <FileQuestion size={36} className="text-clay-muted" />
@@ -725,13 +727,13 @@ export default function NoteDetailPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-clay space-y-6 px-4 py-6 sm:px-6">
+    <div className="note-detail mx-auto w-full max-w-[1180px] space-y-6 px-4 py-6 sm:px-8">
       {/* Header */}
-      <div className="flex flex-col gap-3">
+      <header className="note-detail-header flex flex-col gap-4 p-4 sm:p-6">
         <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
           <Link
-            href="/dashboard"
-            aria-label={l.backToDashboard}
+            href="/dashboard/catatan"
+            aria-label={locale === "en" ? "Back to notes" : "Kembali ke catatan"}
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-3"
           >
             <ArrowLeft size={20} />
@@ -740,9 +742,18 @@ export default function NoteDetailPage() {
             {data.title}
           </h1>
         </div>
-        <div className="-mx-4 flex flex-wrap items-center gap-2 px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={askNote} className="btn-clay-primary !min-h-[44px] !px-4 text-sm">
+            <MessageCircleQuestion size={16} className="mr-2" />
+            {l.askAi}
+          </button>
+          <button onClick={() => setShowShareNote(true)} className="btn-clay-ghost !min-h-[44px] !px-4 text-sm">
+            <Share2 size={16} className="mr-2" />
+            {l.share}
+          </button>
           <button
             onClick={toggleBookmark}
+            aria-pressed={bookmarked}
             aria-label="Bookmark"
             title="Bookmark"
             className={`btn-clay-ghost shrink-0 !min-h-[44px] !px-3 ${
@@ -758,6 +769,12 @@ export default function NoteDetailPage() {
               }
             />
           </button>
+          <details className="group/actions relative">
+            <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-2 rounded-xl border border-clay-primary/15 bg-clay-cream px-3 text-sm font-bold text-clay-dark focus-visible:outline focus-visible:outline-clay-primary [&::-webkit-details-marker]:hidden">
+              {locale === "en" ? "More actions" : "Aksi lainnya"}
+              <span aria-hidden="true" className="group-open/actions:rotate-180">⌄</span>
+            </summary>
+            <div onClick={(event) => { if ((event.target as HTMLElement).closest("button:not(:disabled), a")) event.currentTarget.closest("details")?.removeAttribute("open"); }} className="mt-2 grid w-full min-w-[180px] gap-1 rounded-xl border border-clay-primary/15 bg-clay-cream p-2 shadow-lg sm:absolute sm:z-20">
           <button
             onClick={() => setShowEdit(true)}
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
@@ -788,25 +805,11 @@ export default function NoteDetailPage() {
             {l.whiteboard}
           </Link>
           <button
-            onClick={askNote}
-            className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
-          >
-            <MessageCircleQuestion size={16} className="mr-2" />
-            {l.askAi}
-          </button>
-          <button
             onClick={() => notify(l.callComingSoon)}
             className="btn-clay-ghost shrink-0 !min-h-[44px] !px-4 text-sm"
           >
             <Phone size={16} className="mr-2" />
             {l.call}
-          </button>
-          <button
-            onClick={() => setShowShareNote(true)}
-            className="btn-clay-primary shrink-0 !min-h-[44px] !px-4 text-sm"
-          >
-            <Share2 size={16} className="mr-2" />
-            {l.share}
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
@@ -815,8 +818,22 @@ export default function NoteDetailPage() {
             <Trash2 size={16} className="mr-2" />
             {l.delete}
           </button>
+            </div>
+          </details>
         </div>
-      </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-bold text-clay-muted">
+          {chapters.length > 0 && (
+            <button type="button" onClick={() => scrollToChapter(chapters[0].id)} className="rounded-md px-2 py-2 text-clay-primary hover:bg-clay-primary/10 focus-visible:outline focus-visible:outline-clay-primary">
+              {locale === "en" ? `Start reading · ${chapters.length} chapters` : `Mulai baca · ${chapters.length} bab`}
+            </button>
+          )}
+          {findYoutubeLink(data.sourceUrl ?? "")?.url && (
+            <a href="#note-source-video" className="rounded-md px-2 py-2 text-clay-primary hover:bg-clay-primary/10 focus-visible:outline focus-visible:outline-clay-primary">
+              {l.sourceVideo}
+            </a>
+          )}
+        </div>
+      </header>
 
       {/* Kehadiran kolaborator */}
       {presence.length > 0 && (
@@ -866,20 +883,22 @@ export default function NoteDetailPage() {
         {/* Konten utama */}
         <main className="min-w-0 flex-1">
           {/* Ringkasan */}
-          <div className="card-clay p-6">
+          <div className="rounded-2xl border border-clay-primary/15 bg-clay-cream p-5 sm:p-7">
             <h2 className="mb-2 text-xs font-extrabold uppercase tracking-wider text-clay-muted">
               {l.summary}
             </h2>
-            <p className="break-words text-[17px] font-semibold leading-6 text-clay-dark">
+            <SelectionActions noteId={data.id} content={data.summary} onChange={summary => setNote(current => current ? { ...current, summary } : current)}>
+            <p className="max-w-[72ch] break-words text-base leading-relaxed text-clay-dark">
               {data.summary}
             </p>
+            </SelectionActions>
           </div>
 
           {/* Video sumber (catatan dari YouTube) — untuk SEMUA pengguna:
               cukup sourceUrl-nya link YouTube valid (spesifikasi
               youtube-video-chat "Embed video di halaman catatan"). */}
           {(findYoutubeLink(data.sourceUrl ?? "")?.url ?? null) && (
-            <div className="card-clay mt-4 p-4 sm:p-6">
+            <div id="note-source-video" className="mt-4 scroll-mt-24 rounded-2xl border border-clay-primary/15 bg-clay-cream p-4 sm:p-6">
               <h2 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-clay-muted">
                 {l.sourceVideo}
               </h2>
@@ -990,6 +1009,7 @@ export default function NoteDetailPage() {
                   const collapsed = !!collapsedMap[chapter.id];
                   return (
                     <section key={chapter.id} id={`chapter-${chapter.id}`}>
+                      <SelectionActions noteId={data.id} chapterId={chapter.id} content={chapter.content} onChange={content => setNote(current => current ? { ...current, chapters: current.chapters.map(item => item.id === chapter.id ? { ...item, content } : item) } : current)}>
                       <NoteContent
                         chapter={chapter}
                         onOpenNotepad={openNotepad}
@@ -1005,6 +1025,7 @@ export default function NoteDetailPage() {
                           sectionRefs.current[chapter.id] = el;
                         }}
                       />
+                      </SelectionActions>
                       {!collapsed &&
                         chapterImages.map((image) => (
                           <ImageFigure
@@ -1159,7 +1180,7 @@ export default function NoteDetailPage() {
                 type="button"
                 disabled={deleting}
                 onClick={deleteNoteNow}
-                className="btn-clay-primary !min-h-[44px] !px-4 text-sm !bg-red-500 !shadow-[0_6px_0_#B91C1C] hover:!bg-red-600"
+                className="btn-clay-primary !min-h-[44px] !px-4 text-sm !bg-red-600 hover:!bg-red-700"
               >
                 {deleting ? (
                   <Loader2 size={16} className="animate-spin" />

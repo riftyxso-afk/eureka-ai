@@ -1,6 +1,5 @@
 "use client";
 
-import EurekaOrb from "@/components/ui/EurekaOrb";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, apiEventSource, getClientLocale } from "@/lib/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
@@ -18,7 +17,6 @@ import {
   Plus,
   RotateCcw,
   ServerOff,
-  Square,
   SquarePlay,
   Trash2,
   Upload,
@@ -37,7 +35,7 @@ import { playCompletionSound } from "@/lib/notifySound";
 import { ensurePushSetup } from "@/lib/push";
 import { addActiveJobId, removeActiveJobId } from "@/context/JobWatcherContext";
 import { useNoteSteps, type NoteStep } from "@/components/note/useNoteSteps";
-import { NoteLoadingSteps } from "@/components/note/NoteLoadingSteps";
+import { NoteGenerationProgress } from "@/components/note/NoteGenerationProgress";
 import "./create-note-modal.css";
 
 interface SourceOption {
@@ -818,65 +816,7 @@ export const CreateNoteModal = ({
                   </div>
                 </div>
               ) : processing ? (
-                <div className="flex flex-col items-center px-4 py-8 sm:px-6 sm:py-12 text-center">
-                  <EurekaOrb
-                    variant="working"
-                    scale="avatar"
-                    label="Membuat catatan"
-                    className="mx-auto"
-                  />
-                  <motion.p
-                    key={progressMessage}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-6 sm:mt-8 min-h-[28px] text-base sm:text-lg font-extrabold px-2"
-                  >
-                    {progressMessage}
-                  </motion.p>
-                  <div className="mt-4 sm:mt-6 w-full max-w-sm px-2">
-                    <div className="flex justify-between text-xs font-extrabold text-clay-muted">
-                      <span>Membuat catatan kamu...</span>
-                      <span>{progressPercent}%</span>
-                    </div>
-                    <div className="mt-2 h-5 sm:h-6 w-full overflow-hidden rounded-clay-full border-3 border-clay-shadow/40 bg-clay-inputBg shadow-clay-inset">
-                      <motion.div
-                        className="relative h-full rounded-clay-full bg-gradient-to-r from-clay-primary to-clay-accent shadow-clay-btn overflow-hidden"
-                        initial={{ width: "0%" }}
-                        animate={{ width: `${progressPercent}%` }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 110,
-                          damping: 22,
-                        }}
-                      >
-                        {/* Shimmer effect */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer" />
-                      </motion.div>
-                    </div>
-                  </div>
-                  {/* Daftar langkah nyata dari event SSE (real-time, tanpa mock) */}
-                  <div className="mt-2 w-full max-w-sm px-2">
-                    <NoteLoadingSteps steps={steps} />
-                  </div>
-                  <p className="mt-4 text-xs sm:text-sm font-semibold text-clay-muted px-4">
-                    Berjalan di latar belakang — kamu boleh pindah halaman.
-                    Kami beri tahu lewat notifikasi saat selesai.
-                  </p>
-                  <button
-                    onClick={close}
-                    className="mt-4 text-xs sm:text-sm font-extrabold text-clay-primary underline-offset-2 hover:underline min-h-[44px] px-4"
-                  >
-                    Tutup & lanjutkan di latar belakang →
-                  </button>
-                  <button
-                    onClick={stopProcessing}
-                    disabled={!activeJobId || stoppingJob}
-                    className="mt-2 flex items-center justify-center gap-2 rounded-clay-md border-2 border-red-200 bg-red-50 py-3 px-4 text-xs sm:text-sm font-extrabold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 min-h-[44px]"
-                  >
-                    <Square size={11} className="fill-current" />
-                    {stoppingJob ? "Menghentikan..." : "Berhenti proses"}
-                  </button>
-                </div>
+                <NoteGenerationProgress message={progressMessage} percent={progressPercent} steps={steps} onBackground={close} onStop={stopProcessing} canStop={!!activeJobId} stopping={stoppingJob} />
               ) : step === 1 ? (
                 <>
                   <div className="flex items-start justify-between gap-2">

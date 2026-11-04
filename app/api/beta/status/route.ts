@@ -21,6 +21,16 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    if (
+      process.env.EUREKA_DEV_ALL_ACCESS === "true" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      return NextResponse.json({
+        isBeta: true,
+        joinedAt: new Date().toISOString(),
+      });
+    }
+
     const { data } = await db()
       .from("users")
       .select("is_beta, beta_joined_at")

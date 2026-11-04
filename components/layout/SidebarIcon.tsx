@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 const icons: Record<string, ReactNode> = {
+  kursus: <><path fill="#8253D4" d="m2 12 14-7 14 7-14 7z"/><path fill="#B995ED" d="M7 17v7q9 7 18 0v-7l-9 5z"/><path stroke="#FFCC54" strokeWidth="2" strokeLinecap="round" d="M28 14v10"/><circle cx="28" cy="25" r="2" fill="#FFCC54"/></>,
   catatan: <><rect x="6" y="4" width="20" height="25" rx="4" fill="#8253d4"/><rect x="9" y="6" width="15" height="20" rx="2" fill="#e6d8fa"/><path d="M12 12h9M12 16h9M12 20h6" stroke="#a37de0" strokeWidth="2" strokeLinecap="round"/></>,
   dashboard: <><path fill="#FFBB38" d="M5 15h22v13H5z"/><path fill="#FF6E64" d="M2 15 16 3l14 12-2.8 3L16 8.7 4.8 18z"/><path fill="#FFE783" d="M9 16h14v12H9z"/><path fill="#8B58D6" d="M13 20h6v8h-6z"/></>,
   "mata-pelajaran": <><path fill="#7643D3" d="M3 6q7-3 13 2 6-5 13-2v20q-7-3-13 2-6-5-13-2z"/><path fill="#C1A1F5" d="M5 8q6-2 10 2v15q-4-3-10-2z"/><path fill="#E8DAFF" d="M17 10q4-4 10-2v15q-6-1-10 2z"/></>,

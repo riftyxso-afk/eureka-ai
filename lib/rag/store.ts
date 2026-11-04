@@ -1,10 +1,11 @@
 /**
  * Supabase Integration for RAG (Retrieval Augmented Generation)
- * Complete migration from local file system to Supabase database
+ * Supabase persistence for notes, chunks, and retrieval.
  */
 
 import { db } from '../supabase/admin';
 import type { Note, NoteChapter } from '../types';
+import { NOTE_EMBEDDING_DIMENSIONS, noteSearchTerms, serializeNoteEmbedding } from './vector';
 
 interface StoredChunk {
   id: string;
@@ -43,6 +44,7 @@ interface NoteSearchResult {
   noteTitle: string;
   noteSubject: string;
   chunkId: string;
+  noteId?: string;
 }
 
 /**
@@ -82,12 +84,13 @@ export async function saveNoteWithChunks(
       note_id: note.id,
       chapter_id: chapterId,
       text: chunk.text.trim(),
-      // pgvector butuh format string "[0.1,0.2,...]"
-      embedding: chunk.embedding
-        ? `[${chunk.embedding.map((n) => n.toFixed(6)).join(",")}]`
-        : null,
+      // Simpan teks walau provider lokal tidak cocok dengan VECTOR(1536).
+      embedding: serializeNoteEmbedding(chunk.embedding),
     }));
 
+    if (chunks.some((chunk) => chunk.embedding && !serializeNoteEmbedding(chunk.embedding))) {
+      console.warn(`[saveNoteWithChunks] Embedding non-${NOTE_EMBEDDING_DIMENSIONS} dimensi dilewati; pencarian teks tetap tersedia.`);
+    }
     if (chunkRecords.length > 0) {
       const { error: chunksError } = await db()
         .from('chunks')
@@ -281,8 +284,7 @@ export async function replaceChunksForNote(
       note_id: noteId,
       chapter_id: c.chapterId,
       text: c.text.trim(),
-      // pgvector butuh format string "[0.1,0.2,...]"
-      embedding: `[${c.embedding.map((n) => n.toFixed(6)).join(",")}]`,
+      embedding: serializeNoteEmbedding(c.embedding),
     }));
 
     const { error: insError } = await db().from('chunks').insert(records);
@@ -323,6 +325,43 @@ export async function updateChunksEmbeddings(noteId: string, embeddings: number[
   }
 }
 
+/** Keyword retrieval for local embeddings whose vector space does not match the database. */
+export async function searchTextChunks(
+  query: string,
+  topK = 4,
+  noteId?: string,
+  userId?: string
+): Promise<NoteSearchResult[]> {
+  const terms = noteSearchTerms(query);
+  if (terms.length === 0) return [];
+  try {
+    let request = db().from('chunks')
+      .select('id,note_id,chapter_id,text,notes!inner(title,subject,user_id)')
+      .textSearch('text', terms.join(' or '), { type: 'websearch', config: 'simple' })
+      .limit(Math.max(12, topK * 3));
+    if (noteId) request = request.eq('note_id', noteId);
+    if (userId) request = request.eq('notes.user_id', userId);
+    const { data, error } = await request;
+    if (error) throw error;
+    return ((data ?? []) as unknown as Record<string, unknown>[]).map((row) => {
+      const text = String(row.text ?? '');
+      const note = (Array.isArray(row.notes) ? row.notes[0] : row.notes) as Record<string, unknown> | undefined;
+      const matched = terms.filter((term) => text.toLocaleLowerCase('id-ID').includes(term)).length;
+      return {
+        score: matched / terms.length,
+        text,
+        noteTitle: String(note?.title ?? ''),
+        noteSubject: String(note?.subject ?? ''),
+        noteId: String(row.note_id ?? ''),
+        chunkId: String(row.id ?? ''),
+      };
+    }).sort((a, b) => b.score - a.score).slice(0, topK);
+  } catch (error) {
+    console.warn('[searchTextChunks] Pencarian teks gagal:', error);
+    return [];
+  }
+}
+
 /**
  * Search chunks using vector similarity
  */
@@ -330,8 +369,12 @@ export async function searchChunks(
   queryEmbedding: number[],
   topK: number = 3,
   noteId?: string,
-  userId?: string
+  userId?: string,
+  queryText?: string
 ): Promise<NoteSearchResult[]> {
+  if (queryEmbedding.length !== NOTE_EMBEDDING_DIMENSIONS) {
+    return queryText ? searchTextChunks(queryText, topK, noteId, userId) : [];
+  }
   try {
     // Use Supabase RPC function match_chunks
     const { data, error } = await db().rpc('match_chunks', {
@@ -353,6 +396,7 @@ export async function searchChunks(
       noteTitle: "",
       noteSubject: "",
       chunkId: item.id,
+      noteId: item.note_uid ?? item.note_id,
     }));
   } catch (error) {
     console.error('[searchChunks] Error:', error);

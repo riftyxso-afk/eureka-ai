@@ -18,6 +18,8 @@ import { ChapterAIChat } from "@/components/note/ChapterAIChat";
 import { DreamingOverlay } from "@/components/note/DreamingOverlay";
 import { ParsedContent } from "@/components/note/ParsedContent";
 import { parseNoteContent } from "@/lib/parseNoteContent";
+import SelectionActions from "@/components/note/SelectionActions";
+import { apiFetch } from "@/lib/apiClient";
 import { useRegenerateJob } from "@/lib/useRegenerateJob";
 
 interface Chapter {
@@ -68,7 +70,7 @@ export default function ChapterNotepadPage() {
 
   const loadChapter = useCallback(async () => {
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/notes/${params.id}/bab/${params.chapterId}`
       );
       if (res.ok) {
@@ -116,7 +118,7 @@ export default function ChapterNotepadPage() {
     async (content: string) => {
       setSaveState("saving");
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `/api/notes/${params.id}/bab/${params.chapterId}`,
           {
             method: "PUT",
@@ -227,7 +229,9 @@ export default function ChapterNotepadPage() {
 
       {/* Isi bab */}
       <div className="card-clay p-6 sm:p-8">
-        <ParsedContent items={items} />
+        <SelectionActions noteId={note.id} chapterId={chapter.id} content={chapter.content} onChange={content => setChapter(current => current ? { ...current, content } : current)}>
+          <ParsedContent items={items} />
+        </SelectionActions>
         <NoteFlow flow={chapter.flow ?? []} />
       </div>
 
@@ -258,12 +262,14 @@ export default function ChapterNotepadPage() {
             )}
           </div>
         </div>
+        <SelectionActions noteId={note.id} content={userNote} onChange={handleUserNoteChange} local>
         <textarea
           value={userNote}
           onChange={(e) => handleUserNoteChange(e.target.value)}
           placeholder="Tulis catatanmu untuk bab ini... (tersimpan otomatis)"
           className="input-clay min-h-[180px] w-full resize-y !text-base !font-medium !leading-relaxed"
         />
+        </SelectionActions>
       </div>
 
       {/* Tanya AI tentang bab ini */}

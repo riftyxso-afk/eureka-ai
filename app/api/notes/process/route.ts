@@ -351,7 +351,11 @@ export async function POST(req: NextRequest) {
             return;
           }
           const baseMsg = "Terjadi kesalahan saat memproses materi.";
-          const detail = e instanceof Error ? e.message : String(e);
+          const detail = e instanceof Error
+            ? e.message
+            : typeof e === "object" && e !== null && "message" in e
+              ? String(e.message)
+              : String(e);
           console.error("[api/notes/process] Job gagal:", detail, e);
           // AWAIT: penulisan terminal harus mendarat di DB walau proses
           // langsung mati setelah ini (lihat update done di atas).

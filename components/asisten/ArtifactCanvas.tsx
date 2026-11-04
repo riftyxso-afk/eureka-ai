@@ -21,9 +21,10 @@ interface ArtifactCanvasProps {
   /** Artifact yang sedang menerima stream (ikon/status live). */
   streamingId: string | null;
   open: boolean;
+  sending?: boolean;
   onClose: () => void;
   /** Simpan hasil edit markdown (content baru) — version naik di parent. */
-  onEditSave?: (id: string, content: string) => void;
+  onEditSave?: (id: string, content: string) => Promise<void>;
 }
 
 /**
@@ -36,11 +37,14 @@ export default function ArtifactCanvas({
   artifacts,
   streamingId,
   open,
+  sending = false,
   onClose,
   onEditSave,
 }: ArtifactCanvasProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [copied, setCopied] = useState(false);
   const [terminalExpanded, setTerminalExpanded] = useState(false);
@@ -66,6 +70,7 @@ export default function ArtifactCanvas({
   // Artifact baru masuk → reset mode edit & pilihan.
   useEffect(() => {
     setEditing(false);
+    setSaveError(null);
     setCopied(false);
     setTerminalExpanded(false);
   }, [active?.id, active?.version]);
@@ -84,16 +89,23 @@ export default function ArtifactCanvas({
   };
 
   const startEdit = () => {
-    if (!active || active.type !== "markdown") return;
+    if (!active || active.type !== "markdown" || sending || streamingId || !onEditSave || saving) return;
     setEditText(active.content);
     setEditing(true);
   };
 
-  const saveEdit = () => {
-    if (!active) return;
-    // Version bertambah (PRD §7.2) — update via state di parent (hook).
-    onEditSave?.(active.id, editText);
-    setEditing(false);
+  const saveEdit = async () => {
+    if (!active || sending || streamingId || !onEditSave || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await onEditSave(active.id, editText);
+      setEditing(false);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Gagal menyimpan artifact.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -129,7 +141,7 @@ export default function ArtifactCanvas({
                   {active.type === "terminal" ? "TER" : active.type === "image" ? "IMG" : "MD"}
                 </span>
               )}
-              {streamingId && (
+              {active?.id === streamingId && (
                 <span className="shrink-0 rounded-full bg-clay-primary/10 px-1.5 py-px text-[9px] font-extrabold text-clay-primary">
                   streaming…
                 </span>
@@ -165,6 +177,8 @@ export default function ArtifactCanvas({
                 <button
                   key={a.id}
                   onClick={() => setActiveId(a.id)}
+                  disabled={saving}
+                  aria-pressed={a.id === active?.id}
                   className={`shrink-0 rounded-clay-full px-2 py-0.5 text-[10px] font-bold transition-colors ${
                     a.id === active?.id
                       ? "bg-[rgb(var(--accent-coral))]/12 text-[rgb(var(--accent-coral))]"
@@ -186,12 +200,17 @@ export default function ArtifactCanvas({
               </p>
             ) : active.type === "markdown" ? (
               editing ? (
+                <div className="h-full">
+                <label htmlFor="artifact-edit-content" className="mb-2 block text-xs font-bold text-clay-dark">Isi catatan</label>
                 <textarea
+                  id="artifact-edit-content"
                   value={editText}
+                  disabled={saving || sending || Boolean(streamingId)}
                   onChange={(e) => setEditText(e.target.value)}
                   className="h-full min-h-[240px] w-full resize-none rounded-clay-md bg-clay-inputBg p-3 font-mono text-xs text-clay-dark shadow-[inset_0_2px_6px_rgb(var(--clay-shadow-dark)/0.35)] focus:outline-none"
                   aria-label="Edit artifact"
                 />
+                </div>
               ) : (
                 <>
                   {/* Sitasi sumber — elemen ringan: satu baris teks kecil netral,
@@ -223,6 +242,7 @@ export default function ArtifactCanvas({
             )}
           </div>
 
+          {saveError && <p role="alert" className="px-3 pb-2 text-xs text-red-700">{saveError}</p>}
           {/* Toolbar per tipe (PRD §7.5) — ikon ghost minimal; footer ramah
               siswa: codename agent hanya di tooltip (chat-visual-hierarchy). */}
           {active && (
@@ -230,6 +250,7 @@ export default function ArtifactCanvas({
               {active.type === "markdown" && !editing && (
                 <button
                   onClick={startEdit}
+                  disabled={sending || Boolean(streamingId) || !onEditSave || saving}
                   title="Edit catatan"
                   aria-label="Edit artifact"
                   className="flex h-7 w-7 items-center justify-center rounded-clay-full text-clay-muted hover:bg-clay-beige hover:text-clay-dark"
@@ -240,6 +261,7 @@ export default function ArtifactCanvas({
               {active.type === "markdown" && editing && (
                 <button
                   onClick={saveEdit}
+                  disabled={saving || sending || Boolean(streamingId)}
                   title={`Simpan sebagai versi ${active.version + 1}`}
                   aria-label="Simpan editan"
                   className="flex h-7 w-7 items-center justify-center rounded-clay-full text-[rgb(var(--accent-coral))] hover:bg-[rgb(var(--accent-coral))]/10"
@@ -248,6 +270,12 @@ export default function ArtifactCanvas({
                 </button>
               )}
 
+              {editing && (
+                <button type="button" onClick={() => { setEditing(false); setSaveError(null); }} disabled={saving}
+                  className="px-2 py-1 text-xs text-clay-muted hover:bg-clay-beige disabled:cursor-not-allowed">
+                  Batal
+                </button>
+              )}
               {active.type === "image" && (
                 <a
                   href={active.content}
@@ -262,9 +290,10 @@ export default function ArtifactCanvas({
 
               <span
                 className="ml-auto cursor-help text-[10px] font-bold text-clay-muted/70"
-                title={`Dibuat oleh agent "${active.sourceAgent}" — tersimpan otomatis ke akunmu`}
+                title={`Dibuat oleh agent "${active.sourceAgent}"`}
+                role="status"
               >
-                Tersimpan otomatis · v{active.version}
+                {saving ? "Menyimpan…" : active.id === streamingId ? "Sedang dibuat" : editing ? "Belum disimpan" : "Versi"} · v{active.version}
               </span>
             </div>
           )}

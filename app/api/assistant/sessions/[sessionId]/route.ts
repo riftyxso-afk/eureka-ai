@@ -5,7 +5,9 @@ import {
   getMessages,
   getSession,
   renameSession,
+  updateArtifactMessage,
 } from "@/lib/assistant/store";
+import { editMessageArtifact } from "@/lib/assistant/artifacts";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
@@ -55,10 +57,11 @@ export async function PATCH(
     const body = (await req.json().catch(() => null)) as {
       userId?: string;
       title?: string;
+      artifact?: { messageId: string; index: number; content: string; previousContent: string };
     } | null;
     const rawUserId = String(body?.userId ?? "").trim();
     const title = String(body?.title ?? "").trim().slice(0, 120);
-    if (!rawUserId || !title) {
+    if (!rawUserId || (!title && !body?.artifact)) {
       return NextResponse.json(
         { error: "userId dan title diperlukan." },
         { status: 400 }
@@ -73,6 +76,24 @@ export async function PATCH(
         { error: auth.error },
         { status: auth.status ?? 401 }
       );
+    }
+    if (body?.artifact) {
+      if (!(await getSession(sessionId, auth.userId))) {
+        return NextResponse.json({ error: "Sesi tidak ditemukan." }, { status: 404 });
+      }
+      const edit = body.artifact;
+      if (typeof edit.messageId !== "string" || !Number.isInteger(edit.index) || edit.index < 0 ||
+          typeof edit.content !== "string" || typeof edit.previousContent !== "string" || edit.content.length > 200_000) {
+        return NextResponse.json({ error: "Edit artifact tidak valid." }, { status: 400 });
+      }
+      let content: string;
+      try { content = editMessageArtifact(edit.previousContent, edit.index, edit.content); }
+      catch (error) {
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Edit tidak valid." }, { status: 400 });
+      }
+      const saved = await updateArtifactMessage(sessionId, edit.messageId, edit.previousContent, content);
+      if (!saved) return NextResponse.json({ error: "Artifact berubah. Muat ulang sebelum menyimpan." }, { status: 409 });
+      return NextResponse.json({ ok: true, content });
     }
     await renameSession(sessionId, auth.userId, title);
     return NextResponse.json({ ok: true });

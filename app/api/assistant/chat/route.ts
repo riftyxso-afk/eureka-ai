@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { citedNoteSources } from "@/lib/assistant/citedSources";
 
 import {
   aiChatJson,
@@ -132,8 +133,41 @@ function sseEvent(
   controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
 }
 
+/** Hemat satu panggilan AI untuk prompt yang sudah punya tugas dan topik jelas. */
+function shouldAssessClarification(question: string): boolean {
+  const q = question.trim();
+  const words = q.split(/\s+/).filter(Boolean);
+  if (words.length === 0 || q.length > 240 || words.length > 14) return false;
+  if (/^(halo|hai|hello|hei|pagi|siang|sore|malam|terima kasih|makasih)\b/i.test(q)) {
+    return false;
+  }
+  if (
+    words.length >= 3 &&
+    /^(apa|siapa|kapan|dimana|di mana|mengapa|kenapa|bagaimana|gimana|berapa)\b/i.test(q)
+  ) {
+    return false;
+  }
+  // Rujukan tanpa topik atau pernyataan bingung tetap layak dinilai AI.
+  if (
+    /\b(kurang paham|tidak paham|gak paham|ga paham|nggak paham|belum paham|bingung|gak ngerti|ga ngerti|tidak mengerti|ini|itu|tersebut|semuanya)\b/i.test(q)
+  ) {
+    return true;
+  }
+  if (q.includes("?") && words.length >= 4) return false;
+  if (words.length >= 3 && /^(jawab|jelaskan|terangkan|ringkas|rangkum|buat|buatkan|hitung|analisis|bandingkan|tulis|uraikan|contohkan|terjemahkan)\b/i.test(q)) {
+    return false;
+  }
+  return words.length <= 6;
+}
+
 export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
+  const requestStartedAt = Date.now();
+  const traceTiming = (stage: string) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[chat timing] ${stage}: ${Date.now() - requestStartedAt}ms`);
+    }
+  };
 
   const respondJson = (body: unknown, status: number = 400) =>
     new Response(JSON.stringify(body), {
@@ -317,6 +351,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  traceTiming("auth, premium, dan rate limit");
+
   if (!hasAiKey()) {
     return respondJson(
       { error: "API key AI belum diatur di .env.local." },
@@ -337,6 +373,8 @@ export async function POST(req: NextRequest) {
     console.error("[api/assistant/chat] guardInput:", e);
   }
 
+  traceTiming("guard input");
+
   // ── Klarifikasi prompt ambigu ────────────────────────────────────────
   // Sebelum streaming, nilai prompt dengan panggilan AI ringan. Bila prompt
   // kurang informasi inti, balas JSON pertanyaan pilihan ganda (maks 3) dan
@@ -349,7 +387,13 @@ export async function POST(req: NextRequest) {
   // (3) jawaban user (`clarifications`) & tombol skip membuat server langsung
   // menjawab tanpa menilai ulang (lihat hasClarifications/clarificationsSkipped).
   const MAX_CLARIFICATIONS_PER_SESSION = 2;
-  if (!hasClarifications && !clarificationsSkipped && !webSearch && !attachment) {
+  if (
+    !hasClarifications &&
+    !clarificationsSkipped &&
+    !webSearch &&
+    !attachment &&
+    shouldAssessClarification(question)
+  ) {
     try {
       // Konteks percakapan terakhir + jumlah klarifikasi yang sudah terjadi
       // di sesi ini (dari pesan user yang berisi Q/A) + daftar pertanyaan
@@ -420,6 +464,9 @@ export async function POST(req: NextRequest) {
           json: true,
           maxTokens: 400,
           temperature: 0.2,
+          speedMode: "fast",
+          reasoning: false,
+          model: "gpt-4o",
           forChat: true,
           premium: isPremiumUser,
         },
@@ -459,12 +506,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  traceTiming("klarifikasi");
+
   // Bangun aliran SSE
   const stream = new ReadableStream({
     async start(controller) {
       const emit = (payload: unknown) => sseEvent(encoder, controller, payload);
       let answer = "";
       let modelUsed = "";
+      let firstTokenLogged = false;
       let sources: AssistantSource[] = [];
 
       try {
@@ -477,8 +527,8 @@ export async function POST(req: NextRequest) {
         }
 
         // Konteks user (profil, progres, subjek, catatan) + riwayat
-        const prior = (await getMessages(sessionId, userId))
-          .slice(-16)
+        const recentMessages = (await getMessages(sessionId, userId)).slice(-16);
+        const prior = recentMessages
           .map((m) => ({ role: m.role, content: m.content }));
 
         // Simpan pesan user (idempotent: retry dari pertanyaan yang sama
@@ -501,6 +551,7 @@ export async function POST(req: NextRequest) {
 
         // 1) Konteks user (profil, progres, subjek, catatan)
         const context = await buildUserContext(userId);
+        traceTiming("sesi, riwayat, dan konteks user");
 
         // 2) Meta catatan yang disebut user
         const mentionedNotesMeta =
@@ -509,16 +560,38 @@ export async function POST(req: NextRequest) {
           context.notes.map((n) => [n.id, n.title] as [string, string])
         );
 
-        // 3) RAG: cari materi relevan (di-scope ke mention bila ada)
+        // 3) RAG: cari materi relevan (di-scope ke mention bila ada).
+        // Jangan panggil embedding bila tidak ada catatan, dan jangan tahan
+        // seluruh jawaban bila model embedding lokal sedang dimuat/diunduh.
         let ragHits: RagHit[] = [];
         let ragError = "";
-        try {
-          ragHits = await searchUserNotes(userId, question, mentions);
-        } catch (e) {
-          ragError = e instanceof Error ? e.message : "RAG gagal";
-          console.warn("[api/assistant/chat] RAG:", ragError);
+        if (context.notes.length > 0 || mentions.length > 0) {
+          let ragTimeout: ReturnType<typeof setTimeout> | undefined;
+          try {
+            ragHits = await Promise.race([
+              searchUserNotes(
+                userId,
+                !mentions.length && question.trim().split(/\s+/).length <= 7
+                  ? buildWebSearchQuery(effectiveQuestion, history.slice(-2))
+                  : effectiveQuestion,
+                mentions
+              ),
+              new Promise<never>((_, reject) => {
+                ragTimeout = setTimeout(
+                  () => reject(new Error("RAG melebihi batas 3 detik")),
+                  3_000
+                );
+              }),
+            ]);
+          } catch (e) {
+            ragError = e instanceof Error ? e.message : "RAG gagal";
+            console.warn("[api/assistant/chat] RAG:", ragError);
+          } finally {
+            if (ragTimeout) clearTimeout(ragTimeout);
+          }
         }
         sources = toAssistantSources(ragHits);
+        traceTiming("RAG");
 
         // 4a) Tool web search: hasil Firecrawl jadi konteks tambahan.
         //     Hasilnya dikirim juga ke UI (event "web") untuk ditampilkan
@@ -660,6 +733,10 @@ export async function POST(req: NextRequest) {
             },
             (ev) => {
               if (ev.type === "token") {
+                if (!firstTokenLogged) {
+                  firstTokenLogged = true;
+                  traceTiming("token pertama dari AI");
+                }
                 answer += ev.text;
                 emit({ type: "token", text: ev.text });
               } else if (ev.type === "thinking") {
@@ -671,6 +748,7 @@ export async function POST(req: NextRequest) {
           );
           if (!answer) answer = result.content;
           modelUsed = modelUsed || result.model;
+          traceTiming("stream AI selesai");
         } catch (e) {
           const msg = "AI gagal.";
           // Pesan user sudah tersimpan; tampilkan error agar UI bisa retry.
@@ -693,6 +771,14 @@ export async function POST(req: NextRequest) {
         }
 
         // Simpan jawaban asisten
+        const mentionedSources: AssistantSource[] = mentionedNoteContents
+          .filter(note => note.chapters.length > 0)
+          .map(note => ({ noteId: note.id, noteTitle: note.title, chapterId: null, similarity: 1 }));
+        const priorSources = recentMessages.slice(-4)
+          .filter(message => message.role === "assistant")
+          .flatMap(message => citedNoteSources(message.content, message.sources))
+          .filter(source => noteTitleById.get(source.noteId) === source.noteTitle);
+        sources = citedNoteSources(storedAnswer, [...mentionedSources, ...sources, ...priorSources]);
         await appendMessage({
           sessionId,
           role: "assistant",

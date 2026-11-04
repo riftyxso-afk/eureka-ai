@@ -66,7 +66,7 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
   if (steps.length === 0) return null;
 
   return (
-    <div className="mt-4 w-full text-left">
+    <div className="mt-2 w-full text-left">
       {/* Header collapsible */}
       <button
         type="button"
@@ -81,7 +81,7 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
           }`}
         />
         <span className="tabular-nums">
-          {doneCount}/{totalParents} langkah selesai
+          Detail proses · {doneCount}/{totalParents} langkah selesai
         </span>
       </button>
 
@@ -109,11 +109,12 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
                   >
                     <button
                       type="button"
-                      aria-expanded={rowOpen}
+                      aria-expanded={step.detail ? rowOpen : undefined}
+                      disabled={!step.detail}
                       onClick={() => step.detail && toggleRow(step.id)}
-                      className={`flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1 text-left transition-colors ${
-                        isSubStep ? "ml-5" : ""
-                      } ${step.detail ? "hover:bg-clay-cream" : ""}`}
+                      className={`grid min-h-[40px] w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-lg px-2 py-2 text-left transition-colors ${
+                        isSubStep ? "pl-6" : ""
+                      } ${isActive ? "bg-violet-50 dark:bg-violet-950/40" : ""} ${step.detail ? "hover:bg-violet-100 dark:hover:bg-violet-900/40" : ""}`}
                     >
                       {/* Ikon status langkah */}
                       <span
@@ -131,13 +132,13 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
                           <StepIcon icon={step.icon} className={isSubStep ? "!h-3 !w-3" : ""} />
                         )}
                         {isActive && (
-                          <span className="absolute inset-0 animate-ping rounded-full bg-clay-primary/20" />
+                          <span className="absolute inset-0 animate-ping rounded-full bg-clay-primary/20 motion-reduce:animate-none" />
                         )}
                       </span>
 
                       {/* Label aksi */}
                       <span
-                        className={`shrink-0 font-bold ${
+                        className={`min-w-0 break-words font-bold ${
                           isSubStep ? "text-[11px]" : "text-xs"
                         } ${
                           step.status === "done"
@@ -150,7 +151,7 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
 
                       {/* Chip detail baris aktif */}
                       {isActive && step.detail && (
-                        <span className="inline-flex min-w-0 flex-1 items-center truncate rounded-full bg-clay-inputBg px-2 py-0.5 text-[10px] font-semibold text-clay-muted">
+                        <span className="col-start-2 row-start-2 min-w-0 truncate text-[11px] font-medium text-clay-muted">
                           {step.detail}
                         </span>
                       )}
@@ -159,7 +160,7 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
                       {step.detail && (
                         <ChevronDown
                           size={12}
-                          className={`ml-auto shrink-0 text-clay-muted transition-transform duration-200 ${
+                          className={`col-start-3 row-start-1 shrink-0 text-clay-muted transition-transform duration-200 ${
                             rowOpen ? "rotate-180" : ""
                           }`}
                         />
@@ -175,7 +176,7 @@ export function NoteLoadingSteps({ steps }: NoteLoadingStepsProps) {
                       }}
                     >
                       <div className="min-h-0 overflow-hidden">
-                        <p className="mb-1 ml-8 border-l-2 border-clay-borderLight py-0.5 pl-3 text-[11px] font-medium text-clay-muted">
+                        <p className="mb-1 ml-8 break-all border-l-2 border-clay-borderLight py-1 pl-3 text-[11px] font-medium text-clay-muted">
                           {step.detail}
                         </p>
                       </div>

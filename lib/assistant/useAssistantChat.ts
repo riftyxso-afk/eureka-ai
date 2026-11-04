@@ -17,6 +17,7 @@ import {
   type ArtifactParserEvent,
 } from "@/lib/agents/artifactParser";
 import type { Artifact } from "@/lib/agents/types";
+import { ChatRequestScope, messageArtifacts } from "@/lib/assistant/artifacts";
 import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type {
   AssistantChatMessage,
@@ -132,7 +133,7 @@ export interface UseAssistantChatResult {
   /** Tutup panel canvas. */
   closeCanvas: () => void;
   /** Simpan editan artifact markdown (version naik otomatis). */
-  saveArtifactEdit: (id: string, content: string) => void;
+  saveArtifactEdit: (id: string, content: string) => Promise<void>;
   /** Step-log Solve-then-Guide (event asli; kosong saat tidak aktif). */
   stepLog: StepLogEntry[];
   /** Output terminal live (stdout/stderr asli sandbox). */
@@ -159,9 +160,14 @@ export function useAssistantChat(options: {
   const { sessionId, onSessionCreated } = options;
   const initialSendRef = useRef(options.initialSend ?? null);
   const initialSentRef = useRef(false);
+  const scopeRef = useRef(new ChatRequestScope());
+  const historyRequestRef = useRef(0);
+  const messagesRef = useRef<AssistantChatMessage[]>([]);
+
 
   const [sessions, setSessions] = useState<AssistantChatSession[]>([]);
   const [messages, setMessages] = useState<AssistantChatMessage[]>([]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [streaming, setStreaming] = useState<StreamingState>(newStreaming());
@@ -211,13 +217,28 @@ export function useAssistantChat(options: {
   }, []);
 
   /** Simpan editan artifact markdown — content baru + version bertambah. */
-  const saveArtifactEdit = useCallback((id: string, content: string) => {
-    setCanvas((c) => ({
-      ...c,
-      artifacts: c.artifacts.map((a) =>
-        a.id === id ? { ...a, content, version: a.version + 1 } : a
-      ),
-    }));
+  const saveArtifactEdit = useCallback(async (id: string, content: string) => {
+    if (sendingRef.current) throw new Error("Tunggu respons selesai sebelum mengedit.");
+    const match = /^(.*):artifact:(\d+)$/.exec(id);
+    const message = messagesRef.current.find((item) => item.id === match?.[1]);
+    const target = scopeRef.current.sessionId;
+    const token = scopeRef.current.token;
+    if (!match || !message || !target || message.sessionId !== target) {
+      throw new Error("Artifact belum tersimpan. Muat ulang dan coba lagi.");
+    }
+    const response = await apiFetch(`/api/assistant/sessions/${encodeURIComponent(target)}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: getUserId(), artifact: {
+        messageId: message.id, index: Number(match[2]), content, previousContent: message.content,
+      } }),
+    });
+    const result = await response.json() as { error?: string; content?: string };
+    if (!response.ok || typeof result.content !== "string") throw new Error(result.error || "Gagal menyimpan artifact.");
+    if (!scopeRef.current.current(target, token)) return;
+    const updated = { ...message, content: result.content };
+    setMessages((list) => list.map((item) => item.id === message.id ? updated : item));
+    setCanvas((state) => ({ ...state, artifacts: state.artifacts.map((item) =>
+      messageArtifacts(updated).find((saved) => saved.id === item.id) ?? item) }));
   }, []);
   // Input & sesi yang sedang menunggu jawaban klarifikasi (untuk kirim ulang).
   const pendingInputRef = useRef<ChatSendInput | null>(null);
@@ -333,12 +354,17 @@ export function useAssistantChat(options: {
   const loadMessages = useCallback(async (id: string) => {
     const userId = getUserId();
     if (!userId) return;
+    const token = scopeRef.current.token;
+    const request = ++historyRequestRef.current;
+    if (scopeRef.current.sessionId !== id) return;
     setLoading(true);
     try {
       const res = await apiFetch(
         `/api/assistant/sessions/${encodeURIComponent(id)}?userId=${encodeURIComponent(userId)}`
       );
+      if (!scopeRef.current.current(id, token) || request !== historyRequestRef.current) return;
       if (!res.ok) {
+        setCanvas({ artifacts: [], streamingId: null, open: false });
         // Sesi hilang / bukan milik user — kosongkan (pemanggil bisa redirect).
         setMessages([]);
         return;
@@ -346,57 +372,48 @@ export function useAssistantChat(options: {
       const data = (await res.json()) as {
         messages?: AssistantChatMessage[];
       };
+      if (!scopeRef.current.current(id, token) || request !== historyRequestRef.current) return;
       const fetchedMsgs = data.messages ?? [];
       setMessages(fetchedMsgs);
 
-      // Parse artifact dari riwayat percakapan terdahulu agar canvas terisi
-      // saat halaman di-load / di-refresh
-      if (fetchedMsgs.length > 0) {
-        let historyArtifacts: Artifact[] = [];
-        for (const msg of fetchedMsgs) {
-          if (msg.role === "assistant" && msg.content.includes("<artifact")) {
-            const historyParser = new ArtifactStreamParser();
-            const evs = historyParser.push(msg.content);
-            for (const ev of evs) {
-              if (ev.kind === "artifact-open") historyArtifacts.push(ev.artifact);
-              else if (ev.kind === "artifact-chunk") {
-                const target = historyArtifacts.find((a) => a.id === ev.id);
-                if (target) target.content += ev.text;
-              }
-            }
-            const flushEvs = historyParser.flush();
-            for (const ev of flushEvs) {
-              if (ev.kind === "artifact-chunk") {
-                const target = historyArtifacts.find((a) => a.id === ev.id);
-                if (target) target.content += ev.text;
-              }
-            }
-          }
-        }
-        if (historyArtifacts.length > 0) {
-          setCanvas({
-            artifacts: historyArtifacts,
-            streamingId: null,
-            open: true,
-          });
-        }
-      }
+      const historyArtifacts = fetchedMsgs.flatMap(messageArtifacts);
+      setCanvas((previous) => ({
+        artifacts: historyArtifacts, streamingId: null,
+        open: historyArtifacts.length > 0 && (previous.open || previous.artifacts.length === 0),
+      }));
     } catch {
       // jaringan offline — tampilkan kosong
     } finally {
-      setLoading(false);
+      if (scopeRef.current.current(id, token) && request === historyRequestRef.current) setLoading(false);
     }
   }, []);
 
   // Muat riwayat saat sesi aktif berubah (lewati saat sedang mengirim,
   // supaya placeholder streaming tidak tertimpa data setengah jalan).
   useEffect(() => {
-    if (sessionId && !sendingRef.current) {
-      loadMessages(sessionId);
-      setStreaming(newStreaming());
-    }
+    if (scopeRef.current.sessionId === sessionId && sendingRef.current) return;
+    scopeRef.current.enter(sessionId);
+    abortRef.current();
+    sendingRef.current = false;
+    parserRef.current = null;
+    clearStreamBuffer();
+    setSending(false);
+    setMessages([]);
+    setCanvas({ artifacts: [], streamingId: null, open: false });
+    setStreaming(newStreaming());
+    setClarification(null);
+    pendingInputRef.current = null;
+    pendingSessionRef.current = null;
+    if (sessionId) void loadMessages(sessionId);
+    else setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  useEffect(() => () => {
+    scopeRef.current.enter(null);
+    abortRef.current();
+    clearStreamBuffer();
+  }, [clearStreamBuffer]);
 
   useEffect(() => {
     refreshSessions();
@@ -426,6 +443,7 @@ export function useAssistantChat(options: {
       const videoUrl =
         input.videoUrl ?? findYoutubeLink(input.question)?.url ?? null;
 
+      const token = scopeRef.current.enter(targetSessionId);
       lastSendRef.current = input;
       stoppedRef.current = false;
       setSending(true);
@@ -433,6 +451,7 @@ export function useAssistantChat(options: {
       clearStreamBuffer();
       setStreaming(newStreaming());
       setClarification(null);
+      parserRef.current = new ArtifactStreamParser();
 
       // Optimis: tampilkan pesan user + placeholder asisten
       const nowIso = new Date().toISOString();
@@ -478,6 +497,7 @@ export function useAssistantChat(options: {
           model: input.model,
         },
         (ev) => {
+          if (!scopeRef.current.current(targetSessionId, token)) return;
           if (ev.type === "token") {
             // Artifact parser: pisahkan tag <artifact> dari teks chat.
             applyParserEvents(parserRef.current?.push(ev.text) ?? []);
@@ -524,13 +544,14 @@ export function useAssistantChat(options: {
           }
         }
       );
+      if (!scopeRef.current.current(targetSessionId, token)) { abort(); return; }
       abortRef.current = abort;
 
       try {
         await completed;
       } catch {
         // Pembatalan oleh user (Stop) bukan error.
-        if (!stoppedRef.current) {
+        if (scopeRef.current.current(targetSessionId, token) && !stoppedRef.current) {
           setStreaming((s) => ({
             ...s,
             error: "Koneksi terputus. Coba lagi ya.",
@@ -540,6 +561,7 @@ export function useAssistantChat(options: {
 
       // Pastikan sisa buffer ikut tampil sebelum riwayat final dimuat.
       // Flush parser: tag artifact menggantung dilepas aman (PRD §7.3).
+      if (!scopeRef.current.current(targetSessionId, token)) return;
       applyParserEvents(parserRef.current?.flush() ?? []);
       parserRef.current = null;
       flushStreamBuffer();
@@ -569,6 +591,7 @@ export function useAssistantChat(options: {
       const userId = getUserId();
       if (!userId) return;
 
+      const token = scopeRef.current.enter(targetSessionId);
       lastSendRef.current = input;
       stoppedRef.current = false;
       setSending(true);
@@ -626,6 +649,7 @@ export function useAssistantChat(options: {
           solveThenGuide: input.solveThenGuide === true,
         },
         (ev) => {
+          if (!scopeRef.current.current(targetSessionId, token)) return;
           if (ev.type === "token") {
             applyParserEvents(parserRef.current?.push(ev.text ?? "") ?? []);
           } else if (ev.type === "thinking") {
@@ -664,12 +688,13 @@ export function useAssistantChat(options: {
           // done → buffer di-flush setelah await completed.
         }
       );
+      if (!scopeRef.current.current(targetSessionId, token)) { abort(); return; }
       abortRef.current = abort;
 
       try {
         await completed;
       } catch {
-        if (!stoppedRef.current) {
+        if (scopeRef.current.current(targetSessionId, token) && !stoppedRef.current) {
           setStreaming((s) => ({
             ...s,
             error: "Koneksi terputus. Coba lagi ya.",
@@ -677,6 +702,7 @@ export function useAssistantChat(options: {
         }
       }
 
+      if (!scopeRef.current.current(targetSessionId, token)) return;
       applyParserEvents(parserRef.current?.flush() ?? []);
       parserRef.current = null;
       flushStreamBuffer();
@@ -698,7 +724,6 @@ export function useAssistantChat(options: {
     initialSentRef.current = true;
     initialSendRef.current = null;
     void sendTo(sessionId, pending);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, loading, sendTo]);
 
   const handleSend = useCallback(
@@ -741,15 +766,19 @@ export function useAssistantChat(options: {
 
   const handleStop = useCallback(() => {
     stoppedRef.current = true;
+    applyParserEvents(parserRef.current?.flush() ?? []);
+    parserRef.current = null;
+    scopeRef.current.enter(scopeRef.current.sessionId);
     abortRef.current();
+    setCanvas((state) => ({ ...state, streamingId: null }));
     clearStreamBuffer();
     setSending(false);
     sendingRef.current = false;
     setStreaming(newStreaming());
-  }, [clearStreamBuffer]);
+  }, [clearStreamBuffer, applyParserEvents]);
 
   const handleRetry = useCallback(() => {
-    if (lastSendRef.current && sessionId) {
+    if (!sendingRef.current && lastSendRef.current && sessionId) {
       sendTo(sessionId, lastSendRef.current);
     }
   }, [sessionId, sendTo]);

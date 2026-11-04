@@ -12,6 +12,7 @@ import {
   Flag,
   Flame,
   FileText,
+  GraduationCap,
   HelpCircle,
   LayoutDashboard,
   LogOut,
@@ -49,6 +50,7 @@ const menuItems: MenuItem[] = [
   // dapat diakses lewat URL/link internal (Home, Rencana, Ujian, Leaderboard).
   { id: "dashboard", label: "Belajar", icon: LayoutDashboard, href: "/dashboard" },
   { id: "catatan", label: "Catatan", icon: FileText, href: "/dashboard/catatan" },
+  { id: "kursus", label: "Kursus", icon: GraduationCap, href: "/dashboard/kursus" },
   { id: "leaderboard", label: "Papan skor", icon: Trophy, href: "/dashboard/leaderboard" },
   { id: "jadwal", label: "Jadwal", icon: CalendarDays, href: "/dashboard/jadwal" },
   { id: "tugas", label: "Tugas & Ujian", icon: AlarmClock, href: "/dashboard/tugas" },
@@ -172,7 +174,7 @@ export const Sidebar = () => {
     return (
       <>
         <nav className="eureka-sidebar-nav" aria-label="Navigasi utama">
-          {["dashboard", "catatan", "mata-pelajaran", "leaderboard", "misi", "jadwal", "profil"].map((id) => {
+          {["dashboard", "catatan", "kursus", "mata-pelajaran", "leaderboard", "misi", "jadwal", "profil"].map((id) => {
             const item = menuItems.find((entry) => entry.id === id)!;
             return <SidebarItem key={item.id} icon={item.icon} art={item.id} label={item.label} href={item.href} active={activeMenuId(pathname) === item.id} onClick={onNavigate} collapsed={compact} />;
           })}
@@ -181,7 +183,7 @@ export const Sidebar = () => {
           </button>
         </nav>
         {showMore && <div className="eureka-sidebar-extra">
-          {menuItems.filter((item) => !["dashboard", "catatan", "mata-pelajaran", "leaderboard", "misi", "jadwal", "profil"].includes(item.id)).map((item) => (
+          {menuItems.filter((item) => !["dashboard", "catatan", "kursus", "mata-pelajaran", "leaderboard", "misi", "jadwal", "profil"].includes(item.id)).map((item) => (
             <SidebarItem key={item.id} icon={item.icon} label={item.label} href={item.href} active={activeMenuId(pathname) === item.id} onClick={onNavigate} collapsed={compact} />
           ))}
         <div className="eureka-sidebar-actions">

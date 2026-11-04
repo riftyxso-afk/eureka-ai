@@ -1,0 +1,41 @@
+.loading-momo-stage {
+  position: relative;
+  display: block;
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+}
+
+.loading-momo-stage :is(.momo-companion, .momo-canvas-mount, canvas) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.loading-momo-stage .momo-canvas-mount { position: absolute; inset: 0; }
+
+.momo-loading-track {
+  display: block;
+  flex: 1;
+  width: 100%;
+  height: 8px;
+  appearance: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: #e9dff8;
+}
+
+.momo-loading-track::-webkit-progress-bar { background: #e9dff8; border-radius: 999px; }
+.momo-loading-track::-webkit-progress-value { background: #7540d0; border-radius: 999px; }
+.momo-loading-track::-moz-progress-bar { background: #7540d0; border-radius: 999px; }
+.momo-loading-track:indeterminate {
+  background: #e9dff8 linear-gradient(#7540d0, #7540d0) 0 center / 32% 100% no-repeat;
+  animation: momo-loading-travel 1.5s ease-in-out infinite alternate;
+}
+.momo-loading-track:indeterminate::-webkit-progress-bar { background: transparent; }
+.momo-loading-track:indeterminate::-moz-progress-bar { background: transparent; }
+@keyframes momo-loading-travel { to { background-position: 100% center; } }
+@media (prefers-reduced-motion: reduce) {
+  .momo-loading-track:indeterminate { animation: none; }
+}

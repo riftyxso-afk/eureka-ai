@@ -1,431 +1,201 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import { motion } from "framer-motion";
-import {
-  CheckCircle2,
-  Loader2,
-  Plus,
-  Sparkles,
-  Target,
-  Trash2,
-  Trophy,
-} from "lucide-react";
-import CardClay from "@/components/ui/CardClay";
-import ButtonClay from "@/components/ui/ButtonClay";
-import InputClay from "@/components/ui/InputClay";
-import CelebrationOverlay, {
-  type CelebrationVariant,
-} from "@/components/CelebrationOverlay";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Check, Flag, Plus, Trophy, Zap } from "lucide-react";
+import MomoCompanion from "@/components/asisten/MomoCompanion";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
-import { emojiToIcon } from "@/lib/emojiIcon";
+import { PENDING_PROMPT_KEY } from "@/lib/assistant/pendingPrompt";
 import {
-  MISSION_TEMPLATES,
-  addMission,
-  deleteMission,
-  getMissions,
-  missionProgress,
-  missionTypeLabel,
-  updateMission,
-  type Mission,
-  type MissionType,
+  MISSION_TEMPLATES, addMission, completedMissionSteps, deleteMission, finishMission,
+  getMissions, missionProgress, missionXp, toggleMissionCheckpoint, updateMission,
+  type Mission, type MissionType,
 } from "@/lib/mission-store";
+import "./missions.css";
 
 export default function MisiPage() {
+  const router = useRouter();
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [showNew, setShowNew] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const [loadingGuide, setLoadingGuide] = useState<string | null>(null);
-  // Perayaan pencapaian misi (milestone).
-  const [celebration, setCelebration] = useState<CelebrationVariant | null>(
-    null
-  );
-  const [celebrationGrand, setCelebrationGrand] = useState(false);
-
-  // Form misi baru
-  const [template, setTemplate] = useState<MissionType>("ipk");
-  const [currentValue, setCurrentValue] = useState("");
-  const [targetValue, setTargetValue] = useState("");
-  const [deadline, setDeadline] = useState("");
-
-  const reload = () => setMissions(getMissions());
+  const [selectedId, setSelectedId] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [type, setType] = useState<MissionType>("umum");
+  const [busy, setBusy] = useState<"plan" | "chat" | null>(null);
+  const [status, setStatus] = useState("");
+  const [deleteId, setDeleteId] = useState("");
+  const pending = useRef(false);
+  const refresh = () => setMissions(getMissions());
   useEffect(() => {
-    reload();
+    setMissions(getMissions());
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
   }, []);
 
-  const notify = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2400);
-  };
+  const selected = missions.find(m => m.id === selectedId) ?? missions.find(m => m.status === "active") ?? missions[0];
+  const template = MISSION_TEMPLATES.find(item => item.type === type)!;
+  const completed = selected ? completedMissionSteps(selected) : [];
+  const next = selected?.steps?.find(step => !completed.includes(step));
+  const xp = missions.reduce((sum, mission) => sum + missionXp(mission), 0);
+  const wins = missions.filter(m => m.status === "done").length;
 
-  const tpl = MISSION_TEMPLATES.find((t) => t.type === template)!;
-
-  const createMission = () => {
-    const cur = Number(currentValue.replace(",", "."));
-    const tgt = Number(targetValue.replace(",", "."));
-    if (!Number.isFinite(tgt) || tgt <= 0) {
-      notify("Isi nilai target dengan benar");
-      return;
-    }
+  function create(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const title = String(data.get("title") ?? "").trim() || template.title;
+    const target = String(data.get("target") ?? "").trim();
     const mission = addMission({
-      type: template,
-      title: tpl.title,
-      currentValue: Number.isFinite(cur) ? cur : undefined,
-      targetValue: tgt,
-      unit: tpl.unit,
-      deadline: deadline || undefined,
+      type, title, unit: template.unit,
+      targetValue: target ? Number(target) : undefined,
+      deadline: String(data.get("deadline") || "") || undefined,
+      planSource: "starter",
+      steps: [
+        "Petakan materi dan pilih satu bagian yang paling sulit.",
+        "Luangkan 15 menit untuk berlatih. Catat dua kesalahan atau pertanyaan.",
+        "Ulangi latihan tanpa melihat catatan dan tulis hasilnya.",
+      ],
     });
-    setShowNew(false);
-    setCurrentValue("");
-    setTargetValue("");
-    setDeadline("");
-    reload();
-    notify("Misi dibuat!");
-    void requestGuide(mission.id);
-  };
+    setSelectedId(mission.id);
+    setCreating(false);
+    setStatus("Misi dibuat. Mulai checkpoint pertama atau minta rencana dari Momo.");
+    refresh();
+  }
 
-  const requestGuide = async (id: string) => {
-    const m = getMissions().find((x) => x.id === id);
-    if (!m) return;
-    setLoadingGuide(id);
+  async function plan(mission: Mission, blocker: string) {
+    if (pending.current) return;
+    pending.current = true;
+    setBusy("plan");
+    setStatus("");
     try {
-      const res = await apiFetch("/api/missions/guide", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await apiFetch("/api/missions/guide", {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: m.type,
-          title: m.title,
-          currentValue: m.currentValue,
-          targetValue: m.targetValue,
-          unit: m.unit,
-          deadline: m.deadline,
-          education: m.type === "ipk" ? "Mahasiswa" : m.type === "snbp" || m.type === "snbt" ? "SMA Kelas 12" : "",
-          userId: getUserId(),
+          type: mission.type,
+          title: mission.title,
+          currentValue: mission.currentValue,
+          targetValue: mission.targetValue,
+          unit: mission.unit,
+          deadline: mission.deadline,
+          completedSteps: completedMissionSteps(mission),
+          blocker,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Gagal");
-      updateMission(id, { guide: data.guide, steps: data.steps });
-      reload();
-    } catch (e) {
-      notify(e instanceof Error ? e.message : "AI sibuk — coba lagi nanti");
+      const result = await response.json();
+      if (!response.ok || result.source !== "ai" || !Array.isArray(result.steps)) {
+        throw new Error("Momo belum bisa menyusun rencana. Checkpoint lama masih bisa dikerjakan.");
+      }
+      const latest = getMissions().find(item => item.id === mission.id);
+      if (!latest || latest.status !== "active") return;
+      const kept = completedMissionSteps(latest);
+      const remaining = [...new Set<string>(result.steps.filter((step: unknown): step is string => typeof step === "string" && !!step.trim()))].filter(step => !kept.includes(step));
+      if (!remaining.length) throw new Error("Momo belum menemukan checkpoint baru. Coba jelaskan kendalamu.");
+      updateMission(mission.id, { steps: [...kept, ...remaining], guide: result.guide, planSource: "ai" });
+      refresh();
+      setStatus("Rencana diperbarui. Checkpoint yang sudah selesai tetap tercatat.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Rencana belum bisa dimuat.");
     } finally {
-      setLoadingGuide(null);
+      pending.current = false;
+      setBusy(null);
     }
-  };
+  }
 
-  const completeMission = (id: string) => {
-    // Intensitas perayaan sadar-konteks: target sudah terpenuhi penuh
-    // → perayaan lebih meriah dibanding ditandai selesai manual.
-    const m = missions.find((x) => x.id === id);
-    const prog = m ? Math.round(missionProgress(m)) : 0;
-    updateMission(id, { status: "done" });
-    reload();
-    notify("Misi selesai — hebat!");
-    setCelebrationGrand(prog >= 100);
-    setCelebration("milestone");
-  };
-
-  const active = missions.filter((m) => m.status === "active");
-  const done = missions.filter((m) => m.status === "done");
+  async function practice(mission: Mission, step: string) {
+    if (pending.current) return;
+    pending.current = true;
+    setBusy("chat");
+    setStatus("");
+    try {
+      const response = await apiFetch("/api/assistant/sessions", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: getUserId() }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.session?.id) throw new Error();
+      sessionStorage.setItem(PENDING_PROMPT_KEY, JSON.stringify({
+        prompt: `Dampingi saya mengerjakan misi belajar "${mission.title}". Checkpoint: "${step}". Beri satu aktivitas singkat yang bisa saya kerjakan sekarang, tunggu jawaban saya, lalu beri umpan balik. Jangan langsung memberi solusi.`,
+      }));
+      router.push(`/chat/${encodeURIComponent(data.session.id)}`);
+    } catch {
+      setStatus("Chat latihan belum bisa dibuka. Coba lagi.");
+    } finally {
+      pending.current = false;
+      setBusy(null);
+    }
+  }
 
   return (
-    <div className="eureka-dashboard-page eureka-page-misi mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-      <div className="eureka-page-heading">
-        <h1 className="text-2xl font-extrabold sm:text-3xl">Misi Belajar</h1>
-        <p className="mt-2 text-base font-semibold text-clay-muted">
-          Tetapkan target besar — AI membimbingmu langkah demi langkah
-        </p>
+    <main className="mission-board">
+      <header className="mission-banner">
+        <div><span className="mission-eyebrow"><Flag size={15} /> MARKAS BELAJAR</span><h1>Misi Belajar</h1><p>Pilih target, tuntaskan checkpoint, dan naik level.</p></div>
+        <button type="button" className="mission-button mission-new" aria-expanded={creating} onClick={() => setCreating(value => !value)}><Plus size={17} /> Misi baru</button>
+      </header>
+      <div className="mission-stats">
+        <div><Zap size={19} /><strong>{xp} XP</strong><span>XP misi di perangkat ini</span></div>
+        <div><Flag size={19} /><strong>Level {1 + Math.floor(xp / 100)}</strong><span>{100 - xp % 100} XP ke level berikutnya</span></div>
+        <div><Trophy size={19} /><strong>{wins} selesai</strong><span>Dari {missions.length} misi</span></div>
       </div>
-
-      <div className="mt-5 flex justify-end">
-        <ButtonClay
-          onClick={() => setShowNew((v) => !v)}
-          className="min-h-[44px] px-4 py-2 text-sm"
-        >
-          <Plus size={16} className="mr-2" />
-          Misi Baru
-        </ButtonClay>
-      </div>
-
-      {showNew && (
-        <CardClay className="mt-4 !p-4 sm:!p-6">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {MISSION_TEMPLATES.map((t) => {
-              const activeTpl = template === t.type;
-              const Icon = emojiToIcon(t.icon);
-              return (
-                <button
-                  key={t.type}
-                  onClick={() => setTemplate(t.type)}
-                  className={`rounded-clay-md border-3 p-3 text-left transition-all duration-75 min-h-[72px] ${
-                    activeTpl
-                      ? "border-clay-primary bg-clay-primary/5 shadow-clay-sm"
-                      : "border-clay-shadow/40 bg-clay-cream hover:-translate-y-0.5"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
-                      <Icon size={16} />
-                    </span>
-                    <span className="text-sm font-extrabold text-clay-dark">
-                      {t.title}
-                    </span>
-                  </span>
-                  <span className="mt-1 block text-xs font-semibold text-clay-muted">
-                    {t.desc}
-                  </span>
-                  <span className="mt-1.5 inline-block rounded-clay-full bg-clay-beige px-2 py-0.5 text-[10px] font-extrabold text-clay-muted">
-                    {t.forLabel}
-                  </span>
-                </button>
-              );
-            })}
+      {creating && (
+        <form className="mission-panel mission-form" onSubmit={create}>
+          <h2>Siapkan misi</h2>
+          <div className="mission-fields">
+            <label>Jenis misi<select value={type} onChange={event => setType(event.target.value as MissionType)}>{MISSION_TEMPLATES.map(item => <option key={item.type} value={item.type}>{item.title}</option>)}</select></label>
+            <label>Nama misi<input name="title" maxLength={120} placeholder={template.title} /></label>
+            <label>Target {template.unit} (opsional)<input name="target" type="number" min="0.01" max={type === "ipk" ? 4 : undefined} step="any" placeholder={String(template.defaultTarget)} /></label>
+            <label>Tenggat (opsional)<input name="deadline" type="date" /></label>
           </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                NILAI SEKARANG ({tpl.unit})
-              </label>
-              <InputClay
-                placeholder={tpl.type === "ipk" ? "2.0" : "500"}
-                inputMode="decimal"
-                value={currentValue}
-                onChange={(e) => setCurrentValue(e.target.value)}
-              />
+          <button className="mission-button mission-primary" type="submit">Buat misi <ArrowRight size={16} /></button>
+        </form>
+      )}
+      {status && <p className="mission-notice" role="status">{status}</p>}
+      {selected ? (
+        <div className="mission-layout">
+          <aside className="mission-panel mission-list" aria-label="Daftar misi">
+            <h2>Koleksi misi</h2>
+            {missions.map(mission => <button type="button" key={mission.id} aria-pressed={mission.id === selected.id} onClick={() => { setSelectedId(mission.id); setDeleteId(""); setStatus(""); }}><span>{mission.title}</span><small>{mission.status === "done" ? "Selesai" : `${missionProgress(mission)}%`}</small></button>)}
+          </aside>
+          <section className="mission-panel mission-track">
+            <div className="mission-track-heading">
+              <div><span className="mission-eyebrow">{selected.status === "done" ? "MISI SELESAI" : "JALUR MISI"}</span><h2>{selected.title}</h2></div>
+              <span className="mission-reward">+{missionXp(selected)} XP</span>
             </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                TARGET ({tpl.unit})
-              </label>
-              <InputClay
-                placeholder={String(tpl.defaultTarget)}
-                inputMode="decimal"
-                value={targetValue}
-                onChange={(e) => setTargetValue(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-extrabold text-clay-dark">
-                TENGGAT (opsional)
-              </label>
-              <input
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="w-full rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-3 py-3 text-sm font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[44px]"
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 flex gap-3">
-            <ButtonClay
-              variant="secondary"
-              onClick={() => setShowNew(false)}
-              className="flex-1"
-            >
-              Batal
-            </ButtonClay>
-            <ButtonClay onClick={createMission} className="flex-1">
-              <Target size={16} className="mr-2" />
-              Buat Misi
-            </ButtonClay>
-          </div>
-        </CardClay>
-      )}
-
-      {active.length === 0 && done.length === 0 && !showNew && (
-        <div className="study-empty mt-4">
-          <Image src="/landing/ei6Qn.png" alt="" width={180} height={180} />
-          <h3 className="mt-4 text-lg font-extrabold">Mulai misi pertamamu</h3>
-          <p className="mt-1.5 max-w-sm text-sm font-semibold text-clay-muted">
-            Contoh: mahasiswa kejar IPK dari 2 ke 3.5, atau siswa SMA kelas 12
-            mengejar lulus SNBP/SNBT.
-          </p>
-          <ButtonClay
-            onClick={() => setShowNew(true)}
-            className="mt-5 min-h-[44px] px-5 py-2 text-sm"
-          >
-            <Target size={16} className="mr-2" /> Buat Misi Pertama
-          </ButtonClay>
+            {selected.deadline && <p className="mission-meta">Tenggat {selected.deadline}</p>}
+            <div className="mission-progress-label"><span>Progres misi</span><strong>{missionProgress(selected)}%</strong></div>
+            <progress aria-label="Progres misi" max={100} value={missionProgress(selected)} />
+            <ol className="mission-checkpoints">
+              {[...new Set(selected.steps)].map((step, index) => {
+                const checked = completed.includes(step);
+                return <li key={`${index}-${step}`} data-next={next === step || undefined}>
+                  <label><input type="checkbox" checked={checked} disabled={selected.status === "done"} onChange={() => { toggleMissionCheckpoint(selected.id, step); refresh(); }} /><span className="mission-node" aria-hidden="true">{checked ? <Check size={16} /> : index + 1}</span><span className="mission-step-copy">{next === step && <small>CHECKPOINT BERIKUTNYA</small>}{step}</span><small className="mission-step-xp">+10 XP</small></label>
+                </li>;
+              })}
+            </ol>
+            {!selected.steps?.length && selected.status === "active" && <p className="mission-meta">Minta Momo menyusun checkpoint pertama untuk misi ini.</p>}
+            {selected.status === "active" && <>
+              {selected.targetValue != null && <form className="mission-score" key={selected.id} onSubmit={event => {
+                event.preventDefault();
+                const value = Number(new FormData(event.currentTarget).get("score"));
+                updateMission(selected.id, { currentValue: value }); refresh();
+              }}><label>Nilai tercatat · target {selected.targetValue} {selected.unit}<input name="score" required type="number" min="0" max={selected.type === "ipk" ? 4 : undefined} step="any" defaultValue={selected.currentValue} /></label><button type="submit" className="mission-button">Simpan nilai</button></form>}
+              <button className="mission-button mission-primary" disabled={missionProgress(selected) < 100 || (selected.targetValue != null && (selected.currentValue ?? -1) < selected.targetValue)} onClick={() => {
+                if (finishMission(selected.id)) { refresh(); setStatus("Misi selesai! Kamu mendapat bonus 30 XP."); }
+              }}><Trophy size={16} /> Selesaikan misi · +30 XP</button>
+            </>}
+            <div className="mission-manage">{deleteId === selected.id ? <><span>Hapus misi beserta progres dan XP-nya?</span><button type="button" onClick={() => { deleteMission(selected.id); refresh(); setDeleteId(""); }}>Ya, hapus</button><button type="button" onClick={() => setDeleteId("")}>Batal</button></> : <button type="button" onClick={() => setDeleteId(selected.id)}>Hapus misi</button>}</div>
+          </section>
+          {selected.status === "active" && <aside className="mission-panel mission-coach" aria-label="Mentor Momo">
+            <div className="mission-coach-heading"><div><span className="mission-eyebrow">MENTOR BELAJAR</span><h2>Momo</h2></div><MomoCompanion className="mission-momo" mode="deep" thinking={busy !== null} /></div>
+            <p>{selected.guide || "Momo bisa mengubah targetmu jadi tugas kecil dan menyesuaikan rencana saat kamu buntu."}</p>
+            <form key={selected.id} onSubmit={event => {
+              event.preventDefault();
+              void plan(selected, String(new FormData(event.currentTarget).get("blocker") ?? ""));
+            }}>
+              <label>Bagian yang terasa sulit <span>(opsional)</span><textarea name="blocker" maxLength={300} rows={2} placeholder="Misalnya, saya hanya punya 15 menit sehari." /></label>
+              <button className="mission-button mission-primary" disabled={busy !== null}>{busy === "plan" ? "Momo menyusun rencana…" : selected.planSource === "ai" ? "Sesuaikan rencana" : "Susun rencana AI"}</button>
+            </form>
+            {next && <button className="mission-button" disabled={busy !== null} onClick={() => void practice(selected, next)}>{busy === "chat" ? "Membuka chat…" : "Latihan bareng Momo"} <ArrowRight size={16} /></button>}
+          </aside>}
         </div>
-      )}
-
-      <div className="mt-4 space-y-4">
-        {active.map((m) => {
-          const progress = missionProgress(m);
-          const Icon = emojiToIcon(
-            MISSION_TEMPLATES.find((t) => t.type === m.type)?.icon
-          );
-          return (
-            <CardClay key={m.id} className="!p-4 sm:!p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
-                    <Icon size={18} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-base font-extrabold text-clay-dark">
-                      {missionTypeLabel(m.type)}
-                    </p>
-                    <p className="mt-0.5 text-xs font-bold text-clay-muted">
-                      {m.currentValue != null ? `${m.currentValue} → ` : ""}
-                      Target {m.targetValue} {m.unit}
-                      {m.deadline ? (
-                        <>
-                          {" "}
-                          ·{" "}
-                          {new Date(`${m.deadline}T00:00:00`).toLocaleDateString(
-                            "id-ID",
-                            { day: "numeric", month: "short", year: "numeric" }
-                          )}
-                        </>
-                      ) : (
-                        ""
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-extrabold text-clay-primary">
-                    {progress}%
-                  </span>
-                  <button
-                    onClick={() => {
-                      deleteMission(m.id);
-                      reload();
-                      notify("Misi dihapus");
-                    }}
-                    aria-label="Hapus misi"
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-clay-muted transition-colors hover:bg-red-100 hover:text-red-500"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-clay-inputBg shadow-clay-inset">
-                <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-clay-primary to-clay-accent"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, progress)}%` }}
-                  transition={{ type: "spring", stiffness: 90, damping: 20 }}
-                />
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  onClick={() => void requestGuide(m.id)}
-                  disabled={loadingGuide === m.id}
-                  className="btn-clay-ghost !min-h-[40px] !px-3 text-xs"
-                >
-                  {loadingGuide === m.id ? (
-                    <Loader2 size={14} className="mr-1 animate-spin" />
-                  ) : (
-                    <Sparkles size={14} className="mr-1 text-clay-primary" />
-                  )}
-                  <span className="font-extrabold">
-                    {loadingGuide === m.id
-                      ? "AI menyusun... "
-                      : m.guide
-                        ? "Bimbingan AI (perbarui)"
-                        : "Minta Bimbingan AI"}
-                  </span>
-                </button>
-                <button
-                  onClick={() => completeMission(m.id)}
-                  className="btn-clay-primary !min-h-[40px] !px-3 text-xs"
-                >
-                  <CheckCircle2 size={14} className="mr-1" />
-                  <span className="font-extrabold">Tandai Selesai</span>
-                </button>
-              </div>
-
-              {m.guide && (
-                <div className="mt-4 rounded-clay-md border-2 border-clay-shadow/30 bg-clay-beige/60 p-4">
-                  <p className="text-sm font-semibold leading-relaxed text-clay-dark">
-                    {m.guide}
-                  </p>
-                  {m.steps && m.steps.length > 0 && (
-                    <ol className="mt-3 space-y-2">
-                      {m.steps.map((s, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-2 text-sm font-semibold text-clay-dark"
-                        >
-                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-clay-primary text-[10px] font-extrabold text-white">
-                            {i + 1}
-                          </span>
-                          <span className="leading-relaxed">{s}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  )}
-                </div>
-              )}
-            </CardClay>
-          );
-        })}
-      </div>
-
-      {done.length > 0 && (
-        <div className="mt-8">
-          <h2 className="flex items-center gap-2 text-lg font-extrabold sm:text-xl">
-            Misi Selesai <Trophy size={20} className="text-clay-primary" />
-          </h2>
-          <div className="mt-3 space-y-2">
-            {done.map((m) => {
-              const Icon = emojiToIcon(
-                MISSION_TEMPLATES.find((t) => t.type === m.type)?.icon
-              );
-              return (
-              <div
-                key={m.id}
-                className="card-clay flex items-center gap-3 !p-4 opacity-70"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
-                  <Icon size={17} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-extrabold text-clay-dark">
-                    {missionTypeLabel(m.type)}
-                  </p>
-                  <p className="text-xs font-bold text-clay-muted">
-                    Target {m.targetValue} {m.unit} — selesai
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    deleteMission(m.id);
-                    reload();
-                  }}
-                  aria-label="Hapus misi"
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-clay-muted hover:bg-red-100 hover:text-red-500"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Perayaan pencapaian misi */}
-      <CelebrationOverlay
-        variant={celebration}
-        grand={celebrationGrand}
-        onDone={() => setCelebration(null)}
-      />
-
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn">
-          {toast}
-        </div>
-      )}
-    </div>
+      ) : !creating && <section className="mission-panel mission-empty"><Flag size={28} /><h2>Belum ada misi</h2><p>Mulai dari satu target belajar. Kamu bisa langsung mengerjakan checkpoint pertamamu.</p><button className="mission-button mission-primary" onClick={() => setCreating(true)}>Buat misi pertama <ArrowRight size={16} /></button></section>}
+    </main>
   );
 }

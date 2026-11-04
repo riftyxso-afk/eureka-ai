@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
       embedding,
       Number(body?.topK) || 3,
       body?.noteId ? String(body.noteId) : undefined,
-      userId || undefined
+      userId || undefined,
+      query
     );
 
     return NextResponse.json({ results });

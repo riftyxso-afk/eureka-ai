@@ -67,6 +67,17 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/schedule/export", scheduleExport);
   count++;
 
+  // ─── Kursus (katalog, progres, latihan & tutor) ───────
+  const courses = await import("@/app/api/courses/route");
+  const courseDetail = await import("@/app/api/courses/[courseId]/route");
+  const courseLesson = await import("@/app/api/courses/[courseId]/lessons/[lessonId]/route");
+  const courseTutor = await import("@/app/api/courses/[courseId]/lessons/[lessonId]/tutor/route");
+  mount(app, "/api/courses", courses);
+  mount(app, "/api/courses/:courseId", courseDetail);
+  mount(app, "/api/courses/:courseId/lessons/:lessonId", courseLesson);
+  mount(app, "/api/courses/:courseId/lessons/:lessonId/tutor", courseTutor);
+  count += 4;
+
   // ─── Music Hub (music-hub) ─────────────────────────────
   const musicSearch = await import("@/app/api/music/search/route");
   mount(app, "/api/music/search", musicSearch);
@@ -180,6 +191,7 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const assistantFlashcards = await import("@/app/api/assistant/flashcards/route");
   const assistantImage = await import("@/app/api/assistant/image/route");
   const assistantQuiz = await import("@/app/api/assistant/quiz/route");
+  const assistantSuggestions = await import("@/app/api/assistant/suggestions/route");
   const assistantSessions = await import("@/app/api/assistant/sessions/route");
   const assistantSessionsId = await import("@/app/api/assistant/sessions/[sessionId]/route");
   const assistantSessionsShare = await import("@/app/api/assistant/sessions/[sessionId]/share/route");
@@ -187,10 +199,11 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/assistant/flashcards", assistantFlashcards);
   mount(app, "/api/assistant/image", assistantImage);
   mount(app, "/api/assistant/quiz", assistantQuiz);
+  mount(app, "/api/assistant/suggestions", assistantSuggestions);
   mount(app, "/api/assistant/sessions", assistantSessions);
   mount(app, "/api/assistant/sessions/:sessionId", assistantSessionsId);
   mount(app, "/api/assistant/sessions/:sessionId/share", assistantSessionsShare);
-  count += 7;
+  count += 8;
 
   // ─── Eureka Multi Agent (loop tutoring) ─────────────────
   const agentsLoop = await import("@/app/api/agents/loop/route");

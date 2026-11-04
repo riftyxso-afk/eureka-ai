@@ -10,6 +10,8 @@ import { db } from "../supabase/admin";
 import { getProfileMd } from "../profile";
 import { levelInfoForXp } from "../progress-store";
 import { embedTexts } from "../rag/embed";
+import { searchTextChunks } from "../rag/store";
+import { NOTE_EMBEDDING_DIMENSIONS } from "../rag/vector";
 import type { AssistantSource } from "./store";
 
 export interface NoteMeta {
@@ -283,6 +285,23 @@ export async function searchUserNotes(
 
   const [embedding] = await embedTexts([query.trim()], "query");
   if (!embedding || embedding.length === 0) return [];
+  if (embedding.length !== NOTE_EMBEDDING_DIMENSIONS) {
+    const hits: RagHit[] = [];
+    if (noteIds.length === 0) {
+      hits.push(...(await searchTextChunks(query, 6, undefined, userId)).map((hit) => ({
+        noteId: hit.noteId ?? "", noteTitle: hit.noteTitle, noteSubject: hit.noteSubject || null,
+        chapterId: 0, text: hit.text, similarity: hit.score, chunkId: hit.chunkId,
+      })));
+    } else {
+      for (const noteId of noteIds.slice(0, 3)) {
+        hits.push(...(await searchTextChunks(query, 4, noteId, userId)).map((hit) => ({
+          noteId: hit.noteId ?? noteId, noteTitle: hit.noteTitle, noteSubject: hit.noteSubject || null,
+          chapterId: 0, text: hit.text, similarity: hit.score, chunkId: hit.chunkId,
+        })));
+      }
+    }
+    return hits;
+  }
 
   const similar: RagHit[] = [];
   if (noteIds.length === 0) {

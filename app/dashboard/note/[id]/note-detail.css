@@ -1,0 +1,117 @@
+.flex.min-h-screen:has(.note-detail) {
+  background: #fff;
+}
+
+@media (min-width: 1024px) {
+  .flex.min-h-screen:has(.note-detail) {
+    gap: 0;
+    padding: 0 24px 0 0;
+  }
+}
+
+.note-detail {
+  --detail-surface: #fff;
+  --detail-border: #ede8f1;
+  --detail-violet: #7540d0;
+  --detail-hover: #f4edf9;
+  --detail-ink: #352644;
+}
+
+.dark .flex.min-h-screen:has(.note-detail) { background: #18131e; }
+.dark .note-detail {
+  --detail-surface: #282130;
+  --detail-border: #493b55;
+  --detail-hover: #392a49;
+  --detail-ink: #f4ecfa;
+}
+
+.note-detail-header {
+  border-radius: 19px;
+  background: var(--detail-violet);
+  box-shadow: 0 5px 0 #5a29af;
+}
+
+.note-detail-header h1 { color: #fff; }
+.note-detail .card-clay,
+.note-detail main > .rounded-2xl,
+.note-detail aside {
+  background: var(--detail-surface);
+  border: 1px solid var(--detail-border);
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.note-detail :is(.btn-clay-primary, .btn-clay-ghost, summary) {
+  border: 1px solid var(--detail-border);
+  border-radius: 11px;
+  background: var(--detail-surface);
+  color: var(--detail-ink);
+  box-shadow: none;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.note-detail :is(.btn-clay-ghost, summary):hover { background: var(--detail-hover); }
+.note-detail .btn-clay-primary {
+  background: var(--detail-violet);
+  border-color: transparent;
+  color: #fff;
+}
+.note-detail .btn-clay-primary:hover { background: #6332ac; }
+.note-detail :is(.btn-clay-primary, .btn-clay-ghost, summary):active { transform: translateY(1px); }
+.note-detail :is(button, a, summary):focus-visible {
+  outline: 2px solid #ac81ef;
+  outline-offset: 3px;
+}
+
+.note-detail-header > div > :is(a, button, details > summary) {
+  border: 1px solid #ffffff70;
+  background: #ffffff15;
+  color: #fff;
+}
+.note-detail-header > div > :is(a, button, details > summary):hover { background: #ffffff29; }
+.note-detail-header > div > .btn-clay-primary,
+.note-detail-header > div > .btn-clay-primary:hover {
+  background: #fff;
+  color: #5a29af;
+}
+.note-detail-header > div > button svg { color: inherit; }
+.note-detail-header > div > button[aria-pressed="true"] { background: #fff !important; color: #5a29af; }
+.note-detail-header details > div { background: var(--detail-surface); }
+.note-detail-header details .btn-clay-ghost { justify-content: flex-start; }
+.note-detail-header :is(a, button, summary):focus-visible { outline-color: #e4d1ff; }
+
+.note-detail .note-chapter-card {
+  border: 1px solid var(--detail-border);
+  border-radius: 16px;
+  background: var(--detail-surface);
+  color: var(--detail-ink);
+}
+
+.note-detail .note-chapter-heading {
+  border-bottom: 1px solid var(--detail-border);
+}
+
+.note-chapter-heading button[aria-expanded] {
+  border-radius: 10px;
+}
+
+.note-chapter-heading button[aria-expanded]:hover,
+.note-chapter-card > button:hover {
+  background: var(--detail-hover);
+}
+
+.note-chapter-card > button {
+  width: 100%;
+  border-radius: 10px;
+  background: var(--detail-hover);
+  padding: 12px 14px;
+}
+
+.note-chapter-card > button:hover {
+  box-shadow: inset 0 0 0 1px #a477df;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-detail :is(.btn-clay-primary, .btn-clay-ghost, summary) { transition: none; }
+  .note-detail :is(.btn-clay-primary, .btn-clay-ghost, summary):active { transform: none; }
+}

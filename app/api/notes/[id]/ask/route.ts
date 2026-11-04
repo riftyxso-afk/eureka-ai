@@ -123,7 +123,7 @@ export async function POST(
     }
 
     const [embedding] = await embedTexts([question], "query");
-    const results = await searchChunks(embedding, 4, id);
+    const results = await searchChunks(embedding, 4, id, auth.userId, question);
 
     if (results.length === 0) {
       return NextResponse.json(

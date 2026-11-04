@@ -8,8 +8,7 @@
  *
  * Kartu PNG diringkas dari jadwal mingguan (blok per hari) + tugas terdekat.
  */
-import { useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import {
   Download,
@@ -44,7 +43,7 @@ export function ScheduleExportCard({ entries, tasks }: ScheduleExportCardProps) 
 
   return (
     <div
-      className="w-[420px] max-w-full overflow-hidden rounded-clay-md bg-clay-beige"
+      className="quest-export-card w-[420px] max-w-full overflow-hidden rounded-clay-md bg-clay-beige"
       style={{ fontFamily: "system-ui, sans-serif" }}
     >
       {/* Header kartu */}
@@ -144,12 +143,26 @@ export function ScheduleExportModal({
   tasks: TaskItem[];
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const notifyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  useEffect(() => () => {
+    if (notifyTimer.current) clearTimeout(notifyTimer.current);
+  }, []);
   const [busy, setBusy] = useState<"pdf" | "png" | "share" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const notify = (msg: string) => {
+    if (notifyTimer.current) clearTimeout(notifyTimer.current);
     setToast(msg);
-    setTimeout(() => setToast(null), 2600);
+    notifyTimer.current = setTimeout(() => setToast(null), 2600);
   };
 
   const payload = () => ({
@@ -248,26 +261,14 @@ export function ScheduleExportModal({
   };
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-clay-dark/40 p-3 sm:items-center"
-          onClick={onClose}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Ekspor Jadwal"
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 260, damping: 26 }}
-            className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-4 shadow-clay-lg sm:p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
+    <dialog
+      ref={dialogRef}
+      className="quest-export-dialog"
+      aria-label="Ekspor Jadwal"
+      onCancel={onClose}
+      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+          <div className="quest-export-content">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-extrabold text-clay-dark">Ekspor Jadwal</h2>
@@ -296,7 +297,7 @@ export function ScheduleExportModal({
               <button
                 onClick={() => void downloadPdf()}
                 disabled={busy !== null}
-                className="flex min-h-[44px] items-center justify-center gap-2 rounded-clay-md bg-clay-primary px-3 text-sm font-extrabold text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 disabled:opacity-50"
+                className="quest-export-primary flex min-h-[44px] items-center justify-center gap-2 rounded-clay-md bg-clay-primary px-3 text-sm font-extrabold text-white shadow-clay-btn disabled:opacity-50"
               >
                 {busy === "pdf" ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
                 PDF
@@ -325,13 +326,11 @@ export function ScheduleExportModal({
             </p>
 
             {toast && (
-              <div className="mt-3 rounded-clay-full bg-clay-primary px-4 py-2 text-center text-xs font-extrabold text-white">
+              <div role="status" className="mt-3 rounded-clay-full bg-clay-primary px-4 py-2 text-center text-xs font-extrabold text-white">
                 {toast}
               </div>
             )}
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </div>
+    </dialog>
   );
 }
