@@ -13,6 +13,10 @@ import {
 import { detectNoteIntent } from "@/lib/assistant/noteIntent";
 import { detectImageIntent } from "@/lib/assistant/imageIntent";
 import { detectStudyCommand } from "@/lib/assistant/studyContext";
+import NoteActions from "@/components/asisten/NoteActions";
+import TaskActions from "@/components/asisten/TaskActions";
+import { mayManageNote, parseNoteCommand, proposeNoteCommand, type NoteCommand } from "@/lib/assistant/noteCommands";
+import { mayManageTask, parseTaskCommand, proposeTaskCommand, type TaskCommand } from "@/lib/assistant/taskCommands";
 import { NoteProgressOverlay } from "@/components/note/NoteProgressOverlay";
 import { ImageSketchBlock } from "@/components/chat/ImageSketchBlock";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
@@ -48,6 +52,7 @@ import { markdownToPlainText } from "@/lib/assistant/plainText";
 import {
   Check,
   Copy,
+  Ellipsis,
   Crown,
   FileText,
   Hand,
@@ -127,6 +132,10 @@ export default function ChatPage() {
   // Naik tiap permintaan gambar baru — paksa remount blok walau prompt sama.
   const [imageNonce, setImageNonce] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
+  const [noteCommand, setNoteCommand] = useState<NoteCommand | null>(null);
+  const [taskCommand, setTaskCommand] = useState<TaskCommand | null>(null);
+  const [planningAction, setPlanningAction] = useState(false);
+  const planningLock = useRef(false);
   const [copiedAll, setCopiedAll] = useState(false);
   const [quizOpen, setQuizOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
@@ -261,9 +270,9 @@ export default function ChatPage() {
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-clay-cream">
         {/* Header tetap di luar area scroll agar tidak mengubah posisi pesan. */}
-        <header className="shrink-0">
+        <header className="chat-session-header shrink-0">
               <div className="flex items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
-                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-3">
                   <MobileSessionButton
                     sessions={chat.sessions}
                     onSelect={(id) => router.push(`/chat/${id}`)}
@@ -273,7 +282,7 @@ export default function ChatPage() {
                     href="/dashboard"
                     data-tutorial-id="dashboard-nav"
                     aria-label={l.openDashboard}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-clay-md bg-clay-cream text-clay-primary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 lg:hidden"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-clay-primary hover:bg-clay-primary/10 lg:hidden"
                   >
                     <LayoutDashboard size={18} />
                   </Link>
@@ -295,7 +304,7 @@ export default function ChatPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
                   {chat.renderedMessages.length > 0 && (
                     <>
                       {/* Ikon Canvas — ghost minimal dengan badge count kecil
@@ -310,11 +319,11 @@ export default function ChatPage() {
                           title={chat.canvas.open ? "Sembunyikan Canvas" : "Buka Canvas"}
                           aria-label="Toggle Artifact Canvas"
                           data-testid="chat-toggle-canvas"
-                          className="relative flex !min-h-[40px] !w-10 items-center justify-center rounded-clay-full text-clay-muted transition-all duration-75 hover:-translate-y-0.5 hover:bg-clay-beige hover:text-clay-dark disabled:opacity-50"
+                          className="relative flex min-h-11 w-11 items-center justify-center rounded-xl text-clay-primary hover:bg-clay-primary/10 disabled:opacity-50"
                         >
                           <FileText size={16} />
                           <span
-                            className={`absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-extrabold ${
+                            className={`absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-extrabold ${
                               chat.canvas.open
                                 ? "bg-[rgb(var(--accent-coral))] text-white"
                                 : "bg-clay-primary/15 text-clay-primary"
@@ -330,7 +339,7 @@ export default function ChatPage() {
                         title={l.copyAllTitle}
                         aria-label={l.copyAll}
                         data-testid="chat-copy-all"
-                        className="flex !min-h-[40px] !w-10 items-center justify-center rounded-clay-full text-clay-muted transition-all duration-75 hover:-translate-y-0.5 hover:bg-clay-beige hover:text-clay-dark disabled:opacity-50"
+                        className="hidden min-h-11 w-11 items-center justify-center rounded-xl text-clay-muted hover:bg-clay-beige hover:text-clay-dark disabled:opacity-50 sm:flex"
                       >
                         {copiedAll ? <Check size={16} className="text-clay-success" /> : <Copy size={16} />}
                       </button>
@@ -341,11 +350,33 @@ export default function ChatPage() {
                         title={l.shareTitle}
                         aria-label={l.share}
                         data-testid="chat-share"
-                        className="inline-flex !min-h-[38px] items-center gap-1.5 rounded-clay-full bg-[rgb(var(--accent-coral))] px-3.5 py-2 text-xs font-extrabold text-white shadow-[0_2px_10px_rgb(249_115_98/0.35)] transition-all duration-150 hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:scale-[0.97] disabled:opacity-50"
+                        className="hidden min-h-11 items-center gap-1.5 rounded-xl bg-violet-700 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-violet-800 disabled:opacity-50 sm:inline-flex"
                       >
                         <Share2 size={14} />
-                        <span className="hidden sm:inline">Bagikan</span>
+                        <span>{l.share}</span>
                       </button>
+                      <details className="chat-mobile-actions sm:hidden" onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          event.currentTarget.open = false;
+                          event.currentTarget.querySelector("summary")?.focus();
+                        }
+                      }}>
+                        <summary aria-label="Opsi percakapan"><Ellipsis size={20} aria-hidden="true" /></summary>
+                        <div className="chat-mobile-action-list">
+                          <button type="button" disabled={chat.sending} onClick={(event) => {
+                            const menu = event.currentTarget.closest("details");
+                            if (menu) {
+                              menu.open = false;
+                              menu.querySelector("summary")?.focus();
+                            }
+                            void handleCopyAll();
+                          }}><Copy size={16} aria-hidden="true" /> {l.copyAll}</button>
+                          <button type="button" disabled={chat.sending} onClick={(event) => {
+                            event.currentTarget.closest("details")?.removeAttribute("open");
+                            setShareOpen(true);
+                          }}><Share2 size={16} aria-hidden="true" /> {l.share}</button>
+                        </div>
+                      </details>
                     </>
                   )}
                   <button
@@ -353,7 +384,7 @@ export default function ChatPage() {
                     title={l.newChat}
                     aria-label={l.newChat}
                     data-testid="chat-new-top"
-                    className="flex !min-h-[40px] !w-10 items-center justify-center rounded-clay-full text-clay-muted transition-all duration-75 hover:-translate-y-0.5 hover:bg-clay-beige hover:text-clay-dark"
+                    className="flex min-h-11 w-11 items-center justify-center rounded-xl text-clay-primary hover:bg-clay-primary/10"
                   >
                     <Plus size={16} />
                   </button>
@@ -362,7 +393,7 @@ export default function ChatPage() {
         </header>
 
         {/* Area pesan — scroll di sini */}
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6">
+        <div className="chat-session-messages min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3.5 py-5 sm:px-6 sm:py-6">
           {initialSend && (initialPending || chat.loading || chat.sending) && chat.renderedMessages.length === 0 && !chat.hasError && !chat.clarification ? (
             <div className="mx-auto w-full max-w-3xl space-y-4">
               <MessageBubble message={{ id: "pending-user", sessionId, role: "user", content: initialSend.question, mentions: initialSend.mentions, sources: [], model: null, createdAt: new Date().toISOString() }} />
@@ -486,6 +517,9 @@ export default function ChatPage() {
 
         {/* Composer — minta "buat catatan" → wizard F&Q menyatu, bukan chat */}
         <div className="momo-session-composer">
+        {noteCommand && <div className="mx-auto max-w-[760px]"><NoteActions key={JSON.stringify(noteCommand)} command={noteCommand} onClose={() => setNoteCommand(null)} onChoose={setNoteCommand} /></div>}
+        {taskCommand && <div className="mx-auto max-w-[760px]"><TaskActions key={JSON.stringify(taskCommand)} command={taskCommand} onClose={() => setTaskCommand(null)} onChoose={setTaskCommand} /></div>}
+        {planningAction && <p role="status" className="mx-auto mb-2 max-w-[760px] text-sm text-clay-muted">Momo sedang memahami permintaan Anda…</p>}
         {chat.renderedMessages.length > 0 && (
           <div className="momo-composer-companion">
             <motion.div
@@ -515,7 +549,7 @@ export default function ChatPage() {
           onMomoModeChange={setMomoMode}
           userId={getUserId()}
           sending={chat.sending}
-          disabled={chat.loading || chat.sessionsLoading}
+          disabled={planningAction || chat.loading || chat.sessionsLoading}
           initialMentions={importedNoteId ? [importedNoteId] : []}
           isBeta={isBeta}
           onCall={() => setCallOpen(true)}
@@ -529,7 +563,33 @@ export default function ChatPage() {
             setNotePrompt(wizardPrompt);
             setWizardPrompt(null);
           }}
-          onSend={(input) => {
+          onSend={async (input) => {
+            const noteAction = parseNoteCommand(input.question);
+            if (noteAction) {
+              setTaskCommand(null);
+              setNoteCommand(noteAction);
+              return;
+            }
+            const taskAction = parseTaskCommand(input.question);
+            if (taskAction) { setNoteCommand(null); setTaskCommand(taskAction); return; }
+            if (mayManageNote(input.question)) {
+              if (planningLock.current) return;
+              planningLock.current = true;
+              setPlanningAction(true);
+              const proposal = await proposeNoteCommand(input.question);
+              planningLock.current = false;
+              setPlanningAction(false);
+              if (proposal) { setTaskCommand(null); setNoteCommand(proposal); return; }
+            }
+            if (mayManageTask(input.question)) {
+              if (planningLock.current) return;
+              planningLock.current = true;
+              setPlanningAction(true);
+              const proposal = await proposeTaskCommand(input.question);
+              planningLock.current = false;
+              setPlanningAction(false);
+              if (proposal) { setNoteCommand(null); setTaskCommand(proposal); return; }
+            }
             // Command alat belajar: /kuis & /card → buka popup, TIDAK dikirim
             // sebagai pesan ke AI. Exact-match (deteksi di lib/studyContext).
             const cmd = detectStudyCommand(input.question);

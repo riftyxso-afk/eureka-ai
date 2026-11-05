@@ -10,6 +10,7 @@
  * - Riwayat "Baru diputar" (localStorage) untuk akses cepat.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   Clock,
   Link2,
@@ -225,7 +226,7 @@ export default function MusicPage() {
               if (e.key === "Enter") playSpotify();
             }}
             placeholder="Tempel link track / album / playlist (open.spotify.com/…)"
-            className="flex-1 rounded-clay-full border-2 border-clay-shadow/40 bg-clay-inputBg px-4 py-2.5 text-xs font-bold text-clay-dark outline-none focus:border-clay-primary"
+            className="min-w-0 flex-1 rounded-clay-full border-2 border-clay-shadow/40 bg-clay-inputBg px-4 py-2.5 text-xs font-bold text-clay-dark outline-none focus:border-clay-primary"
             aria-label="Link Spotify"
           />
           <button
@@ -371,9 +372,9 @@ export default function MusicPage() {
       <div className="mt-8 rounded-clay-md bg-clay-primary/5 px-4 py-3 text-xs font-semibold text-clay-muted">
         Tanpa login — putar langsung dari YouTube & Spotify. Riwayat hanya
         tersimpan di perangkatmu. Untuk belajar dengan Eureka,{" "}
-        <a href="/chat" className="font-extrabold text-clay-primary underline underline-offset-2">
+        <Link href="/chat" className="font-extrabold text-clay-primary underline underline-offset-2">
           buka chat asisten
-        </a>
+        </Link>
         .
       </div>
     </div>

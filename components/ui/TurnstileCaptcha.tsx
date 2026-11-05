@@ -64,34 +64,22 @@ export default function TurnstileCaptcha({
 
     const SCRIPT_SRC =
       "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    if (window.turnstile) {
-      render();
-      return;
-    }
-    // Hindari memuat script 2x (mis. StrictMode mount ganda) → warning Turnstile.
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[src="${SCRIPT_SRC}"]`
-    );
-    if (existing) {
-      if (existing.dataset.loaded === "1") {
-        render();
-      } else {
-        existing.addEventListener("load", render, { once: true });
+    let script = document.querySelector<HTMLScriptElement>(`script[src="${SCRIPT_SRC}"]`);
+    if (window.turnstile) render();
+    else {
+      if (!script) {
+        script = document.createElement("script");
+        script.src = SCRIPT_SRC;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
       }
-      return;
+      script.addEventListener("load", render);
     }
-    const s = document.createElement("script");
-    s.src = SCRIPT_SRC;
-    s.async = true;
-    s.defer = true;
-    s.onload = () => {
-      s.dataset.loaded = "1";
-      render();
-    };
-    document.head.appendChild(s);
 
     return () => {
       cancelled = true;
+      script?.removeEventListener("load", render);
       if (widgetId.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetId.current);

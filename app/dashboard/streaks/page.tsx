@@ -70,12 +70,12 @@ export default function StreaksPage() {
           const s = payload.stats;
           setStats((prev) => ({
             ...prev,
-            currentStreak: s.streak,
-            longestStreak: s.longestStreak,
-            totalXP: s.xp,
-            level: s.level,
-            levelTitle: s.levelTitle,
-            recentActivity: s.recentActivity ?? [],
+            currentStreak: typeof s.streak === "number" ? s.streak : prev.currentStreak,
+            longestStreak: typeof s.longestStreak === "number" ? s.longestStreak : prev.longestStreak,
+            totalXP: typeof s.xp === "number" ? s.xp : prev.totalXP,
+            level: typeof s.level === "number" ? s.level : prev.level,
+            levelTitle: typeof s.levelTitle === "string" ? s.levelTitle : prev.levelTitle,
+            recentActivity: Array.isArray(s.recentActivity) ? s.recentActivity : [],
           }));
         }
       }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { GraduationCap, X } from "lucide-react";
-import { startTutorial } from "@/lib/tutorial";
+import { setFirstNoteGuide } from "@/lib/firstNoteGuide";
 
 const DISMISS_KEY = "eureka_empty_notes_cta_dismissed";
 
@@ -13,8 +14,7 @@ interface EmptyNotesCtaProps {
 }
 
 /**
- * Banner "belum punya catatan" di halaman home — menawarkan bantuan lewat
- * tutorial realtime (spotlight) yang langsung menyorot tombol & menu asli.
+ * Offers the guided note flow when the library is empty.
  */
 export default function EmptyNotesCta({ notesCount }: EmptyNotesCtaProps) {
   const [dismissed, setDismissed] = useState<boolean>(() => {
@@ -51,19 +51,19 @@ export default function EmptyNotesCta({ notesCount }: EmptyNotesCtaProps) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-extrabold leading-snug text-clay-dark sm:text-base">
-              Hmm, kamu belum punya catatan nih
+              Mulai dari catatan pertama Anda
             </p>
             <p className="mt-1 text-[13px] font-semibold leading-relaxed text-clay-muted sm:text-sm">
-              Mau aku bantu bikin catatan pertamamu? Aku tunjukkan caranya —
-              langkah demi langkah, langsung di tombol & menunya.
+              Momo akan memandu Anda dari memilih sumber hingga membuka hasil catatan.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => void startTutorial()}
+              <Link
+                href="/dashboard/catatan"
+                onClick={() => setFirstNoteGuide({ stage: "active" })}
                 className="inline-flex min-h-[40px] items-center gap-1.5 rounded-clay-md bg-clay-primary px-4 py-2 text-xs font-extrabold text-white shadow-clay-btn transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1 sm:text-sm"
               >
-                Ya, bantu aku
-              </button>
+                Mulai panduan
+              </Link>
               <button
                 onClick={dismiss}
                 className="inline-flex min-h-[40px] items-center rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream px-4 py-2 text-xs font-extrabold text-clay-muted transition-all duration-75 hover:text-clay-dark sm:text-sm"

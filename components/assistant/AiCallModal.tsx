@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GraduationCap, Loader2, Mic, PhoneOff, X } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
+import { VoiceRing } from "voice-ring";
 import { getUserId } from "@/lib/identity";
 
 type CallPhase = "idle" | "listening" | "thinking" | "speaking";
@@ -51,10 +52,28 @@ export default function AiCallModal({
   const [reply, setReply] = useState("");
 
   const holdingRef = useRef(false);
+  const transcriptRef = useRef("");
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const speakerRef = useRef<HTMLAudioElement | null>(null);
+  const speakerContextRef = useRef<AudioContext | null>(null);
+  const speakerAnalyserRef = useRef<AnalyserNode | null>(null);
+  const speakerUrlRef = useRef("");
+  const speechRequestRef = useRef<AbortController | null>(null);
+  const callRequestRef = useRef<AbortController | null>(null);
+  const ringSamplesRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(1024));
+  const ringLevel = useCallback(() => {
+    const analyser = speakerAnalyserRef.current ?? analyserRef.current;
+    if (!analyser) return 0;
+    if (ringSamplesRef.current.length !== analyser.fftSize) ringSamplesRef.current = new Uint8Array(analyser.fftSize);
+    const samples = ringSamplesRef.current;
+    analyser.getByteTimeDomainData(samples);
+    let total = 0;
+    for (const value of samples) total += ((value - 128) / 128) ** 2;
+    return Math.min(1, Math.sqrt(total / samples.length) * 4);
+  }, []);
   const rafRef = useRef<number | null>(null);
 
   const barEls = useRef<(HTMLSpanElement | null)[]>([]);
@@ -108,10 +127,88 @@ export default function AiCallModal({
     }
   }, []);
 
+  /** Bacakan jawaban dengan ElevenLabs. */
+  const speak = useCallback(async (text: string) => {
+    const controller = new AbortController();
+    speechRequestRef.current = controller;
+    const response = await apiFetch("/api/call/speech", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: controller.signal });
+    if (!response.ok) { const body = await response.json().catch(() => null); throw new Error(body?.error || "Suara belum bisa dibuat."); }
+    const blob = await response.blob();
+    if (controller.signal.aborted) return;
+    if (speakerUrlRef.current) URL.revokeObjectURL(speakerUrlRef.current);
+    const url = URL.createObjectURL(blob);
+    speakerUrlRef.current = url;
+    const audio = new Audio(url);
+    speakerRef.current = audio;
+    try {
+      const context = new AudioContext();
+      const source = context.createMediaElementSource(audio);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 1024;
+      source.connect(analyser); analyser.connect(context.destination);
+      speakerContextRef.current = context; speakerAnalyserRef.current = analyser;
+      await context.resume();
+    } catch { /* audio tetap diputar jika analisis tidak tersedia */ }
+    audio.onended = () => { setPhase("idle"); speakerAnalyserRef.current = null; void speakerContextRef.current?.close(); speakerContextRef.current = null; };
+    audio.onerror = () => { setPhase("idle"); setError("Suara belum bisa diputar."); };
+    await audio.play();
+    setPhase("speaking");
+  }, []);
+
+  const processTranscript = useCallback(async () => {
+    const q = transcriptRef.current.trim();
+    if (!q) { stopMetering(); setPhase("idle"); setError("Tidak mendengar suara. Coba lagi."); return; }
+    if (phase === "thinking" || phase === "speaking") return;
+    setPhase("thinking");
+    stopMetering();
+    barEls.current.forEach((el) => {
+      if (el) el.style.transform = "scaleY(0.9)";
+    });
+
+    const userId = getUserId();
+    if (!userId) {
+      setError("Silakan masuk dulu ya.");
+      setPhase("idle");
+      return;
+    }
+
+    try {
+      const controller = new AbortController();
+      callRequestRef.current = controller;
+      const res = await apiFetch("/api/call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, question: q }),
+        signal: controller.signal,
+      });
+      const body = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        reply?: string;
+        error?: string;
+      } | null;
+      if (!res.ok || !body?.ok) {
+        setError(body?.error ?? "Gagal memanggil AI. Coba lagi.");
+        setPhase("idle");
+        return;
+      }
+      if (controller.signal.aborted) return;
+      const answer = body.reply ?? "";
+      setReply(answer);
+      await speak(answer);
+    } catch (e) {
+      if ((e instanceof DOMException && e.name === "AbortError") || callRequestRef.current?.signal.aborted) return;
+      setError(
+        e instanceof Error ? e.message : "Gagal memanggil AI. Coba lagi."
+      );
+      setPhase("idle");
+    }
+  }, [phase, stopMetering, speak]);
+
   /** Bicara (press & hold): mulai STT browser. */
   const startListening = useCallback(async () => {
     setError(null);
     setTranscript("");
+    transcriptRef.current = "";
     setReply("");
     holdingRef.current = true;
 
@@ -143,17 +240,16 @@ export default function AiCallModal({
           break;
         }
       }
-      setTranscript(t.trim());
+      transcriptRef.current = t.trim();
+      setTranscript(transcriptRef.current);
     };
     rec.onerror = () => {
       setError("Tidak mendengar suara. Coba lagi.");
       setPhase("idle");
     };
     rec.onend = () => {
-      if (holdingRef.current) {
-        // Speech dianggap selesai otomatis → tetap proses.
-        void processTranscript();
-      }
+      holdingRef.current = false;
+      void processTranscript();
     };
     recognitionRef.current = rec;
     setPhase("listening");
@@ -164,7 +260,7 @@ export default function AiCallModal({
       setError("Input suara gagal dimulai. Coba lagi.");
       setPhase("idle");
     }
-  }, []);
+  }, [processTranscript, startMetering]);
 
   /** Lepas hold: stop STT, kirim teks ke /api/call, bacakan jawaban. */
   const stopListening = useCallback(() => {
@@ -174,91 +270,24 @@ export default function AiCallModal({
     } catch {
       // abaikan
     }
-    void processTranscript();
-  }, []);
-
-  const processTranscript = useCallback(async () => {
-    const q = transcript.trim();
-    if (!q || phase === "thinking" || phase === "speaking") return;
-    setPhase("thinking");
-    stopMetering();
-    barEls.current.forEach((el) => {
-      if (el) el.style.transform = "scaleY(0.9)";
-    });
-
-    const userId = getUserId();
-    if (!userId) {
-      setError("Silakan masuk dulu ya.");
-      setPhase("idle");
-      return;
-    }
-
-    try {
-      const res = await apiFetch("/api/call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, question: q }),
-      });
-      const body = (await res.json().catch(() => null)) as {
-        ok?: boolean;
-        reply?: string;
-        error?: string;
-      } | null;
-      if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Gagal memanggil AI. Coba lagi.");
-        setPhase("idle");
-        return;
-      }
-      const answer = body.reply ?? "";
-      setReply(answer);
-      await speak(answer);
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Gagal memanggil AI. Coba lagi."
-      );
-      setPhase("idle");
-    }
-  }, [transcript, phase, stopMetering]);
-
-  /** Bacakan jawaban dengan TTS id-ID. */
-  const speak = useCallback((text: string) => {
-    return new Promise<void>((resolve) => {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-        setPhase("idle");
-        resolve();
-        return;
-      }
-      const synth = window.speechSynthesis;
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = "id-ID";
-      utter.rate = 1.05;
-      utter.onstart = () => setPhase("speaking");
-      utter.onend = () => {
-        setPhase("idle");
-        resolve();
-      };
-      utter.onerror = () => {
-        setPhase("idle");
-        resolve();
-      };
-      // Pilih suara id-ID bila tersedia.
-      const voices = synth.getVoices();
-      const idVoice = voices.find((v) => v.lang?.toLowerCase().startsWith("id"));
-      if (idVoice) utter.voice = idVoice;
-      synth.cancel();
-      synth.speak(utter);
-    });
   }, []);
 
   const cleanup = useCallback(() => {
     holdingRef.current = false;
     try {
+      if (recognitionRef.current) recognitionRef.current.onend = null;
       recognitionRef.current?.stop();
     } catch {
       // abaikan
     }
     recognitionRef.current = null;
-    window.speechSynthesis?.cancel();
+    callRequestRef.current?.abort();
+    speechRequestRef.current?.abort();
+    speakerRef.current?.pause(); speakerRef.current = null;
+    speakerAnalyserRef.current = null;
+    void speakerContextRef.current?.close(); speakerContextRef.current = null;
+    if (speakerUrlRef.current) URL.revokeObjectURL(speakerUrlRef.current);
+    speakerUrlRef.current = "";
     stopMetering();
     setPhase("idle");
     setTranscript("");
@@ -303,6 +332,8 @@ export default function AiCallModal({
             </button>
 
             {/* Avatar */}
+            <div aria-hidden="true" className="mx-auto flex justify-center"><VoiceRing size={180} state={phase === "thinking" ? "processing" : phase === "speaking" ? "speaking" : phase === "listening" ? "listening" : "idle"} level={ringLevel} emotion="calm" theme="light" /></div>
+            <div className="sr-only">
             <div
               className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full border-4 text-3xl transition-colors duration-300 ${
                 phase === "speaking"
@@ -319,6 +350,7 @@ export default function AiCallModal({
               ) : (
                 <GraduationCap size={18} className="align-middle text-clay-primary" />
               )}
+            </div>
             </div>
 
             <h2 className="mt-3 text-lg font-extrabold">Panggilan Eureka</h2>

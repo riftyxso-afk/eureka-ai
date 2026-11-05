@@ -3,9 +3,9 @@
 // CSS katex dimuat di sini (bukan global) — hanya halaman catatan yang
 // merender math yang mengunduhnya; landing tidak terbebani CSS ini.
 import "katex/dist/katex.min.css";
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { MoveHorizontal } from "lucide-react";
+import { Suspense, lazy } from "react";
 import CodeBlock from "@/components/note/CodeBlock";
+import ReadingTable from "@/components/ui/ReadingTable";
 import {
   renderInlineText,
   type ParsedContent as ParsedContentItem,
@@ -35,69 +35,27 @@ function TableBlock({
   rows: string[][];
   highlights: HighlightEntry[];
 }) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const [canScroll, setCanScroll] = useState(false);
-
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const check = () => setCanScroll(el.scrollWidth > el.clientWidth + 2);
-    check();
-    if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
   return (
-    <div className="my-6">
-      <div
-        ref={wrapRef}
-        className="overflow-x-auto rounded-clay-md border-2 border-clay-shadow/20 shadow-clay-sm"
-      >
-        <table className="w-full min-w-[min(100%,420px)] border-collapse bg-clay-cream">
-          <thead>
-            <tr className="bg-clay-primary text-white">
-              {headers.map((h, i) => (
-                <th
-                  key={i}
-                  className="break-words border border-clay-primary/30 px-4 py-3 text-left text-sm font-extrabold"
-                >
-                  {renderInlineText(h, highlights)}
-                </th>
+    <ReadingTable label="Tabel catatan">
+      <table>
+        <thead>
+          <tr>
+            {headers.map((header, index) => (
+              <th key={index} scope="col">{renderInlineText(header, highlights)}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex}>{renderInlineText(cell, highlights)}</td>
               ))}
             </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr
-                key={i}
-                className={
-                  i % 2 === 0
-                    ? "bg-clay-cream hover:bg-clay-beige/50"
-                    : "bg-clay-beige/30 hover:bg-clay-beige/70"
-                }
-              >
-                {row.map((cell, j) => (
-                  <td
-                    key={j}
-                    className="break-words border border-clay-shadow/20 px-4 py-3 text-sm font-medium text-clay-dark"
-                  >
-                    {renderInlineText(cell, highlights)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {canScroll && (
-        <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px] font-extrabold text-clay-muted">
-          <MoveHorizontal size={12} />
-          Geser tabel ke samping untuk melihat semua kolom
-        </div>
-      )}
-    </div>
+          ))}
+        </tbody>
+      </table>
+    </ReadingTable>
   );
 }
 

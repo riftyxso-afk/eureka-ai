@@ -40,17 +40,15 @@ export async function addSubject(
   const client = db();
   const name = input.name.trim();
   if (!name) throw new Error("Nama mata pelajaran tidak boleh kosong.");
+  if (name.length > 80) throw new Error("Nama mata pelajaran maksimal 80 karakter.");
 
-  const { data: existing } = await client
-    .from("subjects")
-    .select("id")
-    .eq("user_id", userId)
-    .ilike("name", name)
-    .maybeSingle();
-  if (existing) throw new Error(`"${name}" sudah ada di daftar.`);
+  const existing = await getSubjects(userId);
+  if (existing.some((subject) => subject.name.normalize("NFKC").trim().toLocaleLowerCase("id") === name.normalize("NFKC").toLocaleLowerCase("id"))) {
+    throw new Error(`"${name}" sudah ada di daftar.`);
+  }
 
   const subject: Subject = {
-    id: `s-${Date.now()}`,
+    id: `s-${crypto.randomUUID()}`,
     name,
     emoji: input.emoji?.trim() || "📖",
     color: input.color || "#8B5CF6",

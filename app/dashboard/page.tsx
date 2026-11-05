@@ -30,6 +30,7 @@ import { BackgroundJobPopup } from "@/components/dashboard/BackgroundJobPopup";
 import GuideBanner from "@/components/dashboard/GuideBanner";
 import AssistantHub from "@/components/dashboard/AssistantHub";
 import TutorialHost from "@/components/tutorial/TutorialHost";
+import FirstNoteGuide, { useFirstNoteGuide } from "@/components/tutorial/FirstNoteGuide";
 import { Reveal } from "@/components/ui/Reveal";
 import { useOnboarding } from "@/context/OnboardingContext";
 import LearningJourney from "@/components/dashboard/LearningJourney";
@@ -69,6 +70,7 @@ function getGreeting(l: Dictionary["dashboard"]): string {
 }
 
 export default function DashboardPage() {
+  const firstNoteGuide = useFirstNoteGuide();
   const router = useRouter();
   const { data } = useOnboarding();
   const { locale, dict } = useI18n();
@@ -263,12 +265,16 @@ export default function DashboardPage() {
 
   return (
     <>
+      <FirstNoteGuide />
       <LearningJourney
         name={userName}
         locale={locale}
         progress={progress}
         progressLoaded={progressLoaded}
-        onCreateNote={() => setIsModalOpen(true)}
+        onCreateNote={() => {
+          if (firstNoteGuide?.stage === "welcome" || firstNoteGuide?.stage === "active") openNotes();
+          else setIsModalOpen(true);
+        }}
         onOpenWorkspace={openNotes}
       />
       <CreateNoteModal open={isModalOpen} onClose={() => setIsModalOpen(false)} onCreate={handleCreate} />

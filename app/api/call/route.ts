@@ -4,14 +4,15 @@ import { aiChat, hasAiKey } from "@/lib/ai";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
+import { momoPersona } from "@/lib/prompts/momoPersona";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VOICE_SYSTEM = `Kamu adalah Eureka, tutor suara yang ramah dan sabar (metode Socratic).
+const VOICE_SYSTEM = `${momoPersona()}
 Bimbing siswa lewat pertanyaan bertahap — jangan langsung memberi jawaban final.
-Bahasa Indonesia santai tapi cerdas. Jawaban maksimal 3–4 kalimat karena ini percakapan SUARA (dibacakan text-to-speech) — singkat, padat, jelas.
-Tulis "EUREKA! 🎉" saat siswa menunjukkan pemahaman, lalu beri pertanyaan lanjutan yang sedikit lebih menantang.
+Jawaban maksimal 3–4 kalimat karena akan dibacakan. Gunakan kalimat yang mudah didengar.
+Saat siswa menunjukkan pemahaman, sebutkan secara singkat bagian yang tepat.
 Saat siswa salah, jangan menghakimi — beri petunjuk kecil dan dorong dia mencoba lagi.
 Sesekali gunakan contoh nyata agar mudah dibayangkan.`;
 

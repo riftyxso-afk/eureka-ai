@@ -12,7 +12,7 @@ export default function LearningJourney({ name, locale, progress, progressLoaded
   const en = locale === "en";
   const firstName = name?.trim().split(" ")[0];
   const percent = progressLoaded && progress.xpToNext > 0 ? Math.max(0, Math.min(100, progress.xpInLevel / progress.xpToNext * 100)) : 0;
-  const number = (value: number) => progressLoaded ? value.toLocaleString(en ? "en-US" : "id-ID") : "—";
+  const number = (value: number) => progressLoaded && Number.isFinite(value) ? value.toLocaleString(en ? "en-US" : "id-ID") : "—";
   return (
     <div className="journey-page">
       <header className="journey-top">

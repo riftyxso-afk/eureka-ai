@@ -1,5 +1,7 @@
 "use client";
 
+import { recordFirstNote } from "@/lib/firstNoteGuide";
+
 /**
  * Pemantau job pembuatan catatan yang berjalan di latar belakang.
  *
@@ -229,6 +231,7 @@ export function JobWatcherProvider({
             });
             notifyBrowserNoteReady(noteId, noteTitle);
             if (noteId) {
+              recordFirstNote(noteId, job.id);
               window.dispatchEvent(
                 new CustomEvent("note-ready", { detail: { noteId } })
               );

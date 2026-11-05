@@ -14,6 +14,10 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Brain, PenLine } from "lucide-react";
 import EurekaOrb from "@/components/ui/EurekaOrb";
 import TutorialHost from "@/components/tutorial/TutorialHost";
+import NoteActions from "@/components/asisten/NoteActions";
+import TaskActions from "@/components/asisten/TaskActions";
+import { mayManageNote, parseNoteCommand, proposeNoteCommand, type NoteCommand } from "@/lib/assistant/noteCommands";
+import { mayManageTask, parseTaskCommand, proposeTaskCommand, type TaskCommand } from "@/lib/assistant/taskCommands";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId, setUserId } from "@/lib/identity";
 import { supabase } from "@/lib/supabase/client";
@@ -33,6 +37,10 @@ import { useBeta } from "@/lib/useBeta";
 import { useI18n } from "@/context/LocaleContext";
 
 export default function AssistantHub({ standalone = false }: { standalone?: boolean }) {
+  const [noteCommand, setNoteCommand] = useState<NoteCommand | null>(null);
+  const [taskCommand, setTaskCommand] = useState<TaskCommand | null>(null);
+  const [planningAction, setPlanningAction] = useState(false);
+  const planningLock = useRef(false);
   const router = useRouter();
   const [launchError, setLaunchError] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -49,7 +57,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
   const [composerKey, setComposerKey] = useState(0);
   const [loadingCard, setLoadingCard] = useState<"tanya" | "tugas" | null>(null);
   const { isBeta } = useBeta();
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const l = dict.home;
   const heroAnchor = useRef<HTMLDivElement>(null);
   const composerAnchor = useRef<HTMLDivElement>(null);
@@ -93,6 +101,34 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
       if (launching) return;
       setLaunchError(null);
       setNeedsLogin(false);
+      const command = parseNoteCommand(input.question);
+      if (command) {
+        setTaskCommand(null);
+        setNoteCommand(command);
+        return;
+      }
+
+      const task = parseTaskCommand(input.question);
+      if (task) { setNoteCommand(null); setTaskCommand(task); return; }
+
+      if (mayManageNote(input.question)) {
+        if (planningLock.current) return;
+        planningLock.current = true;
+        setPlanningAction(true);
+        const proposal = await proposeNoteCommand(input.question);
+        planningLock.current = false;
+        setPlanningAction(false);
+        if (proposal) { setTaskCommand(null); setNoteCommand(proposal); return; }
+      }
+      if (mayManageTask(input.question)) {
+        if (planningLock.current) return;
+        planningLock.current = true;
+        setPlanningAction(true);
+        const proposal = await proposeTaskCommand(input.question);
+        planningLock.current = false;
+        setPlanningAction(false);
+        if (proposal) { setNoteCommand(null); setTaskCommand(proposal); return; }
+      }
 
       // Permintaan "buat gambar" → generate gambar AI (sesuai deskripsi/topik).
       if (detectImageIntent(input.question).isImageRequest) {
@@ -192,15 +228,20 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
             <div className="w-full text-center">
               {!standalone && <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-clay-muted">Belajar</p>}
               <h2 className="mt-2 text-[28px] font-extrabold leading-none tracking-tight text-clay-dark sm:text-[36px]">
-                {standalone ? "Apa yang ingin kamu tanyakan?" : "Apa yang mau kamu pelajari?"}
+                {locale === "en" ? "What would you like to learn?" : "Apa yang ingin Anda pelajari?"}
               </h2>
               <p className="mx-auto mt-3 max-w-md text-[13px] font-semibold leading-relaxed text-clay-muted">
-                Tanya apa saja, kerjakan tugas, atau buat ringkasan materi — Eureka siap membantu.
+                {locale === "en"
+                  ? "Momo can help you understand a topic, work through a problem, or create a summary."
+                  : "Momo dapat membantu Anda memahami materi, mengerjakan soal, atau membuat ringkasan."}
               </p>
             </div>
 
             {/* Composer — focal point */}
             <div className="momo-start-composer mt-8 w-full">
+              {noteCommand && <NoteActions key={JSON.stringify(noteCommand)} command={noteCommand} onClose={() => setNoteCommand(null)} onChoose={setNoteCommand} />}
+              {taskCommand && <TaskActions key={JSON.stringify(taskCommand)} command={taskCommand} onClose={() => setTaskCommand(null)} onChoose={setTaskCommand} />}
+              {planningAction && <p role="status" className="mb-2 text-sm text-clay-muted">Momo sedang memahami permintaan Anda…</p>}
               {momoMoving && <div ref={composerAnchor} className="momo-preview-companion" aria-hidden="true" />}
               <Composer
                 reactBits={standalone}
@@ -209,7 +250,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
                 key={composerKey}
                 userId={getUserId()}
                 sending={!!launching}
-                disabled={!!launching || (!standalone && chat.sessionsLoading)}
+                disabled={planningAction || !!launching || (!standalone && chat.sessionsLoading)}
                 placeholder={standalone ? "Tanya Eureka apa saja…" : "Ketik @ untuk fitur"}
                 initialValue={composerPrefill}
                 isBeta={isBeta}
@@ -223,6 +264,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
                 }}
                 onSend={launchChat}
               />
+              {!noteCommand && <button type="button" onClick={() => setNoteCommand({ action: "list", title: "" })} className="mt-1 min-h-11 px-2 text-sm font-bold text-clay-primary">Kelola catatan dengan Momo</button>}
             </div>
 
             {launchError && <p role="alert" className="momo-launch-error">{launchError}{needsLogin && <> <Link href="/login?next=%2Fchat">Masuk</Link></>}</p>}

@@ -187,11 +187,16 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   count++;
 
   // ─── Asisten AI (halaman /home & /chat) ────────────────
+  const callSpeech = await import("@/app/api/call/speech/route");
+  mount(app, "/api/call/speech", callSpeech);
+  const voices = await import("@/app/api/voices/route");
+  mount(app, "/api/voices", voices);
   const assistantChat = await import("@/app/api/assistant/chat/route");
   const assistantFlashcards = await import("@/app/api/assistant/flashcards/route");
   const assistantImage = await import("@/app/api/assistant/image/route");
   const assistantQuiz = await import("@/app/api/assistant/quiz/route");
   const assistantSuggestions = await import("@/app/api/assistant/suggestions/route");
+  const assistantNoteIntent = await import("@/app/api/assistant/note-intent/route");
   const assistantSessions = await import("@/app/api/assistant/sessions/route");
   const assistantSessionsId = await import("@/app/api/assistant/sessions/[sessionId]/route");
   const assistantSessionsShare = await import("@/app/api/assistant/sessions/[sessionId]/share/route");
@@ -200,10 +205,11 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/assistant/image", assistantImage);
   mount(app, "/api/assistant/quiz", assistantQuiz);
   mount(app, "/api/assistant/suggestions", assistantSuggestions);
+  mount(app, "/api/assistant/note-intent", assistantNoteIntent);
   mount(app, "/api/assistant/sessions", assistantSessions);
   mount(app, "/api/assistant/sessions/:sessionId", assistantSessionsId);
   mount(app, "/api/assistant/sessions/:sessionId/share", assistantSessionsShare);
-  count += 8;
+  count += 9;
 
   // ─── Eureka Multi Agent (loop tutoring) ─────────────────
   const agentsLoop = await import("@/app/api/agents/loop/route");
@@ -242,15 +248,16 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   // ─── Subjects ──────────────────────────────────────────
   const subjects = await import("@/app/api/subjects/route");
   const subjectsId = await import("@/app/api/subjects/[id]/route");
+  const subjectPractice = await import("@/app/api/subjects/[id]/practice/route");
   mount(app, "/api/subjects", subjects);
+  mount(app, "/api/subjects/:id/practice", subjectPractice);
   mount(app, "/api/subjects/:id", subjectsId);
-  count += 2;
+  count += 3;
 
   // ─── Notes (CRUD) ──────────────────────────────────────
   const notes = await import("@/app/api/notes/route");
   const notesId = await import("@/app/api/notes/[id]/route");
   mount(app, "/api/notes", notes);
-  mount(app, "/api/notes/:id", notesId);
   count += 2;
 
   // ─── Notes (Background Jobs) ───────────────────────────
@@ -262,12 +269,16 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/notes/process", notesProcess);
   mount(app, "/api/notes/process-progress/:sessionId", notesProcessProgress);
   mount(app, "/api/notes/query", notesQuery);
+  // Hono picks handlers in registration order. Keep literal paths above :id.
+  mount(app, "/api/notes/:id", notesId);
   count += 4;
 
   // ─── Notes (Per-note sub-routes) ───────────────────────
   const notesPdf = await import("@/app/api/notes/[id]/pdf/route");
   const notesPdfStream = await import("@/app/api/notes/[id]/pdf/stream/route");
   const notesAsk = await import("@/app/api/notes/[id]/ask/route");
+  const notesStory = await import("@/app/api/notes/[id]/story/route");
+  const notesStoryAudio = await import("@/app/api/notes/[id]/story/audio/route");
   const notesBoard = await import("@/app/api/notes/[id]/board/route");
   const notesChat = await import("@/app/api/notes/[id]/chat/route");
   const notesCollab = await import("@/app/api/notes/[id]/collab/route");
@@ -297,6 +308,8 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/notes/:id/pdf", notesPdf);
   mount(app, "/api/notes/:id/pdf/stream", notesPdfStream);
   mount(app, "/api/notes/:id/ask", notesAsk);
+  mount(app, "/api/notes/:id/story", notesStory);
+  mount(app, "/api/notes/:id/story/audio", notesStoryAudio);
   mount(app, "/api/notes/:id/board", notesBoard);
   mount(app, "/api/notes/:id/chat", notesChat);
   mount(app, "/api/notes/:id/collab", notesCollab);

@@ -9,8 +9,9 @@
  */
 import type { AssistantContext, RagHit, NoteMeta } from "./context";
 import { AI_SAFETY_GUARDRAIL } from "../prompts/safety";
+import { momoPersona, MOMO_NAME } from "../prompts/momoPersona";
 
-export const ASSISTANT_NAME = "Eureka";
+export const ASSISTANT_NAME = MOMO_NAME;
 
 export interface WebSearchResult {
   url: string;
@@ -51,22 +52,23 @@ export function buildSystemPrompt(input: {
       : "- Selalu dalam Bahasa Indonesia yang hangat, jelas, dan terstruktur (pakai markdown: heading, list, tebal bila perlu).";
 
   const lines: string[] = [
-    `Kamu adalah ${ASSISTANT_NAME}, asisten belajar pribadi dari Eureka.AI.`,
-    "Kamu punya AKSES PENUH ke data belajar user: profil, catatan, bab, subjek, progres, kartu hafalan, dan ujiannya.",
+    momoPersona(language),
+    "Gunakan hanya data belajar yang disediakan dalam konteks ini.",
     "Gunakan data itu untuk memberi jawaban yang PERSONAL dan RELEVAN, bukan jawaban generik.",
     "",
     "ATURAN MENJAWAB:",
+    "- Jangan pernah mengklaim telah membuat, mengubah, atau menghapus data pengguna tanpa hasil nyata dari fitur yang melakukannya. Jika tidak ada hasil aksi, jelaskan bahwa perubahan belum dilakukan.",
     languageRule,
     "- Pakai catatan hanya jika isinya mendukung jawaban. Untuk setiap catatan yang benar-benar dipakai, tulis kutipan terpisah dengan judul persis seperti di data: *(Sumber: Catatan \"Turunan Fungsi\", Bab 1)*. Jangan mengutip judul dari daftar catatan saja atau potongan yang tidak relevan.",
     "- Jika jawaban tidak ada di materi, akui dengan jujur, lalu tawarkan bantuan: buat catatan baru, carikan cara lain, atau arahkan ke bagian lain.",
     "- Jika user bertanya tentang progres/XP/streak/ujian mereka, gunakan data progres di bawah.",
-    "- ARTIFACT CANVAS (WAJIB): Jika user meminta rangkuman, ringkasan, kumpulan rumus, catatan bab, atau penjelasan terstruktur, kamu WAJIB memasukkan SELURUH rangkuman & rumus tersebut di dalam tag `<artifact type=\"markdown\" title=\"<Judul Ringkas>\" agent=\"jejak\">...isi rangkuman lengkap...</artifact>`. Di LUAR tag (di pesan chat), kamu HANYA BOLEH menuliskan 1 kalimat sapaan pengantar (misal: 'Berikut rangkuman rumus fisikanya, sudah kualokasikan ke panel Artifact Canvas di sebelah agar mudah dibaca!'). JANGAN PERNAH mengulang isi rangkuman/rumus di luar tag artifact!",
+    "- ARTIFACT CANVAS (WAJIB): Jika user meminta rangkuman, ringkasan, kumpulan rumus, catatan bab, atau penjelasan terstruktur, kamu WAJIB memasukkan SELURUH rangkuman & rumus tersebut di dalam tag `<artifact type=\"markdown\" title=\"<Judul Ringkas>\" agent=\"jejak\">...isi rangkuman lengkap...</artifact>`. Di luar tag, tulis satu kalimat pengantar, misalnya: 'Silakan buka dokumen berikut untuk membaca rangkuman rumus fisika.' Jangan ulangi isi dokumen di pesan chat.",
     "- PENULISAN RUMUS (LATEX): Di dalam artifact maupun chat, rumus matematika/fisika WAJIB memakai delimiter LaTeX yang valid: inline pakai $...$ (contoh: $v = \\frac{s}{t}$, $F = m \\cdot a$) dan display equation pakai $$...$$ di baris baru sendiri (contoh: $$v_t = v_0 + a t$$). JANGAN PERNAH menulis rumus mentah seperti v = \\frac{s}{t} tanpa tanda dollar ($) karena tidak akan ter-render sebagai simbol matematika!",
     "- Untuk SOAL HITUNGAN sederhana: jawab ringkas 3-5 baris (rumus → substitusi → hasil). Contoh: $E_p = k Q_1 Q_2 / r$ → $E_p = (9\\times10^9)(2\\times10^{-6})(-4\\times10^{-6})/0.3 = -0,24\\ \\text{Joule}$.",
     "- Untuk RANGKUMAN MATERI: berikan jawaban lengkap dan terstruktur (3–5 poin inti, maksimal 350 kata). Sebut sumber catatan bila isinya benar-benar dipakai.",
     "- JANGAN pakai format `→ skipped: [...]` untuk materi inti/rangkuman. Hanya gunakan `→ skipped: [...]` bila ada penurunan rumus/derivasi kalkulus yang sangat teknis dan panjang yang sengaja dipersingkat — dan pastikan inti materi sudah lengkap dulu sebelum menulis skipped.",
     "- Jangan mengarang data (XP, nilai ujian, jumlah kartu) yang tidak ada di konteks. Bila tidak tahu, katakan tidak tersedia.",
-    "- Akhiri rangkuman dengan ajakan singkat (mis. “Mau lanjut latihan soal atau buat kartu hafalan?”) hanya jika relevan, jangan bertele-tele.",
+    "- Akhiri rangkuman dengan ajakan singkat (mis. “Apakah Anda ingin mencoba latihan soal atau membuat kartu hafalan?”) hanya jika relevan.",
     "",
     AI_SAFETY_GUARDRAIL,
   ];

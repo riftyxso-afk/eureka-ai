@@ -1,7 +1,10 @@
 "use client";
 
+import StoryPlayer from "@/components/note/StoryPlayer";
+
 import "./note-detail.css";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { finishFirstNoteGuide } from "@/lib/firstNoteGuide";
 import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -291,6 +294,7 @@ export default function NoteDetailPage() {
           keyPoints: data.note.keyPoints ?? [],
           noteType: data.note.noteType ?? "rangkuman",
         });
+        finishFirstNoteGuide(data.note.id);
       }
     } catch {
       // catatan tidak ditemukan
@@ -887,6 +891,14 @@ export default function NoteDetailPage() {
             </p>
             </SelectionActions>
           </div>
+
+          <StoryPlayer key={data.id} noteId={data.id} noteTitle={data.title} />
+
+          <section className="mt-4 rounded-2xl border border-clay-primary/15 bg-clay-cream p-5 sm:p-7">
+            <h2 className="text-lg font-extrabold text-clay-dark">Petualangan Momo</h2>
+            <p className="mt-1 text-sm text-clay-muted">Berlatih melalui permainan 3D dengan pertanyaan dari catatan ini.</p>
+            <Link href={`/dashboard/note/${data.id}/game`} className="btn-clay-primary mt-3 min-h-11 px-4 text-sm">Mainkan</Link>
+          </section>
 
           {/* Video sumber (catatan dari YouTube) — untuk SEMUA pengguna:
               cukup sourceUrl-nya link YouTube valid (spesifikasi

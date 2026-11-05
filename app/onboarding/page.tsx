@@ -37,6 +37,7 @@ import {
 } from "@/lib/onboardingContent";
 import { getSession, updateSessionName } from "@/lib/auth";
 import { getUserId } from "@/lib/identity";
+import { offerFirstNoteGuide } from "@/lib/firstNoteGuide";
 import { emojiToIcon } from "@/lib/emojiIcon";
 import { playCelebrationSound } from "@/lib/notifySound";
 
@@ -388,6 +389,7 @@ export default function OnboardingPage() {
       }
       // Sinkronkan nama ke sesi lokal agar home/chat/sidebar konsisten.
       updateSessionName(data.name);
+      if (!resumeMode) offerFirstNoteGuide();
     } catch {
       setSaveError("Gagal menyimpan profil. Coba lagi.");
       return;
@@ -404,7 +406,7 @@ export default function OnboardingPage() {
     setSkipping(true);
     try {
       // Tandai dilewati agar tidak diarahkan paksa ke sini lagi.
-      await apiFetch("/api/profile", {
+      const response = await apiFetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -413,6 +415,7 @@ export default function OnboardingPage() {
           profileData: { onboardingSkipped: true },
         }),
       });
+      if (response.ok && !resumeMode) offerFirstNoteGuide();
     } catch {
       // Gagal menyimpan flag → tetap masuk; onboarding akan ditawarkan lagi.
     }

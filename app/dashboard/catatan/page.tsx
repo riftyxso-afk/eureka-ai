@@ -7,6 +7,8 @@ import { CreateNoteModal } from "@/components/dashboard/CreateNoteModal";
 import { NoteItem } from "@/components/dashboard/NoteItem";
 import { BackgroundJobPopup } from "@/components/dashboard/BackgroundJobPopup";
 import NoteShelf from "@/components/dashboard/NoteShelf";
+import FirstNoteGuide, { useFirstNoteGuide } from "@/components/tutorial/FirstNoteGuide";
+import { recordFirstNote, setFirstNoteGuide } from "@/lib/firstNoteGuide";
 import { useI18n } from "@/context/LocaleContext";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
@@ -24,6 +26,14 @@ export default function NotesPage() {
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const [sort, setSort] = useState<"newest" | "oldest" | "title">("newest");
   const [modal, setModal] = useState(false);
+  const [guided, setGuided] = useState(false);
+  const guide = useFirstNoteGuide();
+  const openNoteForm = (replay = false) => {
+    const withGuide = replay || guide?.stage === "welcome" || guide?.stage === "active";
+    if (replay || guide?.stage === "welcome") setFirstNoteGuide({ stage: "active" });
+    setGuided(withGuide);
+    setModal(true);
+  };
 
   const loadNotes = useCallback(async () => {
     setLoading(true);
@@ -72,7 +82,11 @@ export default function NotesPage() {
     } catch { alert(l.errDeleteRetry); }
   };
   return <main className="notes-page">
-    <header className="notes-page-header"><div><span className="notes-page-icon"><BookOpen size={23} /></span><h1>{l.yourNotes}</h1><p>{locale === "en" ? "Your learning materials, all in one place." : "Temukan dan pelajari kembali semua catatanmu."}</p></div><button type="button" onClick={() => setModal(true)}><Plus size={18} /> {locale === "en" ? "New note" : "Buat catatan"}</button></header>
+    <div className="mb-4 empty:hidden"><FirstNoteGuide inNotes /></div>
+    <header className="notes-page-header"><div><span className="notes-page-icon"><BookOpen size={23} /></span><h1>{l.yourNotes}</h1><p>{locale === "en" ? "Your learning materials, all in one place." : "Temukan dan pelajari kembali semua catatanmu."}</p></div><button type="button" onClick={() => openNoteForm()}><Plus size={18} /> {locale === "en" ? "New note" : "Buat catatan"}</button></header>
+    <button type="button" onClick={() => openNoteForm(true)} className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-clay-primary underline-offset-4 hover:underline">
+      <BookOpen size={16} aria-hidden="true" />{locale === "en" ? "Open the note-making guide" : "Buka panduan membuat catatan"}
+    </button>
     {!loading && !error && notes.length > 0 && <NoteShelf notes={notes} locale={locale} />}
     <section className="notes-overview" aria-label={locale === "en" ? "Notes overview" : "Ringkasan catatan"}>
       {[{ icon: LibraryBig, count: notes.length, label: locale === "en" ? "All notes" : "Total catatan" }, { icon: Layers3, count: subjects.length, label: locale === "en" ? "Subjects" : "Mata pelajaran" }, { icon: Pin, count: pinnedCount, label: locale === "en" ? "Pinned" : "Disematkan" }].map(({ icon: Icon, count, label }) => <div key={label}><span><Icon size={19} /></span><div><strong>{loading || error ? "—" : count}</strong><p>{label}</p></div></div>)}
@@ -84,9 +98,14 @@ export default function NotesPage() {
         <select value={sort} onChange={(event) => setSort(event.target.value as "newest" | "oldest" | "title")} aria-label={locale === "en" ? "Sort notes" : "Urutkan catatan"}><option value="newest">{locale === "en" ? "Newest" : "Terbaru"}</option><option value="oldest">{locale === "en" ? "Oldest" : "Terlama"}</option><option value="title">{locale === "en" ? "Title A–Z" : "Judul A–Z"}</option></select>
         <button type="button" className="notes-pin-filter" aria-pressed={pinnedOnly} onClick={() => setPinnedOnly((value) => !value)}><Pin size={16} /> {locale === "en" ? "Pinned" : "Disematkan"}</button>
       </div>
-      {loading ? <PageLoader inline title={l.loadingNotes} /> : error ? <div className="notes-page-empty" role="alert"><span className="notes-empty-icon"><BookOpen size={26} /></span><strong>{locale === "en" ? "Could not load notes" : "Catatan belum bisa dimuat"}</strong><span>{locale === "en" ? "Check your connection and try again." : "Periksa koneksi, lalu coba muat kembali catatanmu."}</span><button type="button" onClick={() => void loadNotes()}>{locale === "en" ? "Try again" : "Coba lagi"}</button></div> : filtered.length === 0 ? <div className="notes-page-empty"><span className="notes-empty-icon"><BookOpen size={26} /></span><strong>{hasFilters ? (locale === "en" ? "No matching notes" : "Catatan tidak ditemukan") : l.noNotes}</strong><span>{hasFilters ? (locale === "en" ? "Try a different search or filter." : "Coba ubah pencarian atau filter.") : l.noNotesDesc}</span>{hasFilters ? <button type="button" onClick={resetFilters}><X size={16} /> {locale === "en" ? "Clear filters" : "Hapus filter"}</button> : <button type="button" onClick={() => setModal(true)}><Plus size={16} /> {locale === "en" ? "Create your first note" : "Buat catatan pertama"}</button>}</div> : <div className="notes-page-grid">{filtered.map((note) => <NoteItem key={note.id} id={note.id} title={note.title} subject={note.subject} updatedAt={new Date(note.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "id-ID", { day: "numeric", month: "short", year: "numeric" })} pinned={!!note.pinned} onTogglePin={(id, pinned) => void togglePin(id, pinned)} onDelete={(id) => void deleteNote(id)} />)}</div>}
+      {loading ? <PageLoader inline title={l.loadingNotes} /> : error ? <div className="notes-page-empty" role="alert"><span className="notes-empty-icon"><BookOpen size={26} /></span><strong>{locale === "en" ? "Could not load notes" : "Catatan belum bisa dimuat"}</strong><span>{locale === "en" ? "Check your connection and try again." : "Periksa koneksi, lalu coba muat kembali catatanmu."}</span><button type="button" onClick={() => void loadNotes()}>{locale === "en" ? "Try again" : "Coba lagi"}</button></div> : filtered.length === 0 ? <div className="notes-page-empty"><span className="notes-empty-icon"><BookOpen size={26} /></span><strong>{hasFilters ? (locale === "en" ? "No matching notes" : "Catatan tidak ditemukan") : l.noNotes}</strong><span>{hasFilters ? (locale === "en" ? "Try a different search or filter." : "Coba ubah pencarian atau filter.") : l.noNotesDesc}</span>{hasFilters ? <button type="button" onClick={resetFilters}><X size={16} /> {locale === "en" ? "Clear filters" : "Hapus filter"}</button> : <button type="button" onClick={() => openNoteForm()}><Plus size={16} /> {locale === "en" ? "Create your first note" : "Buat catatan pertama"}</button>}</div> : <div className="notes-page-grid">{filtered.map((note) => <NoteItem key={note.id} id={note.id} title={note.title} subject={note.subject} updatedAt={new Date(note.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "id-ID", { day: "numeric", month: "short", year: "numeric" })} pinned={!!note.pinned} onTogglePin={(id, pinned) => void togglePin(id, pinned)} onDelete={(id) => void deleteNote(id)} />)}</div>}
     </section>
-    <CreateNoteModal open={modal} onClose={() => setModal(false)} onCreate={(note) => { setNotes((current) => [note, ...current.filter((item) => item.id !== note.id)]); setModal(false); setError(false); }} />
+    <CreateNoteModal open={modal} guided={guided} onClose={() => setModal(false)} onCreate={(note) => {
+      if (guided) recordFirstNote(note.id);
+      setNotes((current) => [note, ...current.filter((item) => item.id !== note.id)]);
+      setModal(false);
+      setError(false);
+    }} />
     <BackgroundJobPopup />
   </main>;
 }

@@ -51,10 +51,13 @@ export async function verifyTurnstileToken(
   token: string
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isTurnstileConfigured()) {
+    if (getTurnstileSiteKey().trim() || getTurnstileSecretKey().trim()) {
+      return { ok: false, error: "Konfigurasi verifikasi keamanan belum lengkap. Hubungi pengelola." };
+    }
     return { ok: true };
   }
   const clean = String(token ?? "").trim();
-  if (!clean) {
+  if (!clean || clean.length > 2048) {
     return { ok: false, error: "Selesaikan verifikasi keamanan dulu ya." };
   }
   try {

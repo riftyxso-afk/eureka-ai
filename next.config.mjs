@@ -11,6 +11,7 @@ const cspHeader = `
   script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://www.youtube.com${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
+  media-src 'self' blob: https://storage.googleapis.com;
   font-src 'self' data: https://fonts.gstatic.com;
   connect-src 'self' https: wss:${isDev ? " http://localhost:* http://127.0.0.1:*" : ""};
   worker-src 'self' blob:;

@@ -178,10 +178,10 @@ export default function ProfilPage() {
         if (payload.stats) {
           setStats((prev) => ({
             ...prev,
-            xp: payload.stats.xp,
-            level: payload.stats.level,
-            streak: payload.stats.streak,
-            rank: payload.stats.rank,
+            xp: typeof payload.stats.xp === "number" ? payload.stats.xp : prev.xp,
+            level: typeof payload.stats.level === "number" ? payload.stats.level : prev.level,
+            streak: typeof payload.stats.streak === "number" ? payload.stats.streak : prev.streak,
+            rank: typeof payload.stats.rank === "number" ? payload.stats.rank : null,
           }));
         }
       }

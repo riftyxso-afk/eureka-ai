@@ -92,18 +92,21 @@ function ArtifactWorkspace({
     >
       <header className="artifact-workspace-header">
         <div className="artifact-workspace-top">
-          <p><FormatIcon size={17} aria-hidden="true" />{label}<span aria-hidden="true">·</span> Versi {active.version}</p>
-          <button className="artifact-action artifact-icon-action" type="button" onClick={onClose} aria-label="Tutup canvas"><X size={21} aria-hidden="true" /></button>
+          <div className="artifact-heading">
+            <p><FormatIcon size={16} aria-hidden="true" />{label}<span aria-hidden="true">·</span> Versi {active.version}</p>
+            <h2 id="artifact-workspace-title" ref={titleRef} tabIndex={-1}>{active.title}</h2>
+          </div>
+          <button className="artifact-action artifact-icon-action" type="button" onClick={onClose} aria-label="Tutup artifact"><X size={21} aria-hidden="true" /></button>
         </div>
-        <h2 id="artifact-workspace-title" ref={titleRef} tabIndex={-1}>{active.title}</h2>
         {artifacts.length > 1 && (
-          <nav className="artifact-file-list" aria-label="Pilih artifact">
+          <label className="artifact-file-picker">
+            <span>Pindah artifact</span>
+            <select value={active.id} disabled={saving} onChange={(event) => onSelect(event.target.value)}>
             {artifacts.map((item) => (
-              <button type="button" key={item.id} aria-pressed={item.id === active.id} disabled={saving} onClick={() => onSelect(item.id)}>
-                {item.title}
-              </button>
+              <option key={item.id} value={item.id}>{item.title}</option>
             ))}
-          </nav>
+            </select>
+          </label>
         )}
       </header>
 

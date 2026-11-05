@@ -34,6 +34,8 @@ import { emojiToIcon } from "@/lib/emojiIcon";
 import { playCompletionSound } from "@/lib/notifySound";
 import { ensurePushSetup } from "@/lib/push";
 import { addActiveJobId, removeActiveJobId } from "@/context/JobWatcherContext";
+import { recordFirstNote, trackFirstNoteJob } from "@/lib/firstNoteGuide";
+import { useI18n } from "@/context/LocaleContext";
 import { useNoteSteps, type NoteStep } from "@/components/note/useNoteSteps";
 import { NoteGenerationProgress } from "@/components/note/NoteGenerationProgress";
 import "./create-note-modal.css";
@@ -253,7 +255,26 @@ interface CreateNoteModalProps {
   open: boolean;
   onClose: () => void;
   onCreate: (note: Note) => void;
+  initialSubject?: string;
+  guided?: boolean;
 }
+
+const guideInstructions = {
+  id: [
+    "Pilih sumber yang sudah Anda siapkan. Misalnya, pilih Web jika Anda memiliki tautan artikel.",
+    "Isi materi sesuai sumber yang dipilih, lalu pilih atau tambahkan mata pelajaran.",
+    "Pilih jenis rangkuman sesuai kebutuhan belajar Anda. Opsi bawaan bisa langsung digunakan.",
+    "Tentukan jumlah bab. Untuk materi singkat, dua atau tiga bab biasanya cukup.",
+    "Pilih mode pembuatan, lalu tekan Buat Catatan. Setelah selesai, pilih Buka Catatan untuk melihat hasilnya.",
+  ],
+  en: [
+    "Choose a source you have ready. For example, select Web if you have an article link.",
+    "Add your material, then choose or create a subject.",
+    "Choose a summary type that suits your goal. You can keep the default.",
+    "Choose the number of chapters. Two or three usually work well for short material.",
+    "Choose a generation mode and create your note. When it is ready, select Open note to read it.",
+  ],
+};
 
 const selectClayClass =
   "w-full appearance-none rounded-clay-md border-3 border-clay-shadow/40 bg-clay-inputBg px-3 py-3 pr-10 text-sm sm:px-5 sm:py-4 sm:pr-12 sm:text-base font-bold text-clay-dark shadow-clay-inset focus:border-clay-primary focus:outline-none min-h-[44px]";
@@ -262,11 +283,18 @@ export const CreateNoteModal = ({
   open,
   onClose,
   onCreate,
+  initialSubject = "",
+  guided = false,
 }: CreateNoteModalProps) => {
+  const { locale } = useI18n();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (open && guided && dialogRef.current) dialogRef.current.scrollTop = 0;
+  }, [open, guided, step]);
   const [sources, setSources] = useState<SourceEntry[]>([]);
   const [translateToIndo, setTranslateToIndo] = useState(false);
-  const [mataPelajaran, setMataPelajaran] = useState("");
+  const [mataPelajaran, setMataPelajaran] = useState(initialSubject);
   const [studyMode, setStudyMode] = useState<"ringkas" | "standar" | "lengkap">(
     "standar"
   );
@@ -383,7 +411,7 @@ export const CreateNoteModal = ({
     setStep(1);
     setSources([]);
     setTranslateToIndo(false);
-    setMataPelajaran("");
+    setMataPelajaran(initialSubject);
     setStudyMode("standar");
     setGenerationMode("lengkap");
     setGayaPenulisan("Ramah & Santai");
@@ -462,7 +490,7 @@ export const CreateNoteModal = ({
     reset();
     onCreate(note);
     onClose();
-    router.push(`/dashboard/note/${note.id}`);
+    router.push(`/${locale}/dashboard/note/${encodeURIComponent(note.id)}`);
   };
 
   /** Tambah satu sumber baru ke daftar (maks 5) lalu lanjut ke langkah isi. */
@@ -545,6 +573,7 @@ export const CreateNoteModal = ({
         progressPercentRef.current = 100;
         setProgressPercent(100);
         setProgressMessage("Selesai!");
+        if (guided) recordFirstNote(ndata.note.id, jobId);
         setCreatedNote(ndata.note as Note);
         setProcessing(false);
       }
@@ -646,6 +675,7 @@ export const CreateNoteModal = ({
         jobId = String(data.jobId);
         jobIdRef.current = jobId;
         setActiveJobId(jobId);
+        if (guided) trackFirstNoteJob(jobId);
         addActiveJobId(jobId);
 
         // Jaring pengaman: polling status job tiap 5 detik — progress bar tetap
@@ -747,12 +777,19 @@ export const CreateNoteModal = ({
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
+            ref={dialogRef}
             aria-modal="true"
             aria-label="Buat catatan baru"
             className="create-note-dialog m-auto w-full max-w-lg max-h-[80dvh] overflow-y-auto sm:max-h-[85vh] rounded-clay"
           >
             <CardClay className="create-note-card !shadow-none !p-4 sm:!p-8">
               {!processing && !createdNote && !jobError && <div className="create-note-progress" aria-label={`Langkah ${step} dari 5`}><span>BUAT CATATAN</span><div aria-hidden="true">{[1, 2, 3, 4, 5].map((number) => <i key={number} className={number <= step ? "is-current" : ""} />)}</div></div>}
+              {guided && !processing && !createdNote && !jobError && (
+                <aside aria-live="polite" className="mb-4 rounded-xl border border-clay-primary/20 bg-clay-primary/5 px-3.5 py-3 text-sm">
+                  <p className="font-extrabold text-clay-dark">{locale === "en" ? `Momo’s guide · Step ${step} of 5` : `Panduan Momo · Langkah ${step} dari 5`}</p>
+                  <p className="mt-1 leading-relaxed text-clay-muted">{guideInstructions[locale === "en" ? "en" : "id"][step - 1]}</p>
+                </aside>
+              )}
               {jobError ? (
                 <div className="flex flex-col items-center px-4 py-8 sm:px-6 sm:py-12 text-center">
                   <motion.div

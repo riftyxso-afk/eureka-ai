@@ -10,6 +10,7 @@ import "katex/dist/katex.min.css";
 import rehypeKatex from "rehype-katex";
 import { normalizeMathDelimiters } from "@/lib/mathText";
 import CodeBlock from "@/components/note/CodeBlock";
+import ReadingTable from "@/components/ui/ReadingTable";
 import { causalChainSteps, remarkAnswerLineBreaks, remarkTextTimelines } from "@/lib/assistant/answerFormatting";
 import "./answer-content.css";
 
@@ -67,10 +68,8 @@ function MarkdownView({ content, className = "" }: MarkdownViewProps) {
             );
           },
           pre: ({ children }) => <>{children}</>,
-          table: ({ ...props }) => (
-            <div className="answer-table-wrap" tabIndex={0} role="region" aria-label="Tabel jawaban">
-              <table {...props} className="answer-table" />
-            </div>
+          table: ({ children }) => (
+            <ReadingTable label="Tabel jawaban"><table>{children}</table></ReadingTable>
           ),
           th: ({ ...props }) => (
             <th {...props} scope="col" />

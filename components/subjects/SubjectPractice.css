@@ -1,0 +1,50 @@
+.sj-practice {
+  width: min(560px, calc(100% - 28px));
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: clamp(20px, 4vw, 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 2px solid var(--sj-line, rgb(var(--clay-shadow, 209 196 180)));
+  border-radius: 24px;
+  background: var(--sj-panel, rgb(var(--clay-cream, 255 255 255)));
+  color: var(--sj-ink, rgb(var(--clay-dark, 45 42 36)));
+  box-shadow: 0 20px 65px #30231935;
+}
+.sj-practice::backdrop { background: #30231980; }
+.sj-practice * { box-sizing: border-box; }
+.sj-practice-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.sj-practice-heading > div { min-width: 0; }
+.sj-practice h2 { margin: 4px 0 0; font-size: 1.35rem; line-height: 1.35; font-weight: 800; overflow-wrap: anywhere; }
+.sj-practice-eyebrow { margin: 0; color: var(--sj-muted, rgb(var(--clay-dark, 45 42 36) / .75)); font-size: .8rem; font-weight: 700; }
+.sj-practice-description, .sj-practice-status, .sj-practice-footer p, .sj-practice-empty p, .sj-practice-result p { font-size: .875rem; line-height: 1.6; }
+.sj-practice-description { margin: 16px 0; color: var(--sj-muted, rgb(var(--clay-dark, 45 42 36) / .75)); }
+.sj-practice-status { min-height: 28px; margin-bottom: 16px; font-weight: 650; }
+.sj-practice button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--sj-line, rgb(var(--clay-shadow, 209 196 180))); border-radius: 12px; background: var(--sj-panel, rgb(var(--clay-cream, 255 255 255))); color: inherit; font: inherit; font-size: .875rem; font-weight: 750; cursor: pointer; }
+.sj-practice button:hover:not(:disabled) { background: var(--sj-soft, rgb(var(--clay-input-bg, 239 232 224))); text-decoration: underline; }
+.sj-practice button:active:not(:disabled) { transform: translateY(1px); }
+.sj-practice button:disabled { opacity: .5; cursor: not-allowed; }
+.sj-practice button:focus-visible { outline: 3px solid #6851b6; outline-offset: 3px; }
+.sj-practice .sj-practice-close { flex-shrink: 0; padding: 0; width: 44px; font-size: 1.7rem; line-height: 1; }
+.sj-practice .sj-practice-primary { background: #6245a0; border-color: #6245a0; color: #fff; }
+.sj-practice .sj-practice-primary:hover:not(:disabled) { background: #503782; }
+.sj-practice-position { margin: 8px 0 12px; color: var(--sj-muted, rgb(var(--clay-dark, 45 42 36) / .75)); font-size: .8rem; }
+.sj-practice-card { display: flex; min-height: 220px; padding: clamp(20px, 4vw, 28px); flex-direction: column; justify-content: center; gap: 16px; border: 2px solid var(--sj-line, rgb(var(--clay-shadow, 209 196 180))); border-radius: 18px; background: var(--sj-soft, rgb(var(--clay-beige, 249 243 236))); }
+.sj-practice-card-text { margin: 0; font-size: 1.15rem; line-height: 1.65; font-weight: 650; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sj-practice .sj-practice-flip { width: 100%; margin-top: 12px; }
+.sj-practice-navigation { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.sj-practice-navigation button { flex: 1; min-width: 0; }
+.sj-practice-footer { border-top: 1px solid var(--sj-line, rgb(var(--clay-shadow, 209 196 180))); margin-top: 24px; padding-top: 16px; }
+.sj-practice-footer p { margin: 0 0 12px; color: var(--sj-muted, rgb(var(--clay-dark, 45 42 36) / .75)); }
+.sj-practice-footer button { width: 100%; }
+.sj-practice-error { padding: 12px 14px; margin: 0 0 16px; border: 1px solid #bd6767; border-radius: 12px; background: #fff0ed; color: #8d2929; font-size: .875rem; line-height: 1.5; }
+.sj-practice-empty, .sj-practice-result { padding: 8px 0; }
+.sj-practice-empty button { margin: 8px 8px 0 0; }
+.sj-practice-result h3 { margin: 8px 0; font-size: 1.3rem; font-weight: 800; }
+.sj-practice .sj-practice-reload { margin-top: 12px; }
+@media (max-width: 380px) {
+  .sj-practice { width: calc(100% - 16px); padding: 16px; border-radius: 18px; }
+  .sj-practice-navigation { gap: 8px; }
+  .sj-practice-navigation button { padding-inline: 8px; font-size: .8rem; }
+}
+@media (forced-colors: active) { .sj-practice button:focus-visible { outline-color: Highlight; } }
