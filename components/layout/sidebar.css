@@ -41,16 +41,12 @@
 
 @media (max-width:1023px) {
   .eureka-mobile-bar {
-    position:sticky;
-    z-index:35;
-    top:0;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:8px;
     padding:calc(6px + env(safe-area-inset-top)) 16px 6px;
-    background:rgb(var(--clay-cream));
-    border-bottom:1px solid rgb(var(--clay-border-light) / .65);
+    background:transparent;
   }
   .eureka-mobile-brand {
     color:rgb(var(--clay-primary));
