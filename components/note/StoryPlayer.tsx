@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VoiceRing } from "voice-ring";
-import { BookOpen, ChevronDown, Headphones, Music2, Pause, Play } from "lucide-react";
+import { ChevronDown, Headphones, Music2, Pause, Play } from "lucide-react";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
 import { apiFetch } from "@/lib/apiClient";
 import { STORY_VOICES } from "@/lib/storyVoices";
+import { activeStoryCue, type StoryCue } from "@/lib/storySubtitles";
 import "./story-player.css";
 
 type VoiceOption = { id: string; name: string; description: string; previewUrl: string | null };
@@ -19,6 +20,7 @@ export default function StoryPlayer({ noteId, noteTitle }: { noteId: string; not
   const [stage, setStage] = useState<"idle" | "writing" | "voicing">("idle");
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [cues, setCues] = useState<StoryCue[]>([]);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [voiceId, setVoiceId] = useState<string>(STORY_VOICES[0].id);
   const [voices, setVoices] = useState<VoiceOption[] | null>(null);
@@ -105,17 +107,21 @@ export default function StoryPlayer({ noteId, noteTitle }: { noteId: string; not
       }
       setStage("voicing");
       const audio = await apiFetch(`/api/notes/${encodeURIComponent(noteId)}/story/audio`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: narration, voiceId }), signal: request.signal,
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: narration, voiceId, subtitles: true }), signal: request.signal,
       });
       if (!audio.ok) {
         const result = await audio.json().catch(() => null);
         throw new Error(result?.error || "Suara belum bisa disiapkan.");
       }
-      const blob = await audio.blob();
+      const result = await audio.json();
+      if (typeof result.audio !== "string" || !Array.isArray(result.cues)) throw new Error("Audio belum bisa disiapkan.");
+      const bytes = Uint8Array.from(atob(result.audio), character => character.charCodeAt(0));
+      const blob = new Blob([bytes], { type: "audio/mpeg" });
       if (!blob.size) throw new Error("Audio kosong. Silakan coba lagi.");
       if (request.signal.aborted) return;
       if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
       objectUrl.current = URL.createObjectURL(blob);
+      setCues(result.cues);
       setAudioUrl(objectUrl.current);
     } catch (failure) {
       if (!request.signal.aborted) setError(failure instanceof Error ? failure.message : "Cerita belum bisa disiapkan.");
@@ -152,7 +158,7 @@ export default function StoryPlayer({ noteId, noteTitle }: { noteId: string; not
     audioRef.current?.pause();
     void contextRef.current?.close(); contextRef.current = null; analyserRef.current = null; samplesRef.current = null;
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
-    objectUrl.current = ""; setAudioUrl(""); setPlaying(false); setTime(0); setDuration(0); setError(""); setVoiceId(id);
+    objectUrl.current = ""; setAudioUrl(""); setCues([]); setPlaying(false); setTime(0); setDuration(0); setError(""); setVoiceId(id);
   };
   const preview = async (voice: VoiceOption) => {
     const audio = previewRef.current;
@@ -173,7 +179,7 @@ export default function StoryPlayer({ noteId, noteTitle }: { noteId: string; not
       <div className="story-player-copy">
         <span className="story-player-status"><span />{loading ? "MOMO SEDANG MENYIAPKAN" : playing ? "SEDANG DIPUTAR" : audioUrl ? "SIAP DIDENGARKAN" : "SIAP BERCERITA"}</span>
         <h3>{loading ? (stage === "writing" ? "Momo sedang merangkai cerita" : "Momo sedang menyiapkan suara") : audioUrl ? noteTitle : "Belajar lewat cerita"}</h3>
-        <p>{loading ? (stage === "writing" ? "Membaca catatan dan menyusun penjelasan…" : "Mengubah cerita menjadi suara Momo…") : audioUrl ? "Putar kapan saja, atau baca teksnya di bawah." : "Hai, aku Momo! Aku akan membantu menjelaskan catatan ini lewat cerita."}</p>
+        {audioUrl ? <div className="story-caption" aria-label="Subtitle cerita"><span>SUBTITLE</span><p>{cues.length ? activeStoryCue(cues, time)?.text ?? "Tekan putar untuk mendengarkan cerita." : "Subtitle tidak tersedia untuk audio ini."}</p></div> : <p>{loading ? (stage === "writing" ? "Membaca catatan dan menyusun penjelasan…" : "Mengubah cerita menjadi suara Momo…") : "Hai, aku Momo! Aku akan membantu menjelaskan catatan ini lewat cerita."}</p>}
         {!audioUrl && <button type="button" className="story-primary" disabled={loading} onClick={() => void prepare()}>{loading ? <><Music2 size={16} /> Sedang disiapkan</> : <><Play size={16} fill="currentColor" /> {story ? "Buat audio dengan suara ini" : "Siapkan cerita"}</>}</button>}
         {loading && <p className="story-live" role="status" aria-live="polite">{stage === "writing" ? "Menyusun narasi dari catatan…" : "Membuat audio cerita…"}</p>}
       </div>
@@ -190,7 +196,6 @@ export default function StoryPlayer({ noteId, noteTitle }: { noteId: string; not
       <button type="button" className="story-play" aria-label={playing ? "Jeda cerita" : "Putar cerita"} onClick={() => void togglePlayback()}>{playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}</button>
       <div className="story-timeline"><div className="story-timeline-top"><strong>{playing ? "Momo sedang bercerita" : "Cerita Momo"}</strong><span>{formatTime(time)} / {formatTime(duration)}</span></div><input type="range" min={0} max={duration || 0} step="0.1" value={Math.min(time, duration || 0)} aria-label="Posisi cerita" disabled={!duration} onChange={event => { const value = Number(event.target.value); if (audioRef.current) audioRef.current.currentTime = value; setTime(value); }} /></div>
     </div>}
-    {story && <details className="story-transcript"><summary><span><BookOpen size={17} /> Baca teks cerita</span><ChevronDown size={17} /></summary><p>{story}</p></details>}
     {error && <p role="alert" className="story-error">{error}</p>}
   </section>;
 }

@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/assistant/auth";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { db } from "@/lib/supabase/admin";
 import { STORY_VOICES } from "@/lib/storyVoices";
+import { storyCues } from "@/lib/storySubtitles";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!checkRateLimit(`note-story-audio:${auth.userId}`, 15, 60 * 60 * 1000).ok) return NextResponse.json({ error: "Batas pembuatan suara tercapai. Silakan coba lagi nanti." }, { status: 429 });
   try {
     const dialogue = model.startsWith("eleven_v4");
-    const endpoint = dialogue ? "text-to-dialogue" : `text-to-speech/${encodeURIComponent(voice)}`;
+    const baseEndpoint = dialogue ? "text-to-dialogue" : `text-to-speech/${encodeURIComponent(voice)}`;
+    const endpoint = body?.subtitles === true ? `${baseEndpoint}/with-timestamps` : baseEndpoint;
     const upstream = await fetch(`https://api.elevenlabs.io/v1/${endpoint}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": key, "Content-Type": "application/json" },
@@ -37,8 +39,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const message = status === 402 ? "Paket atau kuota ElevenLabs tidak mendukung suara ini." : status === 429 ? "Layanan suara sedang sibuk. Coba lagi sebentar." : "Suara belum bisa dibuat. Periksa konfigurasi ElevenLabs.";
       return NextResponse.json({ error: message }, { status: status === 429 ? 429 : 502 });
     }
-    if (!upstream.body) return NextResponse.json({ error: "Audio tidak tersedia." }, { status: 502 });
-    return new Response(upstream.body, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "private, no-store" } });
+    if (body?.subtitles !== true) {
+      if (!upstream.body) return NextResponse.json({ error: "Audio tidak tersedia." }, { status: 502 });
+      return new Response(upstream.body, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "private, no-store" } });
+    }
+    const result = await upstream.json();
+    if (typeof result.audio_base64 !== "string" || !result.audio_base64) return NextResponse.json({ error: "Audio tidak tersedia." }, { status: 502 });
+    const cues = storyCues(result.alignment ?? result.normalized_alignment);
+    return NextResponse.json({ audio: result.audio_base64, cues }, { headers: { "Cache-Control": "private, no-store" } });
   } catch {
     return NextResponse.json({ error: "Layanan suara belum dapat dihubungi. Coba lagi." }, { status: 502 });
   }
