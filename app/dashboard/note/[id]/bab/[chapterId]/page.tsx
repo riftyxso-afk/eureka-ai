@@ -16,6 +16,7 @@ import {
 import { NoteFlow } from "@/components/note/NoteFlow";
 import { ChapterAIChat } from "@/components/note/ChapterAIChat";
 import { DreamingOverlay } from "@/components/note/DreamingOverlay";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { ParsedContent } from "@/components/note/ParsedContent";
 import { parseNoteContent } from "@/lib/parseNoteContent";
 import SelectionActions from "@/components/note/SelectionActions";
@@ -151,15 +152,8 @@ export default function ChapterNotepadPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-        <div className="card-clay flex items-center justify-center py-16 text-clay-muted">
-          <p className="text-base font-extrabold">Memuat bab...</p>
-        </div>
-        <DreamingOverlay
-          open
-          title="Membaca bab..."
-          status="AI sedang membuka catatanmu"
-        />
+      <div className="note-detail mx-auto w-full max-w-clay py-16">
+        <PageLoader inline title="Memuat bab…" />
       </div>
     );
   }

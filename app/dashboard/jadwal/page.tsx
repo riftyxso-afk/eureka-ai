@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/PageLoader";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -265,7 +266,7 @@ export default function JadwalPage() {
     notify("Tantangan dihapus");
   };
 
-  if (!ready) return <div className="schedule-quest" role="status"><div className="quest-loading">Menyiapkan peta belajarmu…</div></div>;
+  if (!ready) return <div className="schedule-quest"><PageLoader inline title="Memuat jadwal…" /></div>;
 
   return (
     <div className="schedule-quest eureka-page-jadwal">

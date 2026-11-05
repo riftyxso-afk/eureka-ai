@@ -4,6 +4,7 @@
 
 'use client';
 
+import { PageLoader } from "@/components/ui/PageLoader";
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Check } from 'lucide-react';
 import Link from 'next/link';
@@ -32,9 +33,7 @@ export default function SettingsPage() {
 
   if (!settings) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-clay-beige dark:bg-[#171526]">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-clay-primary"></div>
-      </div>
+      <PageLoader inline title="Memuat pengaturan…" />
     );
   }
 

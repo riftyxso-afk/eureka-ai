@@ -49,13 +49,14 @@
     background:transparent;
   }
   .eureka-mobile-brand {
+    margin-inline-end:auto;
     color:rgb(var(--clay-primary));
     font-size:24px;
     font-weight:900;
     letter-spacing:-.04em;
   }
   .eureka-mobile-shortcuts { display:flex; align-items:center; gap:4px; }
-  .eureka-mobile-shortcuts :is(a,button) {
+  .eureka-mobile-shortcuts a, .eureka-mobile-menu {
     display:inline-flex;
     align-items:center;
     justify-content:center;
@@ -68,13 +69,13 @@
     font-size:12px;
     font-weight:800;
   }
-  .eureka-mobile-shortcuts :is([aria-current], button, :active) {
+  .eureka-mobile-shortcuts :is([aria-current], :active), .eureka-mobile-menu {
     color:rgb(var(--clay-primary));
     background:rgb(var(--clay-primary) / .10);
   }
   .eureka-mobile-bar :focus-visible { outline:2px solid rgb(var(--clay-primary)); outline-offset:2px; }
   html:has(.eureka-sidebar-mobile[open]) { overflow:hidden; }
-  .eureka-sidebar-mobile[open] {
+  .eureka-sidebar-mobile {
     position:fixed;
     inset:0 auto 0 0;
     margin:0;
@@ -85,6 +86,25 @@
   .eureka-sidebar-mobile-header .eureka-sidebar-brand { padding-block:0; }
   .eureka-sidebar-close { width:44px; height:44px; }
   .eureka-sidebar-mobile .eureka-sidebar-item { min-height:46px; }
+}
+
+@media (max-width:1023px) and (prefers-reduced-motion:no-preference) {
+  @supports (transition-behavior: allow-discrete) {
+    .eureka-sidebar-mobile {
+      transform:translateX(-100%);
+      transition:transform 220ms cubic-bezier(.23,1,.32,1), display 220ms allow-discrete, overlay 220ms allow-discrete;
+    }
+    .eureka-sidebar-mobile[open] { transform:translateX(0); }
+    .eureka-sidebar-mobile::backdrop {
+      opacity:0;
+      transition:opacity 220ms ease-out, display 220ms allow-discrete, overlay 220ms allow-discrete;
+    }
+    .eureka-sidebar-mobile[open]::backdrop { opacity:1; }
+    @starting-style {
+      .eureka-sidebar-mobile[open] { transform:translateX(-100%); }
+      .eureka-sidebar-mobile[open]::backdrop { opacity:0; }
+    }
+  }
 }
 .eureka-sidebar-nav > .eureka-sidebar-item { min-height:52px; gap:16px; padding:8px 12px; font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.025em; }
 .eureka-sidebar-nav > .eureka-sidebar-item.is-collapsed { justify-content:center; padding:8px; }

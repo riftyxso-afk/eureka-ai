@@ -45,6 +45,7 @@ import { YoutubeEmbed } from "@/components/video/YoutubeEmbed";
 import { VideoViewOverlay } from "@/components/video/VideoViewOverlay";
 import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import { DreamingOverlay } from "@/components/note/DreamingOverlay";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { useRegenerateJob } from "@/lib/useRegenerateJob";
 import type { HighlightEntry } from "@/lib/highlights-store";
 import type { NoteImage } from "@/lib/note-images-store";
@@ -589,15 +590,8 @@ export default function NoteDetailPage() {
 
   if (loading) {
     return (
-      <div className="note-detail mx-auto w-full max-w-clay px-4 py-6 sm:px-6">
-        <div className="card-clay flex items-center justify-center py-16 text-clay-muted">
-          <p className="text-base font-extrabold">{l.loading}</p>
-        </div>
-        <DreamingOverlay
-          open
-          title={l.reading}
-          status={l.preparingPage}
-        />
+      <div className="note-detail mx-auto w-full max-w-clay py-16">
+        <PageLoader inline title={l.loading} />
       </div>
     );
   }

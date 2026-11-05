@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,7 +27,6 @@ import { NoteItem } from "@/components/dashboard/NoteItem";
 import { CreateNoteModal } from "@/components/dashboard/CreateNoteModal";
 import "./workspace.css";
 import { BackgroundJobPopup } from "@/components/dashboard/BackgroundJobPopup";
-import { DashboardPreparing } from "@/components/dashboard/DashboardPreparing";
 import GuideBanner from "@/components/dashboard/GuideBanner";
 import AssistantHub from "@/components/dashboard/AssistantHub";
 import TutorialHost from "@/components/tutorial/TutorialHost";
@@ -81,18 +79,6 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"semua" | "terbaru">("semua");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // Tab hub pada layar kecil: "asisten" | "aktivitas" (default: asisten).
-  // Menunda render dashboard: setelah onboarding selesai tampilkan dulu
-  // layar "Menyiapkan dashboardmu..." sebelum konten muncul.
-  // Flag dibaca sekali di initializer (aman dari StrictMode double-effect).
-  const [prepareOn] = useState(() => {
-    try {
-      return sessionStorage.getItem("eureka_dashboard_prepare") === "1";
-    } catch {
-      return false;
-    }
-  });
-  const [ready, setReady] = useState(!prepareOn);
   const [progress, setProgress] = useState({
     xp: 0,
     level: 1,
@@ -107,17 +93,6 @@ export default function DashboardPage() {
   });
 
   const userName = data.name || getUserName();
-
-  // Layar "Menyiapkan dashboardmu..." (flag di-set oleh halaman onboarding).
-  useEffect(() => {
-    try {
-      sessionStorage.removeItem("eureka_dashboard_prepare");
-    } catch {
-      // abaikan
-    }
-    const t = setTimeout(() => setReady(true), prepareOn ? 1700 : 120);
-    return () => clearTimeout(t);
-  }, [prepareOn]);
 
   // Banner info versi pengembangan — bisa ditutup, diingat di localStorage.
   const [bannerHidden, setBannerHidden] = useState<boolean>(() => {

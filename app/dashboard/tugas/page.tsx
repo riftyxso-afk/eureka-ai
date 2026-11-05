@@ -1,5 +1,7 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/PageLoader";
+
 /**
  * Tugas & Ujian (task-reminders) — halaman pengelola tugas dengan tenggat,
  * pengingat otomatis (cron 1×/jam), dan tab ujian.
@@ -388,9 +390,7 @@ export default function TugasPage() {
           {/* Daftar tugas */}
           <div className="mt-5 flex flex-col gap-3">
             {loading ? (
-              <div className="flex justify-center py-10 text-clay-muted">
-                <Loader2 className="animate-spin" size={26} />
-              </div>
+              <PageLoader inline title="Memuat tugas…" />
             ) : tasks.length === 0 ? (
               <div className="rounded-clay-md border-2 border-dashed border-clay-shadow/30 py-14 text-center">
                 <Timer size={36} className="mx-auto text-clay-shadow/50" />

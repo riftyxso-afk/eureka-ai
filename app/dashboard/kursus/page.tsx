@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/PageLoader";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -10,7 +11,6 @@ import {
   Info,
   Library,
   ListOrdered,
-  Loader2,
   Plus,
   RotateCcw,
   Search,
@@ -223,11 +223,7 @@ export default function CourseCatalogPage() {
       )}
 
       {loading ? (
-        <div className="course-state" role="status">
-          <Loader2 className="course-loading-icon" size={30} aria-hidden="true" />
-          <h2>Menyiapkan katalog kursus</h2>
-          <p>Daftar kursus dan progres belajarmu sedang dimuat.</p>
-        </div>
+        <PageLoader inline title="Memuat katalog kursus…" />
       ) : loadError ? (
         <div className="course-state" role="alert">
           <Library size={30} aria-hidden="true" />

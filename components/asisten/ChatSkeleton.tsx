@@ -1,75 +1,17 @@
-"use client";
+import "@/components/ui/page-loader.css";
 
-import EurekaOrb from "@/components/ui/EurekaOrb";
-
-/**
- * Skeleton loading chat — placeholder bubble user & AI dengan shimmer
- * CSS (reuse @keyframes shimmer di globals.css). Meniru ukuran bubble
- * asli (MessageBubble) agar tidak ada lonjakan layout saat diganti
- * konten. Reduced motion → animasi mati (motion-reduce:animate-none).
- */
-export default function ChatSkeleton() {
+export default function ChatSkeleton({ label = "Memuat percakapan…" }: { label?: string }) {
   return (
-    <div
-      aria-busy="true"
-      aria-label="Memuat percakapan"
-      data-testid="chat-skeleton"
-      className="mx-auto w-full max-w-3xl space-y-4"
-    >
-      {/* Bubble user (kanan, kecil — meniru balasan singkat) */}
-      <div className="flex justify-end">
-        <div className="relative h-10 w-28 overflow-hidden rounded-clay-md rounded-br-[8px] bg-clay-primary/70">
-          <span className="skeleton-shimmer motion-reduce:animate-none" />
-        </div>
-      </div>
-
-      {/* Bubble AI 1 (kiri, multi-baris) */}
-      <div className="flex items-start gap-2.5">
-        <span
-          aria-hidden
-          className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center"
-        >
-          <EurekaOrb variant="connecting" scale="inline" label="Memuat sesi" />
-        </span>
-        <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-clay-cream px-4 py-3 shadow-clay-sm">
-          <div className="space-y-2">
-            <div className="relative h-3.5 w-4/5 overflow-hidden rounded-full bg-clay-beige">
-              <span className="skeleton-shimmer motion-reduce:animate-none" />
-            </div>
-            <div className="relative h-3.5 w-full overflow-hidden rounded-full bg-clay-beige">
-              <span className="skeleton-shimmer motion-reduce:animate-none" />
-            </div>
-            <div className="relative h-3.5 w-3/5 overflow-hidden rounded-full bg-clay-beige">
-              <span className="skeleton-shimmer motion-reduce:animate-none" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bubble AI 2 (kiri) */}
-      <div className="flex items-start gap-2.5">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/holo-sticker.gif"
-          alt=""
-          aria-hidden
-          style={{ mixBlendMode: "screen" }}
-          className="mt-1 h-10 w-10 shrink-0 object-contain"
-        />
-        <div className="min-w-0 max-w-[85%] rounded-clay-md rounded-tl-[8px] border-2 border-clay-borderLight bg-clay-cream px-4 py-3 shadow-clay-sm">
-          <div className="space-y-2">
-            <div className="relative h-3.5 w-2/3 overflow-hidden rounded-full bg-clay-beige">
-              <span className="skeleton-shimmer motion-reduce:animate-none" />
-            </div>
-            <div className="relative h-3.5 w-11/12 overflow-hidden rounded-full bg-clay-beige">
-              <span className="skeleton-shimmer motion-reduce:animate-none" />
-            </div>
-            <div className="relative h-3.5 w-7/12 overflow-hidden rounded-full bg-clay-beige">
-              <span className="skeleton-shimmer motion-reduce:animate-none" />
-            </div>
-            <div className="relative h-3.5 w-1/2 overflow-hidden rounded-full bg-clay-beige">
-              <span className="skeleton-shimmer motion-reduce:animate-none" />
-            </div>
+    <div role="status" data-testid="chat-skeleton" className="mx-auto w-full max-w-3xl space-y-6">
+      <span className="sr-only">{label}</span>
+      <div aria-hidden="true" className="page-loader-reveal space-y-3">
+        <div className="ml-auto h-9 w-2/5 rounded-xl bg-clay-primary/10" />
+        <div className="flex gap-3 pt-3">
+          <div className="size-8 shrink-0 rounded-full bg-clay-primary/10" />
+          <div className="w-4/5 space-y-2.5 pt-1">
+            <div className="h-2.5 rounded-full bg-clay-primary/10" />
+            <div className="h-2.5 w-5/6 rounded-full bg-clay-primary/10" />
+            <div className="h-2.5 w-3/5 rounded-full bg-clay-primary/10" />
           </div>
         </div>
       </div>

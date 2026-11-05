@@ -1,9 +1,10 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/PageLoader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
-import { Loader2, BookOpenCheck } from "lucide-react";
+import { BookOpenCheck } from "lucide-react";
 import ComprehensionPage from "@/components/note/ComprehensionPage";
 
 export default function UjiPemahamanPage({
@@ -42,9 +43,7 @@ export default function UjiPemahamanPage({
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-clay-primary" />
-      </div>
+      <PageLoader inline title="Memuat latihan…" />
     );
   }
 

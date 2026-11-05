@@ -1,5 +1,7 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/PageLoader";
+
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -130,9 +132,7 @@ export default function LeaderboardPage() {
       {/* Daftar */}
       <div className="mt-6 flex flex-col gap-3">
         {loading ? (
-          <p className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-6 text-center text-sm font-semibold text-clay-muted">
-            {l.loading}
-          </p>
+          <PageLoader inline title={l.loading} />
         ) : loadError ? (
           <div className="study-empty" role="status">
             <Image src="/onboarding/eureka-welcome.png" alt="" width={136} height={136} />

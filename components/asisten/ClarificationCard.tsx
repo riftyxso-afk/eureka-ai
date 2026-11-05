@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, HelpCircle, Sparkles, X } from "lucide-react";
+import { ArrowRight, HelpCircle } from "lucide-react";
 import type { ClarificationQuestion } from "@/lib/assistant-stream";
 
 interface ClarificationCardProps {
@@ -39,53 +39,35 @@ export default function ClarificationCard({
   };
 
   return (
-    <div className="card-clay rounded-clay p-4 shadow-clay-sm sm:p-5">
-      <div className="flex items-start gap-2.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-clay-full bg-clay-primary/15 text-clay-primary">
-          <HelpCircle size={18} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-extrabold text-clay-dark">
-            Sebelum menjawab, Eureka butuh info ini
-          </p>
-          <p className="mt-0.5 text-xs font-semibold text-clay-muted">
-            Promptmu kurang jelas — jawab pertanyaan berikut agar jawabannya
-            tepat sasaran.
-          </p>
-        </div>
-      </div>
+    <section aria-label="Klarifikasi pertanyaan" className="min-w-0 border-s-2 border-clay-primary/25 ps-3 sm:ps-5">
+      <p className="flex items-center gap-2 text-sm font-extrabold text-clay-dark">
+        <HelpCircle size={17} className="shrink-0 text-clay-primary" aria-hidden="true" />
+        Pilih arah jawaban
+      </p>
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-4 space-y-5">
         {questions.map((q) => {
           const chosen = selected[q.id];
           return (
-            <div key={q.id}>
-              <p className="text-sm font-extrabold text-clay-dark">
+            <fieldset key={q.id} className="min-w-0">
+              <legend className="mb-1 text-sm font-bold text-clay-dark [overflow-wrap:anywhere]">
                 {q.question}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
+              </legend>
+              <div className="divide-y divide-clay-primary/10">
                 {q.options.map((opt) => {
                   const active = chosen === opt;
                   return (
-                    <button
+                    <label
                       key={opt}
-                      type="button"
-                      onClick={() =>
-                        setSelected((prev) => ({ ...prev, [q.id]: opt }))
-                      }
-                      className={`flex items-center gap-1.5 rounded-clay-full border-2 px-3 py-1.5 text-xs font-extrabold transition-all duration-75 min-h-[38px] ${
-                        active
-                          ? "border-clay-primary bg-clay-primary text-white shadow-clay-btn"
-                          : "border-clay-shadow/40 bg-clay-cream text-clay-dark hover:border-clay-primary/60"
-                      }`}
+                      className={`flex min-h-11 cursor-pointer items-center gap-3 px-2 py-2 text-sm font-semibold text-clay-dark ${active ? "bg-clay-primary/10" : "hover:bg-clay-primary/5"}`}
                     >
-                      {active && <Check size={13} />}
-                      {opt}
-                    </button>
+                      <input type="radio" name={`clarification-${q.id}`} checked={active} onChange={() => setSelected((prev) => ({ ...prev, [q.id]: opt }))} className="size-4 shrink-0 accent-violet-600" />
+                      <span className="min-w-0 [overflow-wrap:anywhere]">{opt}</span>
+                    </label>
                   );
                 })}
               </div>
-            </div>
+            </fieldset>
           );
         })}
       </div>
@@ -94,21 +76,20 @@ export default function ClarificationCard({
         <button
           type="button"
           onClick={onSkip}
-          className="inline-flex items-center gap-1.5 text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary"
+          className="inline-flex min-h-11 items-center text-sm font-bold text-clay-muted transition-colors hover:text-clay-primary"
         >
-          <X size={14} />
           Langsung jawab saja
         </button>
         <button
           type="button"
           onClick={submit}
           disabled={!allAnswered}
-          className="btn-clay-primary inline-flex items-center justify-center gap-2 !min-h-[44px] !px-5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Sparkles size={16} />
           {allAnswered ? "Lanjutkan" : `Pilih ${questions.length - answered} lagi`}
+          <ArrowRight size={16} aria-hidden="true" />
         </button>
       </div>
-    </div>
+    </section>
   );
 }

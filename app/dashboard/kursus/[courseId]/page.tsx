@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/PageLoader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -341,11 +342,7 @@ export default function CourseDetailPage() {
       </Link>
 
       {loading ? (
-        <div className="course-state" role="status">
-          <Loader2 className="course-loading-icon" size={30} aria-hidden="true" />
-          <h1>Memuat detail kursus</h1>
-          <p>Silabus dan progres belajarmu sedang disiapkan.</p>
-        </div>
+        <PageLoader inline title="Memuat detail kursus…" />
       ) : loadError || !overview ? (
         <div className="course-state" role="alert">
           <Library size={30} aria-hidden="true" />

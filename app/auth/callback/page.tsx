@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { PageLoader } from "@/components/ui/PageLoader";
 import {
   finishGoogleOAuth,
   getSafeNext,
@@ -118,20 +118,5 @@ export default function AuthCallbackPage() {
     };
   }, [router]);
 
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-clay-beige px-4">
-      <img
-        src="/holo-sticker.gif"
-        alt="Logo Eureka.AI"
-        style={{ mixBlendMode: "screen" }}
-        className="h-24 w-24 object-contain"
-      />
-      <div className="mt-6 flex items-center gap-3 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-6 py-4 shadow-clay-sm">
-        <Loader2 size={22} className="animate-spin text-clay-primary" />
-        <p className="text-sm font-extrabold text-clay-dark">
-          Menyelesaikan masuk dengan Google...
-        </p>
-      </div>
-    </div>
-  );
+  return <PageLoader title="Menyelesaikan masuk dengan Google…" />;
 }

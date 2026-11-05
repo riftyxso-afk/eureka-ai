@@ -206,15 +206,15 @@ export const Sidebar = () => {
   return (
     <>
       <header className="eureka-mobile-bar">
+        <button type="button" className="eureka-mobile-menu" onClick={() => mobileMenu.current?.showModal()} aria-label="Buka menu" aria-haspopup="dialog">
+          <Menu size={22} aria-hidden="true" />
+        </button>
         <Link href="/dashboard" className="eureka-mobile-brand" aria-label="Eureka, dashboard">eureka!</Link>
         <nav aria-label="Akses cepat" className="eureka-mobile-shortcuts">
           <Link href="/dashboard/catatan" aria-current={activeMenuId(pathname) === "catatan" ? "true" : undefined}>
             <FileText size={18} aria-hidden="true" /><span>Catatan</span>
           </Link>
           <Link href="/chat"><MessageCircle size={18} aria-hidden="true" /><span>Chat</span></Link>
-          <button type="button" onClick={() => mobileMenu.current?.showModal()} aria-label="Buka menu" aria-haspopup="dialog">
-            <Menu size={22} aria-hidden="true" />
-          </button>
         </nav>
       </header>
 

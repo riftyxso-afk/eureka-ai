@@ -4,6 +4,7 @@
  * Dashboard Keamanan AI — metrik guardrails NVIDIA NIM + event log.
  * Hanya untuk admin (SAFETY_ADMIN_USER_IDS); selain itu tampil "Akses ditolak".
  */
+import { PageLoader } from "@/components/ui/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
@@ -72,9 +73,7 @@ export default function KeamananPage() {
   if (loading) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-10">
-        <CardClay>
-          <p className="text-sm font-semibold text-clay-muted">Memuat metrik keamanan…</p>
-        </CardClay>
+        <PageLoader inline title="Memuat metrik keamanan…" />
       </main>
     );
   }

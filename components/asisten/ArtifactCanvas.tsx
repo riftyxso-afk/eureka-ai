@@ -1,356 +1,168 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  Check,
-  Copy,
-  Download,
-  Edit3,
-  FileText,
-  Save,
-  Terminal,
-  X,
-} from "lucide-react";
-
+import { useEffect, useRef, useState } from "react";
+import { Check, Copy, Download, FileText, ImageIcon, Pencil, Save, Terminal, X } from "lucide-react";
 import MarkdownView from "@/components/asisten/MarkdownView";
 import type { Artifact } from "@/lib/agents/types";
+import "./artifact-workspace.css";
 
 interface ArtifactCanvasProps {
   artifacts: Artifact[];
-  /** Artifact yang sedang menerima stream (ikon/status live). */
   streamingId: string | null;
   open: boolean;
+  activeId: string | null;
+  onSelect: (id: string) => void;
   sending?: boolean;
   onClose: () => void;
-  /** Simpan hasil edit markdown (content baru) — version naik di parent. */
   onEditSave?: (id: string, content: string) => Promise<void>;
 }
 
-/**
- * Artifact Canvas (PRD §7) — panel rendering terpisah dari bubble chat.
- * Desktop: panel samping; mobile: bottom sheet. Toolbar per tipe:
- * markdown → copy/edit/simpan; terminal → expand/collapse (read-only);
- * image → copy/simpan.
- */
-export default function ArtifactCanvas({
-  artifacts,
-  streamingId,
-  open,
-  sending = false,
-  onClose,
-  onEditSave,
-}: ArtifactCanvasProps) {
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
+const formats = {
+  markdown: { label: "Dokumen", icon: FileText },
+  terminal: { label: "Terminal", icon: Terminal },
+  image: { label: "Gambar", icon: ImageIcon },
+};
+
+export default function ArtifactCanvas(props: ArtifactCanvasProps) {
+  const active = props.artifacts.find((item) => item.id === props.activeId) ?? props.artifacts.at(-1);
+  if (!active) return null;
+  return <ArtifactWorkspace key={`${active.id}:${active.version}`} {...props} active={active} />;
+}
+
+function ArtifactWorkspace({
+  artifacts, active, streamingId, open, sending, onClose, onEditSave, onSelect,
+}: ArtifactCanvasProps & { active: Artifact }) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [terminalExpanded, setTerminalExpanded] = useState(false);
+  const [feedback, setFeedback] = useState<{ error: boolean; text: string } | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const editing = draft !== null;
+  const busy = saving || sending || Boolean(streamingId);
+  const streaming = active.id === streamingId;
+  const { label, icon: FormatIcon } = formats[active.type];
 
-  // Artifact aktif: yang dipilih, atau terakhir dibuat.
-  const active = useMemo(
-    () =>
-      artifacts.find((a) => a.id === activeId) ??
-      artifacts[artifacts.length - 1] ??
-      null,
-    [artifacts, activeId]
-  );
-
-  // Sitasi sumber dokumen dari konten markdown — baris "*(Sumber: …)*"
-  // diambil dari alur markdown & dirender sebagai teks ringan terpisah
-  // (chat-visual-hierarchy: sitasi tanpa banner berborder).
-  const sourceLabel = useMemo(() => {
-    if (!active || active.type !== "markdown") return null;
-    const m = /\*\(Sumber:\s*([^)]+)\)\*/.exec(active.content);
-    return m ? `Sumber: ${m[1].trim()}` : null;
-  }, [active]);
-
-  // Artifact baru masuk → reset mode edit & pilihan.
   useEffect(() => {
-    setEditing(false);
-    setSaveError(null);
-    setCopied(false);
-    setTerminalExpanded(false);
-  }, [active?.id, active?.version]);
+    if (!open || !window.matchMedia("(max-width: 899px)").matches) return;
+    const previous = document.activeElement;
+    titleRef.current?.focus({ preventScroll: true });
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, [open]);
 
-  if (!open || artifacts.length === 0) return null;
+  if (!open) return null;
 
-  const copyActive = async () => {
-    if (!active) return;
+  async function copy() {
     try {
       await navigator.clipboard.writeText(active.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
+      setFeedback({ error: false, text: "Isi disalin" });
     } catch {
-      // clipboard ditolak — abaikan
+      setFeedback({ error: true, text: "Isi belum bisa disalin." });
     }
-  };
+  }
 
-  const startEdit = () => {
-    if (!active || active.type !== "markdown" || sending || streamingId || !onEditSave || saving) return;
-    setEditText(active.content);
-    setEditing(true);
-  };
-
-  const saveEdit = async () => {
-    if (!active || sending || streamingId || !onEditSave || saving) return;
+  async function save() {
+    if (draft === null || busy || !onEditSave) return;
     setSaving(true);
-    setSaveError(null);
+    setFeedback(null);
     try {
-      await onEditSave(active.id, editText);
-      setEditing(false);
+      await onEditSave(active.id, draft);
+      setDraft(null);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Gagal menyimpan artifact.");
+      setFeedback({ error: true, text: error instanceof Error ? error.message : "Perubahan belum bisa disimpan." });
     } finally {
       setSaving(false);
     }
-  };
+  }
+
+  const terminalLines = active.type === "terminal" ? active.content.split("\n") : [];
+  const visibleLines = expanded ? terminalLines : terminalLines.slice(0, 6);
+  const source = active.type === "markdown" ? /(?:^|\n)\*\(Sumber:\s*([^)\n]+)\)\*\s*(?=\n|$)/.exec(active.content) : null;
+  const documentText = source ? active.content.replace(source[0], "\n").trim() : active.content;
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.aside
-          key="artifact-canvas"
-          initial={{ opacity: 0, x: 32 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 32 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="fixed inset-x-0 bottom-0 z-40 flex max-h-[72dvh] flex-col border-t border-clay-borderLight/60 bg-clay-cream sm:static sm:mx-0 sm:max-h-none sm:w-[380px] sm:shrink-0 sm:border-r sm:border-t-0 border-clay-borderLight/60 lg:w-[420px]"
-          data-testid="artifact-canvas"
-        >
-          {/* Header minimal ala Claude: ikon tipe + judul + badge format kiri,
-              aksi kanan. Tanpa border-bottom (bersih tanpa garis perpotongan). */}
-          <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-clay-full text-clay-muted">
-                {active?.type === "terminal" ? (
-                  <Terminal size={13} />
-                ) : active?.type === "image" ? (
-                  <FileText size={13} />
-                ) : (
-                  <FileText size={13} />
-                )}
-              </span>
-              <span className="truncate text-xs font-extrabold text-clay-dark">
-                {active?.title ?? "Artifact"}
-              </span>
-              {active && (
-                <span className="shrink-0 rounded-clay-sm bg-clay-beige px-1.5 py-px text-[9px] font-extrabold uppercase tracking-wide text-clay-muted">
-                  {active.type === "terminal" ? "TER" : active.type === "image" ? "IMG" : "MD"}
-                </span>
-              )}
-              {active?.id === streamingId && (
-                <span className="shrink-0 rounded-full bg-clay-primary/10 px-1.5 py-px text-[9px] font-extrabold text-clay-primary">
-                  streaming…
-                </span>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-0.5">
-              {active && (
-                <button
-                  onClick={copyActive}
-                  aria-label="Salin artifact"
-                  title="Salin isi artifact"
-                  className="flex h-7 w-7 items-center justify-center rounded-clay-full text-clay-muted hover:bg-clay-beige hover:text-clay-dark"
-                >
-                  {copied ? <Check size={13} className="text-clay-success" /> : <Copy size={13} />}
-                </button>
-              )}
-              <button
-                onClick={onClose}
-                aria-label="Tutup canvas"
-                title="Tutup panel"
-                className="flex h-7 w-7 items-center justify-center rounded-clay-full text-clay-muted hover:bg-clay-beige hover:text-clay-dark"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
-
-          {/* Tab daftar artifact (bila lebih dari satu) — chip kecil netral,
-              aktif = latar coral tipis (bukan solid penuh). */}
-          {artifacts.length > 1 && (
-            <div className="flex gap-1 overflow-x-auto border-b border-clay-borderLight/60 px-2 pb-1.5">
-              {artifacts.map((a, i) => (
-                <button
-                  key={a.id}
-                  onClick={() => setActiveId(a.id)}
-                  disabled={saving}
-                  aria-pressed={a.id === active?.id}
-                  className={`shrink-0 rounded-clay-full px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                    a.id === active?.id
-                      ? "bg-[rgb(var(--accent-coral))]/12 text-[rgb(var(--accent-coral))]"
-                      : "text-clay-muted hover:bg-clay-beige hover:text-clay-dark"
-                  }`}
-                >
-                  {a.type === "terminal" ? "▣" : a.type === "image" ? "🖼" : "📄"}{" "}
-                  {a.title.slice(0, 18)} ({i + 1})
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Konten */}
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
-            {!active ? (
-              <p className="mt-8 text-center text-xs font-bold text-clay-muted">
-                Belum ada artifact.
-              </p>
-            ) : active.type === "markdown" ? (
-              editing ? (
-                <div className="h-full">
-                <label htmlFor="artifact-edit-content" className="mb-2 block text-xs font-bold text-clay-dark">Isi catatan</label>
-                <textarea
-                  id="artifact-edit-content"
-                  value={editText}
-                  disabled={saving || sending || Boolean(streamingId)}
-                  onChange={(e) => setEditText(e.target.value)}
-                  className="h-full min-h-[240px] w-full resize-none rounded-clay-md bg-clay-inputBg p-3 font-mono text-xs text-clay-dark shadow-[inset_0_2px_6px_rgb(var(--clay-shadow-dark)/0.35)] focus:outline-none"
-                  aria-label="Edit artifact"
-                />
-                </div>
-              ) : (
-                <>
-                  {/* Sitasi sumber — elemen ringan: satu baris teks kecil netral,
-                      bukan banner berborder (chat-visual-hierarchy). */}
-                  {sourceLabel && (
-                    <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-clay-muted/80">
-                      <FileText size={11} className="shrink-0" />
-                      <span className="truncate">{sourceLabel}</span>
-                    </p>
-                  )}
-                  <MarkdownView content={active.content} className="text-sm" />
-                </>
-              )
-            ) : active.type === "terminal" ? (
-              <TerminalPanel
-                content={active.content}
-                streaming={active.id === streamingId}
-                expanded={terminalExpanded}
-                onToggle={() => setTerminalExpanded((v) => !v)}
-              />
-            ) : (
-              /* image: dataUrl/url pada content — dirender sebagai gambar */
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={active.content}
-                alt={active.title}
-                className="mx-auto max-h-full rounded-clay-md"
-              />
-            )}
-          </div>
-
-          {saveError && <p role="alert" className="px-3 pb-2 text-xs text-red-700">{saveError}</p>}
-          {/* Toolbar per tipe (PRD §7.5) — ikon ghost minimal; footer ramah
-              siswa: codename agent hanya di tooltip (chat-visual-hierarchy). */}
-          {active && (
-            <div className="flex items-center gap-0.5 border-t border-clay-borderLight/60 px-2.5 py-1.5">
-              {active.type === "markdown" && !editing && (
-                <button
-                  onClick={startEdit}
-                  disabled={sending || Boolean(streamingId) || !onEditSave || saving}
-                  title="Edit catatan"
-                  aria-label="Edit artifact"
-                  className="flex h-7 w-7 items-center justify-center rounded-clay-full text-clay-muted hover:bg-clay-beige hover:text-clay-dark"
-                >
-                  <Edit3 size={13} />
-                </button>
-              )}
-              {active.type === "markdown" && editing && (
-                <button
-                  onClick={saveEdit}
-                  disabled={saving || sending || Boolean(streamingId)}
-                  title={`Simpan sebagai versi ${active.version + 1}`}
-                  aria-label="Simpan editan"
-                  className="flex h-7 w-7 items-center justify-center rounded-clay-full text-[rgb(var(--accent-coral))] hover:bg-[rgb(var(--accent-coral))]/10"
-                >
-                  <Save size={13} />
-                </button>
-              )}
-
-              {editing && (
-                <button type="button" onClick={() => { setEditing(false); setSaveError(null); }} disabled={saving}
-                  className="px-2 py-1 text-xs text-clay-muted hover:bg-clay-beige disabled:cursor-not-allowed">
-                  Batal
-                </button>
-              )}
-              {active.type === "image" && (
-                <a
-                  href={active.content}
-                  download={`${active.title || "artifact"}.png`}
-                  title="Unduh gambar"
-                  aria-label="Unduh gambar"
-                  className="flex h-7 w-7 items-center justify-center rounded-clay-full text-clay-muted hover:bg-clay-beige hover:text-clay-dark"
-                >
-                  <Download size={13} />
-                </a>
-              )}
-
-              <span
-                className="ml-auto cursor-help text-[10px] font-bold text-clay-muted/70"
-                title={`Dibuat oleh agent "${active.sourceAgent}"`}
-                role="status"
-              >
-                {saving ? "Menyimpan…" : active.id === streamingId ? "Sedang dibuat" : editing ? "Belum disimpan" : "Versi"} · v{active.version}
-              </span>
-            </div>
-          )}
-        </motion.aside>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ─── Panel terminal (PRD §7.4) ──────────────────────────────────────────────
-
-function TerminalPanel({
-  content,
-  streaming,
-  expanded,
-  onToggle,
-}: {
-  content: string;
-  streaming: boolean;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  const lines = content.split("\n");
-  const collapsed = !expanded && lines.length > 6;
-  const visible = collapsed ? lines.slice(0, 6) : lines;
-
-  return (
-    <div
-      className="rounded-clay-md bg-clay-inputBg p-3 font-mono text-[11.5px] leading-relaxed text-clay-dark shadow-[inset_0_2px_6px_rgb(var(--clay-shadow-dark)/0.35)]"
-      data-testid="artifact-terminal"
+    <aside
+      className="artifact-workspace"
+      aria-labelledby="artifact-workspace-title"
+      data-testid="artifact-canvas"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") { event.stopPropagation(); onClose(); }
+      }}
     >
-      <div className="max-h-[52dvh] overflow-y-auto">
-        {visible.map((line, i) => (
-          <div key={i} className="whitespace-pre-wrap break-all">
-            {line || " "}
-          </div>
-        ))}
-        {streaming && (
-          <div className="animate-pulse text-clay-primary">▌</div>
+      <header className="artifact-workspace-header">
+        <div className="artifact-workspace-top">
+          <p><FormatIcon size={17} aria-hidden="true" />{label}<span aria-hidden="true">·</span> Versi {active.version}</p>
+          <button className="artifact-action artifact-icon-action" type="button" onClick={onClose} aria-label="Tutup canvas"><X size={21} aria-hidden="true" /></button>
+        </div>
+        <h2 id="artifact-workspace-title" ref={titleRef} tabIndex={-1}>{active.title}</h2>
+        {artifacts.length > 1 && (
+          <nav className="artifact-file-list" aria-label="Pilih artifact">
+            {artifacts.map((item) => (
+              <button type="button" key={item.id} aria-pressed={item.id === active.id} disabled={saving} onClick={() => onSelect(item.id)}>
+                {item.title}
+              </button>
+            ))}
+          </nav>
+        )}
+      </header>
+
+      <div className="artifact-workspace-scroll">
+        {active.type === "markdown" ? (
+          editing ? (
+            <div className="artifact-editor">
+              <label htmlFor="artifact-edit-content">Isi dokumen</label>
+              <textarea id="artifact-edit-content" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={busy} />
+            </div>
+          ) : (
+            <article className="artifact-document">
+              <MarkdownView content={documentText} />
+              {source && <p className="artifact-source"><FileText size={15} aria-hidden="true" /> Sumber: {source[1].trim()}</p>}
+            </article>
+          )
+        ) : active.type === "terminal" ? (
+          <section className="artifact-terminal" aria-label="Output terminal" data-testid="artifact-terminal">
+            <p>Output terminal</p>
+            <pre>{visibleLines.join("\n")}</pre>
+            {terminalLines.length > 6 && (
+              <button className="artifact-action" type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+                {expanded ? "Ringkas output" : `Tampilkan ${terminalLines.length - 6} baris lagi`}
+              </button>
+            )}
+          </section>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="artifact-image" src={active.content} alt={active.title} />
         )}
       </div>
-      {collapsed && (
-        <button
-          onClick={onToggle}
-          className="mt-2 rounded-clay-full bg-clay-cream px-2.5 py-1 text-[10px] font-extrabold text-clay-primary shadow-clay-sm"
-        >
-          Lihat detail ({lines.length - 6} baris lagi ⌄)
-        </button>
-      )}
-      {expanded && lines.length > 6 && (
-        <button
-          onClick={onToggle}
-          className="mt-2 rounded-clay-full bg-clay-cream px-2.5 py-1 text-[10px] font-extrabold text-clay-muted shadow-clay-sm"
-        >
-          Ringkas ⌃
-        </button>
-      )}
-    </div>
+
+      <footer className="artifact-workspace-footer">
+        {feedback?.error && <p role="alert" className="artifact-error">{feedback.text}</p>}
+        <div className="artifact-action-row">
+          {editing ? (
+            <>
+              <button className="artifact-action" type="button" disabled={saving} onClick={() => { setDraft(null); setFeedback(null); }}>Batal</button>
+              <button className="artifact-action is-primary" type="button" onClick={save} disabled={busy}><Save size={17} aria-hidden="true" />Simpan versi</button>
+            </>
+          ) : (
+            <>
+              <button className="artifact-action" type="button" onClick={copy} aria-label="Salin artifact">
+                {feedback && !feedback.error ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
+                Salin
+              </button>
+              {active.type === "markdown" && onEditSave && (
+                <button className="artifact-action is-primary" type="button" disabled={busy} onClick={() => { setDraft(active.content); setFeedback(null); }}><Pencil size={17} aria-hidden="true" />Edit dokumen</button>
+              )}
+              {active.type === "image" && (
+                <a className="artifact-action is-primary" href={active.content} download={`${active.title || "artifact"}.png`}><Download size={17} aria-hidden="true" />Unduh gambar</a>
+              )}
+            </>
+          )}
+        </div>
+        <p role="status" className="artifact-workspace-status">
+          {saving ? "Menyimpan…" : streaming ? "Sedang dibuat…" : editing ? "Perubahan belum disimpan" : !feedback?.error ? feedback?.text : ""}
+        </p>
+      </footer>
+    </aside>
   );
 }

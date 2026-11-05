@@ -11,6 +11,7 @@ import rehypeKatex from "rehype-katex";
 import { normalizeMathDelimiters } from "@/lib/mathText";
 import CodeBlock from "@/components/note/CodeBlock";
 import { causalChainSteps, remarkAnswerLineBreaks, remarkTextTimelines } from "@/lib/assistant/answerFormatting";
+import "./answer-content.css";
 
 interface MarkdownViewProps {
   content: string;
@@ -44,7 +45,7 @@ function MarkdownView({ content, className = "" }: MarkdownViewProps) {
           ),
           li: ({ ...props }) => <li {...props} className="leading-relaxed" />,
           blockquote: ({ ...props }) => (
-            <blockquote {...props} className="my-3 rounded-clay-md border-l-8 border-clay-secondary bg-clay-secondary/10 px-4 py-2.5 text-clay-dark" />
+            <blockquote {...props} className="answer-quote" />
           ),
           code: ({ className: codeClass, children, ...props }) => {
             const isBlock = /language-/.test(codeClass ?? "");
@@ -67,15 +68,15 @@ function MarkdownView({ content, className = "" }: MarkdownViewProps) {
           },
           pre: ({ children }) => <>{children}</>,
           table: ({ ...props }) => (
-            <div className="my-3 overflow-x-auto">
-              <table {...props} className="w-full border-collapse text-sm" />
+            <div className="answer-table-wrap" tabIndex={0} role="region" aria-label="Tabel jawaban">
+              <table {...props} className="answer-table" />
             </div>
           ),
           th: ({ ...props }) => (
-            <th {...props} className="border-2 border-clay-shadow/30 bg-clay-beige px-3 py-2 text-left font-extrabold" />
+            <th {...props} scope="col" />
           ),
           td: ({ ...props }) => (
-            <td {...props} className="border-2 border-clay-shadow/30 px-3 py-2" />
+            <td {...props} />
           ),
           h1: ({ ...props }) => <h1 {...props} className="mb-2 mt-4 text-xl font-extrabold" />,
           h2: ({ ...props }) => <h2 {...props} className="mb-2 mt-4 text-lg font-extrabold" />,
@@ -87,14 +88,13 @@ function MarkdownView({ content, className = "" }: MarkdownViewProps) {
             const steps = text ? causalChainSteps(text) : null;
             if (!steps) return <p {...props} className="my-2 leading-relaxed">{children}</p>;
             return (
-              <figure className="my-4 min-w-0" aria-label="Diagram alur sebab-akibat">
-                <figcaption className="mb-3 text-xs font-semibold text-clay-muted">Alur sebab-akibat</figcaption>
-                <ol className="m-0 list-none p-0">
+              <figure className="answer-flow">
+                <figcaption>Alur sebab-akibat</figcaption>
+                <ol>
                   {steps.map((step, index) => (
-                    <li key={index} className="relative flex min-w-0 gap-3 pb-3 last:pb-0">
-                      {index < steps.length - 1 && <span aria-hidden="true" className="absolute bottom-0 left-3 top-6 border-l-2 border-clay-primary/25" />}
-                      <span aria-hidden="true" className="relative mt-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-xs font-bold text-clay-primary">{index + 1}</span>
-                      <span className="min-w-0 flex-1 rounded-clay-md bg-clay-beige px-3 py-2.5 text-sm font-medium leading-relaxed text-clay-dark [overflow-wrap:anywhere]">{step}</span>
+                    <li key={index}>
+                      <span className="answer-flow-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                      <span>{step}</span>
                     </li>
                   ))}
                 </ol>

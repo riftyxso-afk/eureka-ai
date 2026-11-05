@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/PageLoader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -141,7 +142,7 @@ export default function LearningRoomPage() {
   }
 
   const staleRoute = Boolean((overview && overview.course.id !== courseId) || (payload && (payload.course.id !== courseId || payload.lesson.id !== lessonId)));
-  if (loading || staleRoute) return <div className="learning-room"><div className="learning-loading" role="status"><LoaderCircle className="spin" size={22} />{generating && !staleRoute ? "Momo sedang menyusun pelajaran ini…" : "Menyiapkan ruang belajarmu…"}</div></div>;
+  if (loading || staleRoute) return <div className="learning-room"><PageLoader inline title={generating && !staleRoute ? "Momo sedang menyusun pelajaran ini…" : "Memuat ruang belajar…"} /></div>;
   if (!overview || !payload) return <div className="learning-room"><div className="learning-state" role="alert"><BookOpen size={30} /><h1>Pelajaran belum bisa dibuka</h1><p>{error || "Materi tidak ditemukan."}</p><button className="learning-button learning-button-primary" type="button" onClick={() => void load()}><RefreshCw size={17} />Coba lagi</button><Link className="learning-button learning-button-secondary" href={`/dashboard/kursus/${courseId}`}>Kembali ke silabus</Link></div></div>;
 
   const lesson = payload.lesson;

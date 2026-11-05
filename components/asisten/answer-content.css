@@ -1,0 +1,19 @@
+.answer-flow { margin-block: 20px; }
+.answer-flow figcaption { margin-bottom: 8px; color: rgb(var(--clay-muted)); font-size: 13px; font-weight: 800; }
+.answer-flow ol { margin: 0; padding: 0; list-style: none; }
+.answer-flow li { position: relative; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; padding-block: 8px; overflow-wrap: anywhere; }
+.answer-flow li:not(:last-child)::before { position: absolute; content: ""; inset-block: 28px -6px; inset-inline-start: 12px; border-inline-start: 1px solid rgb(var(--clay-primary) / .35); }
+.answer-flow-index { align-self: start; border-radius: 50%; background: rgb(var(--clay-primary) / .12); color: rgb(var(--clay-dark)); line-height: 26px; text-align: center; font-size: 11px; font-weight: 850; font-variant-numeric: tabular-nums; }
+
+.answer-quote { margin-block: 16px; padding-inline-start: 14px; border-inline-start: 3px solid rgb(var(--clay-primary) / .55); color: rgb(var(--clay-muted)); }
+.answer-table-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; margin-block: 16px; }
+.answer-table-wrap:focus-visible { outline: 2px solid rgb(var(--clay-primary)); outline-offset: 2px; }
+.answer-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.answer-table :is(th, td) { padding: 10px 12px; vertical-align: top; }
+.answer-table :is(th, td):not([align]) { text-align: start; }
+.answer-table th { background: rgb(var(--clay-primary) / .08); font-weight: 850; }
+.answer-table td { border-bottom: 1px solid rgb(var(--clay-primary) / .14); }
+
+@media (max-width: 639px) {
+  .answer-table :is(th, td) { padding-inline: 9px; }
+}

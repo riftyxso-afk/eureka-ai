@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { parseArtifactMessage } from "@/lib/assistant/artifacts";
 import { motion } from "framer-motion";
-import { BookMarked, Check, Copy, FileText, Info, Paperclip, RefreshCw } from "lucide-react";
+import { ArrowUpRight, BookMarked, Check, Copy, FileText, Info, Paperclip, RefreshCw } from "lucide-react";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
 import { citedNoteSources } from "@/lib/assistant/citedSources";
@@ -21,7 +21,7 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   thinking?: string | null;
   onRetry?: () => void;
-  onOpenArtifacts?: () => void;
+  onOpenArtifacts?: (id: string) => void;
   /** Pesan user sebelumnya — dipakai hitung lama AI menjawab. */
   prevMessage?: AssistantChatMessage | null;
   /** Klik "View" pada embed video → buka tampilan expand (overlay di halaman). */
@@ -183,15 +183,18 @@ export default function MessageBubble({
           )}
         </div>
 
-        {!isStreaming && (parsedContent?.artifacts.length ?? 0) > 0 && onOpenArtifacts && (
+        {!isStreaming && onOpenArtifacts && parsedContent?.artifacts.map((artifact, index) => (
           <button
+            key={index}
             type="button"
-            onClick={onOpenArtifacts}
-            className="inline-flex items-center gap-2 self-start rounded-clay-md border border-clay-borderLight px-3 py-2 text-sm font-semibold text-clay-primary hover:bg-clay-beige focus-visible:outline-2 focus-visible:outline-clay-primary"
+            onClick={() => onOpenArtifacts(`${message.id}:artifact:${index}`)}
+            className="flex min-h-11 max-w-full items-center gap-2 self-start border-b border-clay-primary/20 py-2 text-start text-sm font-bold text-clay-dark hover:text-clay-primary focus-visible:outline-2 focus-visible:outline-clay-primary"
           >
-            <FileText size={16} /> Buka artifact
+            <FileText size={17} className="shrink-0 text-clay-primary" aria-hidden="true" />
+            <span className="min-w-0 [overflow-wrap:anywhere]">{artifact.title || "Buka artifact"}</span>
+            <ArrowUpRight size={15} className="shrink-0 text-clay-muted" aria-hidden="true" />
           </button>
-        )}
+        ))}
 
         {/* Meta: salin muncul on-hover; model & durasi jadi tooltip ikon info
             (metadata teknis tidak tampil default — chat-visual-hierarchy). */}

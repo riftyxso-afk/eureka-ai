@@ -21,6 +21,7 @@ import MessageBubble from "@/components/asisten/MessageBubble";
 import ResponseActivity from "@/components/asisten/ResponseActivity";
 import FollowUpActions from "@/components/asisten/FollowUpActions";
 import MomoCompanion, { type MomoMode } from "@/components/asisten/MomoCompanion";
+import ChatSkeleton from "@/components/asisten/ChatSkeleton";
 import ClarificationCard from "@/components/asisten/ClarificationCard";
 import ShareModal from "@/components/asisten/ShareModal";
 import ChatQuizModal from "@/components/asisten/ChatQuizModal";
@@ -106,6 +107,7 @@ export default function ChatPage() {
   });
   const [momoMode, setMomoMode] = useState<MomoMode>(initialSend?.speedMode ?? "normal");
   const [modelMenuHeight, setModelMenuHeight] = useState(0);
+  const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
   const [initialPending, setInitialPending] = useState(!!initialSend);
 
   // Hapus dari sessionStorage setelah dibaca (efek, aman untuk StrictMode).
@@ -257,19 +259,6 @@ export default function ChatPage() {
           }}
         />
 
-        {/* Artifact Canvas — panel terpisah dari bubble chat.
-            Desktop: kolom samping (flex sibling dari <main>), flush border.
-            Mobile: fixed bottom sheet di atas main (z-40). */}
-        <ArtifactCanvas
-          key={sessionId ?? "new"}
-          artifacts={chat.canvas.artifacts}
-          streamingId={chat.canvas.streamingId}
-          sending={chat.sending}
-          open={chat.canvas.open}
-          onClose={chat.closeCanvas}
-          onEditSave={chat.saveArtifactEdit}
-        />
-
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-clay-cream">
         {/* Header tetap di luar area scroll agar tidak mengubah posisi pesan. */}
         <header className="shrink-0">
@@ -380,22 +369,7 @@ export default function ChatPage() {
               <ResponseActivity thinking={chat.streaming.thinking} />
             </div>
           ) : chat.loading && chat.messages.length === 0 && !chat.sending ? (
-            <div role="status" className="mx-auto w-full max-w-3xl space-y-7">
-              <span className="sr-only">{locale === "en" ? "Loading conversation…" : "Memuat percakapan…"}</span>
-              {[0, 1].map((row) => (
-                <div key={row} aria-hidden="true" className="space-y-5 motion-safe:animate-pulse">
-                  <div className="ml-auto h-10 w-2/5 rounded-2xl rounded-br-sm bg-violet-100 dark:bg-violet-900/50" />
-                  <div className="flex items-start gap-3">
-                    <div className="size-8 shrink-0 rounded-full bg-violet-100 dark:bg-violet-900/50" />
-                    <div className="w-4/5 space-y-2 pt-1">
-                      <div className="h-3 rounded-full bg-violet-100 dark:bg-violet-900/50" />
-                      <div className="h-3 w-5/6 rounded-full bg-violet-100 dark:bg-violet-900/50" />
-                      <div className="h-3 w-3/5 rounded-full bg-violet-100 dark:bg-violet-900/50" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ChatSkeleton label={locale === "en" ? "Loading conversation…" : "Memuat percakapan…"} />
           ) : chat.renderedMessages.length === 0 &&
             !(chat.clarification && chat.clarification.length > 0) &&
             !chat.hasError ? (
@@ -438,7 +412,7 @@ export default function ChatPage() {
                       isStreaming={chat.sending && idx === chat.renderedMessages.length - 1 && m.id.startsWith("stream-")}
                       thinking={chat.sending && idx === chat.renderedMessages.length - 1 ? chat.streaming.thinking : null}
                       prevMessage={prevMsg}
-                      onOpenArtifacts={chat.openCanvas}
+                      onOpenArtifacts={(id) => { setActiveArtifactId(id); chat.openCanvas(); }}
                       videoEnabled={isBeta}
                       onViewVideo={(url) => {
                         // Pertahanan berlapis: hanya beta bisa membuka View.
@@ -602,6 +576,17 @@ export default function ChatPage() {
         />
         </div>
       </main>
+        <ArtifactCanvas
+          key={sessionId ?? "new"}
+          artifacts={chat.canvas.artifacts}
+          streamingId={chat.canvas.streamingId}
+          sending={chat.sending}
+          open={chat.canvas.open}
+          activeId={activeArtifactId}
+          onSelect={setActiveArtifactId}
+          onClose={chat.closeCanvas}
+          onEditSave={chat.saveArtifactEdit}
+        />
       </div>
 
       {/* Overlay pembuatan catatan */}
