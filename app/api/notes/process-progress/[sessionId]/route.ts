@@ -5,7 +5,7 @@
  * Stream ditutup otomatis saat percent mencapai 100.
  */
 import { NextRequest } from "next/server";
-import { getProgressEvents, closeSession } from "@/lib/progressTracker";
+import { getProgressEvents } from "@/lib/progressTracker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +23,7 @@ export async function GET(
   let cursor = 0;
   let timer: ReturnType<typeof setInterval> | null = null;
   let closed = false;
+  let safety: ReturnType<typeof setTimeout> | null = null;
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -36,7 +37,7 @@ export async function GET(
           } catch {
             closed = true;
             if (timer) clearInterval(timer);
-            closeSession(sessionId);
+            if (safety) clearTimeout(safety);
             return;
           }
           if (event.percent >= 100) {
@@ -48,7 +49,7 @@ export async function GET(
             } catch {
               // sudah tertutup — abaikan
             }
-            closeSession(sessionId);
+            if (safety) clearTimeout(safety);
             return;
           }
         }
@@ -56,13 +57,14 @@ export async function GET(
 
       // Kirim event yang sudah ada, lalu poll setiap 400 ms
       send();
+      if (closed) return;
       timer = setInterval(send, POLL_INTERVAL_MS);
       if (typeof (timer as NodeJS.Timeout).unref === "function") {
         (timer as NodeJS.Timeout).unref();
       }
 
       // Pengaman: tutup stream bila terlalu lama (maks 9 menit)
-      const safety = setTimeout(() => {
+      safety = setTimeout(() => {
         closed = true;
         if (timer) clearInterval(timer);
         try {
@@ -71,7 +73,6 @@ export async function GET(
         } catch {
           // abaikan
         }
-        closeSession(sessionId);
       }, MAX_STREAM_MS);
       if (typeof (safety as NodeJS.Timeout).unref === "function") {
         (safety as NodeJS.Timeout).unref();
@@ -80,7 +81,7 @@ export async function GET(
     cancel() {
       closed = true;
       if (timer) clearInterval(timer);
-      closeSession(sessionId);
+      if (safety) clearTimeout(safety);
     },
   });
 

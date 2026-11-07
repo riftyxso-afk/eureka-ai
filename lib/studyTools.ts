@@ -11,6 +11,7 @@ import {
   getSavedQuiz,
   saveFlashcards,
   saveQuiz,
+  studySourceRevision,
   type Flashcard,
   type QuizQuestion,
 } from "./study-store";
@@ -97,6 +98,7 @@ Aturan:
     : [];
 
   if (questions.length > 0) {
+    questions[0].sourceRevision = studySourceRevision(chapters, bahasa, noteTitle);
     await saveQuiz(noteId, questions);
   }
   return questions;
@@ -154,6 +156,7 @@ Aturan:
     : [];
 
   if (cards.length > 0) {
+    cards[0].sourceRevision = studySourceRevision(chapters, bahasa);
     await saveFlashcards(noteId, cards);
   }
   return cards;

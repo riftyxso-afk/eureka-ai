@@ -69,3 +69,7 @@
 .eureka-page-profil .profile-hero > p:first-of-type { font-size:24px; }
 .eureka-page-profil .profile-hero > span:last-child { border:0; background:#eee3fc; color:#7540d0; }
 .dark .eureka-page-profil .profile-hero,.dark .eureka-page-profil > .grid .card-clay { background:#30243e; }
+.dashboard-shell { --clay-beige: 255 255 255; background: #fff; }
+body:has(.dashboard-shell) { background: #fff; }
+.dark .dashboard-shell { --clay-beige: 30 26 36; background: #1e1a24; }
+body.dark:has(.dashboard-shell), .dark body:has(.dashboard-shell) { background: #1e1a24; }

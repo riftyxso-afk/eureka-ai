@@ -65,7 +65,7 @@ export default function LandingPage() {
     ],
   };
 
-  const ctaHref = loggedIn ? "/dashboard" : "/register";
+  const ctaHref = loggedIn ? "/dashboard-v2" : "/register";
   const ctaLabel = loggedIn
     ? dict.nav.lanjutBelajar
     : locale === "en" ? "Start learning for free" : "Mulai belajar gratis";

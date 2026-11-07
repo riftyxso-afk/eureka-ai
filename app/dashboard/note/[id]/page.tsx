@@ -656,7 +656,7 @@ export default function NoteDetailPage() {
   };
 
   const openNotepad = (chapter: Chapter) => {
-    router.push(`/dashboard/note/${data.id}/bab/${chapter.id}`);
+    router.push(`/dashboard-v2/note/${encodeURIComponent(data.id)}?tab=notes&chapter=${chapter.id}`);
   };
 
   /** "Tanya AI": buat sesi chat baru & import catatan ini sebagai lampiran. */
@@ -767,6 +767,7 @@ export default function NoteDetailPage() {
               }
             />
           </button>
+          <Link href={`/dashboard-v2/note/${encodeURIComponent(data.id)}?tab=notes`} className="btn-clay-ghost !min-h-[44px] !px-4 text-sm"><Pencil size={16} className="mr-2" />Editor V2</Link>
           <details className="group/actions relative">
             <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-2 rounded-xl border border-clay-primary/15 bg-clay-cream px-3 text-sm font-bold text-clay-dark focus-visible:outline focus-visible:outline-clay-primary [&::-webkit-details-marker]:hidden">
               {locale === "en" ? "More actions" : "Aksi lainnya"}

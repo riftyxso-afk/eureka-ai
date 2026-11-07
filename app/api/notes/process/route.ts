@@ -112,7 +112,11 @@ async function parseSources(form: FormData): Promise<
     }
 
     const src: NoteSource = { type: type as NoteSource["type"] };
-    if (type === "youtube" || type === "web") {
+    if (type === "prompt") {
+      const prompt = String(item.prompt ?? "").trim();
+      if (prompt.length < 10 || prompt.length > 2000) return { ok: false, error: "Topik harus berisi 10–2.000 karakter.", status: 400 };
+      src.prompt = prompt;
+    } else if (type === "youtube" || type === "web") {
       const url = String(item.url ?? "").trim();
       if (!url) {
         return {

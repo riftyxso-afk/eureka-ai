@@ -214,6 +214,7 @@ export const Sidebar = () => {
           <Link href="/dashboard/catatan" aria-current={activeMenuId(pathname) === "catatan" ? "true" : undefined}>
             <FileText size={18} aria-hidden="true" /><span>Catatan</span>
           </Link>
+          <Link href="/dashboard-v2"><span>V2</span></Link>
           <Link href="/chat"><MessageCircle size={18} aria-hidden="true" /><span>Chat</span></Link>
         </nav>
       </header>
@@ -238,6 +239,7 @@ export const Sidebar = () => {
               {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
             </button>
           </div>
+          <Link href="/dashboard-v2" className="eureka-sidebar-v2" title="Coba Dashboard V2">{collapsed ? "V2" : "Coba Dashboard V2 →"}</Link>
           {navBody()}
         </aside>
       </div>

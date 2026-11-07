@@ -278,7 +278,10 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const notesPdfStream = await import("@/app/api/notes/[id]/pdf/stream/route");
   const notesAsk = await import("@/app/api/notes/[id]/ask/route");
   const notesStory = await import("@/app/api/notes/[id]/story/route");
+  const notesDocument = await import("@/app/api/notes/[id]/document/route");
   const notesStoryAudio = await import("@/app/api/notes/[id]/story/audio/route");
+  const notesMindmap = await import("@/app/api/notes/[id]/mindmap/route");
+  const notesPodcast = await import("@/app/api/notes/[id]/podcast/route");
   const notesBoard = await import("@/app/api/notes/[id]/board/route");
   const notesChat = await import("@/app/api/notes/[id]/chat/route");
   const notesCollab = await import("@/app/api/notes/[id]/collab/route");
@@ -309,7 +312,10 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/notes/:id/pdf/stream", notesPdfStream);
   mount(app, "/api/notes/:id/ask", notesAsk);
   mount(app, "/api/notes/:id/story", notesStory);
+  mount(app, "/api/notes/:id/document", notesDocument);
   mount(app, "/api/notes/:id/story/audio", notesStoryAudio);
+  mount(app, "/api/notes/:id/mindmap", notesMindmap);
+  mount(app, "/api/notes/:id/podcast", notesPodcast);
   mount(app, "/api/notes/:id/board", notesBoard);
   mount(app, "/api/notes/:id/chat", notesChat);
   mount(app, "/api/notes/:id/collab", notesCollab);

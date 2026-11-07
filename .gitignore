@@ -52,3 +52,8 @@ data/
 .qwen/
 .agents/
 /holo-sticker.gif
+
+# Local previews, temporary QA credentials and reference source projects
+/tmp/
+/momo/
+/video/

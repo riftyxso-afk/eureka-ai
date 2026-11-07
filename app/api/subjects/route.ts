@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSubjects, addSubject } from "@/lib/subjects-store";
 import { listNotes } from "@/lib/rag/store";
 import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { db } from "@/lib/supabase/admin";
+import { buildSubjectJourney } from "@/lib/subject-journey";
 
 export const runtime = "nodejs";
 
@@ -20,9 +22,16 @@ export async function GET(req: NextRequest) {
       listNotes(userId || undefined),
     ]);
     // totalNotes dihitung live dari catatan yang subject-nya sama
+    const includeJourney = req.nextUrl.searchParams.get("journey") === "1";
+    let cards = null;
+    if (includeJourney) {
+      const result = await db().from("flashcards").select("note_id, review_count, due_date").eq("user_id", userId);
+      if (!result.error) cards = result.data;
+    }
     const withCount = subjects.map((s) => ({
       ...s,
       totalNotes: notes.filter((n) => n.subject === s.name).length,
+      ...(includeJourney ? { journey: buildSubjectJourney({ id: userId }, s.name, notes, cards) } : {}),
     }));
     return NextResponse.json({ subjects: withCount });
   } catch (e) {

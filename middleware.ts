@@ -62,8 +62,9 @@ export function middleware(req: NextRequest) {
     const locale = match[1] as Locale;
     const rest = match[2] ? pathname.slice(3) : "/";
     const url = req.nextUrl.clone();
-    url.pathname = rest || "/";
-    const res = NextResponse.rewrite(url);
+    const dashboardRoot = rest === "/dashboard" || rest === "/dashboard/";
+    url.pathname = dashboardRoot ? `/${locale}/dashboard-v2` : rest || "/";
+    const res = dashboardRoot ? NextResponse.redirect(url, 307) : NextResponse.rewrite(url);
     res.headers.set("x-locale", locale);
     res.headers.set("x-locale-path", pathname);
     res.cookies.set(LOCALE_COOKIE, locale, {
@@ -77,7 +78,8 @@ export function middleware(req: NextRequest) {
   // ── Tanpa prefix: redirect ke /{locale}{path} ──
   const locale = resolveLocale(req);
   const url = req.nextUrl.clone();
-  url.pathname = pathname === "/" ? `/${locale}` : `/${locale}${pathname}`;
+  const destination = pathname === "/dashboard" || pathname === "/dashboard/" ? "/dashboard-v2" : pathname;
+  url.pathname = destination === "/" ? `/${locale}` : `/${locale}${destination}`;
   // search & hash sudah ikut terbawa (clone mempertahankan query).
   const res = NextResponse.redirect(url, 307);
   res.cookies.set(LOCALE_COOKIE, locale, {

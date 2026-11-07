@@ -116,3 +116,4 @@
 .eureka-sidebar-extra { margin:6px 0 0; padding:5px 0 5px 8px; }
 .eureka-sidebar-extra .eureka-sidebar-actions { margin-top:6px; }
 .dark .eureka-sidebar-nav > .eureka-sidebar-item.is-active { background:#3a2b50; color:#d3b7ff; box-shadow:inset 0 0 0 2px #654781; }
+.eureka-sidebar-v2 { display:block; margin:0 0 14px; padding:10px 8px; border:1px solid #e9ddf7; border-radius:10px; color:#7540d0; background:#faf7fe; text-align:center; font-size:12px; font-weight:800; }

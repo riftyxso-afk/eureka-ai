@@ -762,6 +762,8 @@ export type AiStreamEvent =
   | { type: "error"; message: string };
 
 export interface AiChatStreamOptions extends AiChatOptions {
+  /** Abort an interactive generation when its caller stops or leaves. */
+  signal?: AbortSignal;
   /** Riwayat percakapan sebelum pesan user saat ini (role user/assistant). */
   history?: { role: "user" | "assistant"; content: string }[];
   /** Panggil callback per kejadian (meta/token/error). */
@@ -876,9 +878,10 @@ export async function aiChatStream(
                 : {}),
             },
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(45_000),
+            signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(45_000)]) : AbortSignal.timeout(45_000),
           });
         } catch (e) {
+          if (options.signal?.aborted) throw options.signal.reason;
           const msg = e instanceof Error ? e.message : "fetch gagal";
           throw new Error(`[aiChatStream] ${provider.name}: ${msg}`);
         }
@@ -988,6 +991,7 @@ export async function aiChatStream(
     const tried: string[] = [];
     const firstProviderName = providers[0]?.name ?? "";
     for (const provider of providers) {
+      if (options.signal?.aborted) throw options.signal.reason;
       tried.push(`${provider.name}/${provider.model}`);
       for (let attempt = 1; attempt <= attemptsPerProvider; attempt++) {
         try {
@@ -1003,6 +1007,7 @@ export async function aiChatStream(
           );
           return result;
         } catch (e) {
+          if (options.signal?.aborted) throw options.signal.reason;
           console.warn(
             `[aiChatStream] ${provider.name} attempt ${attempt} gagal:`,
             e instanceof Error ? e.message : e

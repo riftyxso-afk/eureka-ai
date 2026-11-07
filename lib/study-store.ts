@@ -3,8 +3,14 @@
  * Tabel: study_content (satu baris per catatan, konten JSONB)
  */
 import { db } from "./supabase/admin";
+import { createHash } from "node:crypto";
+
+export function studySourceRevision(chapters: unknown, language: string, title = "") {
+  return createHash("sha256").update(JSON.stringify({ title, chapters, language })).digest("hex");
+}
 
 export interface QuizQuestion {
+  sourceRevision?: string;
   id: number;
   question: string;
   options: string[];
@@ -13,6 +19,7 @@ export interface QuizQuestion {
 }
 
 export interface Flashcard {
+  sourceRevision?: string;
   id: number;
   front: string;
   back: string;

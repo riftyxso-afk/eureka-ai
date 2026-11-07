@@ -193,7 +193,7 @@ export default function OnboardingPage() {
         const res = await apiFetch(`/api/profile?userId=${encodeURIComponent(getUserId())}`);
         const payload = await res.json();
         if (!cancelled && payload?.user?.onboardingCompleted) {
-          router.replace("/dashboard");
+          router.replace("/dashboard-v2");
         }
       } catch {
         // biarkan (profil belum tersimpan)
@@ -394,7 +394,7 @@ export default function OnboardingPage() {
       setSaveError("Gagal menyimpan profil. Coba lagi.");
       return;
     }
-    router.replace("/dashboard");
+    router.replace("/dashboard-v2");
   };
 
   const skipOnboarding = async () => {
@@ -419,7 +419,7 @@ export default function OnboardingPage() {
     } catch {
       // Gagal menyimpan flag → tetap masuk; onboarding akan ditawarkan lagi.
     }
-    router.replace("/dashboard");
+    router.replace("/dashboard-v2");
   };
 
 

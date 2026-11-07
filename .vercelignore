@@ -1,0 +1,8 @@
+tmp/
+momo/
+video/
+backend/
+.env*
+.git/
+data/
+*.tsbuildinfo

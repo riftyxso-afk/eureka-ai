@@ -27,7 +27,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!hasAiKey()) return NextResponse.json({ error: "AI belum tersedia." }, { status: 503 });
     const instructions = typeof body.instruction === "string" ? body.instruction.trim().slice(0, 500) : "";
     if (!instructions) return NextResponse.json({ error: "Pilih aksi atau tulis instruksi." }, { status: 400 });
-    const encoder = new TextEncoder();
+    const encoder = new TextEncoder(); const work = new AbortController(); let closed = false;
+    const abort = () => work.abort(); req.signal.addEventListener("abort", abort, { once: true });
     const stream = new ReadableStream({
       async start(controller) {
         try {
@@ -39,17 +40,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             user: JSON.stringify({ instruction: instructions, selected }),
             maxTokens: 1600,
             temperature: 0.35,
+            signal: AbortSignal.any([work.signal, AbortSignal.timeout(115000)]),
           }, event => {
-            if (event.type === "token") { emitted = true; controller.enqueue(encoder.encode(event.text)); }
+            if (!closed && event.type === "token") { emitted = true; controller.enqueue(encoder.encode(event.text)); }
           });
-          if (!emitted && result.content) controller.enqueue(encoder.encode(result.content));
-          controller.close();
+          if (!closed && !emitted && result.content) controller.enqueue(encoder.encode(result.content));
+          if (!closed) { closed = true; controller.close(); }
         } catch (error) {
-          controller.error(error);
-        }
+          if (!closed) { closed = true; controller.error(error); }
+        } finally { req.signal.removeEventListener("abort", abort); }
       },
+      cancel() { closed = true; req.signal.removeEventListener("abort", abort); work.abort(); },
     });
-    return new Response(stream, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
+    return new Response(stream, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-transform", "X-Accel-Buffering": "no" } });
   }
   if (body.action !== "selection-apply") return NextResponse.json({ error: "Aksi tidak dikenali." }, { status: 400 });
   const replacement = typeof body.replacement === "string" ? body.replacement.trim() : "";

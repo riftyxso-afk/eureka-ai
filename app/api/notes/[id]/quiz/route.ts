@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { generateQuiz } from "@/lib/studyTools";
 import { languageFromRequest } from "@/lib/locale";
+import { getSavedQuiz, studySourceRevision } from "@/lib/study-store";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -20,6 +21,7 @@ export async function POST(
     const { id } = await params;
     const body = (await req.json().catch(() => null)) as {
       count?: number;
+      reuse?: boolean;
     } | null;
     const count = Math.min(Math.max(Number(body?.count) || 5, 3), 10);
 
@@ -45,7 +47,8 @@ export async function POST(
       );
     }
 
-    const questions = await generateQuiz(
+    const saved = body?.reuse === true ? await getSavedQuiz(id) : [];
+    const questions = saved.length >= count && saved[0].sourceRevision === studySourceRevision(chapters, languageFromRequest(req), found.note.title) ? saved.slice(0, count) : await generateQuiz(
       id,
       found.note.title,
       chapters,

@@ -38,6 +38,9 @@
   ],
 "exclude": [
     "node_modules",
-    "backend"
+    "backend",
+    "tmp",
+    "momo",
+    "video"
   ]
 }

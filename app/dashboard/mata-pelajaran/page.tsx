@@ -219,9 +219,9 @@ export default function MataPelajaranPage() {
           <Link href="/dashboard" className="sj-back">
             Ruang belajar <span aria-hidden="true">/</span>
           </Link>
-          <h1>Jelajahi materi</h1>
+          <h1>Mata pelajaran</h1>
           <p>
-            Temukan yang ingin dipelajari. Ambil satu langkah lagi hari ini.
+            Semua materi dan langkah belajarmu, di satu tempat.
           </p>
         </div>
         <button
@@ -418,11 +418,11 @@ export default function MataPelajaranPage() {
                   </div>
                 )}
               </div>
-              <Link href="/dashboard/kursus" className="sj-course-link">
+              <Link href="/dashboard/catatan" className="sj-course-link">
                 <BookOpen size={20} />
                 <span>
                   <strong>Belum punya materi?</strong>
-                  <small>Coba kursus gratis Eureka</small>
+                  <small>Buka koleksi catatanmu</small>
                 </span>
                 <ArrowRight size={17} />
               </Link>
@@ -448,8 +448,8 @@ export default function MataPelajaranPage() {
                   >
                     <Plus size={18} /> Pilih mata pelajaran pertama
                   </button>
-                  <Link href="/dashboard/kursus">
-                    Atau jelajahi kursus gratis <ArrowRight size={16} />
+                  <Link href="/dashboard/catatan">
+                    Lihat catatanmu <ArrowRight size={16} />
                   </Link>
                 </section>
               ) : (

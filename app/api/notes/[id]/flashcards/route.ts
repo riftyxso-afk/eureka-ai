@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { generateFlashcards } from "@/lib/studyTools";
 import { languageFromRequest } from "@/lib/locale";
+import { getSavedFlashcards, studySourceRevision } from "@/lib/study-store";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -41,7 +42,9 @@ export async function POST(
       );
     }
 
-    const cards = await generateFlashcards(id, chapters, 8, languageFromRequest(req));
+    const body = await req.json().catch(() => null);
+    const saved = body?.reuse === true ? await getSavedFlashcards(id) : [];
+    const cards = saved.length && saved[0].sourceRevision === studySourceRevision(chapters, languageFromRequest(req)) ? saved : await generateFlashcards(id, chapters, 8, languageFromRequest(req));
     if (cards.length === 0) {
       return NextResponse.json(
         { error: "AI tidak menghasilkan kartu yang valid. Coba lagi." },

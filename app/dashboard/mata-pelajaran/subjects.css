@@ -1,6 +1,6 @@
 .subject-journey {
-  --sj-bg: #faf7f2;
-  --sj-panel: #fffdf9;
+  --sj-bg: #ffffff;
+  --sj-panel: #ffffff;
   --sj-ink: #352b3e;
   --sj-muted: #746a7b;
   --sj-line: #e2d9e7;
@@ -8,7 +8,7 @@
   --sj-soft: #eee5f6;
   --sj-green: #32745b;
   --sj-green-soft: #e9f3eb;
-  --sj-warm: #f4eee4;
+  --sj-warm: #f4f1f7;
   color: var(--sj-ink);
   font-family: var(--font-nunito), Nunito, sans-serif;
   width: 100%;
@@ -182,6 +182,10 @@
 }
 .sj-library {
   min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--sj-line);
+  border-radius: 18px;
+  background: var(--sj-panel);
 }
 .sj-section-head {
   display: flex;
@@ -269,7 +273,7 @@
 }
 .sj-subject.is-selected {
   border-color: var(--sj-accent);
-  box-shadow: inset 3px 0 var(--sj-accent);
+  background: var(--sj-soft);
 }
 .sj-subject-icon {
   display: flex;
@@ -771,9 +775,13 @@
   align-items: center;
   text-align: center;
   padding: 45px 25px;
-  border: 1.5px dashed var(--sj-line);
+  border: 1px solid var(--sj-line);
   border-radius: 20px;
+  background: var(--sj-panel);
 }
+.sj-empty { min-height: 320px; justify-content: center; }
+.sj-empty > svg { color: var(--sj-accent); margin-bottom: 18px; }
+.subject-journey :is(button, a, input):focus-visible { outline: 3px solid #a27be0; outline-offset: 3px; }
 .sj-welcome img {
   margin-bottom: 20px;
 }

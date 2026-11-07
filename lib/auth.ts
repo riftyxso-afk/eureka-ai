@@ -89,7 +89,7 @@ export function isLoggedIn(): boolean {
  * path lokal, cegah open redirect). Dipakai halaman kampanye seperti
  * /launch dan /join agar user kembali otomatis setelah masuk.
  */
-export function getSafeNext(defaultPath = "/dashboard"): string {
+export function getSafeNext(defaultPath = "/dashboard-v2"): string {
   if (typeof window === "undefined") return defaultPath;
   const next = new URLSearchParams(window.location.search).get("next") ?? "";
   if (next.startsWith("/") && !next.startsWith("//") && !next.includes(":")) {
