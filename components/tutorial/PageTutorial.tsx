@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ArrowRight, CircleHelp, Film, Play, X } from "lucide-react";
 import { getUserId } from "@/lib/identity";
 import { guideForPath, PAGE_GUIDES, type PageGuide, type PageGuideId } from "@/lib/pageGuides";
+import { PAGE_GUIDE_RECORDINGS } from "@/lib/pageGuideRecordings";
 import "./page-tutorial.css";
 
 // Also remember within this tab when private browsing blocks persistent storage.
@@ -19,7 +20,8 @@ export default function PageTutorial({ guideId, ready = true }: { guideId?: Page
   const pathname = usePathname();
   const id = guideId ?? guideForPath(pathname);
   if (!id || !ready) return null;
-  return <Tutorial key={id} id={id} guide={PAGE_GUIDES[id]} />;
+  const guide: PageGuide = PAGE_GUIDES[id];
+  return <Tutorial key={id} id={id} guide={{ ...guide, recording: guide.recording ?? PAGE_GUIDE_RECORDINGS[id] }} />;
 }
 
 function Tutorial({ id, guide }: { id: PageGuideId; guide: PageGuide }) {

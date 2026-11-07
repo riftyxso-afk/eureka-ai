@@ -1,0 +1,173 @@
+{
+  "source": "Rekaman UI Eureka dengan akun demo, petunjuk Bahasa Indonesia, tanpa audio.",
+  "videos": [
+    {
+      "id": "dashboard",
+      "file": "dashboard.mp4",
+      "poster": "dashboard.webp",
+      "seconds": 16.13,
+      "bytes": 167758
+    },
+    {
+      "id": "room-learn",
+      "file": "room-learn.mp4",
+      "poster": "room-learn.webp",
+      "seconds": 18.33,
+      "bytes": 274543
+    },
+    {
+      "id": "room-notes",
+      "file": "room-notes.mp4",
+      "poster": "room-notes.webp",
+      "seconds": 17,
+      "bytes": 245264
+    },
+    {
+      "id": "room-mindmap",
+      "file": "room-mindmap.mp4",
+      "poster": "room-mindmap.webp",
+      "seconds": 19.21,
+      "bytes": 260804
+    },
+    {
+      "id": "room-quiz",
+      "file": "room-quiz.mp4",
+      "poster": "room-quiz.webp",
+      "seconds": 16.71,
+      "bytes": 215884
+    },
+    {
+      "id": "room-cards",
+      "file": "room-cards.mp4",
+      "poster": "room-cards.webp",
+      "seconds": 16.38,
+      "bytes": 216015
+    },
+    {
+      "id": "room-sources",
+      "file": "room-sources.mp4",
+      "poster": "room-sources.webp",
+      "seconds": 5.54,
+      "bytes": 52011
+    },
+    {
+      "id": "room-ask",
+      "file": "room-ask.mp4",
+      "poster": "room-ask.webp",
+      "seconds": 15.17,
+      "bytes": 161352
+    },
+    {
+      "id": "room-podcast",
+      "file": "room-podcast.mp4",
+      "poster": "room-podcast.webp",
+      "seconds": 13,
+      "bytes": 506662
+    },
+    {
+      "id": "room-scratch",
+      "file": "room-scratch.mp4",
+      "poster": "room-scratch.webp",
+      "seconds": 11.33,
+      "bytes": 188584
+    },
+    {
+      "id": "chat",
+      "file": "chat.mp4",
+      "poster": "chat.webp",
+      "seconds": 17.17,
+      "bytes": 174693
+    },
+    {
+      "id": "library",
+      "file": "library.mp4",
+      "poster": "library.webp",
+      "seconds": 9.71,
+      "bytes": 180204
+    },
+    {
+      "id": "subjects",
+      "file": "subjects.mp4",
+      "poster": "subjects.webp",
+      "seconds": 9.71,
+      "bytes": 302749
+    },
+    {
+      "id": "missions",
+      "file": "missions.mp4",
+      "poster": "missions.webp",
+      "seconds": 9.67,
+      "bytes": 129623
+    },
+    {
+      "id": "schedule",
+      "file": "schedule.mp4",
+      "poster": "schedule.webp",
+      "seconds": 9.63,
+      "bytes": 316671
+    },
+    {
+      "id": "leaderboard",
+      "file": "leaderboard.mp4",
+      "poster": "leaderboard.webp",
+      "seconds": 12.21,
+      "bytes": 172040
+    },
+    {
+      "id": "profile",
+      "file": "profile.mp4",
+      "poster": "profile.webp",
+      "seconds": 10.54,
+      "bytes": 259507
+    },
+    {
+      "id": "courses",
+      "file": "courses.mp4",
+      "poster": "courses.webp",
+      "seconds": 9.71,
+      "bytes": 88535
+    },
+    {
+      "id": "settings",
+      "file": "settings.mp4",
+      "poster": "settings.webp",
+      "seconds": 9.79,
+      "bytes": 220611
+    },
+    {
+      "id": "streaks",
+      "file": "streaks.mp4",
+      "poster": "streaks.webp",
+      "seconds": 9.71,
+      "bytes": 133995
+    },
+    {
+      "id": "friends",
+      "file": "friends.mp4",
+      "poster": "friends.webp",
+      "seconds": 9.58,
+      "bytes": 71768
+    },
+    {
+      "id": "guide",
+      "file": "guide.mp4",
+      "poster": "guide.webp",
+      "seconds": 9.58,
+      "bytes": 365527
+    },
+    {
+      "id": "tasks",
+      "file": "tasks.mp4",
+      "poster": "tasks.webp",
+      "seconds": 9.46,
+      "bytes": 104138
+    },
+    {
+      "id": "music",
+      "file": "music.mp4",
+      "poster": "music.webp",
+      "seconds": 9.5,
+      "bytes": 110836
+    }
+  ]
+}
