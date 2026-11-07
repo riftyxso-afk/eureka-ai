@@ -14,6 +14,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Brain, PenLine } from "lucide-react";
 import EurekaOrb from "@/components/ui/EurekaOrb";
 import TutorialHost from "@/components/tutorial/TutorialHost";
+import PageTutorial from "@/components/tutorial/PageTutorial";
 import NoteActions from "@/components/asisten/NoteActions";
 import TaskActions from "@/components/asisten/TaskActions";
 import { mayManageNote, parseNoteCommand, proposeNoteCommand, type NoteCommand } from "@/lib/assistant/noteCommands";
@@ -218,7 +219,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
           transition={reduceMotion ? { duration: 0 } : { type: "spring", duration: 0.7, bounce: 0.2 }}>
           <MomoCompanion mode={momoMode} question={launching?.prompt ?? ""} thinking={!!launching} />
         </motion.div>}
-        {standalone && <header className="momo-chat-header"><div className="momo-mobile-history"><MobileSessionButton sessions={chat.sessions} onSelect={(id) => router.push(`/chat/${id}`)} /></div><strong>Chat baru</strong><Link href="/dashboard">← Dashboard</Link></header>}
+        {standalone && <header className="momo-chat-header"><div className="momo-mobile-history"><MobileSessionButton sessions={chat.sessions} onSelect={(id) => router.push(`/chat/${id}`)} /></div><strong>Chat baru</strong><PageTutorial guideId="chat" /><Link href="/dashboard">← Dashboard</Link></header>}
 
         {/* Minimal Perplexity-style landing */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">

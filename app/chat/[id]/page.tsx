@@ -46,6 +46,7 @@ import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
 import { useI18n } from "@/context/LocaleContext";
 import TutorialHost from "@/components/tutorial/TutorialHost";
+import PageTutorial from "@/components/tutorial/PageTutorial";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
@@ -305,6 +306,7 @@ export default function ChatPage() {
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
+                  <PageTutorial guideId="chat" />
                   {chat.renderedMessages.length > 0 && (
                     <>
                       {/* Ikon Canvas — ghost minimal dengan badge count kecil

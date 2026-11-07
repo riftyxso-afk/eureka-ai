@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, CalendarDays, FileText, Flame, FolderOpen, Globe, GraduationCap, Grid2X2, History, List, MessageCircle, Mic, Plus, RefreshCw, Search, Trophy, Upload, Crown } from "lucide-react";
 import PromptBar from "@/components/asisten/reactbits/PromptBar";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
+import PageTutorial from "@/components/tutorial/PageTutorial";
 import { usePromptNoteJob } from "@/components/dashboard/usePromptNoteJob";
 import PromptNoteProgress from "@/components/dashboard/PromptNoteProgress";
 import AiCallModal from "@/components/assistant/AiCallModal";
@@ -98,7 +99,7 @@ export default function DashboardV2() {
     <header className="dv2-topbar">
       <Link className="dv2-brand" href="/dashboard-v2">eureka! <span>V2 · Beta</span></Link>
       <nav aria-label="Navigasi Dashboard V2" className="dv2-topnav"><Link href="/dashboard-v2#dv2-notes-title"><FolderOpen size={16} />Catatan</Link><Link href="/chat"><MessageCircle size={16} />Tanya Momo</Link><details className="dv2-menu"><summary>Ruang belajar</summary><div><Link href="/dashboard/mata-pelajaran"><BookOpen size={16} />Mata pelajaran</Link><Link href="/dashboard/misi"><Trophy size={16} />Misi</Link><Link href="/dashboard/jadwal"><CalendarDays size={16} />Jadwal</Link><Link href="/dashboard/kursus"><GraduationCap size={16} />Kursus · Terkunci</Link></div></details></nav>
-      <div className="dv2-account"><Link href="/dashboard/streaks" className="dv2-stat dv2-streak"><Flame size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard/profil" className="dv2-stat dv2-level"><Trophy size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/pricing" className="dv2-stat dv2-upgrade"><Crown size={16} />Upgrade</Link></div>
+      <div className="dv2-account"><PageTutorial guideId="dashboard" /><Link href="/dashboard/streaks" className="dv2-stat dv2-streak"><Flame size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard/profil" className="dv2-stat dv2-level"><Trophy size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/pricing" className="dv2-stat dv2-upgrade"><Crown size={16} />Upgrade</Link></div>
     </header>
     <main className="dv2-main">
       <section className="dv2-workspace" aria-labelledby="dv2-title">
