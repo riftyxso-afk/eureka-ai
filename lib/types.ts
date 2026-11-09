@@ -22,6 +22,7 @@ export interface User {
 
 export interface OnboardingData {
   name: string;
+  school?: string;
   username: string;
   education: string;
   grade: string;

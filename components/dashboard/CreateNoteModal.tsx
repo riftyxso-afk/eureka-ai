@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, apiEventSource, getClientLocale } from "@/lib/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { isDashboardV2, v2NotePath } from "@/lib/v2Navigation";
 import {
   BookOpen,
   CheckCircle2,
@@ -328,6 +329,7 @@ export const CreateNoteModal = ({
   const progressPercentRef = useRef(0);
   const doneHandledRef = useRef(false);
   const router = useRouter();
+  const inV2 = isDashboardV2(usePathname());
   const jobIdRef = useRef<string | null>(null);
   const { steps, handleEvent, reset: resetSteps } = useNoteSteps();
 
@@ -490,7 +492,7 @@ export const CreateNoteModal = ({
     reset();
     onCreate(note);
     onClose();
-    router.push(`/${locale}/dashboard/note/${encodeURIComponent(note.id)}`);
+    router.push(`/${locale}${inV2 ? v2NotePath(note.id) : `/dashboard/note/${encodeURIComponent(note.id)}`}`);
   };
 
   /** Tambah satu sumber baru ke daftar (maks 5) lalu lanjut ke langkah isi. */

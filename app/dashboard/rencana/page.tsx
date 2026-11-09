@@ -1,8 +1,10 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Clock, Origami, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Check, Clock, Origami, Plus, Sparkles, Trash2 } from "lucide-react";
 import CardClay from "@/components/ui/CardClay";
 import ButtonClay from "@/components/ui/ButtonClay";
 import InputClay from "@/components/ui/InputClay";
@@ -92,7 +94,6 @@ function formatTime(time: string): string {
 
 export default function RencanaPage() {
   const [items, setItems] = useState<PlanItem[]>([]);
-  const [toast, setToast] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
 
   // Form item baru
@@ -107,8 +108,7 @@ export default function RencanaPage() {
   }, []);
 
   const notify = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2400);
+    toast.info(msg);
   };
 
   const stats = useMemo(() => getPlanStats(items), [items]);
@@ -445,21 +445,7 @@ export default function RencanaPage() {
       )}
 
       {/* Toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.button
-            key="toast"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            onClick={() => setToast(null)}
-            className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn"
-          >
-            {toast}
-            <X size={14} />
-          </motion.button>
-        )}
-      </AnimatePresence>
+
     </div>
   );
 }

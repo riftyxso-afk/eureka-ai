@@ -6,8 +6,11 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
+
+import { flushSync } from "react-dom";
 
 type Theme = "light" | "dark" | "system";
 type ResolvedTheme = "light" | "dark";
@@ -43,28 +46,27 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 /**
  * Provider mode gelap untuk area login. Mengatur class `dark` di
  * documentElement; preferensi disimpan di localStorage `eureka_theme`
- * (default: mengikuti preferensi sistem). Halaman publik tidak punya
- * varian dark, jadi otomatis tetap terang.
+ * (default: mengikuti preferensi sistem).
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "system";
-    try {
-      const saved = window.localStorage.getItem(THEME_KEY);
-      if (saved === "light" || saved === "dark" || saved === "system") {
-        return saved;
-      }
-    } catch {
-      // storage tidak tersedia
-    }
-    return "system";
-  });
-
-  const [resolved, setResolved] = useState<ResolvedTheme>(() =>
-    resolveTheme(theme)
-  );
+  const [theme, setThemeState] = useState<Theme | null>(null);
+  const [resolved, setResolved] = useState<ResolvedTheme>("light");
 
   useEffect(() => {
+    if (theme !== null) return;
+    let preference: Theme = "system";
+    try {
+      const saved = window.localStorage.getItem(THEME_KEY);
+      if (saved === "light" || saved === "dark" || saved === "system") preference = saved;
+    } catch {
+      // Use the system theme when storage is unavailable.
+    }
+    setResolved(resolveTheme(preference));
+    setThemeState(preference);
+  }, [theme]);
+
+  useEffect(() => {
+    if (theme === null) return;
     const apply = () => {
       const r = resolveTheme(theme);
       setResolved(r);
@@ -80,21 +82,38 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [theme]);
 
+  const transition = useRef<ViewTransition | null>(null);
   const setTheme = useCallback((t: Theme) => {
-    setThemeState(t);
+    const next = resolveTheme(t);
+    const update = () => {
+      setThemeState(t);
+      setResolved(next);
+      document.documentElement.classList.toggle("dark", next === "dark");
+    };
+    transition.current?.skipTransition();
+    if (document.startViewTransition && next !== resolved &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const active = document.startViewTransition(() => flushSync(update));
+      transition.current = active;
+      void active.finished.catch(() => {}).finally(() => {
+        if (transition.current === active) transition.current = null;
+      });
+    } else {
+      update();
+    }
     try {
       window.localStorage.setItem(THEME_KEY, t);
     } catch {
       // storage tidak tersedia
     }
-  }, []);
+  }, [resolved]);
 
   const toggle = useCallback(() => {
     setTheme(resolved === "dark" ? "light" : "dark");
   }, [resolved, setTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, resolved, setTheme, toggle }}>
+    <ThemeContext.Provider value={{ theme: theme ?? "system", resolved, setTheme, toggle }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -40,7 +42,6 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
   const [status, setStatus] = useState<RefStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [claiming, setClaiming] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,19 +68,15 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
     }
   }, [open, load]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
+
 
   const copyLink = async () => {
     if (!status) return;
     try {
       await navigator.clipboard.writeText(status.link);
-      setToast("Link referral disalin!");
+      toast.success("Link referral disalin!");
     } catch {
-      setToast("Gagal menyalin link");
+      toast.error("Gagal menyalin link");
     }
   };
 
@@ -115,13 +112,13 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
         error?: string;
       } | null;
       if (!res.ok || !data?.ok) {
-        setToast(data?.error ?? "Gagal klaim reward");
+        toast.error(data?.error ?? "Gagal klaim reward");
         return;
       }
-      setToast("Premium 30 hari berhasil diklaim!");
+      toast.success("Premium 30 hari berhasil diklaim!");
       await load();
     } catch {
-      setToast("Gagal klaim reward");
+      toast.error("Gagal klaim reward");
     } finally {
       setClaiming(false);
     }
@@ -274,18 +271,7 @@ export function ReferralPopup({ open, onClose }: ReferralPopupProps) {
           </motion.div>
 
           {/* Toast */}
-          <AnimatePresence>
-            {toast && (
-              <motion.div
-                initial={{ opacity: 0, y: 16, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.95 }}
-                className="fixed bottom-6 left-1/2 z-[130] -translate-x-1/2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn"
-              >
-                {toast}
-              </motion.div>
-            )}
-          </AnimatePresence>
+
         </motion.div>
       )}
     </AnimatePresence>

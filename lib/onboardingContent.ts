@@ -4,7 +4,7 @@ export interface StepOption {
 }
 
 export interface OnboardingStep {
-  key: "name" | "username" | "education" | "grade" | "psyTest" | "weakTopic" | "learningHabit" | "peakHour";
+  key: "name" | "username" | "education" | "school" | "grade" | "psyTest" | "weakTopic" | "learningHabit" | "peakHour";
   emoji: string;
   question: string;
   subtitle?: string;
@@ -160,6 +160,12 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     question: "Kamu sekarang di jenjang apa?",
     subtitle: "Ini penting biar materi & penjelasannya pas dengan levelmu",
     options: EDUCATION_OPTIONS,
+  },
+  {
+    key: "school",
+    emoji: "🏫",
+    question: "Di mana kamu belajar?",
+    subtitle: "Cari sekolah atau kampus di Indonesia. Langkah ini opsional.",
   },
   {
     key: "grade",

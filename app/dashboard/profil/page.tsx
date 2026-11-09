@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import {
@@ -74,7 +76,6 @@ export default function ProfilPage() {
     grade: "",
   });
   const [userNumber, setUserNumber] = useState<number | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [avatar, setAvatarState] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [stats, setStats] = useState({
@@ -130,6 +131,7 @@ export default function ProfilPage() {
           name: u.name || prev.name,
           email: u.email || prev.email,
           username: u.username || prev.username,
+          school: typeof u.profileData?.school === "string" ? u.profileData.school : prev.school,
           education,
           grade: canonicalGrade || "",
         }));
@@ -163,8 +165,7 @@ export default function ProfilPage() {
   }, [data.grade, userId]);
 
   const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
+    toast.info(msg);
   }, []);
 
   const loadStats = useCallback(async () => {
@@ -701,11 +702,7 @@ export default function ProfilPage() {
         </div>
       </CardClay>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn">
-          {toast}
-        </div>
-      )}
+
     </div>
   );
 }

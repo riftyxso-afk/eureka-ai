@@ -1,13 +1,17 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+
+import { toast } from "@yusufceng1z/ding-react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import ThemeSwitch from "@/components/ui/ThemeSwitch";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import type { StudyRoomTab } from "@/lib/studyRoom";
-import { ArrowRight, BookOpen, Check, ChevronDown, FileText, Headphones, Layers, ListChecks, MessageCircle, Network, NotebookPen, ExternalLink, Flame, Trophy, Crown } from "lucide-react";
+import { ArrowRight, BookOpen, Check, FileText, Headphones, Layers, ListChecks, MessageCircle, Network, NotebookPen, ExternalLink, Flame, Trophy, Crown } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
+import V2MobileSidebar from "./V2MobileSidebar";
 import PageTutorial from "@/components/tutorial/PageTutorial";
 import RoomQuiz from "./RoomQuiz";
 import RoomFlashcards from "./RoomFlashcards";
@@ -44,10 +48,7 @@ export default function StudyRoom({ noteId, initialEditor = false, initialChapte
   const [read, setRead] = useState<number[]>([]);
   const [sourceFiles, setSourceFiles] = useState<{ name: string; size: number }[]>([]);
   const [dirty, setDirty] = useState(false);
-  const [notice, setNotice] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [stats, setStats] = useState<{ streak: number; level: number } | null>(null);
-  const navigation = useRef<HTMLElement>(null);
   useEffect(() => { if (!matchMedia("(max-width:700px)").matches) return; const frame = requestAnimationFrame(() => document.querySelector('.sr-main')?.scrollIntoView({ block: "start" })); return () => cancelAnimationFrame(frame); }, [tab]);
   const key = `eureka:v2:reading:${getUserId()}:${noteId}`;
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -82,29 +83,27 @@ export default function StudyRoom({ noteId, initialEditor = false, initialChapte
   const percent = chapters.length ? Math.round(completed / chapters.length * 100) : 0;
   const next = chapters.find(chapter => !read.includes(chapter.id)) ?? chapters[0];
   function navigate(value: Tab, id?: number | null) {
-    if (dirty) { setNotice("Simpan atau batalkan perubahan editor sebelum berpindah bagian."); return; }
-    setMenuOpen(false);
+    if (dirty) { toast.warning("Simpan atau batalkan perubahan editor sebelum berpindah bagian."); return; }
     if (value === "quiz" || value === "cards") { router.push(`/dashboard-v2/note/${noteId}/${value === "quiz" ? "quiz" : "flashcards"}`); return; }
     if (/\/(quiz|flashcards)$/.test(pathname)) { router.push(`/dashboard-v2/note/${noteId}?tab=${value}${id !== undefined && id !== null ? `&chapter=${id}` : ""}`); return; }
-    setTab(value); setNotice(""); if (id !== undefined) setChapterId(id);
+    setTab(value); if (id !== undefined) setChapterId(id);
   }
   function toggleRead(id: number) {
     const values = read.includes(id) ? read.filter(value => value !== id) : [...read, id]; setRead(values);
-    try { localStorage.setItem(key, JSON.stringify(values)); } catch { setNotice("Progres belum tersimpan di perangkat ini."); }
+    try { localStorage.setItem(key, JSON.stringify(values)); } catch { toast.warning("Progres belum tersimpan di perangkat ini."); }
   }
   const activeChapter = chapters.find(chapter => chapter.id === chapterId);
   const sources = [...new Map([...(note?.references ?? []), ...chapters.flatMap(chapter => chapter.sources ?? []), ...(note?.sourceUrl ? [{ title: "Materi sumber", url: note.sourceUrl, snippet: "" }] : [])].filter(source => httpUrl(source.url)).map(source => [source.url, source])).values()];
   return <div className="dv2 sr-room">
-    <header className="dv2-topbar sr-topbar" onClickCapture={event => { if (dirty && event.target instanceof Element && event.target.closest("a")) { event.preventDefault(); setNotice("Simpan atau batalkan perubahan editor sebelum berpindah halaman."); } }}><Link className="dv2-brand" href="/dashboard-v2" onClick={event => { if (dirty) { event.preventDefault(); setNotice("Simpan perubahan editor sebelum kembali."); } }}>eureka!<span>Ruang belajar</span></Link><span className="sr-breadcrumb">{note?.title ?? "Menyiapkan materi"}</span><div className="dv2-account"><PageTutorial guideId={`room-${tab}`} ready={!loading && !!note} /><Link className="dv2-stat dv2-streak" href="/dashboard/streaks"><Flame size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link className="dv2-stat dv2-level" href="/dashboard/profil"><Trophy size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link className="dv2-stat dv2-upgrade" href="/pricing"><Crown size={16} />Upgrade</Link></div></header>
-    <div className="sr-layout"><div className="sr-mobile-bar"><button type="button" aria-expanded={menuOpen} aria-controls="study-navigation" onClick={() => setMenuOpen(value => !value)}><span><small>RUANG BELAJAR</small><strong>{MENU.find(item => item.id === tab)?.label}</strong></span><span className="sr-mobile-menu-label">Semua menu <ChevronDown size={16} /></span></button></div><nav id="study-navigation" ref={navigation} className={`sr-nav ${menuOpen ? "is-open" : ""}`} aria-label="Menu ruang belajar" onKeyDown={event => { if (event.key === "Escape") { setMenuOpen(false); document.querySelector<HTMLButtonElement>('.sr-mobile-bar button')?.focus(); } }}>{MENU.map((item, index) => <button key={item.id} aria-pressed={tab === item.id} onClick={() => navigate(item.id)}><span className="rm-nav-illustration" aria-hidden="true" style={{ backgroundPosition: `${index % 3 * 50}% ${Math.floor(index / 3) * 50}%` }} /><span>{item.label}</span>{(item.id === "mindmap" || item.id === "podcast") && <small className="rm-nav-beta">Beta</small>}</button>)}</nav>
+    <header className="dv2-topbar sr-topbar" onClickCapture={event => { if (dirty && event.target instanceof Element && event.target.closest("a")) { event.preventDefault(); toast.warning("Simpan atau batalkan perubahan editor sebelum berpindah halaman."); } }}><V2MobileSidebar sections={MENU.map(item => ({ id: item.id, label: item.label, active: tab === item.id, select: () => navigate(item.id) }))} /><Link className="dv2-brand" href="/dashboard-v2" onClick={event => { if (dirty) { event.preventDefault(); toast.warning("Simpan perubahan editor sebelum kembali."); } }}>eureka!<span>Ruang belajar</span></Link><span className="sr-breadcrumb">{note?.title ?? "Menyiapkan materi"}</span><div className="dv2-account"><ThemeSwitch /><PageTutorial guideId={`room-${tab}`} ready={!loading && !!note} /><Link className="dv2-stat dv2-streak" href="/dashboard/streaks"><Flame size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link className="dv2-stat dv2-level" href="/dashboard/profil"><Trophy size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link className="dv2-stat dv2-upgrade" href="/pricing"><Crown size={16} />Upgrade</Link></div></header>
+    <div className="sr-layout"><nav id="study-navigation" className="sr-nav" aria-label="Menu ruang belajar">{MENU.map((item, index) => <button key={item.id} aria-pressed={tab === item.id} onClick={() => navigate(item.id)}><span className="rm-nav-illustration" aria-hidden="true" style={{ backgroundPosition: `${index % 3 * 50}% ${Math.floor(index / 3) * 50}%` }} /><span>{item.label}</span>{(item.id === "mindmap" || item.id === "podcast") && <small className="rm-nav-beta">Beta</small>}</button>)}</nav>
       <main className={`sr-main ${tab === "mindmap" ? "is-mindmap" : ""}`}>
-        {notice && <p className="sr-notice" role="status">{notice}</p>}
         {loading ? <div className="sr-loading" role="status"><div className="sr-momo"><MomoCompanion mode="fast" thinking /></div><p>Momo sedang membuka materi…</p></div> : error ? <div className="dv2-empty" role="alert"><h1>Materi belum bisa dibuka</h1><p>{error}</p><button className="dv2-button" onClick={() => void load()}>Coba lagi</button></div> : note && <>
           {tab === "learn" && <><div className="sr-hero"><div className="sr-momo"><MomoCompanion mode="fast" response={completed ? "Kamu sudah menyelesaikan satu langkah belajar!" : ""} /></div><div><p className="sr-eyebrow">RUANG BELAJARMU</p><h1>{note.title}</h1><div className="sr-progress"><progress value={percent} max={100} aria-label="Progres membaca" /><strong>{percent}%</strong></div></div></div><div className="sr-continue"><button className="dv2-button" disabled={!next} onClick={() => navigate("notes", next?.id)}>{completed ? "Lanjutkan" : "Mulai belajar"}<ArrowRight size={17} /></button><div><small>Selanjutnya</small><strong>{next?.title ?? "Tambahkan materi untuk mulai belajar"}</strong></div></div><div className="sr-chapters-heading"><h2>Daftar bab</h2><span>{completed} dari {chapters.length} selesai</span></div><ChapterPath chapters={chapters} read={read} onOpen={id => navigate("notes", id)} /><p className="sr-local-hint">Progres membaca tersimpan di perangkat ini. Tandai bab selesai setelah mempelajarinya.</p></>}
-          {tab === "notes" && <><div className="sr-section-heading"><div><p className="sr-eyebrow">EDITOR CATATAN</p><h1>Catatan dan bab</h1></div><select aria-label="Bagian catatan" value={chapterId ?? "summary"} onChange={event => navigate("notes", event.target.value === "summary" ? null : Number(event.target.value))}><option value="summary">Ringkasan</option>{chapters.map((chapter, index) => <option key={chapter.id} value={chapter.id}>Bab {index + 1} · {chapter.title}</option>)}</select></div><DocumentEditor key={`${note.id}:${chapterId ?? "summary"}`} noteId={note.id} title={note.title} content={activeChapter?.content ?? note.summary ?? ""} chapterId={activeChapter?.id} label={activeChapter?.title ?? "Ringkasan catatan"} onDirtyChange={setDirty} onSaved={(title, content, warning) => { setNote(current => current && ({ ...current, title, ...(activeChapter ? { chapters: current.chapters?.map(chapter => chapter.id === activeChapter.id ? { ...chapter, content } : chapter) } : { summary: content }) })); setNotice(warning ?? "Perubahan tersimpan ke akunmu."); }} />{activeChapter && <div className="sr-reader-footer"><button className="dv2-button" onClick={() => toggleRead(activeChapter.id)}><Check size={16} />{read.includes(activeChapter.id) ? "Tandai belum dibaca" : "Tandai sudah dibaca"}</button><button onClick={() => navigate("learn")}>Kembali ke alur bab</button></div>}</>}
+          {tab === "notes" && <><div className="sr-section-heading"><div><p className="sr-eyebrow">EDITOR CATATAN</p><h1>Catatan dan bab</h1></div><select aria-label="Bagian catatan" value={chapterId ?? "summary"} onChange={event => navigate("notes", event.target.value === "summary" ? null : Number(event.target.value))}><option value="summary">Ringkasan</option>{chapters.map((chapter, index) => <option key={chapter.id} value={chapter.id}>Bab {index + 1} · {chapter.title}</option>)}</select></div><DocumentEditor key={`${note.id}:${chapterId ?? "summary"}`} noteId={note.id} title={note.title} content={activeChapter?.content ?? note.summary ?? ""} chapterId={activeChapter?.id} label={activeChapter?.title ?? "Ringkasan catatan"} onDirtyChange={setDirty} onSaved={(title, content, warning) => { setNote(current => current && ({ ...current, title, ...(activeChapter ? { chapters: current.chapters?.map(chapter => chapter.id === activeChapter.id ? { ...chapter, content } : chapter) } : { summary: content }) })); if (warning) toast.warning(warning); else toast.success("Perubahan tersimpan ke akunmu."); }} />{activeChapter && <div className="sr-reader-footer"><button className="dv2-button" onClick={() => toggleRead(activeChapter.id)}><Check size={16} />{read.includes(activeChapter.id) ? "Tandai belum dibaca" : "Tandai sudah dibaca"}</button><button onClick={() => navigate("learn")}>Kembali ke alur bab</button></div>}</>}
           {tab === "quiz" && <RoomQuiz note={note} />}
           {tab === "cards" && <RoomFlashcards note={note} />}
-          {tab === "mindmap" && <RoomMindmap note={note} onDirtyChange={setDirty} onOpen={id => navigate("notes", id)} onSaved={(id, title, content, warning) => { setNote(current => current && ({ ...current, title, ...(id !== null ? { chapters: current.chapters?.map(chapter => chapter.id === id ? { ...chapter, content } : chapter) } : { summary: content }) })); setNotice(warning ?? "Perubahan tersimpan ke akunmu."); }} />}
+          {tab === "mindmap" && <RoomMindmap note={note} onDirtyChange={setDirty} onOpen={id => navigate("notes", id)} onSaved={(id, title, content, warning) => { setNote(current => current && ({ ...current, title, ...(id !== null ? { chapters: current.chapters?.map(chapter => chapter.id === id ? { ...chapter, content } : chapter) } : { summary: content }) })); if (warning) toast.warning(warning); else toast.success("Perubahan tersimpan ke akunmu."); }} />}
           {tab === "sources" && <SourceMaterials files={sourceFiles} sources={sources} sourceUrl={note.sourceUrl} />}
           {tab === "ask" && <RoomChat noteId={note.id} title={note.title} />}
           {tab === "podcast" && <RoomPodcast noteId={note.id} title={note.title} />}

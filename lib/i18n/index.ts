@@ -155,7 +155,7 @@ export const dictionaries = {
       desc: "Eureka.AI adalah aplikasi belajar AI gratis untuk pelajar Indonesia: 4 tipe rangkuman otomatis, hingga 6 bab per catatan, dan 3 sumber materi — video YouTube, artikel web, dan dokumen.",
       stat1: "tipe rangkuman: biasa, makalah, laporan, dan poin penting",
       stat2:
-        "hari masa aktif Pro per pembayaran — Rp 59.000, tanpa langganan berulang",
+        "hari masa aktif Pro per pembayaran — Rp 15.000, tanpa langganan berulang",
       stat3: "sumber materi: video YouTube, artikel web, dan file dokumen (PDF, DOCX, PPTX)",
       updated: "Terakhir diperbarui: Agustus 2026",
     },
@@ -163,7 +163,7 @@ export const dictionaries = {
     harga: {
       label: "Harga",
       title: "Berapa biaya Eureka.AI?",
-      desc: "Paket Pro Rp 59.000/bulan — bayar sekali, aktif 30 hari.",
+      desc: "Paket Pro Rp 15.000/bulan — bayar sekali, aktif 30 hari.",
       gratis: "Gratis",
       perBulan: "/bulan",
       gratisFeatures: [
@@ -196,7 +196,7 @@ export const dictionaries = {
         },
         {
           q: "Apakah Eureka.AI gratis?",
-          a: "Ya. Paket Gratis tersedia selamanya: chat AI dengan batas harian, 3 catatan otomatis per bulan, serta kuis dan kartu hafalan dasar. Upgrade ke Pro (Rp 59.000/bulan) untuk akses tanpa batas.",
+          a: "Ya. Paket Gratis tersedia selamanya: chat AI dengan batas harian, 3 catatan otomatis per bulan, serta kuis dan kartu hafalan dasar. Upgrade ke Pro (Rp 15.000/bulan) untuk akses tanpa batas.",
         },
         {
           q: "Bagaimana cara membuat catatan otomatis?",
@@ -903,14 +903,14 @@ export const dictionaries = {
       title: "Numbers that make Eureka.AI different",
       desc: "Eureka.AI is a free AI learning app for Indonesian students: 4 summary types, up to 6 chapters per note, and 3 material sources — YouTube videos, web articles, and documents.",
       stat1: "summary types: regular, paper, report, and key points",
-      stat2: "days of active Pro per payment — Rp 59.000, no recurring subscription",
+      stat2: "days of active Pro per payment — Rp 15.000, no recurring subscription",
       stat3: "material sources: YouTube videos, web articles, and document files (PDF, DOCX, PPTX)",
       updated: "Last updated: August 2026",
     },
     harga: {
       label: "Pricing",
       title: "How much does Eureka.AI cost?",
-      desc: "Pro Rp 59.000/month — pay once, active 30 days.",
+      desc: "Pro Rp 15.000/month — pay once, active 30 days.",
       gratis: "Free",
       perBulan: "/month",
       gratisFeatures: [
@@ -942,7 +942,7 @@ export const dictionaries = {
         },
         {
           q: "Is Eureka.AI free?",
-          a: "Yes. The Free plan lasts forever: AI chat with a daily limit, 3 auto-generated notes per month, plus basic quizzes and flashcards. Upgrade to Pro (Rp 59.000/month) for unlimited access.",
+          a: "Yes. The Free plan lasts forever: AI chat with a daily limit, 3 auto-generated notes per month, plus basic quizzes and flashcards. Upgrade to Pro (Rp 15.000/month) for unlimited access.",
         },
         {
           q: "How do I create auto-generated notes?",

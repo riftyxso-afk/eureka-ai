@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import StoryPlayer from "@/components/note/StoryPlayer";
 
 import "./note-detail.css";
@@ -224,7 +226,6 @@ export default function NoteDetailPage() {
   const [showPdfWorkflow, setShowPdfWorkflow] = useState(false);
   const [highlights, setHighlights] = useState<HighlightEntry[]>([]);
   const [images, setImages] = useState<NoteImage[]>([]);
-  const [toast, setToast] = useState<string | null>(null);
   const [presence, setPresence] = useState<PresenceEntry[]>([]);
   const [activeChapterId, setActiveChapterId] = useState<number | null>(null);
   const [collapsedMap, setCollapsedMap] = useState<Record<number, boolean>>({});
@@ -245,8 +246,7 @@ export default function NoteDetailPage() {
   const [animKeys, setAnimKeys] = useState<Set<string>>(new Set());
 
   const notify = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
+    toast.info(msg);
   }, []);
 
   const loadNote = async () => {
@@ -470,6 +470,7 @@ export default function NoteDetailPage() {
           } else if (ev.type === "highlight") {
             if (ev.chapterId == null || !ev.text || !ev.color) continue;
             received++;
+            const highlightId = `ai-${received}-${Date.now()}`;
             flashHighlight(ev.chapterId, ev.text);
             setHighlights((prev) => {
               const dup = prev.some(
@@ -481,7 +482,7 @@ export default function NoteDetailPage() {
               return [
                 ...prev,
                 {
-                  id: `ai-${received}-${Date.now()}`,
+                  id: highlightId,
                   noteId: params.id,
                   chapterId: ev.chapterId!,
                   text: ev.text!,
@@ -1272,13 +1273,7 @@ export default function NoteDetailPage() {
       />
 
       {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2">
-          <div className="card-clay max-w-[calc(100vw-2rem)] whitespace-normal px-5 py-3 text-sm font-extrabold text-clay-dark shadow-clay">
-            {toast}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

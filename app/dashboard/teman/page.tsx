@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import {
@@ -70,11 +72,9 @@ export default function FriendsPage() {
   const [outgoing, setOutgoing] = useState<RequestEntry[]>([]);
   const [searching, setSearching] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
 
   const notify = (msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast(null), 2500);
+    toast.info(msg);
   };
 
   const loadAll = useCallback(async () => {
@@ -375,13 +375,7 @@ export default function FriendsPage() {
         )}
       </div>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
-          <div className="card-clay whitespace-normal break-words px-5 py-3 text-center text-sm font-extrabold text-clay-dark shadow-clay">
-            {toast}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

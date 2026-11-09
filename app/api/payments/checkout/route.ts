@@ -5,18 +5,13 @@ import {
   generateInvoiceNumber,
   isPakasirConfigured,
 } from "@/lib/pakasir";
+import { TIER_PRICES } from "@/lib/paymentPricing";
 import { applyDiscount, consumeDiscount } from "@/lib/discount";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/** Harga tier dalam Rupiah. */
-export const TIER_PRICES: Record<"promo" | "normal", number> = {
-  promo: 5000,
-  normal: 59000,
-};
 
 /**
  * POST /api/payments/checkout
@@ -86,7 +81,7 @@ export async function POST(req: NextRequest) {
     // Diskon: hitung harga final bila kode diberikan (opsional).
     // Kode 'free' → finalAmount Rp 500 (Pakasir menolak Rp 0 & minimal Rp 500),
     // HANYA 1x per user.
-    let amount = baseAmount;
+    let amount: number = baseAmount;
     let discountLabel: string | null = null;
     if (discountCode) {
       const disc = await applyDiscount(discountCode, baseAmount);

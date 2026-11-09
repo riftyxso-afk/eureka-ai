@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 /**
  * Modal Ekspor Jadwal (schedule-export) — ekspor jadwal belajar sebagai:
  * - PDF aesthetic (server-side, lib/scheduleExport) → unduh / bagikan
@@ -144,7 +146,6 @@ export function ScheduleExportModal({
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const notifyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -154,15 +155,11 @@ export function ScheduleExportModal({
   }, [open]);
 
   useEffect(() => () => {
-    if (notifyTimer.current) clearTimeout(notifyTimer.current);
   }, []);
   const [busy, setBusy] = useState<"pdf" | "png" | "share" | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
 
   const notify = (msg: string) => {
-    if (notifyTimer.current) clearTimeout(notifyTimer.current);
-    setToast(msg);
-    notifyTimer.current = setTimeout(() => setToast(null), 2600);
+    toast.info(msg);
   };
 
   const payload = () => ({
@@ -325,11 +322,7 @@ export function ScheduleExportModal({
               PDF berisi jadwal mingguan penuh + semua tugas · PNG ringkas untuk media sosial
             </p>
 
-            {toast && (
-              <div role="status" className="mt-3 rounded-clay-full bg-clay-primary px-4 py-2 text-center text-xs font-extrabold text-white">
-                {toast}
-              </div>
-            )}
+
           </div>
     </dialog>
   );

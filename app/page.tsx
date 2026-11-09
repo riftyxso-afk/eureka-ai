@@ -58,7 +58,7 @@ export default function LandingPage() {
           "@type": "AggregateOffer",
           priceCurrency: "IDR",
           lowPrice: "0",
-          highPrice: "59000",
+          highPrice: "15000",
         },
         description: dict.hero.subtitle,
       },

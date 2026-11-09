@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -59,14 +61,12 @@ export default function ChapterNotepadPage() {
   const [userNote, setUserNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [toast, setToast] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const regen = useRegenerateJob();
 
   const notify = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3500);
+    toast.info(msg);
   }, []);
 
   const loadChapter = useCallback(async () => {
@@ -275,13 +275,7 @@ export default function ChapterNotepadPage() {
       />
 
       {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2">
-          <div className="card-clay whitespace-normal px-5 py-3 text-sm font-extrabold text-clay-dark shadow-clay">
-            {toast}
-          </div>
-        </div>
-      )}
+
 
       {/* Navigasi bab */}
       <div className="mt-6 flex items-center justify-between gap-3 border-t-2 border-clay-shadow/20 pt-5">

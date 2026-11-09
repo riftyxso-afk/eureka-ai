@@ -251,3 +251,24 @@
   .momo-session-composer { border-top: 1px solid rgb(var(--clay-primary) / .12); padding-block-start: 8px; }
   .momo-session-composer:focus-within .momo-composer-companion { visibility: hidden; }
 }
+
+.dark .momo-sidebar:not(.momo-sidebar-compact), .dark .momo-chat-shell .momo-chat-sidebar > div {
+  background: rgb(var(--clay-cream));
+  border-color: rgb(var(--clay-border-light));
+}
+.dark .momo-sidebar :is(.momo-sidebar-new,.momo-sidebar-nav-link,.momo-sidebar-collapse,.momo-sidebar-history-head),
+.dark :is(.eureka-prompt-voice-hint,.momo-preview-label,.response-activity,.response-activity-thinking) {
+  color: rgb(var(--clay-muted));
+}
+.dark .momo-sidebar :is(.momo-sidebar-new,.momo-sidebar-nav-link,.momo-sidebar-collapse):hover,
+.dark .momo-chat-shell .momo-preview-message.is-user {
+  background: #3b2c50;
+  color: #f0e5ff;
+}
+.dark .momo-chat-shell .momo-preview-message.is-assistant {
+  background: rgb(var(--clay-input-bg));
+  color: rgb(var(--clay-dark));
+}
+.dark :is(.eureka-prompt-chip,.eureka-prompt-wizard) { background: rgb(var(--clay-input-bg)); color: rgb(var(--clay-dark)); }
+.dark :is(.eureka-prompt-error,.momo-launch-error) { background: #482531; color: #ffb4c4; }
+.dark .response-activity-shimmer { background-image: linear-gradient(90deg,#c4b1d7 25%,#f0ddff 50%,#c4b1d7 75%); }

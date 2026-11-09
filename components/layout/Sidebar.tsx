@@ -1,9 +1,10 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   AlarmClock,
   BookOpen,
@@ -110,8 +111,6 @@ export const Sidebar = () => {
   const { isPremium } = usePremium();
   const { resolved: themeResolved, toggle: toggleTheme } = useTheme();
   const mobileMenu = useRef<HTMLDialogElement>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [referralOpen, setReferralOpen] = useState(false);
   const [showMore, setShowMore] = useState(false);
   // Sidebar desktop: mode collapse/expand tersimpan per perangkat (localStorage).
@@ -149,9 +148,7 @@ export const Sidebar = () => {
   }, []);
 
   const showToast = (msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 2500);
+    toast.info(msg);
   };
 
   const handleLogout = async () => {
@@ -265,18 +262,7 @@ export const Sidebar = () => {
         {navBody(true)}
       </dialog>
 
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.95 }}
-            className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn"
-          >
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       {/* Popup referral: progres + link + klaim premium */}
       <ReferralPopup

@@ -1,6 +1,6 @@
 'use client';
 
-import { isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { isValidElement, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { animate, useMotionValue, useMotionValueEvent, useReducedMotion } from 'motion/react';
 import {
   ChevronDown as ArrowDown01Icon, Paperclip as Attachment01Icon,
@@ -126,6 +126,7 @@ export default function PromptBar({
   onEffortChange,
   onModelMenuHeightChange,
   busy = false,
+  clearOnSend = true,
   onSend,
   onStop,
   onAttach,
@@ -152,12 +153,14 @@ export default function PromptBar({
   const sparkRef = useRef(null);
   const typing = useRef({ energy: 0, strokes: 0 });
   const boost = useRef(sparkBoost);
-  boost.current = sparkBoost;
   const rowRefs = useRef([]);
   const lastOpen = useRef(null);
   const dictation = useRef(0);
-  const latest = useRef({});
-  latest.current = { onSend, onStop, onAttach, onDictate, onEffortChange };
+  const latest = useRef({ onSend, onStop, onAttach, onDictate, onEffortChange });
+  useLayoutEffect(() => {
+    boost.current = sparkBoost;
+    latest.current = { onSend, onStop, onAttach, onDictate, onEffortChange };
+  }, [sparkBoost, onSend, onStop, onAttach, onDictate, onEffortChange]);
 
   const [internalDraft, setInternalDraft] = useState('');
   const draft = value ?? internalDraft;
@@ -192,12 +195,11 @@ export default function PromptBar({
     return () => observer.disconnect();
   }, [open, onModelMenuHeightChange]);
   const query = plusOpen ? '' : (token?.query ?? '');
-  const list = useMemo(() => {
-    if (open === 'at') return sources.filter(s => s.name.toLowerCase().includes(query));
-    if (open === 'slash') return commands.filter(c => c.name.replace(/^\//, '').toLowerCase().startsWith(query));
-    if (open === 'model') return models;
-    return [];
-  }, [open, query, sources, commands, models]);
+  const list = open === 'at'
+    ? sources.filter(source => source.name.toLowerCase().includes(query))
+    : open === 'slash'
+      ? commands.filter(command => command.name.replace(/^\//, '').toLowerCase().startsWith(query))
+      : open === 'model' ? models : [];
   const cursor = Math.min(active, Math.max(0, list.length - 1));
   const canSend = !disabled && (draft.trim().length > 0 || attachments.length > 0);
   const armed = busy || canSend;
@@ -208,11 +210,11 @@ export default function PromptBar({
   const focusInputForMenu = () => {
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) focusInput();
   };
-  const closeMenus = useCallback(() => {
+  const closeMenus = () => {
     setPlusOpen(false);
     setModelOpen(false);
     setEffortOpen(false);
-  }, []);
+  };
 
   useLayoutEffect(() => {
     const glow = glowRef.current;
@@ -421,7 +423,7 @@ export default function PromptBar({
   const send = () => {
     if (!canSend || busy) return;
     latest.current.onSend?.(draft.trim(), { attachments, model, effort: level });
-    setDraft('');
+    if (clearOnSend) setDraft('');
     setAttachments([]);
     setDismissed(false);
     closeMenus();
@@ -642,7 +644,7 @@ export default function PromptBar({
         />
 
         <div className="prompt-bar__bar">
-          <button
+          {sources.length > 0 && <button
             type="button"
             className="prompt-bar__tool"
             aria-label="Add files and sources"
@@ -659,7 +661,7 @@ export default function PromptBar({
             }}
           >
             <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} />
-          </button>
+          </button>}
           {models.length > 0 ? (
             <button
               type="button"

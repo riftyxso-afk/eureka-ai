@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
@@ -252,12 +254,12 @@ export default function DashboardPage() {
       const res = await apiFetch(`/api/notes/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const d = await res.json().catch(() => null);
-        alert(d?.error ?? l.errDelete);
+        toast.error(d?.error ?? l.errDelete);
         return;
       }
       setNotes((prev) => prev.filter((n) => n.id !== id));
     } catch {
-      alert(l.errDeleteRetry);
+      toast.error(l.errDeleteRetry);
     }
   };
 

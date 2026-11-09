@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { isDashboardV2, v2NotePath } from "@/lib/v2Navigation";
 import { useI18n } from "@/context/LocaleContext";
 import { apiFetch } from "@/lib/apiClient";
 import { getSession } from "@/lib/auth";
@@ -62,7 +64,8 @@ export default function NoteActions({ command, onClose, onChoose }: { command: N
     window.dispatchEvent(new Event("note-ready"));
   });
 
-  const noteHref = (id: string) => `/${locale}/dashboard/note/${encodeURIComponent(id)}`;
+  const inV2 = isDashboardV2(usePathname());
+  const noteHref = (id: string) => `/${locale}${inV2 ? v2NotePath(id) : `/dashboard/note/${encodeURIComponent(id)}`}`;
   const matches = notes?.filter((note) => note.title.toLowerCase().includes(query.trim().toLowerCase())) ?? [];
   const editing = action === "create" || (action === "rename" && selected);
   const canReview = action === "delete" ? Boolean(selected) : Boolean(title.trim() && (action !== "create" || summary.trim()));

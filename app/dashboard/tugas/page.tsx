@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { PageLoader } from "@/components/ui/PageLoader";
 
 /**
@@ -19,7 +21,6 @@ import {
   AlarmClock,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
   Circle,
   ClipboardCheck,
   Clock,
@@ -70,7 +71,6 @@ export default function TugasPage() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Form tugas baru.
@@ -86,8 +86,7 @@ export default function TugasPage() {
   const [examForm, setExamForm] = useState({ subject: "", title: "", date: "" });
 
   const notify = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2600);
+    toast.info(msg);
   }, []);
 
   const loadAll = useCallback(async () => {
@@ -601,11 +600,7 @@ export default function TugasPage() {
         </span>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn">
-          {toast}
-        </div>
-      )}
+
     </div>
   );
 }

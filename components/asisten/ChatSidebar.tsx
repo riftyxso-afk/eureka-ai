@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { isDashboardV2 } from "@/lib/v2Navigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -37,6 +38,9 @@ export default function ChatSidebar({
   onDelete,
 }: ChatSidebarProps) {
   const pathname = usePathname();
+  const inV2 = isDashboardV2(pathname);
+  const homePath = inV2 ? "/dashboard-v2" : "/dashboard";
+  const chatPath = inV2 ? "/dashboard-v2/tanya-momo" : "/chat";
   const [collapsed, setCollapsed] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -110,7 +114,7 @@ export default function ChatSidebar({
 
         {/* Ikon Dashboard di bawah strip */}
         <Link
-          href="/dashboard"
+          href={homePath}
           title="Kembali ke Dashboard"
           aria-label="Dashboard"
           className="mt-auto flex h-9 w-9 items-center justify-center rounded-clay-full text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-primary"
@@ -123,9 +127,9 @@ export default function ChatSidebar({
 
   return (
     <div className="momo-sidebar hidden h-full w-[260px] shrink-0 flex-col gap-2 border-r border-clay-borderLight/60 bg-clay-cream p-3 transition-[width] duration-200 ease-in-out lg:flex">
-      <div className="momo-sidebar-top"><Link href="/dashboard" className="momo-sidebar-brand" aria-label="Eureka dashboard">eureka<span>!</span></Link><button type="button" className="momo-sidebar-collapse" onClick={toggleCollapsed} aria-label="Tutup sidebar" title="Tutup sidebar"><PanelLeftClose size={18} /></button></div>
+      <div className="momo-sidebar-top"><Link href={homePath} className="momo-sidebar-brand" aria-label="Eureka dashboard">eureka<span>!</span></Link><button type="button" className="momo-sidebar-collapse" onClick={toggleCollapsed} aria-label="Tutup sidebar" title="Tutup sidebar"><PanelLeftClose size={18} /></button></div>
       <button type="button" onClick={onNew} className="momo-sidebar-new" data-testid="momo-sidebar-new"><Plus size={17} /> Chat baru</button>
-      <Link href="/dashboard" className="momo-sidebar-nav-link"><House size={17} /> Dashboard</Link>
+      <Link href={homePath} className="momo-sidebar-nav-link"><House size={17} /> Dashboard</Link>
       {/* Header + tombol chat baru & collapse */}
       <div className="momo-sidebar-history-head">
         {searchOpen ? <input ref={searchRef} className="momo-sidebar-search" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") { setSearchOpen(false); setQuery(""); } }} placeholder="Cari percakapan" aria-label="Cari percakapan" /> : <span>Riwayat</span>}
@@ -194,7 +198,7 @@ export default function ChatSidebar({
               }`}
             >
               <Link
-                href={`/chat/${s.id}`}
+                href={`${chatPath}/${s.id}`}
                 onClick={() => onSelect(s.id)}
                 className="min-w-0 flex-1 truncate py-2 pl-3 text-[13.5px] font-extrabold text-clay-dark"
                 data-testid={`asisten-session-${s.id}`}
@@ -228,7 +232,7 @@ export default function ChatSidebar({
 
       {/* Tombol buka dashboard (selalu ada) — jadi target tutorial juga */}
       <Link
-        href="/dashboard"
+        href={homePath}
         data-tutorial-id="dashboard-nav"
         className="border-t border-clay-borderLight/60 pt-2 text-center text-xs font-extrabold text-clay-muted hover:text-clay-primary"
       >

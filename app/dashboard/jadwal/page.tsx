@@ -1,5 +1,10 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
+import { usePathname } from "next/navigation";
+import { isDashboardV2 } from "@/lib/v2Navigation";
+
 import { PageLoader } from "@/components/ui/PageLoader";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import Image from "next/image";
@@ -18,7 +23,6 @@ import {
   Download,
   Flag,
   ListChecks,
-  Info,
   Map,
   Plus,
   Target,
@@ -90,6 +94,8 @@ function QuestProgressRing({ value, label }: { value: number; label: string }) {
 }
 
 export default function JadwalPage() {
+  const inV2 = isDashboardV2(usePathname());
+
   const [tab, setTab] = useState<Tab>("peta");
   const [ready, setReady] = useState(false);
   const [today, setToday] = useState(() => isoDate(new Date()));
@@ -99,7 +105,6 @@ export default function JadwalPage() {
   const [completedSessions, setCompletedSessions] = useState<string[]>([]);
   const [activeMissions, setActiveMissions] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => isoDate(new Date()));
-  const [toast, setToast] = useState<string | null>(null);
   const [celebrating, setCelebrating] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState("");
@@ -117,7 +122,6 @@ export default function JadwalPage() {
   const [taskDue, setTaskDue] = useState("");
   const subjectInput = useRef<HTMLInputElement>(null);
   const taskInput = useRef<HTMLInputElement>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const celebrationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const reload = useCallback(() => {
@@ -159,7 +163,6 @@ export default function JadwalPage() {
   }, [reload]);
 
   useEffect(() => () => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
     if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
   }, []);
 
@@ -167,9 +170,7 @@ export default function JadwalPage() {
   useEffect(() => { if (showTaskForm) taskInput.current?.focus(); }, [showTaskForm]);
 
   const notify = useCallback((message: string) => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(message);
-    toastTimer.current = setTimeout(() => setToast(null), 2800);
+    toast.info(message);
   }, []);
 
   const celebrate = useCallback(() => {
@@ -427,7 +428,7 @@ export default function JadwalPage() {
                 <p>{weekProgress.done} dari {weekProgress.total} agenda selesai. Tugas dengan tenggat minggu ini ikut dihitung.</p>
               </section>
 
-              <Link href="/dashboard/misi" className="quest-mission-link">
+              <Link href={inV2 ? "/dashboard-v2/misi" : "/dashboard/misi"} className="quest-mission-link">
                 <span className="quest-mission-icon"><Trophy size={21} aria-hidden="true" /></span>
                 <span><strong>Misi belajar jangka panjang</strong><small>{activeMissions ? `${activeMissions} misi aktif menantimu` : "Buat target besar dan bagi menjadi checkpoint"}</small></span>
                 <ChevronRight size={18} aria-hidden="true" />
@@ -540,7 +541,7 @@ export default function JadwalPage() {
         </section>
       )}
 
-      {toast && <div className="schedule-toast" role="status"><Info size={18} aria-hidden="true" />{toast}</div>}
+
     </div>
   );
 }

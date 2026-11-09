@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { toast } from "@yusufceng1z/ding-react";
+
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   Copy,
@@ -46,8 +48,6 @@ export default function QuizPage() {
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState("");
-  const [toast, setToast] = useState("");
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Share view
   const [shareTitle, setShareTitle] = useState("");
@@ -73,9 +73,7 @@ export default function QuizPage() {
   const isRoom = token.startsWith("r_");
 
   const notify = (msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 2600);
+    toast.info(msg);
   };
 
   const copyLink = async () => {
@@ -270,7 +268,7 @@ export default function QuizPage() {
 
   if (phase === "loading") {
     return (
-      <Shell toast={toast}>
+      <Shell>
         <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-3">
           <Loader2 size={22} className="animate-spin text-clay-primary" />
           <p className="text-sm font-bold text-clay-muted">Memuat kuis...</p>
@@ -281,7 +279,7 @@ export default function QuizPage() {
 
   if (phase === "error") {
     return (
-      <Shell toast={toast}>
+      <Shell>
         <div className="rounded-clay-md border-2 border-dashed border-clay-shadow/40 p-6 text-center">
           <p className="text-sm font-bold text-clay-dark">{error}</p>
         </div>
@@ -291,7 +289,7 @@ export default function QuizPage() {
 
   if (phase === "share" && questions) {
     return (
-      <Shell toast={toast}>
+      <Shell>
         <header className="mb-5">
           <h1 className="truncate text-base font-extrabold text-clay-dark sm:text-lg">
             {shareTitle || "Kuis"}
@@ -329,7 +327,7 @@ export default function QuizPage() {
 
   if (phase === "join") {
     return (
-      <Shell toast={toast}>
+      <Shell>
         <header className="mb-5">
           <h1 className="text-base font-extrabold text-clay-dark sm:text-lg">
             Ruang Kuis Langsung
@@ -370,7 +368,7 @@ export default function QuizPage() {
 
   if (room && (phase === "lobby" || phase === "play" || phase === "leaderboard")) {
     return (
-      <Shell toast={toast}>
+      <Shell>
         <header className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="truncate text-base font-extrabold text-clay-dark sm:text-lg">
@@ -613,26 +611,15 @@ export default function QuizPage() {
 /** Kerangka halaman publik kuis — mobile-first, safe-area, toast. */
 function Shell({
   children,
-  toast,
 }: {
   children: React.ReactNode;
-  toast: string;
 }) {
   return (
     <div className="min-h-dvh bg-clay-beige">
       <div className="mx-auto w-full max-w-3xl px-4 py-6 pb-[max(24px,env(safe-area-inset-bottom))] sm:py-10">
         {children}
       </div>
-      {toast && (
-        <div
-          aria-live="polite"
-          className="fixed inset-x-0 bottom-[max(16px,env(safe-area-inset-bottom))] z-50 flex justify-center px-4"
-        >
-          <p className="max-w-full rounded-full bg-clay-dark px-4 py-2.5 text-center text-xs font-bold text-white shadow-lg">
-            {toast}
-          </p>
-        </div>
-      )}
+
     </div>
   );
 }

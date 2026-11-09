@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAssistantChat } from "@/lib/assistant/useAssistantChat";
 import { useAssistantSuggestions } from "@/lib/assistant/useAssistantSuggestions";
@@ -44,8 +44,11 @@ import ArtifactCanvas from "@/components/asisten/ArtifactCanvas";
 import { VideoViewOverlay } from "@/components/video/VideoViewOverlay";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
+import ThemeSwitch from "@/components/ui/ThemeSwitch";
 import { useI18n } from "@/context/LocaleContext";
 import TutorialHost from "@/components/tutorial/TutorialHost";
+import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
+import { isDashboardV2 } from "@/lib/v2Navigation";
 import PageTutorial from "@/components/tutorial/PageTutorial";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { copyText } from "@/lib/assistant/clipboard";
@@ -68,6 +71,9 @@ export default function ChatPage() {
   const reduceMotion = useReducedMotion();
   const params = useParams<{ id: string }>();
   const sessionId = params.id;
+  const inV2 = isDashboardV2(usePathname());
+  const chatPath = inV2 ? "/dashboard-v2/tanya-momo" : "/chat";
+  const homePath = inV2 ? "/dashboard-v2" : "/dashboard";
   const router = useRouter();
   const searchParams = useSearchParams();
   // Catatan yang di-import lewat URL (?note=xxx, mis. tombol "Tanya AI" di
@@ -84,11 +90,11 @@ export default function ChatPage() {
     speedMode?: "fast" | "normal" | "deep";
     model?: string;
   } | null>(() => {
-    const raw = sessionStorage.getItem(PENDING_PROMPT_KEY);
-    if (!raw) return null;
     try {
+      const raw = sessionStorage.getItem(PENDING_PROMPT_KEY);
+      if (!raw) return null;
       const parsed = JSON.parse(raw) as PendingPrompt;
-      if (!parsed.prompt) return null;
+      if (!parsed.prompt || (parsed.sessionId && parsed.sessionId !== sessionId)) return null;
       return {
         question: parsed.prompt,
         mentions: Array.isArray(parsed.mentions) ? parsed.mentions : [],
@@ -118,8 +124,8 @@ export default function ChatPage() {
 
   // Hapus dari sessionStorage setelah dibaca (efek, aman untuk StrictMode).
   useEffect(() => {
-    sessionStorage.removeItem(PENDING_PROMPT_KEY);
-  }, []);
+    if (initialSend) sessionStorage.removeItem(PENDING_PROMPT_KEY);
+  }, [initialSend]);
 
   const [notePrompt, setNotePrompt] = useState<string | null>(null);
   const [wizardPrompt, setWizardPrompt] = useState<string | null>(null);
@@ -227,7 +233,7 @@ export default function ChatPage() {
 
   const chat = useAssistantChat({
     sessionId,
-    onSessionCreated: (id) => router.replace(`/chat/${id}`),
+    onSessionCreated: (id) => router.replace(`${chatPath}/${id}`),
     initialSend,
   });
   const suggestions = useAssistantSuggestions(sessionId, chat.renderedMessages, chat.sending, chat.hasError);
@@ -256,14 +262,14 @@ export default function ChatPage() {
         <ChatSidebar
           sessions={chat.sessions}
           activeId={sessionId}
-          onNew={() => router.push("/chat")}
+          onNew={() => router.push(chatPath)}
           onSelect={() => {}}
           onRename={chat.renameSession}
           onDelete={async (id) => {
             const remaining = await chat.deleteSession(id);
             if (id === sessionId) {
               router.replace(
-                remaining.length > 0 ? `/chat/${remaining[0].id}` : "/chat"
+                remaining.length > 0 ? `${chatPath}/${remaining[0].id}` : chatPath
               );
             }
           }}
@@ -274,19 +280,20 @@ export default function ChatPage() {
         <header className="chat-session-header shrink-0">
               <div className="flex items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
                 <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-3">
-                  <MobileSessionButton
+                  {inV2 && <V2MobileSidebar sessions={chat.sessions} />}
+                  <div className={inV2 ? "contents v2-chat-old-mobile-nav" : "contents"}><MobileSessionButton
                     sessions={chat.sessions}
-                    onSelect={(id) => router.push(`/chat/${id}`)}
+                    onSelect={(id) => router.push(`${chatPath}/${id}`)}
                   />
                   {/* Tombol Dashboard — khusus mobile (desktop ada di sidebar) */}
                   <Link
-                    href="/dashboard"
+                    href={homePath}
                     data-tutorial-id="dashboard-nav"
                     aria-label={l.openDashboard}
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-clay-primary hover:bg-clay-primary/10 lg:hidden"
                   >
                     <LayoutDashboard size={18} />
-                  </Link>
+                  </Link></div>
                   <div className="min-w-0">
                     <h1 className="truncate text-sm font-extrabold text-clay-dark sm:text-base">
                       {activeSession?.title ?? l.title}
@@ -306,7 +313,7 @@ export default function ChatPage() {
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
-                  <PageTutorial guideId="chat" />
+                  <ThemeSwitch /><PageTutorial guideId="chat" />
                   {chat.renderedMessages.length > 0 && (
                     <>
                       {/* Ikon Canvas — ghost minimal dengan badge count kecil
@@ -382,7 +389,7 @@ export default function ChatPage() {
                     </>
                   )}
                   <button
-                    onClick={() => router.push("/chat")}
+                    onClick={() => router.push(chatPath)}
                     title={l.newChat}
                     aria-label={l.newChat}
                     data-testid="chat-new-top"

@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import Link from "next/link";
@@ -78,7 +80,6 @@ export default function WhiteboardPage() {
   const [presence, setPresence] = useState<PresenceEntry[]>([]);
   const [color, setColor] = useState(COLORS[0].value);
   const [size, setSize] = useState(SIZES[1].value);
-  const [toast, setToast] = useState<string | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(true);
 
   const drawing = useRef(false);
@@ -89,8 +90,7 @@ export default function WhiteboardPage() {
   const userName = getUserName();
 
   const notify = useCallback((msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast(null), 2500);
+    toast.info(msg);
   }, []);
 
   // Ambil judul catatan
@@ -448,13 +448,7 @@ export default function WhiteboardPage() {
       </div>
 
       {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2">
-          <div className="card-clay max-w-[calc(100vw-2rem)] whitespace-normal px-5 py-3 text-sm font-extrabold text-clay-dark shadow-clay">
-            {toast}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

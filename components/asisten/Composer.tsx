@@ -772,7 +772,7 @@ export default function Composer({
             onSend({ question, mentions: mentionIds, webSearch, attachment: attachment ?? null, speedMode: options.effort === "Kilat" ? "fast" : options.effort === "Mendalam" ? "deep" : "normal", model: options.model?.key === "auto" ? undefined : options.model?.key, reasoning, solveThenGuide: stgOnce || undefined } as ComposerSendInput);
             setMentionIds([]); setAttachment(null); setAttachError(null); setStgOnce(false);
           }}
-          onStop={onStop} background="#ffffff" color="#30263e" menuBackground="#ffffff" sparkColor="#a983e8" width={760} radius={18} maxRows={5}
+          onStop={onStop} background="rgb(var(--clay-cream))" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="#a983e8" width={760} radius={18} maxRows={5}
           voiceSlot={<span title={isBeta ? "Rekam suara" : "Pratinjau suara"}><VoicePill size={34} reactive="mic" disabled={(!isBeta && process.env.NODE_ENV !== "development") || disabled || sending || transcribing} ariaLabel={isBeta ? "Rekam suara" : "Pratinjau suara"} background="#f2ebfa" accentColor="#7540d0" iconColor="#7540d0" onStart={beginVoicePill} onStop={endVoicePill} /></span>}
         />
         {showMultiAgentToggle && <button type="button" className="eureka-prompt-multi" aria-pressed={multiAgentOn} onClick={() => onMultiAgentToggle?.(!multiAgentOn)}>Multi Agent: {multiAgentOn ? "Aktif" : "Nonaktif"}</button>}

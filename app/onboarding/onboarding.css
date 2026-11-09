@@ -102,3 +102,22 @@
 .onboarding-result .bg-clay-secondary\/5 { background: #faf7ff; }
 
 .onboarding-mascot svg { width: 100%; height: 100%; overflow: visible; }
+.onboarding-institutions { width: 100%; max-width: 560px; margin-inline: auto; text-align: start; }
+.onboarding-institutions > label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 800; }
+.onboarding-institution-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-inline: 14px;
+  border: 1px solid #b8a2d5;
+  border-radius: 14px;
+}
+.onboarding-institution-input:focus-within { outline: 2px solid #966bd2; outline-offset: 2px; }
+.onboarding-institution-input input { flex: 1; min-width: 0; min-height: 48px; font-size: 16px; background: transparent; outline: 0; }
+.onboarding-institution-hint { margin: 10px 0 0; font-size: 13px; line-height: 1.55; }
+.onboarding-institution-results { max-height: min(230px, 30dvh); overflow-y: auto; margin: 10px 0 0; padding: 0 4px 0 0; list-style: none; }
+.onboarding-institution-results button { width: 100%; min-height: 48px; padding: 9px 12px; border-bottom: 1px solid #a285c34d; text-align: start; }
+.onboarding-institution-results button:focus-visible { outline: 2px solid #966bd2; outline-offset: -2px; }
+.onboarding-institution-results :is(strong, small) { display: block; overflow-wrap: anywhere; }
+.onboarding-institution-results strong { font-size: 14px; }
+.onboarding-institution-results small { font-size: 12px; margin-top: 3px; }

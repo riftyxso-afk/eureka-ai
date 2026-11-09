@@ -1,5 +1,10 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
+import { usePathname } from "next/navigation";
+import { isDashboardV2 } from "@/lib/v2Navigation";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -30,6 +35,9 @@ type Filter = "all" | "next" | "reviewed";
 const COLORS = ["#7041a6", "#30735c", "#a26425", "#376c96"];
 
 export default function MataPelajaranPage() {
+  const inV2 = isDashboardV2(usePathname());
+  const home = inV2 ? "/dashboard-v2" : "/dashboard";
+  const library = inV2 ? home + "#dv2-notes-title" : "/dashboard/catatan";
   const [subjects, setSubjects] = useState<JourneySubject[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -42,7 +50,6 @@ export default function MataPelajaranPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState("");
   const [createFor, setCreateFor] = useState<JourneySubject | null>(null);
   const [practice, setPractice] = useState<{
     subject: JourneySubject;
@@ -161,7 +168,7 @@ export default function MataPelajaranPage() {
       setAdding(false);
       setQuery("");
       setFilter("all");
-      setNotice(
+      toast.success(
         `${data.subject.name} ditambahkan. Mulai dengan materi pertamamu.`,
       );
       await load();
@@ -189,7 +196,7 @@ export default function MataPelajaranPage() {
       if (!res.ok) throw new Error("Mata pelajaran belum terhapus. Coba lagi.");
       setSubjects((prev) => prev.filter((s) => s.id !== subject.id));
       if (selectedId === subject.id) setSelectedId(null);
-      setNotice(`${subject.name} dihapus. Catatannya tetap tersimpan.`);
+      toast.success(`${subject.name} dihapus. Catatannya tetap tersimpan.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menghapus.");
     } finally {
@@ -216,7 +223,7 @@ export default function MataPelajaranPage() {
     <div className="subject-journey">
       <header className="sj-header">
         <div>
-          <Link href="/dashboard" className="sj-back">
+          <Link href={home} className="sj-back">
             Ruang belajar <span aria-hidden="true">/</span>
           </Link>
           <h1>Mata pelajaran</h1>
@@ -275,9 +282,6 @@ export default function MataPelajaranPage() {
           {error}
         </p>
       )}
-      <p className="sj-notice" role="status">
-        {notice}
-      </p>
       {loading ? (
         <div className="sj-loading" role="status">
           <RefreshCw size={23} />
@@ -418,7 +422,7 @@ export default function MataPelajaranPage() {
                   </div>
                 )}
               </div>
-              <Link href="/dashboard/catatan" className="sj-course-link">
+              <Link href={library} className="sj-course-link">
                 <BookOpen size={20} />
                 <span>
                   <strong>Belum punya materi?</strong>
@@ -448,7 +452,7 @@ export default function MataPelajaranPage() {
                   >
                     <Plus size={18} /> Pilih mata pelajaran pertama
                   </button>
-                  <Link href="/dashboard/catatan">
+                  <Link href={library}>
                     Lihat catatanmu <ArrowRight size={16} />
                   </Link>
                 </section>
@@ -481,7 +485,7 @@ export default function MataPelajaranPage() {
                           : "Progres kartu belum tersedia"}
                       </span>
                       <Link
-                        href={`/dashboard/catatan?subject=${encodeURIComponent(selected.name)}`}
+                        href={inV2 ? `${home}?subject=${encodeURIComponent(selected.name)}#dv2-notes-title` : `${library}?subject=${encodeURIComponent(selected.name)}`}
                       >
                         Lihat catatan <ArrowRight size={15} />
                       </Link>
@@ -531,7 +535,7 @@ export default function MataPelajaranPage() {
                     ) : !selected.journey.progressAvailable ? (
                       <Link
                         className="sj-button sj-button-primary"
-                        href={`/dashboard/note/${encodeURIComponent(nextNote.id)}`}
+                        href={`${home}/note/${encodeURIComponent(nextNote.id)}`}
                       >
                         Buka materi
                         <ArrowRight size={16} />
@@ -600,7 +604,7 @@ export default function MataPelajaranPage() {
                             <div className="sj-steps">
                               <Link
                                 className="sj-step"
-                                href={`/dashboard/note/${encodeURIComponent(note.id)}`}
+                                href={`${home}/note/${encodeURIComponent(note.id)}`}
                               >
                                 <span className="sj-node sj-node-done">
                                   <BookOpen size={23} />
@@ -752,7 +756,7 @@ export default function MataPelajaranPage() {
           }}
           onCreate={() => {
             setCreateFor(null);
-            setNotice("Materi ditambahkan ke jalur belajarmu.");
+            toast.success("Materi ditambahkan ke jalur belajarmu.");
             void load();
           }}
         />
@@ -768,7 +772,7 @@ export default function MataPelajaranPage() {
             void load();
           }}
           onComplete={() => {
-            setNotice("Sesi ulang tersimpan. Petamu sudah diperbarui.");
+            toast.success("Sesi ulang tersimpan. Petamu sudah diperbarui.");
           }}
         />
       )}

@@ -8,6 +8,7 @@ export const PENDING_PROMPT_KEY = "eureka_pending_prompt";
 
 export interface PendingPrompt {
   prompt: string;
+  sessionId?: string;
   mentions?: string[];
   webSearch?: boolean;
   attachment?: ChatAttachment | null;

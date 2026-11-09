@@ -8,12 +8,14 @@
  */
 
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Brain, PenLine } from "lucide-react";
 import EurekaOrb from "@/components/ui/EurekaOrb";
 import TutorialHost from "@/components/tutorial/TutorialHost";
+import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
+import { isDashboardV2 } from "@/lib/v2Navigation";
 import PageTutorial from "@/components/tutorial/PageTutorial";
 import NoteActions from "@/components/asisten/NoteActions";
 import TaskActions from "@/components/asisten/TaskActions";
@@ -35,6 +37,7 @@ import MomoCompanion, { type MomoMode } from "@/components/asisten/MomoCompanion
 import Composer from "@/components/asisten/Composer";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
+import ThemeSwitch from "@/components/ui/ThemeSwitch";
 import { useI18n } from "@/context/LocaleContext";
 
 export default function AssistantHub({ standalone = false }: { standalone?: boolean }) {
@@ -42,6 +45,9 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
   const [taskCommand, setTaskCommand] = useState<TaskCommand | null>(null);
   const [planningAction, setPlanningAction] = useState(false);
   const planningLock = useRef(false);
+  const inV2 = isDashboardV2(usePathname());
+  const chatPath = inV2 ? "/dashboard-v2/tanya-momo" : "/chat";
+  const homePath = inV2 ? "/dashboard-v2" : "/dashboard";
   const router = useRouter();
   const [launchError, setLaunchError] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -86,7 +92,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
 
   const chat = useAssistantChat({
     sessionId: null,
-    onSessionCreated: (id) => router.push(`/chat/${id}`),
+    onSessionCreated: (id) => router.push(`${chatPath}/${id}`),
   });
 
   /** Buat sesi → simpan prompt → animasi → pindah ke /chat/[id]. */
@@ -191,9 +197,9 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
           model: input.model,
         })
       );
-      router.push(`/chat/${sessionId}`);
+      router.push(`${chatPath}/${sessionId}`);
     },
-    [launching, router, standalone]
+    [launching, router, standalone, chatPath]
   );
 
   return (
@@ -205,7 +211,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
           sessions={chat.sessions}
           activeId={null}
           onNew={() => { setLaunchError(null); setNeedsLogin(false); setMomoMoving(false); setComposerPrefill(""); setComposerKey((key) => key + 1); }}
-          onSelect={(id) => router.push(`/chat/${id}`)}
+          onSelect={(id) => router.push(`${chatPath}/${id}`)}
           onRename={chat.renameSession}
           onDelete={async (id) => {
           await chat.deleteSession(id);
@@ -219,7 +225,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
           transition={reduceMotion ? { duration: 0 } : { type: "spring", duration: 0.7, bounce: 0.2 }}>
           <MomoCompanion mode={momoMode} question={launching?.prompt ?? ""} thinking={!!launching} />
         </motion.div>}
-        {standalone && <header className="momo-chat-header"><div className="momo-mobile-history"><MobileSessionButton sessions={chat.sessions} onSelect={(id) => router.push(`/chat/${id}`)} /></div><strong>Chat baru</strong><PageTutorial guideId="chat" /><Link href="/dashboard">← Dashboard</Link></header>}
+        {standalone && <header className="momo-chat-header">{inV2 && <V2MobileSidebar sessions={chat.sessions} />}<div className="momo-mobile-history"><MobileSessionButton sessions={chat.sessions} onSelect={(id) => router.push(`${chatPath}/${id}`)} /></div><strong>{inV2 ? "Tanya Momo" : "Chat baru"}</strong><ThemeSwitch /><PageTutorial guideId="chat" /><Link href={homePath}>← Dashboard</Link></header>}
 
         {/* Minimal Perplexity-style landing */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -268,7 +274,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
               {!noteCommand && <button type="button" onClick={() => setNoteCommand({ action: "list", title: "" })} className="mt-1 min-h-11 px-2 text-sm font-bold text-clay-primary">Kelola catatan dengan Momo</button>}
             </div>
 
-            {launchError && <p role="alert" className="momo-launch-error">{launchError}{needsLogin && <> <Link href="/login?next=%2Fchat">Masuk</Link></>}</p>}
+            {launchError && <p role="alert" className="momo-launch-error">{launchError}{needsLogin && <> <Link href={`/login?next=${encodeURIComponent(chatPath)}`}>Masuk</Link></>}</p>}
             {/* Two suggestion tiles only — isi ke composer, tidak langsung kirim */}
             {!standalone && (
             <div className="mt-4 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">

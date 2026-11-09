@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { TIER_PRICES } from "@/lib/paymentPricing";
 import { applyDiscount, normalizeCode } from "@/lib/discount";
 import { db } from "@/lib/supabase/admin";
 
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const baseAmount = tier === "promo" ? 5000 : 59000;
+    const baseAmount = TIER_PRICES[tier];
     const disc = await applyDiscount(code, baseAmount);
     if (!disc.ok) {
       return NextResponse.json({ ok: false, error: disc.error }, { status: 200 });

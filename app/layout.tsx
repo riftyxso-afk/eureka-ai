@@ -20,6 +20,7 @@ const nunito = localFont({
 });
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { JobWatcherProvider } from "@/context/JobWatcherContext";
+import AppToaster from "@/components/ui/AppToaster";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LocaleProvider } from "@/context/LocaleContext";
 import LevelUpOverlay from "@/components/dashboard/LevelUpOverlay";
@@ -141,11 +142,12 @@ export default async function RootLayout({
           id="theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("eureka_theme");var d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark");}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("eureka_theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.classList.add("dark");}catch(e){}})();`,
           }}
         />
         <LocaleProvider initialLocale={locale}>
           <ThemeProvider>
+            <AppToaster />
             <JobWatcherProvider>
               <OnboardingProvider>
                 {children}

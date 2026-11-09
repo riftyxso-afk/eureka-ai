@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { ArrowUpRight, ChevronDown, ChevronRight, Expand, Minus, Plus, Search, Sparkles, X } from "lucide-react";
@@ -25,7 +27,6 @@ export default function RoomMindmap({ note, onOpen, onSaved, onDirtyChange }: { 
   const [mobilePane, setMobilePane] = useState<"map" | "notes">("map");
   const [progress, setProgress] = useState({ completed: 0, total: 0, characters: 0 });
   const locked = useRef(false);
-  const [message, setMessage] = useState("");
   const [view, setView] = useState({ x: 25, y: 30, scale: .75 });
   const canvas = useRef<HTMLDivElement>(null);
   const request = useRef<AbortController | null>(null);
@@ -66,8 +67,8 @@ export default function RoomMindmap({ note, onOpen, onSaved, onDirtyChange }: { 
   }, [graph.width, graph.height]);
   useEffect(() => { const observer = new ResizeObserver(fit); if (canvas.current) observer.observe(canvas.current); fit(); return () => observer.disconnect(); }, [fit]);
   function select(node: Node) {
-    if (dirty) { setMessage("Simpan atau batalkan perubahan editor sebelum memilih cabang lain."); return; }
-    setSelected(node.chapter ?? null); setDetail(node.leaf ? { label: node.label, detail: node.detail ?? "" } : null); setMessage("");
+    if (dirty) { toast.warning("Simpan atau batalkan perubahan editor sebelum memilih cabang lain."); return; }
+    setSelected(node.chapter ?? null); setDetail(node.leaf ? { label: node.label, detail: node.detail ?? "" } : null);
   }
   function zoom(factor: number) {
     const rect = canvas.current?.getBoundingClientRect(); if (!rect) return;
@@ -75,8 +76,8 @@ export default function RoomMindmap({ note, onOpen, onSaved, onDirtyChange }: { 
   }
   async function develop() {
     if (locked.current) return;
-    if (dirty) { setMessage("Simpan atau batalkan perubahan catatan sebelum mengembangkan mindmap."); return; }
-    locked.current = true; const previous = branches; setBranches([]); setCollapsed([]); setDetail(null); setBusy(true); setMessage("");
+    if (dirty) { toast.warning("Simpan atau batalkan perubahan catatan sebelum mengembangkan mindmap."); return; }
+    locked.current = true; const previous = branches; setBranches([]); setCollapsed([]); setDetail(null); setBusy(true);
     setProgress({ completed: 0, total: Math.min(20, note.chapters?.length ?? 0), characters: 0 });
     const controller = new AbortController(); request.current = controller;
     try {
@@ -97,16 +98,15 @@ export default function RoomMindmap({ note, onOpen, onSaved, onDirtyChange }: { 
       });
       if (!complete) throw new Error("Proses belum selesai. Peta sebelumnya dipulihkan; silakan coba lagi.");
       setBranches(final);
-      try { localStorage.setItem(storage, JSON.stringify({ fingerprint, branches: final })); } catch { setMessage("Peta siap digunakan. Penyimpanan perangkat tidak tersedia."); }
-      if (final.length < Math.min(20, note.chapters?.length ?? 0)) setMessage(`${final.length} bab berhasil dikembangkan. Bab lainnya tetap menggunakan struktur catatan.`);
-    } catch (failure) { setBranches(previous); if (!controller.signal.aborted) setMessage(failure instanceof Error && failure.name === "TimeoutError" ? "AI membutuhkan waktu lebih lama. Peta sebelumnya tetap tersedia." : failure instanceof Error ? failure.message : "Mindmap belum dapat dikembangkan."); }
+      try { localStorage.setItem(storage, JSON.stringify({ fingerprint, branches: final })); } catch { toast.warning("Peta siap digunakan. Penyimpanan perangkat tidak tersedia."); }
+      if (final.length < Math.min(20, note.chapters?.length ?? 0)) toast.warning(`${final.length} bab berhasil dikembangkan. Bab lainnya tetap menggunakan struktur catatan.`);
+    } catch (failure) { setBranches(previous); if (!controller.signal.aborted) toast.error(failure instanceof Error && failure.name === "TimeoutError" ? "AI membutuhkan waktu lebih lama. Peta sebelumnya tetap tersedia." : failure instanceof Error ? failure.message : "Mindmap belum dapat dikembangkan."); }
     finally { locked.current = false; setBusy(false); }
   }
   const chapter = note.chapters?.find(c => c.id === selected);
   const selectedConcepts = branches.find(branch => branch.id === selected)?.concepts ?? [];
   return <section className="rm-mindmap">
     <div className="rm-feature-heading"><div><h1>Mindmap <span className="rm-beta">Beta</span></h1><p>Telusuri konsep, lalu pelajari dan edit bab di sampingnya.</p></div><div className="rm-mindmap-actions">{busy && <button className="sp-text-button" onClick={() => request.current?.abort()}>Hentikan</button>}<button className="dv2-button" disabled={busy || !note.chapters?.length} onClick={() => void develop()}><Sparkles size={15} />{busy ? "Menyusun konsep…" : "Kembangkan dengan AI"}</button></div></div>
-    {message && <p className="sr-notice" role="status">{message}</p>}
     <div className="rm-map-pane-switch" role="group" aria-label="Tampilan mindmap"><button aria-pressed={mobilePane === "map"} onClick={() => setMobilePane("map")}>Mindmap</button><button aria-pressed={mobilePane === "notes"} onClick={() => setMobilePane("notes")}>Isi bab {busy ? "· Menyusun…" : ""}</button></div>
     <div className={`rm-map-layout show-${mobilePane} ${busy ? "is-generating" : ""}`}>
       <div className="rm-map-side"><label className="rm-map-search"><Search size={15} /><input disabled={busy} aria-label="Cari konsep" value={query} onChange={e => setQuery(e.target.value)} placeholder="Cari konsep atau bab…" /></label>
@@ -121,7 +121,7 @@ export default function RoomMindmap({ note, onOpen, onSaved, onDirtyChange }: { 
           {query && !graph.nodes.some(n => n.label.toLocaleLowerCase().includes(query.toLocaleLowerCase())) && <p className="rm-map-empty">Konsep tidak ditemukan. Coba kata lain.</p>}
         </div><p className="rm-map-hint">Seret kanvas untuk menggeser · pilih cabang untuk membaca</p>
       </div>
-      <div className="rm-map-reader" aria-busy={busy}><div className="rm-reader-heading"><strong>{chapter?.title ?? "Ringkasan catatan"}</strong><button disabled={busy} onClick={() => { if (dirty) setMessage("Simpan perubahan sebelum membuka editor penuh."); else onOpen(selected); }}>Buka penuh <ArrowUpRight size={15} /></button></div>
+      <div className="rm-map-reader" aria-busy={busy}><div className="rm-reader-heading"><strong>{chapter?.title ?? "Ringkasan catatan"}</strong><button disabled={busy} onClick={() => { if (dirty) toast.warning("Simpan perubahan sebelum membuka editor penuh."); else onOpen(selected); }}>Buka penuh <ArrowUpRight size={15} /></button></div>
         {busy ? <div className="rm-dream-document"><StudyDreaming paper compact={selectedConcepts.length > 0} title="Menyiapkan hubungan dari isi bab" detail="Catatanmu dipakai sebagai dasar untuk menyusun peta konsep." />{selectedConcepts.length > 0 && <div className="rm-live-concepts"><p className="sp-eyebrow">PRATINJAU KONSEP DARI BAB INI</p>{selectedConcepts.map(concept => <article key={concept.label}><h3>{concept.label}</h3><p>{concept.detail}</p></article>)}</div>}</div> : <DocumentEditor key={chapter?.id ?? "summary"} noteId={note.id} title={note.title} content={chapter?.content ?? note.summary ?? ""} chapterId={chapter?.id} label={chapter?.title ?? "Ringkasan"} onDirtyChange={v => { setDirty(v); onDirtyChange(v); }} onSaved={(title, content, warning) => onSaved(selected, title, content, warning)} />}
       </div>
     </div>

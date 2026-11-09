@@ -7,6 +7,7 @@ export interface PromptBarProps {
   voiceSlot?: ReactNode; onSourcesOpen?: () => void; onSourceSelect?: (source: PromptSource) => void;
   sources?: PromptSource[]; commands?: PromptCommand[]; models?: PromptModel[]; defaultModel?: string;
   efforts?: string[]; defaultEffort?: string; onEffortChange?: (effort: string) => void; busy?: boolean;
+  clearOnSend?: boolean;
   onModelMenuHeightChange?: (height: number) => void;
   onSend?: (text: string, options: { attachments: string[]; model?: PromptModel; effort: string }) => void;
   onStop?: () => void; onAttach?: () => void | string | string[] | Promise<void | string | string[]>;

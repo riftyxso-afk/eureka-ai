@@ -1,7 +1,10 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { isDashboardV2 } from "@/lib/v2Navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, Check, Flag, Plus, Trophy, Zap } from "lucide-react";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
 import { apiFetch } from "@/lib/apiClient";
@@ -15,13 +18,13 @@ import {
 import "./missions.css";
 
 export default function MisiPage() {
+  const inV2 = isDashboardV2(usePathname());
   const router = useRouter();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [creating, setCreating] = useState(false);
   const [type, setType] = useState<MissionType>("umum");
   const [busy, setBusy] = useState<"plan" | "chat" | null>(null);
-  const [status, setStatus] = useState("");
   const [deleteId, setDeleteId] = useState("");
   const pending = useRef(false);
   const refresh = () => setMissions(getMissions());
@@ -56,7 +59,7 @@ export default function MisiPage() {
     });
     setSelectedId(mission.id);
     setCreating(false);
-    setStatus("Misi dibuat. Mulai checkpoint pertama atau minta rencana dari Momo.");
+    toast.success("Misi dibuat. Mulai checkpoint pertama atau minta rencana dari Momo.");
     refresh();
   }
 
@@ -64,7 +67,6 @@ export default function MisiPage() {
     if (pending.current) return;
     pending.current = true;
     setBusy("plan");
-    setStatus("");
     try {
       const response = await apiFetch("/api/missions/guide", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -90,9 +92,9 @@ export default function MisiPage() {
       if (!remaining.length) throw new Error("Momo belum menemukan checkpoint baru. Coba jelaskan kendalamu.");
       updateMission(mission.id, { steps: [...kept, ...remaining], guide: result.guide, planSource: "ai" });
       refresh();
-      setStatus("Rencana diperbarui. Checkpoint yang sudah selesai tetap tercatat.");
+      toast.success("Rencana diperbarui. Checkpoint yang sudah selesai tetap tercatat.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Rencana belum bisa dimuat.");
+      toast.error(error instanceof Error ? error.message : "Rencana belum bisa dimuat.");
     } finally {
       pending.current = false;
       setBusy(null);
@@ -103,7 +105,6 @@ export default function MisiPage() {
     if (pending.current) return;
     pending.current = true;
     setBusy("chat");
-    setStatus("");
     try {
       const response = await apiFetch("/api/assistant/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -114,9 +115,9 @@ export default function MisiPage() {
       sessionStorage.setItem(PENDING_PROMPT_KEY, JSON.stringify({
         prompt: `Dampingi saya mengerjakan misi belajar "${mission.title}". Checkpoint: "${step}". Beri satu aktivitas singkat yang bisa saya kerjakan sekarang, tunggu jawaban saya, lalu beri umpan balik. Jangan langsung memberi solusi.`,
       }));
-      router.push(`/chat/${encodeURIComponent(data.session.id)}`);
+      router.push(`${inV2 ? "/dashboard-v2/tanya-momo" : "/chat"}/${encodeURIComponent(data.session.id)}`);
     } catch {
-      setStatus("Chat latihan belum bisa dibuka. Coba lagi.");
+      toast.error("Chat latihan belum bisa dibuka. Coba lagi.");
     } finally {
       pending.current = false;
       setBusy(null);
@@ -146,12 +147,11 @@ export default function MisiPage() {
           <button className="mission-button mission-primary" type="submit">Buat misi <ArrowRight size={16} /></button>
         </form>
       )}
-      {status && <p className="mission-notice" role="status">{status}</p>}
       {selected ? (
         <div className="mission-layout">
           <aside className="mission-panel mission-list" aria-label="Daftar misi">
             <h2>Koleksi misi</h2>
-            {missions.map(mission => <button type="button" key={mission.id} aria-pressed={mission.id === selected.id} onClick={() => { setSelectedId(mission.id); setDeleteId(""); setStatus(""); }}><span>{mission.title}</span><small>{mission.status === "done" ? "Selesai" : `${missionProgress(mission)}%`}</small></button>)}
+            {missions.map(mission => <button type="button" key={mission.id} aria-pressed={mission.id === selected.id} onClick={() => { setSelectedId(mission.id); setDeleteId(""); }}><span>{mission.title}</span><small>{mission.status === "done" ? "Selesai" : `${missionProgress(mission)}%`}</small></button>)}
           </aside>
           <section className="mission-panel mission-track">
             <div className="mission-track-heading">
@@ -177,7 +177,7 @@ export default function MisiPage() {
                 updateMission(selected.id, { currentValue: value }); refresh();
               }}><label>Nilai tercatat · target {selected.targetValue} {selected.unit}<input name="score" required type="number" min="0" max={selected.type === "ipk" ? 4 : undefined} step="any" defaultValue={selected.currentValue} /></label><button type="submit" className="mission-button">Simpan nilai</button></form>}
               <button className="mission-button mission-primary" disabled={missionProgress(selected) < 100 || (selected.targetValue != null && (selected.currentValue ?? -1) < selected.targetValue)} onClick={() => {
-                if (finishMission(selected.id)) { refresh(); setStatus("Misi selesai! Kamu mendapat bonus 30 XP."); }
+                if (finishMission(selected.id)) { refresh(); toast.success("Misi selesai! Kamu mendapat bonus 30 XP."); }
               }}><Trophy size={16} /> Selesaikan misi · +30 XP</button>
             </>}
             <div className="mission-manage">{deleteId === selected.id ? <><span>Hapus misi beserta progres dan XP-nya?</span><button type="button" onClick={() => { deleteMission(selected.id); refresh(); setDeleteId(""); }}>Ya, hapus</button><button type="button" onClick={() => setDeleteId("")}>Batal</button></> : <button type="button" onClick={() => setDeleteId(selected.id)}>Hapus misi</button>}</div>

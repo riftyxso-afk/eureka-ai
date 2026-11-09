@@ -21,6 +21,7 @@ import {
 import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
+import InstitutionField from "./InstitutionField";
 import dynamic from "next/dynamic";
 const JellyBlobMascot = dynamic(() => import("feral-blob").then((mod) => mod.JellyBlobMascot), { ssr: false });
 import "feral-blob/blob.css";
@@ -217,6 +218,7 @@ export default function OnboardingPage() {
              username: cleanUsername,
               profileData: {
                 education: data.education,
+                school: data.school?.trim(),
                 grade: data.grade,
                 psyAnswers: data.psyAnswers,
                 weakTopic: data.weakTopic,
@@ -332,7 +334,7 @@ export default function OnboardingPage() {
   }, [phase, userNumber]);
 
   const canProceed =
-    current.key === "name"
+    current.key === "school" ? true : current.key === "name"
       ? data.name.trim().length >= 2
       : current.key === "username"
         ? usernameStatus === "available"
@@ -371,6 +373,7 @@ export default function OnboardingPage() {
           onboardingCompleted: true,
           profileData: {
             education: data.education,
+            school: data.school?.trim(),
             grade: data.grade,
             psyAnswers: data.psyAnswers,
             weakTopic: data.weakTopic,
@@ -537,6 +540,8 @@ export default function OnboardingPage() {
                       )}
                     </div>
                   </div>
+                ) : current.key === "school" ? (
+                  <InstitutionField value={data.school ?? ""} level={data.education} onChange={school => update({ school })} />
                 ) : current.key === "psyTest" && psyQuestion ? (
                   <div className="onboarding-options">
                     <p className="text-xs font-extrabold uppercase tracking-widest text-clay-primary">
@@ -748,7 +753,7 @@ export default function OnboardingPage() {
                     Paket Pro
                   </p>
                   <p className="mt-1 text-4xl font-extrabold">
-                    Rp 59.000
+                    Rp 15.000
                     <span className="text-lg font-bold text-clay-muted">
                       /bulan
                     </span>

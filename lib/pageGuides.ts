@@ -14,7 +14,7 @@ export const PAGE_GUIDES = {
     label: "Beranda", title: "Belajar kini dimulai dari obrolan",
     description: "Bawa ide, tautan, atau materi belajarmu. Momo membantu menyusunnya menjadi catatan yang bisa kamu pelajari dengan berbagai cara.",
     steps: ["Tulis topik atau lampirkan materi", "Kirim, lalu ikuti proses penyusunan", "Buka catatan untuk mulai belajar"],
-    action: "Buat catatan pertama", target: ".dv2-composer textarea, .dv2 textarea, [data-tutorial-id='create-note-btn']",
+    action: "Buat catatan pertama", target: ".dv2-compose-modes button:last-child, .dv2 textarea, [data-tutorial-id='create-note-btn']",
   },
   "room-learn": {
     label: "Alur belajar", title: "Satu materi, banyak cara memahami",

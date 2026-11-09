@@ -7,7 +7,7 @@ import { addActiveJobId, removeActiveJobId } from "@/context/JobWatcherContext";
 import { useNoteSteps, type NoteProgressEvent } from "@/components/note/useNoteSteps";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 
-type JobState = { status: "running" | "done" | "error"; prompt: string; percent: number; message: string; noteId?: string; error?: string };
+type JobState = { status: "running" | "done" | "error"; prompt: string; percent: number; message: string; jobId?: string; noteId?: string; error?: string };
 export function usePromptNoteJob() {
   const [job, setJob] = useState<JobState | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -50,6 +50,7 @@ export function usePromptNoteJob() {
       if (!response.ok || typeof result.jobId !== "string") throw new Error(result.error || "Proses catatan belum bisa dimulai.");
       jobId.current = result.jobId; addActiveJobId(result.jobId);
       if (!mounted.current) return;
+      setJob(current => current && ({ ...current, jobId: result.jobId }));
       let polling = false;
       async function poll() {
         if (polling || !active.current) return;
@@ -62,7 +63,7 @@ export function usePromptNoteJob() {
             throw new Error("Status belum tersedia");
           }
           const next = data.job;
-          if (!next || !mounted.current) return;
+          if (!next || !mounted.current || !active.current || controller.signal.aborted) return;
           if (next.status === "error") { removeActiveJobId(result.jobId); fail(next.error || "Catatan gagal diproses."); return; }
           setConnection("");
           if (next.status === "done" && next.noteId) {
@@ -97,7 +98,7 @@ export function usePromptNoteJob() {
     try {
       const response = await apiFetch(`/api/notes/jobs/${encodeURIComponent(jobId.current)}`, { method: "POST" });
       if (!response.ok) throw new Error();
-      stop.current(); active.current = false; removeActiveJobId(jobId.current);
+      stop.current(); abort.current?.abort(); active.current = false; removeActiveJobId(jobId.current);
       setJob(current => current && ({ ...current, status: "error", error: "Pembuatan dihentikan. Kamu bisa menyesuaikan topik dan mencoba lagi." }));
     } catch { setConnection("Permintaan berhenti belum terkirim. Silakan coba lagi."); }
     finally { setCancelling(false); }

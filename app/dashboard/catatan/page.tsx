@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { PageLoader } from "@/components/ui/PageLoader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookOpen, Plus, Search, Pin, LibraryBig, Layers3, X } from "lucide-react";
@@ -71,7 +73,7 @@ export default function NotesPage() {
     try {
       const res = await apiFetch(`/api/notes/${encodeURIComponent(id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pinned }) });
       if (!res.ok) throw new Error();
-    } catch { setNotes((current) => current.map((note) => note.id === id ? { ...note, pinned: !pinned } : note)); alert(l.errPin); }
+    } catch { setNotes((current) => current.map((note) => note.id === id ? { ...note, pinned: !pinned } : note)); toast.error(l.errPin); }
   };
   const deleteNote = async (id: string) => {
     if (!window.confirm(l.confirmDelete)) return;
@@ -79,7 +81,7 @@ export default function NotesPage() {
       const res = await apiFetch(`/api/notes/${encodeURIComponent(id)}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setNotes((current) => current.filter((note) => note.id !== id));
-    } catch { alert(l.errDeleteRetry); }
+    } catch { toast.error(l.errDeleteRetry); }
   };
   return <main className="notes-page">
     <div className="mb-4 empty:hidden"><FirstNoteGuide inNotes /></div>

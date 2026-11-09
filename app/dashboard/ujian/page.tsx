@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@yusufceng1z/ding-react";
+
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import { CalendarDays, ClipboardCheck, Plus, Trash2 } from "lucide-react";
@@ -32,11 +34,9 @@ export default function UjianPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ subject: "", title: "", date: "" });
-  const [toast, setToast] = useState<string | null>(null);
 
   const notify = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
+    toast.info(msg);
   }, []);
 
   const loadExams = useCallback(async () => {
@@ -243,11 +243,7 @@ export default function UjianPage() {
         )}
       </div>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-clay-full border-3 border-clay-borderLight bg-clay-primary px-6 py-3 text-sm font-extrabold text-white shadow-clay-btn">
-          {toast}
-        </div>
-      )}
+
     </div>
   );
 }

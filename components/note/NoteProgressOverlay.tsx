@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { isDashboardV2, v2NotePath } from "@/lib/v2Navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Crown, Square, X } from "lucide-react";
 import { apiFetch, apiEventSource, getClientLocale } from "@/lib/apiClient";
@@ -39,6 +40,7 @@ export function NoteProgressOverlay({
   onClose,
 }: NoteProgressOverlayProps) {
   const router = useRouter();
+  const inV2 = isDashboardV2(usePathname());
   const [percent, setPercent] = useState(0);
   const [message, setMessage] = useState("Menyiapkan materi…");
   const [error, setError] = useState<string | null>(null);
@@ -84,12 +86,12 @@ export function NoteProgressOverlay({
         doneRef.current = true;
         cleanup();
         // Selesai → buka halaman catatan yang baru dibuat.
-        router.push(`/dashboard/note/${job.noteId}`);
+        router.push(inV2 ? v2NotePath(job.noteId) : `/dashboard/note/${job.noteId}`);
       } catch {
         // ulangi pada panggilan berikutnya (polling/SSE)
       }
     },
-    [cleanup, router]
+    [cleanup, inV2, router]
   );
 
   useEffect(() => {

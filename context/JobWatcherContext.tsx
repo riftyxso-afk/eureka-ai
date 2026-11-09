@@ -8,7 +8,7 @@ import { recordFirstNote } from "@/lib/firstNoteGuide";
  * Setiap submit di CreateNoteModal menyimpan jobId ke localStorage
  * (eureka_active_jobs). Provider ini — dipasang di root layout — memantau
  * job-job itu dari SEMUA halaman; saat selesai:
- *  1. toast clay in-app,
+ *  1. notifikasi Ding di aplikasi,
  *  2. notifikasi browser (bila diizinkan; klik → buka catatan),
  *  3. event window "note-ready" agar dashboard refresh daftar catatan.
  */
@@ -17,13 +17,12 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/apiClient";
-import { AnimatePresence, motion } from "framer-motion";
-import { BellRing, CheckCircle2, X, XCircle } from "lucide-react";
+import { toast } from "@yusufceng1z/ding-react";
+import { isDashboardV2, v2NotePath } from "@/lib/v2Navigation";
 import { playCompletionSound } from "@/lib/notifySound";
 import { getUserId } from "@/lib/identity";
 import { ensurePushSetup } from "@/lib/push";
@@ -109,14 +108,10 @@ export interface RunningJobInfo {
 }
 
 interface JobWatcherContextValue {
-  toast: ToastState | null;
-  dismissToast: () => void;
   runningJobs: RunningJobInfo[];
 }
 
 const JobWatcherContext = createContext<JobWatcherContextValue>({
-  toast: null,
-  dismissToast: () => {},
   runningJobs: [],
 });
 
@@ -130,23 +125,18 @@ export function JobWatcherProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const inV2 = isDashboardV2(usePathname());
   const [runningJobs, setRunningJobs] = useState<RunningJobInfo[]>([]);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const dismissToast = useCallback(() => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(null);
-  }, []);
+  const notePath = useCallback((id: string) =>
+    inV2 ? v2NotePath(id) : `/dashboard/note/${encodeURIComponent(id)}`, [inV2]);
 
-  const showToast = useCallback(
-    (next: ToastState) => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-      setToast(next);
-      toastTimer.current = setTimeout(() => setToast(null), 7000);
-    },
-    []
-  );
+  const showToast = useCallback(({ title, message, variant, link, linkLabel }: ToastState) => {
+    toast[variant](title, {
+      description: message,
+      action: link ? { label: linkLabel ?? "Buka", onClick: () => router.push(link) } : undefined,
+    });
+  }, [router]);
 
   // Daftarkan perangkat untuk Web Push bila izin notifikasi sudah diberikan
   // (menutup celah: user yang kembali ke aplikasi tanpa submit catatan baru).
@@ -164,11 +154,11 @@ export function JobWatcherProvider({
   useEffect(() => {
     const open = (e: Event) => {
       const detail = (e as CustomEvent<{ noteId?: string }>).detail;
-      if (detail?.noteId) router.push(`/dashboard/note/${detail.noteId}`);
+      if (detail?.noteId) router.push(notePath(detail.noteId));
     };
     window.addEventListener("open-note", open);
     return () => window.removeEventListener("open-note", open);
-  }, [router]);
+  }, [router, notePath]);
 
   // Polling job aktif dari localStorage
   useEffect(() => {
@@ -226,7 +216,7 @@ export function JobWatcherProvider({
               title: "Catatan selesai dibuat!",
               message: `“${noteTitle}” sudah siap dipelajari.`,
               variant: "success",
-              link: noteId ? `/dashboard/note/${noteId}` : undefined,
+              link: noteId ? notePath(noteId) : undefined,
               linkLabel: "Lihat",
             });
             notifyBrowserNoteReady(noteId, noteTitle);
@@ -284,78 +274,7 @@ export function JobWatcherProvider({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [showToast]);
+  }, [showToast, notePath]);
 
-  return (
-    <JobWatcherContext.Provider value={{ toast, dismissToast, runningJobs }}>
-      {children}
-
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.96 }}
-            transition={{ duration: 0.2 }}
-            className="fixed bottom-6 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2"
-          >
-            <div
-              className={`rounded-clay border-3 p-4 shadow-xl ${
-                toast.variant === "success"
-                  ? "border-clay-borderLight bg-white"
-                  : "border-red-200 bg-red-50"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span
-                  className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-clay-inset ${
-                    toast.variant === "success"
-                      ? "bg-clay-success text-white"
-                      : "bg-red-100 text-red-500"
-                  }`}
-                >
-                  {toast.variant === "success" ? (
-                    <CheckCircle2 size={18} />
-                  ) : (
-                    <XCircle size={18} />
-                  )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-extrabold text-clay-dark">
-                    {toast.title}
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold leading-relaxed text-clay-muted">
-                    {toast.message}
-                  </p>
-                </div>
-                <button
-                  onClick={dismissToast}
-                  aria-label="Tutup notifikasi"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-clay-muted hover:bg-clay-beige"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-              <div className="mt-3 flex items-center justify-between border-t-2 border-clay-shadow/20 pt-3">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-clay-muted">
-                  <BellRing size={12} /> Dibuat otomatis oleh AI
-                </span>
-                {toast.link && (
-                  <button
-                    onClick={() => {
-                      dismissToast();
-                      router.push(toast.link!);
-                    }}
-                    className="inline-flex items-center gap-1 rounded-clay-full bg-clay-primary px-4 py-1.5 text-xs font-extrabold text-white shadow-clay-btn transition-all duration-75 active:translate-y-0.5"
-                  >
-                    {toast.linkLabel ?? "Buka"}
-                  </button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </JobWatcherContext.Provider>
-  );
+  return <JobWatcherContext.Provider value={{ runningJobs }}>{children}</JobWatcherContext.Provider>;
 }
