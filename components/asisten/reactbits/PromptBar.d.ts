@@ -4,7 +4,7 @@ export interface PromptModel { key: string; name: string; tag?: string; logo?: s
 export interface PromptCommand { key: string; name: string; description?: string; }
 export interface PromptBarProps {
   placeholder?: string; value?: string; onDraftChange?: Dispatch<SetStateAction<string>>; disabled?: boolean;
-  voiceSlot?: ReactNode; onSourcesOpen?: () => void; onSourceSelect?: (source: PromptSource) => void;
+  leadingSlot?: ReactNode; voiceSlot?: ReactNode; onSourcesOpen?: () => void; onSourceSelect?: (source: PromptSource) => void;
   sources?: PromptSource[]; commands?: PromptCommand[]; models?: PromptModel[]; defaultModel?: string;
   efforts?: string[]; defaultEffort?: string; onEffortChange?: (effort: string) => void; busy?: boolean;
   clearOnSend?: boolean;

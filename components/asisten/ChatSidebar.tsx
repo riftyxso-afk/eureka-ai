@@ -7,7 +7,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  Bot,
   MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
@@ -88,39 +87,11 @@ export default function ChatSidebar({
 
   if (collapsed) {
     return (
-      <div className="momo-sidebar momo-sidebar-compact hidden h-full w-[60px] shrink-0 flex-col items-center gap-3 border-r border-clay-borderLight/60 bg-clay-cream py-3 transition-[width] duration-200 ease-in-out lg:flex">
-        {/* Tombol expand */}
-        <button
-          onClick={toggleCollapsed}
-          title="Buka sidebar riwayat chat"
-          aria-label="Expand sidebar"
-          className="flex h-9 w-9 items-center justify-center rounded-clay-full text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-dark"
-        >
-          <PanelLeftOpen size={18} />
+      <div className="momo-sidebar-reopen hidden lg:flex">
+        <button type="button" onClick={toggleCollapsed} title="Buka sidebar"
+          aria-label="Buka sidebar" aria-expanded={false}>
+          <PanelLeftOpen size={20} />
         </button>
-
-        {/* Tombol chat baru (compact) */}
-        <button
-          onClick={onNew}
-          title="Chat baru"
-          className="flex h-9 w-9 items-center justify-center rounded-clay-full bg-[rgb(var(--accent-coral))] text-white shadow-[0_2px_8px_rgb(249_115_98/0.3)] transition-transform hover:scale-105 active:scale-95"
-          aria-label="Chat baru"
-          data-testid="asisten-new-chat-collapsed"
-        >
-          <Plus size={16} />
-        </button>
-
-        <div className="my-1 h-px w-6 bg-clay-borderLight/60" />
-
-        {/* Ikon Dashboard di bawah strip */}
-        <Link
-          href={homePath}
-          title="Kembali ke Dashboard"
-          aria-label="Dashboard"
-          className="mt-auto flex h-9 w-9 items-center justify-center rounded-clay-full text-clay-muted transition-colors hover:bg-clay-beige hover:text-clay-primary"
-        >
-          <Bot size={18} />
-        </Link>
       </div>
     );
   }

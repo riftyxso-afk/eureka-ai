@@ -1,0 +1,74 @@
+.eureka-theme-switch {
+  --theme-track: #f0edf5;
+  --theme-border: #ded7e9;
+  --theme-thumb: #fff;
+  --theme-active: #7545bd;
+  --theme-muted: #8b7c9e;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 64px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.dark .eureka-theme-switch {
+  --theme-track: #28232f;
+  --theme-border: #463b55;
+  --theme-thumb: #4c3d60;
+  --theme-active: #f2e9ff;
+  --theme-muted: #a294b3;
+}
+.eureka-theme-track {
+  position: relative;
+  display: block;
+  width: 60px;
+  height: 32px;
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  background: var(--theme-track);
+}
+.eureka-theme-track > svg {
+  position: absolute;
+  top: 8px;
+  color: var(--theme-muted);
+  pointer-events: none;
+}
+.eureka-theme-track-sun { left: 8px; }
+.eureka-theme-track-moon { right: 8px; }
+.eureka-theme-thumb {
+  position: absolute;
+  inset: 2px auto auto 2px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--theme-thumb);
+  color: var(--theme-active);
+  box-shadow: 0 1px 3px #2413341f, inset 0 0 0 1px #ffffff24;
+  transition: transform 220ms cubic-bezier(.22, 1, .36, 1);
+}
+.dark .eureka-theme-thumb { transform: translateX(28px); }
+.eureka-theme-glyph {
+  grid-area: 1 / 1;
+  transition: transform 220ms cubic-bezier(.22, 1, .36, 1), opacity 160ms ease;
+}
+.eureka-theme-sun { opacity: 1; transform: rotate(0deg) scale(1); }
+.eureka-theme-moon { opacity: 0; transform: rotate(-45deg) scale(.75); }
+.dark .eureka-theme-sun { opacity: 0; transform: rotate(45deg) scale(.75); }
+.dark .eureka-theme-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+.eureka-theme-switch:focus-visible { outline: 2px solid #a17bd4; outline-offset: 2px; }
+.eureka-theme-switch:active .eureka-theme-track { transform: scale(.96); }
+@media (hover: hover) and (pointer: fine) {
+  .eureka-theme-switch:hover .eureka-theme-track { border-color: #a58abe; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eureka-theme-thumb, .eureka-theme-glyph { transition: none; }
+}

@@ -1,0 +1,40 @@
+/* Phone-specific spacing and touch targets. Desktop geometry stays unchanged. */
+@media (max-width: 700px) {
+  .dv2 .dv2-topbar { flex-wrap: nowrap; gap: 8px; padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left)); }
+  .dv2 .dv2-topbar > .dv2-brand { min-width: 0; font-size: 23px; gap: 6px; }
+  .dv2 .dv2-account { gap: 4px; flex: none; }
+  .dv2 .dv2-main { padding-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right)); padding-bottom: max(28px, env(safe-area-inset-bottom)); }
+  .dv2.dv2-simple .dv2-main .dv2-workspace { padding-block: 36px 48px; }
+  .dv2.dv2-simple .dv2-main .dv2-greeting { justify-content: flex-start; margin-bottom: 22px; }
+  .dv2.dv2-simple .dv2-main .dv2-greeting h1 { max-width: 260px; font-size: 26px; line-height: 1.3; text-wrap: balance; }
+  .dv2.dv2-simple .dv2-main .dv2-compose-area { border-radius: 18px; }
+  .dv2.dv2-simple .dv2-main .dv2-prompt textarea { min-height: 88px; font-size: 16px; }
+  .dv2.dv2-simple .dv2-main .prompt-bar__send { width: 44px; height: 44px; }
+  .dv2.dv2-simple .dv2-main .dv2-attachments li button { width: 44px; height: 44px; }
+  .dv2 .prompt-bar__menu { max-height: min(48dvh, 320px); overflow-y: auto; overscroll-behavior: contain; }
+  .dv2 .prompt-bar__row { min-height: 46px; height: auto; }
+  .dv2 .dv2-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .dv2 .dv2-toolbar > .dv2-search { grid-column: 1 / -1; min-width: 0; }
+  .dv2 .dv2-toolbar > select { width: 100%; min-width: 0; }
+  .dv2 .dv2-view button { width: 44px; height: 44px; }
+  .dv2 .dv2-filters { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-inline: contain; padding-bottom: 10px; scrollbar-width: none; }
+  .dv2 .dv2-filters button { flex: none; min-height: 44px; }
+  .dv2 .dv2-filters::-webkit-scrollbar { display: none; }
+  .dv2 .dv2-library-heading { flex-wrap: wrap; }
+  .dv2 .dv2-library-heading h2 { font-size: 22px; }
+  .v2-mobile-drawer { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+  .v2-mobile-drawer .v2-drawer-heading button { width: 44px; height: 44px; }
+  .v2-mobile-drawer nav :is(a, button) { min-height: 48px; }
+  .v2-mobile-drawer nav { padding-bottom: 16px; }
+  .v2-feature-page .v2-feature-content { padding-inline: 16px; padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 380px) {
+  .dv2 .dv2-topbar > .dv2-brand > span { display: none; }
+  .dv2.dv2-simple .dv2-main .dv2-greeting h1 { font-size: 23px; }
+  .dv2 .dv2-library-heading > .dv2-button { width: 100%; justify-content: center; }
+}
+@media (max-width: 700px) and (pointer: coarse) {
+  .dv2.dv2-simple .dv2-main .dv2-workspace:focus-within { min-height: 0; padding-block: 20px 24px; }
+  .dv2 :is(input, textarea, select) { font-size: 16px; }
+  .dv2 button:active, .v2-mobile-drawer nav a:active { opacity: .75; }
+}

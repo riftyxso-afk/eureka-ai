@@ -6,6 +6,7 @@
 import { randomBytes } from "crypto";
 import { db } from "../supabase/admin";
 import { aiChat } from "../ai";
+import { normalizeWebResults } from "./webSources";
 import type {
   AssistantChatMessage,
   AssistantChatSession,
@@ -128,7 +129,7 @@ function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
     role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
     content: String(m.content ?? ""),
     mentions: asArray<string>(m.mentions),
-    sources: asArray<Record<string, unknown>>(m.sources).map((s) => ({
+    sources: asArray<Record<string, unknown>>(m.sources).filter(s => s.type !== "web").map((s) => ({
       noteId: String(s.noteId ?? s.note_id ?? ""),
       noteTitle: String(s.noteTitle ?? s.note_title ?? "Catatan"),
       chapterId:
@@ -139,6 +140,7 @@ function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
             : null,
       similarity: s.similarity != null ? Number(s.similarity) : undefined,
     })),
+    webResults: normalizeWebResults(asArray<Record<string, unknown>>(m.sources).filter(s => s.type === "web")),
     model: m.model ? String(m.model) : null,
     createdAt: String(m.created_at ?? ""),
   };
@@ -150,6 +152,7 @@ export async function appendMessage(data: {
   content: string;
   mentions?: string[];
   sources?: AssistantSource[];
+  webResults?: AssistantChatMessage["webResults"];
   model?: string | null;
 }): Promise<AssistantChatMessage> {
   const { error } = await db().from("ai_chat_messages").insert({
@@ -157,7 +160,7 @@ export async function appendMessage(data: {
     role: data.role,
     content: data.content,
     mentions: data.mentions ?? [],
-    sources: data.sources ?? [],
+    sources: [...(data.sources ?? []), ...normalizeWebResults(data.webResults).map(source => ({ type: "web", ...source }))],
     model: data.model ?? null,
   });
   if (error) throw error;
@@ -175,6 +178,7 @@ export async function appendMessage(data: {
     content: data.content,
     mentions: data.mentions ?? [],
     sources: data.sources ?? [],
+    webResults: normalizeWebResults(data.webResults),
     model: data.model ?? null,
     createdAt: new Date().toISOString(),
   };

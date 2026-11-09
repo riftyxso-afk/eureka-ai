@@ -406,7 +406,7 @@ export default function ChatPage() {
           {initialSend && (initialPending || chat.loading || chat.sending) && chat.renderedMessages.length === 0 && !chat.hasError && !chat.clarification ? (
             <div className="mx-auto w-full max-w-3xl space-y-4">
               <MessageBubble message={{ id: "pending-user", sessionId, role: "user", content: initialSend.question, mentions: initialSend.mentions, sources: [], model: null, createdAt: new Date().toISOString() }} />
-              <ResponseActivity thinking={chat.streaming.thinking} />
+              {initialSend.webSearch ? <WebSearchPipeline stage={chat.streaming.webStage ?? "preparing"} results={chat.streaming.webResults} query={chat.streaming.webQuery} notice={chat.streaming.webNotice} /> : <ResponseActivity thinking={chat.streaming.thinking} />}
             </div>
           ) : chat.loading && chat.messages.length === 0 && !chat.sending ? (
             <ChatSkeleton label={locale === "en" ? "Loading conversation…" : "Memuat percakapan…"} />
@@ -429,26 +429,18 @@ export default function ChatPage() {
             /* Sama lebar dengan composer (max-w-3xl) agar bubble sejajar di atasnya. */
             <div className="mx-auto w-full max-w-3xl space-y-4">
               {chat.renderedMessages.map((m, idx) => {
-                const showPipeline =
-                  (chat.streaming.webResults.length > 0 ||
-                    chat.streaming.webStage !== null) &&
-                  idx === chat.renderedMessages.length - 1;
                 // Pesan user sebelumnya → untuk hitung lama AI menjawab.
                 const prevMsg =
                   idx > 0 ? chat.renderedMessages[idx - 1] : null;
                 return (
                   <div key={m.id} className="space-y-4">
-                    {showPipeline && !chat.sending && (
-                      <WebSearchPipeline
-                        stage={chat.streaming.webStage}
-                        results={chat.streaming.webResults}
-                        completed={!chat.sending && !chat.hasError}
-                      />
-                    )}
                     {/* Step-log Solve-then-Guide — tahap asli dari SSE backend.
                         Tampil hanya di bubble streaming terakhir saat aktif. */}
                     <MessageBubble
                       message={m}
+                      webStage={idx === chat.renderedMessages.length - 1 ? chat.streaming.webStage : null}
+                      webQuery={chat.streaming.webQuery}
+                      webNotice={chat.streaming.webNotice}
                       isStreaming={chat.sending && idx === chat.renderedMessages.length - 1 && m.id.startsWith("stream-")}
                       thinking={chat.sending && idx === chat.renderedMessages.length - 1 ? chat.streaming.thinking : null}
                       prevMessage={prevMsg}

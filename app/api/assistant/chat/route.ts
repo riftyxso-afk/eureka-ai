@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { citedNoteSources } from "@/lib/assistant/citedSources";
+import { normalizeWebResults } from "@/lib/assistant/webSources";
+import type { WebSearchItem } from "@/lib/assistant/types";
 
 import {
   aiChatJson,
@@ -10,7 +12,8 @@ import {
   MODEL_CATALOG_IDS,
   type AiSpeedMode,
 } from "@/lib/ai";
-import { cleanSearchQuery, searchWeb } from "@/lib/firecrawl";
+import { searchWeb } from "@/lib/firecrawl";
+import { buildWebSearchQuery } from "@/lib/assistant/webSearchQuery";
 import { checkRateLimit as checkHourlyRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { extractTextFromFile, scrapeYoutubeTranscript } from "@/lib/rag/extract";
 import { findLatestYoutubeInUserMessages } from "@/lib/assistant/videoUrl";
@@ -33,7 +36,6 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
   type AttachedDocument,
-  type WebSearchResult,
 } from "@/lib/assistant/prompt";
 import {
   authorizeAssistantUser,
@@ -59,51 +61,7 @@ function parseDataUrl(dataUrl: string): { mime: string; base64: string } | null 
   return { mime: m[1].toLowerCase(), base64: m[2] };
 }
 
-/** Ambil nama domain dari URL untuk favicon, mis. https://www.ruangguru.com/x → ruangguru.com. */
-function extractDomain(url: string): string {
-  try {
-    const host = new URL(url).hostname;
-    return host.replace(/^www\./, "").slice(0, 80) || url.slice(0, 80);
-  } catch {
-    return url.replace(/^https?:\/\//, "").split("/")[0].slice(0, 80);
-  }
-}
 
-/**
- * Susun query pencarian web dari pertanyaan + konteks percakapan terakhir.
- *
- * Masalah lama: saat user lagi membahas "dilatasi waktu" lalu bilang "cari
- * rumusnya", query yang dikirim hanya "cari rumusnya" — tanpa konteks topik,
- * Firecrawl malah mencari topik/rumus lain yang tidak relevan.
- *
- * Solusi: gabungkan pertanyaan saat ini dengan pesan user sebelumnya (topik
- * biasanya ada di sana) + baris pertama jawaban AI (sering memuat istilah
- * teknis/rumus yang relevan), lalu bersihkan kata-kata perintah.
- */
-function buildWebSearchQuery(
-  question: string,
-  history: { role: string; content: string }[]
-): string {
-  // Kumpulkan konteks: maksimal 2 pesan user terakhir (topik terkini) +
-  // baris pertama jawaban AI terakhir (istilah teknis yang relevan).
-  const userMsgs: string[] = [];
-  const aiFirstLines: string[] = [];
-  for (const m of history) {
-    const text = m.content.trim();
-    if (!text) continue;
-    if (m.role === "assistant") {
-      aiFirstLines.push(text.split(/\r?\n/)[0].slice(0, 160));
-    } else {
-      userMsgs.push(text.slice(0, 240));
-    }
-  }
-  const parts = [...userMsgs.slice(-2), ...aiFirstLines.slice(-1), question];
-  const combined = parts.join(" ").slice(0, 500);
-  const clean = cleanSearchQuery(combined);
-  // Hasil bersih terlalu pendek/aneh → pakai pertanyaan saja (dibersihkan).
-  if (clean.length < 8) return cleanSearchQuery(question);
-  return clean;
-}
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -516,6 +474,7 @@ export async function POST(req: NextRequest) {
       let modelUsed = "";
       let firstTokenLogged = false;
       let sources: AssistantSource[] = [];
+      if (webSearch) emit({ type: "pipeline", stage: "preparing" });
 
       try {
         // Sesi harus milik user ini
@@ -596,29 +555,21 @@ export async function POST(req: NextRequest) {
         // 4a) Tool web search: hasil Firecrawl jadi konteks tambahan.
         //     Hasilnya dikirim juga ke UI (event "web") untuk ditampilkan
         //     dengan logo situs — plus event "pipeline" untuk loading bertahap.
-        let webResults: WebSearchResult[] = [];
+        let webResults: WebSearchItem[] = [];
         if (webSearch) {
-          emit({ type: "pipeline", stage: "searching" });
+          const searchQuery = buildWebSearchQuery(question, history);
+          emit({ type: "pipeline", stage: "searching", query: searchQuery });
+          let searchFailed = false;
           try {
-            const searchQuery = buildWebSearchQuery(question, prior);
-            webResults = (await searchWeb(searchQuery, 10)).map((r) => ({
-              url: r.url,
-              title: r.title,
-              description: r.description,
-            }));
+            webResults = normalizeWebResults(await searchWeb(searchQuery, 10));
           } catch (e) {
+            searchFailed = true;
             console.warn("[api/assistant/chat] Web search:", e);
           }
-          // Maks 10 hasil, dengan domain untuk favicon di UI.
-          emit({
-            type: "web",
-            results: webResults.slice(0, 10).map((r) => ({
-              url: r.url,
-              title: r.title,
-              description: r.description,
-              domain: extractDomain(r.url),
-            })),
-          });
+          emit({ type: "web", results: webResults });
+          emit({ type: "pipeline", stage: "analyzing", message: webResults.length ? undefined
+            : searchFailed ? "Pencarian web belum berhasil. Jawaban disusun tanpa sumber web."
+            : "Belum ada hasil web yang relevan. Jawaban disusun tanpa sumber web." });
         }
 
         // 4b) Tool lampiran: gambar → vision; dokumen → ekstrak teks.
@@ -711,6 +662,7 @@ export async function POST(req: NextRequest) {
 
         // 6) Stream dari AI — maxTokens dinaikkan biar jawaban web search tidak kepotong (deepseek terpotong di 1400)
         emit({ type: "meta", mode: "assistant", model: "" });
+        if (webSearch) emit({ type: "pipeline", stage: "writing" });
         try {
           const maxTokensBySpeed: Record<AiSpeedMode, number> = {
             fast: 3200,
@@ -784,6 +736,7 @@ export async function POST(req: NextRequest) {
           role: "assistant",
           content: storedAnswer,
           sources,
+          webResults,
           model: modelUsed || null,
         });
 

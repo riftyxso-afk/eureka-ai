@@ -9,17 +9,22 @@ import SourceChips from "./SourceChips";
 import { citedNoteSources } from "@/lib/assistant/citedSources";
 import MomoMessageAvatar from "@/components/asisten/MomoMessageAvatar";
 import ResponseActivity from "@/components/asisten/ResponseActivity";
+import WebSearchPipeline from "./WebSearchPipeline";
+import WebSources from "./WebSources";
 import { YoutubeEmbed } from "@/components/video/YoutubeEmbed";
 import { modelDisplayName } from "@/lib/modelCatalog";
 import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
 import { findYoutubeLink } from "@/lib/assistant/videoUrl";
-import type { AssistantChatMessage } from "@/lib/assistant/types";
+import type { AssistantChatMessage, WebSearchStage } from "@/lib/assistant/types";
 
 interface MessageBubbleProps {
   message: AssistantChatMessage;
   isStreaming?: boolean;
   thinking?: string | null;
+  webStage?: WebSearchStage | null;
+  webQuery?: string;
+  webNotice?: string | null;
   onRetry?: () => void;
   onOpenArtifacts?: (id: string) => void;
   /** Pesan user sebelumnya — dipakai hitung lama AI menjawab. */
@@ -94,6 +99,9 @@ export default function MessageBubble({
   message,
   isStreaming = false,
   thinking,
+  webStage,
+  webQuery,
+  webNotice,
   onRetry,
   onOpenArtifacts,
   prevMessage,
@@ -173,7 +181,8 @@ export default function MessageBubble({
     >
       <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} thinking={isStreaming} />
       <div className="chat-message-assistant-content flex min-w-0 flex-col gap-1.5">
-        {isStreaming && (!displayContent || thinking) && <ResponseActivity thinking={thinking} />}
+        {isStreaming && webStage && <WebSearchPipeline stage={webStage} results={message.webResults ?? []} query={webQuery} notice={webNotice} />}
+        {isStreaming && ((!webStage && !displayContent) || thinking) && <ResponseActivity thinking={thinking} />}
         {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}
         <div className="break-words text-clay-dark">
           {empty || !displayContent ? (
@@ -195,6 +204,8 @@ export default function MessageBubble({
             <ArrowUpRight size={15} className="shrink-0 text-clay-muted" aria-hidden="true" />
           </button>
         ))}
+
+        {!isStreaming && !!message.webResults?.length && <WebSources results={message.webResults} />}
 
         {/* Meta: salin muncul on-hover; model & durasi jadi tooltip ikon info
             (metadata teknis tidak tampil default — chat-visual-hierarchy). */}

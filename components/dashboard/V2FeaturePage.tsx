@@ -10,14 +10,10 @@ export default function V2FeaturePage({ title, art, guide, children }: {
 }) {
   return <div className="dv2 v2-feature-page">
     <header className="dv2-topbar">
-      <V2MobileSidebar />
+      <V2MobileSidebar desktop />
       <Link href="/dashboard-v2" className="dv2-brand">eureka! <span>V2 · Beta</span></Link>
       <nav className="dv2-topnav" aria-label="Ruang belajar">
         <Link href="/dashboard-v2#dv2-notes-title">Catatan</Link>
-        <Link href="/dashboard-v2/mata-pelajaran" aria-current={guide === "subjects" ? "page" : undefined}>Mata Pelajaran</Link>
-        <Link href="/dashboard-v2/misi" aria-current={guide === "missions" ? "page" : undefined}>Misi</Link>
-        <Link href="/dashboard-v2/jadwal" aria-current={guide === "schedule" ? "page" : undefined}>Jadwal</Link>
-        <Link href="/dashboard-v2/kursus" aria-current={guide === "courses" ? "page" : undefined}>Kursus</Link>
         <Link href="/dashboard-v2/tanya-momo">Tanya Momo</Link>
       </nav>
       <div className="dv2-account"><ThemeSwitch /><PageTutorial guideId={guide} /></div>

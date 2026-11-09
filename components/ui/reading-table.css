@@ -20,6 +20,10 @@
 .reading-table-viewport th { background: rgb(var(--clay-primary) / .10); font-weight: 850; }
 .reading-table-viewport tbody tr + tr { border-top: 1px solid rgb(var(--clay-primary) / .14); }
 .reading-table-viewport tbody tr:nth-child(even) { background: rgb(var(--clay-primary) / .035); }
+.dark .reading-table-viewport { border-color: rgb(var(--clay-border-light)); background: rgb(var(--clay-beige)); }
+.dark .reading-table-viewport th { background: rgb(var(--clay-dark) / .06); }
+.dark .reading-table-viewport tbody tr + tr { border-color: rgb(var(--clay-border-light)); }
+.dark .reading-table-viewport tbody tr:nth-child(even) { background: rgb(var(--clay-dark) / .025); }
 .reading-table-hint { display: flex; justify-content: space-between; gap: 8px; padding: 5px 2px 0; color: rgb(var(--clay-muted)); font-size: 12px; }
 
 @media (max-width: 639px) {

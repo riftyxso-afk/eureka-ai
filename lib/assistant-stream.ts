@@ -35,7 +35,7 @@ export type AssistantStreamEvent =
   | { type: "token"; text: string }
   | { type: "thinking"; text: string }
   | { type: "sources"; sources: AssistantSource[] }
-  | { type: "pipeline"; stage: WebSearchStage }
+  | { type: "pipeline"; stage: WebSearchStage; query?: string; message?: string }
   | { type: "web"; results: WebSearchItem[] }
   | { type: "clarification"; questions: ClarificationQuestion[] }
   | { type: "done" }

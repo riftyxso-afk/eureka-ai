@@ -114,6 +114,7 @@ export default function PromptBar({
   value,
   onDraftChange,
   disabled = false,
+  leadingSlot,
   voiceSlot,
   onSourcesOpen,
   onSourceSelect,
@@ -630,6 +631,7 @@ export default function PromptBar({
           disabled={disabled}
           placeholder={listening ? 'Listening…' : placeholder}
           aria-label="Prompt"
+          enterKeyHint="send"
           onChange={e => {
             setDraft(e.target.value);
             if (/(^|\s)@[\w-]*$/.test(e.target.value)) onSourcesOpen?.();
@@ -648,6 +650,7 @@ export default function PromptBar({
             type="button"
             className="prompt-bar__tool"
             aria-label="Add files and sources"
+            disabled={disabled}
             aria-expanded={plusOpen}
             data-on={plusOpen ? '' : undefined}
             onMouseDown={e => e.preventDefault()}
@@ -662,11 +665,13 @@ export default function PromptBar({
           >
             <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} />
           </button>}
+          {leadingSlot}
           {models.length > 0 ? (
             <button
               type="button"
               className="prompt-bar__pick"
               aria-label={`Choose model: ${model.name}`}
+              disabled={disabled}
               aria-expanded={modelOpen}
               data-on={modelOpen ? '' : undefined}
               onMouseDown={e => e.preventDefault()}
@@ -688,6 +693,7 @@ export default function PromptBar({
               type="button"
               className="prompt-bar__pick"
               aria-label={`Choose effort: ${level}`}
+              disabled={disabled}
               aria-expanded={effortOpen}
               data-on={effortOpen ? '' : undefined}
               data-max={maxed ? '' : undefined}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { normalizeWebResults } from "./webSources";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import {
@@ -69,6 +70,8 @@ export interface StreamingState {
   webStage: WebSearchStage | null;
   /** Hasil pencarian web yang ditampilkan dengan logo situs. */
   webResults: WebSearchItem[];
+  webQuery: string;
+  webNotice: string | null;
 }
 
 /**
@@ -96,6 +99,8 @@ function newStreaming(): StreamingState {
     skill: null,
     webStage: null,
     webResults: [],
+    webQuery: "",
+    webNotice: null,
   };
 }
 
@@ -449,7 +454,7 @@ export function useAssistantChat(options: {
       setSending(true);
       sendingRef.current = true;
       clearStreamBuffer();
-      setStreaming(newStreaming());
+      setStreaming({ ...newStreaming(), webStage: input.webSearch ? "preparing" : null });
       setClarification(null);
       parserRef.current = new ArtifactStreamParser();
 
@@ -511,12 +516,12 @@ export function useAssistantChat(options: {
             if (ev.model) setStreaming((s) => ({ ...s, model: ev.model ?? null }));
           } else if (ev.type === "pipeline") {
             flushStreamBuffer();
-            setStreaming((s) => ({ ...s, webStage: ev.stage }));
+            setStreaming((s) => ({ ...s, webStage: ev.stage, webQuery: ev.query ?? s.webQuery, webNotice: ev.message ?? s.webNotice }));
           } else if (ev.type === "web") {
             flushStreamBuffer();
             setStreaming((s) => ({
               ...s,
-              webResults: ev.results,
+              webResults: normalizeWebResults(ev.results),
               // Hasil sudah didapat → lanjut ke tahap menganalisis.
               webStage: s.webStage === "writing" ? s.webStage : "analyzing",
             }));
@@ -850,6 +855,7 @@ export function useAssistantChat(options: {
         ...last,
         content: streaming.content,
         sources: streaming.sources,
+        webResults: streaming.webResults,
         model: streaming.model,
       };
     }

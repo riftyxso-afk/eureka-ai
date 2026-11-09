@@ -60,7 +60,7 @@ export interface WebSearchItem {
 }
 
 /** Tahap pipeline web search yang tampil sebagai loading. */
-export type WebSearchStage = "searching" | "analyzing" | "writing";
+export type WebSearchStage = "preparing" | "searching" | "analyzing" | "writing";
 
 /** Sumber materi yang dipakai AI saat menjawab (hasil RAG). */
 export interface AssistantSource {
@@ -77,6 +77,8 @@ export interface AssistantChatMessage {
   content: string;
   mentions: string[];
   sources: AssistantSource[];
+  /** Referensi web dari penelusuran pada giliran pesan ini. */
+  webResults?: WebSearchItem[];
   model: string | null;
   createdAt: string;
   /** Nama file lampiran (hanya untuk pesan user optimis — tidak disimpan server). */

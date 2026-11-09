@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, Search, X } from "lucide-react";
 import type { AssistantChatSession } from "@/lib/assistant/types";
@@ -24,7 +23,8 @@ export function V2MenuArt({ index }: { index: number }) {
   }} />;
 }
 
-export default function V2MobileSidebar({ sections = [], sessions }: {
+export default function V2MobileSidebar({ sections = [], sessions, desktop = false }: {
+  desktop?: boolean;
   sections?: readonly { id: string; label: string; active: boolean; select: () => void }[];
   sessions?: readonly AssistantChatSession[];
 }) {
@@ -40,11 +40,12 @@ export default function V2MobileSidebar({ sections = [], sessions }: {
   const showNewChat = sessions !== undefined && filter("Chat baru");
 
   useEffect(() => {
+    if (desktop) return;
     const mobile = window.matchMedia("(max-width: 700px)");
     const handleResize = () => { if (!mobile.matches) dialog.current?.close(); };
     mobile.addEventListener("change", handleResize);
     return () => mobile.removeEventListener("change", handleResize);
-  }, []);
+  }, [desktop]);
 
   function show() {
     dialog.current?.showModal();
@@ -57,7 +58,7 @@ export default function V2MobileSidebar({ sections = [], sessions }: {
     if (!event.defaultPrevented && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) close();
   }
 
-  return <div className="v2-mobile-navigation">
+  return <div className={`v2-mobile-navigation${desktop ? " is-desktop-enabled" : ""}`}>
     <button type="button" className="v2-mobile-menu-toggle" aria-label="Buka sidebar"
       aria-haspopup="dialog" aria-controls={id} aria-expanded={open} onClick={show}><Menu size={21} /></button>
     <dialog ref={dialog} id={id} className="v2-mobile-drawer" aria-labelledby={id + "-title"}
@@ -68,27 +69,27 @@ export default function V2MobileSidebar({ sections = [], sessions }: {
         if (event.clientX >= right) close();
       }}>
       <header className="v2-drawer-heading">
-        <strong id={id + "-title"}>eureka!</strong>
+        <div className="v2-drawer-brand"><strong id={id + "-title"}>eureka!</strong><span>Ruang belajarmu</span></div>
         <button type="button" aria-label="Tutup sidebar" onClick={close} autoFocus><X size={20} /></button>
       </header>
-      <div className="v2-drawer-cover">
-        <Image src="/onboarding/eureka-welcome.png" alt="" fill sizes="300px" />
-        <span>Ruang belajarmu</span>
-      </div>
       <label className="v2-drawer-search"><Search size={17} aria-hidden="true" />
-        <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Cari menu atau chat" aria-label="Cari menu atau chat" />
+        <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={sessions ? "Cari menu atau percakapan…" : "Cari menu…"} aria-label="Cari menu atau chat" />
       </label>
-      <nav aria-label="Navigasi mobile Eureka">
-        {links.length > 0 && <><p className="v2-drawer-label">RUANG BELAJAR</p>
-          {links.map(item => {
-            const active = item.href === BASE
-              ? pathname === BASE
-              : !item.href.includes("#") && (pathname === item.href || pathname.startsWith(item.href + "/"));
-            return <Link key={item.href} href={item.href} onClick={follow} aria-current={active ? "page" : undefined}>
-              <V2MenuArt index={item.image} />{item.label}
-            </Link>;
-          })}
-        </>}
+      <nav aria-label="Navigasi Eureka">
+        {[{ label: "Utama", items: links.filter(item => navigation.indexOf(item) < 3) },
+          { label: "Belajar", items: links.filter(item => navigation.indexOf(item) >= 3) }].map(group => group.items.length > 0 &&
+          <section className="v2-drawer-group" key={group.label} aria-label={group.label}>
+            <p className="v2-drawer-label">{group.label}</p>
+            {group.items.map(item => {
+              const active = item.href === BASE ? pathname === BASE
+                : !item.href.includes("#") && (pathname === item.href || pathname.startsWith(item.href + "/"));
+              return <Link key={item.href} href={item.href} onClick={follow} aria-current={active ? "page" : undefined}>
+                <V2MenuArt index={item.image} /><span>{item.label}</span>
+                {active && <span className="v2-drawer-active-dot" aria-hidden="true" />}
+              </Link>;
+            })}
+          </section>
+        )}
         {tabs.length > 0 && <><p className="v2-drawer-label">DALAM CATATAN INI</p>
           <div className="v2-drawer-branch">{tabs.map(item => <button type="button" key={item.id} aria-pressed={item.active} onClick={() => { close(); item.select(); }}>{item.label}</button>)}</div>
         </>}
