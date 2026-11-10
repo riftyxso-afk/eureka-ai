@@ -5,8 +5,9 @@ import { apiFetch, getClientLocale } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { recordCallTurns } from "./recordCallTurns";
 import { readCallReply } from "@/lib/audio/callReply";
+import { runLalaWorkspace, type LalaWorkspaceLink } from "./lalaWorkspace";
 
-type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "searching" | "speaking";
+type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "searching" | "working" | "speaking";
 export type CallProvider = "momo" | "lala";
 type Turn = { role: "user" | "assistant"; content: string };
 type Playback = { controller: AbortController; sources: Set<AudioBufferSourceNode>; spoken?: string };
@@ -33,7 +34,7 @@ type Session = {
 
 type LiveMessage = {
   setupComplete?: object;
-  toolCall?: { functionCalls?: { id?: string; name?: string; args?: { query?: string } }[] };
+  toolCall?: { functionCalls?: { id?: string; name?: string; args?: Record<string, unknown> }[] };
   toolCallCancellation?: { ids?: string[] };
   serverContent?: {
     interrupted?: boolean;
@@ -47,6 +48,54 @@ type LiveMessage = {
 const CONNECT_TIMEOUT = 9_000;
 const SESSION_TIMEOUT = 12 * 60_000;
 const SPEAKER_RATE = 24_000;
+
+function errorName(cause: unknown) {
+  return cause && typeof cause === "object" && "name" in cause ? cause.name : undefined;
+}
+
+async function microphonePermission(): Promise<PermissionState | undefined> {
+  try {
+    return (await navigator.permissions?.query({ name: "microphone" as PermissionName }))?.state;
+  } catch {
+    // Some mobile browsers don't expose microphone permission via this API.
+    return undefined;
+  }
+}
+
+async function openCallMicrophone(signal: AbortSignal) {
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+  } catch (cause) {
+    const name = errorName(cause);
+    const granted = name === "NotAllowedError" && await microphonePermission() === "granted";
+    if (!granted && name !== "OverconstrainedError" && name !== "NotReadableError" && name !== "AbortError") throw cause;
+    signal.throwIfAborted();
+    return navigator.mediaDevices.getUserMedia({ audio: true });
+  }
+}
+
+async function microphoneError(cause: unknown) {
+  switch (errorName(cause)) {
+    case "NotAllowedError":
+    case "SecurityError": {
+      const permission = await microphonePermission();
+      if (permission === "granted") return "Izin mikrofon sudah aktif, tetapi perangkat belum bisa membukanya. Tutup aplikasi lain yang memakai mikrofon, lalu coba lagi.";
+      if (permission === "denied") return "Akses mikrofon diblokir. Aktifkan izin mikrofon untuk Eureka di pengaturan browser, lalu coba lagi.";
+      return "Browser belum bisa membuka mikrofon. Periksa akses mikrofon untuk Eureka dan untuk browser di pengaturan HP.";
+    }
+    case "NotFoundError":
+    case "DevicesNotFoundError":
+      return "Mikrofon tidak terdeteksi. Periksa sambungan headset atau mikrofon, lalu coba lagi.";
+    case "NotReadableError":
+    case "TrackStartError":
+    case "AbortError":
+      return "Mikrofon belum bisa dibuka. Tutup aplikasi lain yang memakai mikrofon, lalu coba lagi.";
+    default:
+      return "Mikrofon belum bisa dimulai. Ketuk mikrofon untuk mencoba lagi.";
+  }
+}
 
 function spokenWords(text: string) {
   return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -188,6 +237,10 @@ export function useMomoCall() {
   const [transcript, setTranscript] = useState("");
   const [reply, setReply] = useState("");
   const [backup, setBackup] = useState(false);
+  const [workspaceLinks, setWorkspaceLinks] = useState<LalaWorkspaceLink[]>([]);
+  const [workspaceLoading, setWorkspaceLoading] = useState("");
+  const [deleteTitle, setDeleteTitle] = useState("");
+  const deleteDecision = useRef<((allowed: boolean) => void) | null>(null);
   const active = useRef<Session | null>(null);
   const meterSamples = useRef(new Float32Array(512));
 
@@ -323,6 +376,8 @@ export function useMomoCall() {
     let outputText = "";
     let audioInput: ReadableStreamDefaultController<Uint8Array> | undefined;
     const searches = new Map<string, AbortController>();
+    const workspaceCalls = new Map<string, AbortController>();
+    const handledWorkspaceCalls = new Set<string>();
     const send = (message: object) => {
       if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
     };
@@ -397,6 +452,51 @@ export function useMomoCall() {
       send({ toolResponse: { functionResponses: [{ id, name: "search_call_web", response }] } });
     }
 
+    function confirmDelete(title: string, signal: AbortSignal) {
+      if (deleteDecision.current || signal.aborted) return Promise.resolve(false);
+      return new Promise<boolean>(resolve => {
+        const cancel = () => decide(false);
+        const decide = (allowed: boolean) => {
+          signal.removeEventListener("abort", cancel);
+          deleteDecision.current = null;
+          if (active.current === session) setDeleteTitle("");
+          resolve(allowed);
+        };
+        deleteDecision.current = decide;
+        signal.addEventListener("abort", cancel, { once: true });
+        setDeleteTitle(title);
+      });
+    }
+
+    async function actForLala(id: string, args: Record<string, unknown>) {
+      if (handledWorkspaceCalls.has(id)) return;
+      handledWorkspaceCalls.add(id);
+      const controller = new AbortController();
+      workspaceCalls.set(id, controller);
+      const signal = AbortSignal.any([session.controller.signal, controller.signal]);
+      const loadingLabel = args.action === "create" ? "Membuat catatan…"
+        : args.action === "artifact" ? "Menyusun artefak…"
+        : args.action === "chat" ? "Menyiapkan chat…"
+        : args.action === "update" ? "Memperbarui catatan…"
+        : "Menyiapkan catatan…";
+      setWorkspaceLoading(loadingLabel);
+      setPhase("working");
+      let response: object;
+      try {
+        response = await runLalaWorkspace(args, signal, title => confirmDelete(title, signal), link => {
+          if (active.current !== session || signal.aborted) return;
+          setWorkspaceLinks(previous => [...previous.filter(item => item.href !== link.href), link].slice(-5));
+        });
+      } catch (cause) {
+        response = { error: cause instanceof Error ? cause.message : "Tindakan belum berhasil." };
+      } finally {
+        workspaceCalls.delete(id);
+        if (active.current === session && workspaceCalls.size === 0) setWorkspaceLoading("");
+      }
+      if (signal.aborted || active.current !== session) return;
+      send({ toolResponse: { functionResponses: [{ id, name: "lala_workspace", response }] } });
+    }
+
     socket.onopen = () => send({ setup: { model } });
     socket.onerror = connectionFailed;
     socket.onclose = connectionFailed;
@@ -405,9 +505,14 @@ export function useMomoCall() {
       try {
         const raw = typeof event.data === "string" ? event.data : new TextDecoder().decode(event.data);
         const message = JSON.parse(raw) as LiveMessage;
-        for (const id of message.toolCallCancellation?.ids ?? []) searches.get(id)?.abort();
+        for (const id of message.toolCallCancellation?.ids ?? []) {
+          searches.get(id)?.abort();
+          workspaceCalls.get(id)?.abort();
+        }
         for (const call of message.toolCall?.functionCalls ?? []) {
-          if (call.name !== "search_call_web" || !call.id) continue;
+          if (!call.id) continue;
+          if (call.name === "lala_workspace") { void actForLala(call.id, call.args ?? {}); continue; }
+          if (call.name !== "search_call_web") continue;
           const query = typeof call.args?.query === "string" ? call.args.query.trim() : "";
           if (query) void searchForLala(call.id, query);
           else send({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { results: [] } }] } });
@@ -418,7 +523,7 @@ export function useMomoCall() {
           setPhase("thinking");
           send({ realtimeInput: { text: language === "en"
             ? "Open the call by saying: Hi, I'm Lala. How can I help?"
-            : "Buka panggilan dengan berkata: Hai, aku Lala. Ada yang bisa aku bantu?" } });
+            : "Buka panggilan dengan hangat: Hai, aku Lala! Mau ngobrol atau mau aku bantu bikin sesuatu?" } });
         }
         const content = message.serverContent;
         if (!content) return;
@@ -447,7 +552,7 @@ export function useMomoCall() {
           closeAudioInput();
           inputText = "";
           outputText = "";
-          if (!session.playback && searches.size === 0) setPhase("listening");
+          if (!session.playback && searches.size === 0 && workspaceCalls.size === 0) setPhase("listening");
         }
       } catch {
         connectionFailed();
@@ -462,14 +567,23 @@ export function useMomoCall() {
     setError("");
     setTranscript("");
     setReply("");
-    if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
-      fail("Mikrofon tidak tersedia di browser ini. Coba lewat HTTPS dengan browser terbaru.");
+    setWorkspaceLinks([]);
+    setWorkspaceLoading("");
+    setDeleteTitle("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      fail("Mikrofon tidak tersedia di browser ini. Buka Eureka lewat HTTPS di Safari atau Chrome.");
+      return;
+    }
+    const AudioContextClass = window.AudioContext ??
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) {
+      fail("Browser ini belum mendukung audio panggilan. Coba buka Eureka di Safari atau Chrome.");
       return;
     }
 
     let context: AudioContext;
     try {
-      context = new AudioContext();
+      context = new AudioContextClass();
     } catch {
       fail("Audio tidak bisa dimulai di perangkat ini.");
       return;
@@ -500,25 +614,36 @@ export function useMomoCall() {
       setPhase("listening");
     };
 
+    // Keep both requests in the click handler for mobile browser activation.
+    void context.resume().catch(() => {});
+    let stream: MediaStream;
     try {
-      // Unlock playback inside the click, then attach the mic before waiting for
-      // Web Audio. Some mobile browsers only start the context after mic access.
-      void context.resume().catch(() => {});
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      stream = await openCallMicrophone(session.controller.signal);
+    } catch (cause) {
+      if (!isCurrent()) return;
+      const message = await microphoneError(cause);
+      if (isCurrent()) fail(message);
+      return;
+    }
+
+    try {
       if (!isCurrent()) {
         stream.getTracks().forEach(track => track.stop());
         return;
       }
       session.stream = stream;
+      const tracks = stream.getAudioTracks();
+      if (!tracks.some(track => track.readyState === "live")) {
+        fail("Mikrofon terputus sebelum panggilan dimulai. Ketuk mikrofon untuk mencoba lagi.");
+        return;
+      }
       const mic = context.createAnalyser();
       mic.fftSize = 512;
       session.mic = mic;
       const source = context.createMediaStreamSource(stream);
       session.micSource = source;
       source.connect(mic);
-      for (const track of stream.getAudioTracks()) {
+      for (const track of tracks) {
         track.onended = () => { if (isCurrent()) fail("Mikrofon terputus. Coba mulai panggilan lagi."); };
       }
 
@@ -687,13 +812,9 @@ export function useMomoCall() {
       } catch {
         switchToRecording();
       }
-    } catch (cause) {
+    } catch {
       if (!isCurrent()) return;
-      if (cause instanceof DOMException && /NotAllowed|NotFound|NotReadable/.test(cause.name)) {
-        fail("Mikrofon tidak bisa digunakan. Periksa izin mikrofon lalu coba lagi.");
-      } else {
-        fail("Audio perangkat belum bisa dimulai. Coba lagi.");
-      }
+      fail("Mikrofon sudah terbuka, tetapi audio panggilan belum bisa dimulai. Ketuk mikrofon untuk mencoba lagi.");
     }
   }
 
@@ -717,5 +838,9 @@ export function useMomoCall() {
     setMuted(session.muted);
   }
 
-  return { phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute };
+  return {
+    phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
+    workspaceLinks, workspaceLoading, deleteTitle,
+    confirmWorkspaceDelete: (allowed: boolean) => deleteDecision.current?.(allowed),
+  };
 }

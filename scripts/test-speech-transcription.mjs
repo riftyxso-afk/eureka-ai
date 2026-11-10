@@ -121,11 +121,13 @@ test("Dictation uses the Eureka language with Indonesian as its default", async 
   }
 });
 
-test("Realtime calls greet once, suppress echo, and let users interrupt to correct themselves", async () => {
+test("Realtime calls recover a granted microphone, greet once, and allow corrections without echo", async () => {
   const audioNode = { connect() {}, disconnect() {} };
   let socket, worklet, source, playback;
   let now = 1000;
   let answers = 0;
+  const micRequests = [];
+  const track = { readyState: "live", stop() {} };
   const spoken = [];
   const { useMomoCall } = load("components/assistant/useMomoCall.ts", {
     react: {
@@ -145,13 +147,20 @@ test("Realtime calls greet once, suppress echo, and let users interrupt to corre
     },
     "@/lib/identity": { getUserId: () => "ordinary-user" },
     "./recordCallTurns": {},
+    "./lalaWorkspace": {},
     "@/lib/audio/callReply": load("lib/audio/callReply.ts", {}),
   }, {
-    window: { AudioContext: true, setTimeout: () => 1, clearTimeout() {} },
-    navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [], getAudioTracks: () => [] }) } },
+    navigator: {
+      permissions: { query: async () => ({ state: "granted" }) },
+      mediaDevices: { getUserMedia: async constraints => {
+        micRequests.push(constraints.audio);
+        if (micRequests.length === 1) throw { name: "NotAllowedError" };
+        return { getTracks: () => [track], getAudioTracks: () => [track] };
+      } },
+    },
     performance: { now: () => now },
     URLSearchParams, btoa,
-    AudioContext: class {
+    window: { setTimeout: () => 1, clearTimeout() {}, AudioContext: class {
       state = "running";
       currentTime = 0;
       audioWorklet = { addModule: async () => {} };
@@ -163,7 +172,7 @@ test("Realtime calls greet once, suppress echo, and let users interrupt to corre
       createBufferSource = () => (source = {
         ...audioNode, start() {}, stop() {}, addEventListener: (_event, done) => { playback = done; },
       });
-    },
+    } },
     AudioWorkletNode: class {
       port = { close() {} };
       connect() {}
@@ -188,6 +197,9 @@ test("Realtime calls greet once, suppress echo, and let users interrupt to corre
   };
   try {
     await call.start();
+    assert.equal(micRequests[0].echoCancellation, true);
+    assert.equal(micRequests[1], true);
+    assert.equal(micRequests.length, 2);
     assert.equal(socket.url.searchParams.get("language_code"), "id");
     message("session_started");
     message("session_started");
@@ -270,6 +282,32 @@ test("Lala only issues a model-bound single-use token to authenticated callers",
   assert.equal(result.headers.get("cache-control"), "no-store");
   assert.deepEqual(await result.json(), { token: "auth_tokens/test", model: "models/gemini-3.8-live" });
   assert.equal(upstream, 1);
+});
+
+test("Lala cannot delete ambiguous notes or skip the user's confirmation", async () => {
+  const note = { id: "note-1", title: "Fotosintesis" };
+  let notes = [note, { id: "note-2", title: "Fotosintesis" }];
+  const deletions = [];
+  const { runLalaWorkspace } = load("components/assistant/lalaWorkspace.ts", {
+    "@/lib/identity": { getUserId: () => "ordinary-user" },
+    "@/lib/apiClient": { apiFetch: async (path, options) => {
+      if (options.method === "DELETE") deletions.push(path);
+      return Response.json(path.includes("?") ? { notes } : { note });
+    } },
+  }, { window: { dispatchEvent() {} }, Event });
+  const args = { action: "delete", title: "Fotosintesis" };
+  const signal = new AbortController().signal;
+  const result = await runLalaWorkspace(args, signal, () => assert.fail("Ambiguous title"), () => {});
+  assert.match(result.error, /beberapa catatan/);
+  notes = [note];
+  await runLalaWorkspace(args, signal, async () => false, () => {});
+  assert.deepEqual(deletions, []);
+  await runLalaWorkspace(args, signal, async title => {
+    assert.equal(title, note.title);
+    assert.deepEqual(deletions, []);
+    return true;
+  }, () => {});
+  assert.deepEqual(deletions, ["/api/notes/note-1"]);
 });
 
 test("Voice searches for news without a freshness keyword and waits for evidence before speech", async () => {

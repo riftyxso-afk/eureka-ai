@@ -82,6 +82,22 @@ export async function POST(request: Request) {
     const results = await getVoiceSearchResults(question.slice(0, 200), request.signal);
     return Response.json({ results, date: new Date().toISOString().slice(0, 10) }, { headers: { "Cache-Control": "no-store" } });
   }
+  if (body.action === "save-lala-chat") {
+    const title = typeof body.title === "string" ? body.title.trim().slice(0, 120) : "";
+    const content = typeof body.content === "string" ? body.content.trim() : "";
+    if (!title || !content || content.length > 16000) {
+      return Response.json({ error: "Judul atau isi percakapan tidak valid." }, { status: 400 });
+    }
+    try {
+      const { saveLalaChat } = await import("@/lib/assistant/lalaWorkspaceChat");
+      const sessionId = await saveLalaChat(auth.userId, {
+        title, prompt: question, content, artifact: body.artifact === true,
+      }, request.signal);
+      return Response.json({ sessionId }, { headers: { "Cache-Control": "no-store" } });
+    } catch {
+      return Response.json({ error: "Percakapan belum bisa disimpan." }, { status: 502 });
+    }
+  }
   if (!hasAiKey()) return Response.json({ error: "Momo belum bisa menjawab saat ini." }, { status: 503 });
   const history = readHistory(body.history);
   try {

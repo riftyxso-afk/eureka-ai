@@ -12,7 +12,8 @@ const labels = {
 };
 
 function CallScreen({ onClose }: { onClose: () => void }) {
-  const { phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute } = useMomoCall();
+  const { phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
+    workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete } = useMomoCall();
   const waiting = phase === "permission" || phase === "connecting";
   const dialog = useRef<HTMLDialogElement>(null);
   const cloud = useRef<HTMLSpanElement>(null);
@@ -26,6 +27,7 @@ function CallScreen({ onClose }: { onClose: () => void }) {
     : phase === "listening" ? (muted ? "Mikrofon dimatikan" : `${name} mendengarkan`)
     : phase === "thinking" ? `${name} sedang berpikir`
     : phase === "searching" ? `${name} sedang mencari informasi…`
+    : phase === "working" ? (deleteTitle ? "Lala menunggu konfirmasi" : "Lala sedang mengerjakan permintaanmu…")
     : phase === "speaking" ? `${name} sedang berbicara`
     : labels[phase];
 
@@ -124,11 +126,28 @@ function CallScreen({ onClose }: { onClose: () => void }) {
         {status}
       </p>
     </div>
-    <div className="momo-call-text">
+    <div className="momo-call-text" data-workspace={Boolean(deleteTitle || workspaceLoading || workspaceLinks.length)}>
+      {deleteTitle && <div className="momo-call-confirm" role="group" aria-label="Konfirmasi hapus catatan">
+        <p>Hapus catatan <strong>{deleteTitle}</strong>?</p>
+        <div>
+          <button type="button" onClick={() => confirmWorkspaceDelete(false)}>Batal</button>
+          <button type="button" onClick={() => confirmWorkspaceDelete(true)}>Hapus catatan</button>
+        </div>
+      </div>}
+      {workspaceLoading && !deleteTitle && <div className="momo-call-work-progress" role="status">
+        <span className="momo-call-work-spinner" aria-hidden="true" />
+        <span>{workspaceLoading}</span>
+      </div>}
       {error && <p className="momo-call-error" role="alert">{error}</p>}
       {!error && phase === "idle" && <p>Ketuk mikrofon untuk mulai ngobrol.</p>}
       {backup && !error && phase === "listening" && !muted && !transcript && <p>Bicara lalu jeda sebentar agar Momo bisa menjawab.</p>}
       {captions && phase !== "idle" && (reply || transcript) && <p className="momo-call-caption">{reply || transcript}</p>}
+      {workspaceLinks.length > 0 && <p className="momo-call-result-hint">Buka hasilnya kapan saja, atau lanjut ngobrol di sini.</p>}
+      {workspaceLinks.map(link => <a key={link.href} href={link.href} className="momo-call-result-link"
+        onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) stop(); }}>
+        <span><strong>{link.label}</strong><small>{link.title}</small></span>
+        <ChevronRight size={17} aria-hidden="true" />
+      </a>)}
     </div>
     <footer className="momo-call-controls">
       <button type="button" disabled={waiting} className="momo-call-control"

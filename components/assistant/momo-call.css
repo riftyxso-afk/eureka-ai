@@ -148,7 +148,7 @@
   rotate: -24deg;
   transform-origin: center;
 }
-.momo-call-orb:is([data-phase="thinking"], [data-phase="searching"]) .momo-call-cloud,
+.momo-call-orb:is([data-phase="thinking"], [data-phase="searching"], [data-phase="working"]) .momo-call-cloud,
 .momo-call-orb[data-phase="connecting"] .momo-call-cloud {
   animation: momo-call-current 2.4s cubic-bezier(.77, 0, .175, 1) infinite alternate;
 }
@@ -185,6 +185,52 @@
 .momo-call-text p:last-child { margin-bottom: auto; }
 .momo-call-caption { color: var(--call-ink); line-height: 1.55; }
 .momo-call-error { color: var(--call-ink); font-weight: 650; }
+.momo-call[open]:has(.momo-call-text[data-workspace="true"]) {
+  grid-template-rows: auto minmax(0, 1fr) minmax(90px, 36%) auto;
+}
+.momo-call:has(.momo-call-text[data-workspace="true"]) .momo-call-stage {
+  align-content: center;
+  gap: 10px;
+}
+.momo-call:has(.momo-call-text[data-workspace="true"]) .momo-call-orb { width: clamp(56px, 19dvh, 150px); }
+.momo-call:has(.momo-call-text[data-workspace="true"]) .momo-call-status { position: static; }
+.momo-call-text[data-workspace="true"] { justify-content: flex-start; gap: 10px; }
+.momo-call-work-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: none;
+  min-height: 44px;
+  color: var(--call-ink);
+}
+.momo-call-work-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--call-control);
+  border-top-color: #a679eb;
+  border-radius: 50%;
+}
+.momo-call-result-hint { font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .momo-call-work-spinner { animation: momo-call-spin 800ms linear infinite; }
+}
+@keyframes momo-call-spin { to { transform: rotate(360deg); } }
+.momo-call-confirm, .momo-call-result-link {
+  width: 100%;
+  flex: none;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--call-control);
+  color: var(--call-ink);
+}
+.momo-call-confirm > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
+.momo-call-confirm button { min-height: 44px; padding: 6px 12px; border-radius: 9px; background: var(--call-bg); color: var(--call-ink); }
+.momo-call-confirm button:last-child { background: #ae3148; color: white; }
+.momo-call-result-link { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; text-align: left; }
+.momo-call-result-link span { min-width: 0; overflow-wrap: anywhere; }
+.momo-call-result-link small { display: block; color: var(--call-muted); }
+.momo-call-result-link svg { flex: none; }
 .momo-call-controls {
   display: flex;
   justify-content: space-between;
@@ -194,7 +240,7 @@
 .momo-call-control[aria-pressed="true"] { background: #dbe9f9; color: #193d65; }
 .momo-call-control:disabled { opacity: .55; }
 .momo-call-control:active, .momo-call-settings:active { transform: scale(.94); }
-.momo-call button:focus-visible { outline: 2px solid #2588e5; outline-offset: 3px; }
+.momo-call :is(button, a):focus-visible { outline: 2px solid #2588e5; outline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) {
   .momo-call-control:not(:disabled):hover, .momo-call-settings:hover,
   .momo-call-picker button:enabled:hover { background: var(--call-hover); }
