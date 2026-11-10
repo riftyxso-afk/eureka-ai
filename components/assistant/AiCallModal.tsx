@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, ChevronRight, Mic, MicOff, SlidersHorizontal, X } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
+import { playCallSound } from "@/lib/sound/cuelume";
 import { useMomoCall, type CallProvider } from "./useMomoCall";
 import "./momo-call.css";
 
@@ -12,8 +13,18 @@ const labels = {
 };
 
 function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
+  const opened = useRef(false);
+  const dismissed = useRef(false);
+
+  function dismiss() {
+    if (dismissed.current) return;
+    dismissed.current = true;
+    playCallSound("close");
+    onClose();
+  }
+
   const { phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
-    workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete, turns, showCurrent, sendText } = useMomoCall(onClose);
+    workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete, turns, showCurrent, sendText } = useMomoCall(dismiss);
   const waiting = phase === "permission" || phase === "connecting";
   const dialog = useRef<HTMLDialogElement>(null);
   const cloud = useRef<HTMLSpanElement>(null);
@@ -50,7 +61,13 @@ function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
 
   useEffect(() => {
     const element = dialog.current;
-    if (element && !element.open) element.showModal();
+    if (element && !element.open) {
+      element.showModal();
+      if (!opened.current) {
+        opened.current = true;
+        playCallSound("open");
+      }
+    }
     return () => { if (element?.open) element.close(); };
   }, []);
 
@@ -78,7 +95,7 @@ function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
 
   function end() {
     stop();
-    onClose();
+    dismiss();
   }
 
   function choose(choice: CallProvider) {
@@ -167,7 +184,7 @@ function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
       {!chat && captions && phase !== "idle" && (reply || transcript) && <p className="momo-call-caption">{reply || transcript}</p>}
       {workspaceLinks.length > 0 && <p className="momo-call-result-hint">Buka hasilnya kapan saja, atau lanjut ngobrol di sini.</p>}
       {workspaceLinks.map(link => <a key={link.href} href={link.href} className="momo-call-result-link"
-        onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) stop(); }}>
+        onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) end(); }}>
         <span><strong>{link.label}</strong><small>{link.title}</small></span>
         <ChevronRight size={17} aria-hidden="true" />
       </a>)}

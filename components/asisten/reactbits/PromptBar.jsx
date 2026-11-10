@@ -576,6 +576,7 @@ export default function PromptBar({
                   }}
                   type="button"
                   role="option"
+                  data-eureka-sound={row.key === "momo-call" ? "off" : undefined}
                   disabled={open === 'model' && row.disabled}
                   aria-selected={i === cursor}
                   className="prompt-bar__row"

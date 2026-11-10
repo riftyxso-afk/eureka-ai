@@ -174,18 +174,21 @@ function PlusRow({
   desc,
   active,
   onClick,
+  silent,
 }: {
   icon: React.ReactNode;
   label: string;
   desc: string;
   active?: boolean;
   onClick: () => void;
+  silent?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      data-eureka-sound={silent ? "off" : undefined}
       className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors duration-100 ${
         active ? "bg-clay-primary/10" : "hover:bg-clay-beige"
       }`}
@@ -892,6 +895,7 @@ export default function Composer({
                               icon={<PhoneCall trigger="parent" size={15} />}
                               label="Panggilan Momo"
                               desc="Tanya jawab suara langsung"
+                              silent
                               onClick={() => {
                                 setPlusOpen(false);
                                 onCall();

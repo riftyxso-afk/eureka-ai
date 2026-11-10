@@ -58,7 +58,7 @@ export default function CallIntroBanner({ onTry, paused }: { onTry: () => void; 
       <h2 id="call-intro-title">Ngobrol langsung dengan Momo dan Lala</h2>
       <p id="call-intro-description">Tanya materi, cari info terbaru, atau minta Lala membuat catatan sambil ngobrol.</p>
       <div className="call-intro-actions">
-        <button type="button" className="call-intro-try" onClick={() => { close(); onTry(); }}>
+        <button type="button" className="call-intro-try" data-eureka-sound="off" onClick={() => { close(); onTry(); }}>
           Coba sekarang <ArrowRight size={17} aria-hidden="true" />
         </button>
         <button type="button" className="call-intro-later" onClick={close}>Nanti saja</button>

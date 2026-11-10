@@ -29,6 +29,10 @@ export function playLevelUpSound(): void {
   playCue("success", { theme: "bubble", volume: 0.46, emphasis: "strong" });
 }
 
+export function playCallSound(cue: "open" | "close"): void {
+  playCue(cue, { theme: "bubble", volume: 0.3, emphasis: "subtle" });
+}
+
 export function setSoundEnabled(enabled: boolean): void {
   soundEnabled = enabled;
   setEnabled(enabled);
@@ -54,7 +58,7 @@ export function initCuelume(): () => void {
   function onClick(event: MouseEvent): void {
     if (!event.isTrusted || event.button !== 0 || !(event.target instanceof Element)) return;
     const control = event.target.closest(controls);
-    if (!control || control.closest(':disabled, [aria-disabled="true"], dialog.momo-call')) return;
+    if (!control || control.closest(':disabled, [aria-disabled="true"], [data-eureka-sound="off"], dialog.momo-call')) return;
 
     const now = performance.now();
     if (now - lastClick < 120) return;
