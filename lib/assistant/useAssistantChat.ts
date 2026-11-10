@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { normalizeWebResults } from "./webSources";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
+import { captureChatResponse } from "@/lib/productAnalytics";
 import {
   streamAssistantChat,
   type ClarificationQuestion,
@@ -554,6 +555,7 @@ export function useAssistantChat(options: {
 
       try {
         await completed;
+        if (!stoppedRef.current && scopeRef.current.current(targetSessionId, token)) captureChatResponse();
       } catch {
         // Pembatalan oleh user (Stop) bukan error.
         if (scopeRef.current.current(targetSessionId, token) && !stoppedRef.current) {
@@ -698,6 +700,7 @@ export function useAssistantChat(options: {
 
       try {
         await completed;
+        if (!stoppedRef.current && scopeRef.current.current(targetSessionId, token)) captureChatResponse();
       } catch {
         if (scopeRef.current.current(targetSessionId, token) && !stoppedRef.current) {
           setStreaming((s) => ({

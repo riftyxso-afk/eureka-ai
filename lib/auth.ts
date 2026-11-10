@@ -7,6 +7,7 @@
  */
 import { supabase, isSupabaseConfigured } from "./supabase/client";
 import { apiFetch } from "@/lib/apiClient";
+import { identifyAnalyticsUser, resetAnalyticsUser } from "@/lib/productAnalytics";
 import { getUserId, setUserName, setUserId, clearIdentity } from "./identity";
 
 const SESSION_KEY = "eureka_session";
@@ -147,6 +148,7 @@ function cacheSession(userId: string, name: string, email: string) {
   } satisfies AuthSession);
   setUserId(userId);
   setUserName(name);
+  identifyAnalyticsUser(userId);
 }
 
 /** Buat akun via Supabase Auth. */
@@ -547,6 +549,7 @@ export async function syncAuthSession(): Promise<void> {
 /** Keluar dari Supabase Auth. Sesi lokal dibersihkan segera;
  * signOut Supabase berjalan best-effort tanpa menahan navigasi. */
 export async function logoutUser(): Promise<void> {
+  resetAnalyticsUser();
   safeRemove(SESSION_KEY);
   clearIdentity();
   // Hapus sesi Supabase yang tersimpan (sb-<ref>-auth-token) secara sinkron

@@ -1,4 +1,5 @@
 import { aiChatStream, hasAiKey } from "@/lib/ai";
+import { captureServerEvent } from "@/lib/serverAnalytics";
 import { requireAuth } from "@/lib/assistant/auth";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
 import { momoPersona } from "@/lib/prompts/momoPersona";
@@ -47,7 +48,10 @@ export async function POST(request: Request) {
       signal: AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]),
     });
     const reply = content.trim();
-    if (reply) return Response.json({ ok: true, reply });
+    if (reply) {
+      await captureServerEvent(auth.userId, "momo_call_answered");
+      return Response.json({ ok: true, reply });
+    }
   } catch {
     // Keep upstream errors out of the call UI.
   }

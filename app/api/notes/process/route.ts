@@ -11,6 +11,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { captureServerEvent } from "@/lib/serverAnalytics";
 
 import { runAfter } from "@/lib/after";
 import { requireAuth } from "@/lib/assistant/auth";
@@ -315,6 +316,7 @@ export async function POST(req: NextRequest) {
             noteTitle: note.title,
           });
           tracker.emit("study_tools", 100, "Selesai!");
+          if (userId) await captureServerEvent(userId, "note_created");
           console.info(`[api/notes/process] Selesai: ${note.id} (${note.title})`);
 
           // Notifikasi in-app (lonceng) + XP, hanya bila user diketahui.

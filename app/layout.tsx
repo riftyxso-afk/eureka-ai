@@ -26,6 +26,7 @@ import { LocaleProvider } from "@/context/LocaleContext";
 import LevelUpOverlay from "@/components/dashboard/LevelUpOverlay";
 import PremiumSuccessPopup from "@/components/PremiumSuccessPopup";
 import SoundInitializer from "@/components/SoundInitializer";
+import ProductAnalytics from "@/components/ProductAnalytics";
 import {
   alternatesFor,
   getDictionary,
@@ -148,6 +149,7 @@ export default async function RootLayout({
         <LocaleProvider initialLocale={locale}>
           <ThemeProvider>
             <AppToaster />
+            <ProductAnalytics />
             <JobWatcherProvider>
               <OnboardingProvider>
                 {children}
