@@ -27,7 +27,7 @@ function extractBearer(authHeader: string | null): string {
 
 /** Mode dev lokal eksplisit: percayai userId param (JANGAN dipakai di produksi). */
 function isInsecureDevAuthEnabled(): boolean {
-  return process.env.ALLOW_INSECURE_DEV_AUTH === "true";
+  return process.env.NODE_ENV === "development" && process.env.ALLOW_INSECURE_DEV_AUTH === "true";
 }
 
 /**

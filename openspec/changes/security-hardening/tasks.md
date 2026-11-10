@@ -4,7 +4,7 @@
 - [x] 1.2 Ubah `scripts/test-search-rest.mjs`, `scripts/test-full-chunk.mjs`, `scripts/test-e2e-rag.mjs`, `scripts/test-chunks-insert.mjs` agar membaca `SUPABASE_SERVICE_ROLE_KEY` dari env, bukan hardcode
 - [x] 1.3 Hapus `dev.log` dan `dev.err.log` dari git tracking dan tambahkan ke `.gitignore`
 - [x] 1.4 Bersihkan key terpotong di `IMPLEMENTATION_SUMMARY.md` (dan dokumen lain bila ada)
-- [ ] 1.5 Scrub git history dari service_role key lama (git filter-repo/BFG) dan verifikasi `git log -S "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1YWppeXdzZGl4aHNrZXRmdXJmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjQzOTc5NSwiZXhwIjoyMTAyMDE1Nzk1fQ"` tidak menghasilkan kecocokan
+- [ ] 1.5 Scrub git history dari service_role key lama (git filter-repo/BFG) dan verifikasi `pemindaian riwayat Git berbasis fingerprint` tidak menghasilkan kecocokan
 - [x] 1.6 Verifikasi `git ls-files` tidak memuat file `.env*` apa pun selain `.env.example`
 
 ## 2. Helper autentikasi fail-closed

@@ -9,6 +9,7 @@ const isDev = process.env.NODE_ENV === "development";
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://www.youtube.com${isDev ? " 'unsafe-eval'" : ""};
+  script-src-attr 'none';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
   media-src 'self' blob: https://storage.googleapis.com;
@@ -16,7 +17,7 @@ const cspHeader = `
   connect-src 'self' https: wss:${isDev ? " http://localhost:* http://127.0.0.1:*" : ""};
   worker-src 'self' blob:;
   object-src 'none';
-  base-uri 'self';
+  base-uri 'none';
   form-action 'self';
   frame-src https://challenges.cloudflare.com https://drive.google.com https://www.youtube.com https://www.youtube-nocookie.com;
   frame-ancestors 'none';
@@ -52,6 +53,10 @@ const nextConfig = {
       });
     }
     return [
+      {
+        source: "/api/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store, no-transform" }],
+      },
       {
         source: "/(.*)",
         headers: [

@@ -47,10 +47,10 @@ export async function GET(req: NextRequest) {
   try {
     const userId = String(req.nextUrl.searchParams.get("userId") ?? "").trim();
     const auth = await requireAuth(req.headers.get("authorization"), userId);
-    if (auth.error) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    if (!auth.userId) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status ?? 401 });
     }
-    const notes = await listNotes(userId || undefined);
+    const notes = await listNotes(auth.userId);
     return NextResponse.json({ notes });
   } catch (e) {
     const msg = "Gagal memuat catatan.";

@@ -35,7 +35,7 @@
     "lucide-react": "^1.31.0",
     "mermaid": "^11.16.1",
     "motion": "^14.9.0",
-    "next": "16.3.0",
+    "next": "^16.4.6",
     "officeparser": "^7.5.1",
     "openai": "^7.4.0",
     "page-flip": "^2.0.7",

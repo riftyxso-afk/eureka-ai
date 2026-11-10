@@ -14,7 +14,6 @@
  */
 import { existsSync } from "fs";
 import path from "path";
-import { pathToFileURL } from "url";
 import { fileURLToPath } from "url";
 
 import { config as loadEnv } from "dotenv";
@@ -35,6 +34,14 @@ for (const envPath of [
 }
 
 const app = new Hono();
+
+app.use("/api/*", async (c, next) => {
+  await next();
+  c.header("Cache-Control", "private, no-store, no-transform");
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
+  c.header("Referrer-Policy", "no-referrer");
+});
 
 // ─── CORS ──────────────────────────────────────────────────
 const isProd = process.env.NODE_ENV === "production";
@@ -59,13 +66,13 @@ const corsAllowAll = !isProd && explicitlyAllowAll;
 
 /**
  * Resolver origin CORS:
- * - non-browser (tanpa Origin, mis. curl/server-to-server) → izinkan
+ * - non-browser (tanpa Origin) → tidak memerlukan header CORS
  * - localhost (dev) → selalu izinkan
  * - CORS_ORIGIN "*" → hanya untuk non-produksi, izinkan SEMUA origin
  * - CORS_ORIGIN berisi daftar → hanya origin yang terdaftar (wajib di produksi)
  */
 const resolveCorsOrigin: (origin: string) => string | null = (origin) => {
-  if (!origin) return "*";
+  if (!origin) return null;
   if (corsAllowAll) return origin;
   if (!isProd && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return origin;
@@ -88,7 +95,6 @@ app.use(
       "x-locale",
     ],
     exposeHeaders: ["content-type"],
-    credentials: true,
   })
 );
 console.log(
@@ -111,11 +117,12 @@ app.get("/api/health", (c) =>
 
 // ─── Mount all API routes ─────────────────────────────────
 const port = Number(process.env.PORT ?? 3001);
+const hostname = process.env.EUREKA_BIND_HOST || undefined;
 
 mountAllRoutes(app)
   .then((n) => {
     console.log(`[backend] ${n} route API dimount (selain /api/health).`);
-    serve({ fetch: app.fetch, port }, (info) => {
+    serve({ fetch: app.fetch, port, hostname }, (info) => {
       console.log(`[backend] Eureka.AI API berjalan di http://localhost:${info.port}`);
     });
   })

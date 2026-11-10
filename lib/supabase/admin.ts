@@ -18,7 +18,7 @@ export function isSupabaseConfigured(): boolean {
     url.startsWith("https://") &&
     url.length > 20 &&
     serviceKey.length > 40 &&
-    serviceKey.startsWith("eyJ")
+    (serviceKey.startsWith("sb_secret_") || serviceKey.startsWith("eyJ"))
   );
 }
 
