@@ -1,19 +1,4 @@
-/**
- * Premium gating — status langganan Pakasir + kuota free tier.
- *
- * Setiap route AI berbiaya tinggi memanggil `enforcePremium(userId, feature)`
- * SETELAH auth user lolos. Keputusan 100% server-side; frontend hanya
- * menampilkan hasilnya (402 → notifikasi + tombol ke /pricing).
- *
- * Kuota free tier (usulan — bisa diubah di FEATURE_LIMITS):
- *   - assistant-chat       : 10 pesan/hari  (dihitung dari ai_chat_messages)
- *   - note-generate        : 3 catatan/bulan (dihitung dari notes)
- *   - assistant-image      : wajib premium
- *   - web-search           : wajib premium
- *   - assistant-quiz       : 2/hari   (tabel feature_usage)
- *   - assistant-flashcards : 2/hari   (tabel feature_usage)
- *   - bab-regenerate       : 3/bulan  (tabel feature_usage)
- */
+/** Server-side Eureka Pro entitlement. */
 import { db } from "./supabase/admin";
 
 export type PremiumTier = "promo" | "normal" | "trial" | null;
@@ -34,29 +19,7 @@ export type PremiumFeature =
   | "bab-regenerate"
   | "solve-then-guide";
 
-interface FeatureLimit {
-  /** true = fitur hanya untuk premium (tanpa kuota free). */
-  premiumOnly: boolean;
-  /** Kuota untuk user free; 0 bila premiumOnly. */
-  limit: number;
-  /** Periode kuota. */
-  period: "day" | "month";
-}
-
-export const FEATURE_LIMITS: Record<PremiumFeature, FeatureLimit> = {
-  "assistant-chat": { premiumOnly: false, limit: 10, period: "day" },
-  "note-generate": { premiumOnly: false, limit: 3, period: "month" },
-  "assistant-image": { premiumOnly: true, limit: 0, period: "day" },
-  "web-search": { premiumOnly: true, limit: 0, period: "day" },
-  "assistant-quiz": { premiumOnly: false, limit: 2, period: "day" },
-  "assistant-flashcards": { premiumOnly: false, limit: 2, period: "day" },
-  "bab-regenerate": { premiumOnly: false, limit: 3, period: "month" },
-  // Solve-then-Guide (Eureka Multi Agent, PRD §6) — Pro only; cap biaya
-  // diterapkan terpisah via AGENT_ASTRA_DAILY_TOKEN_CAP (loopStore).
-  "solve-then-guide": { premiumOnly: true, limit: 0, period: "day" },
-};
-
-export const UPGRADE_URL = "/pricing";
+export const UPGRADE_URL = "/dashboard-v2/pricing";
 
 /** Durasi trial gratis (7 hari). */
 export const TRIAL_DAYS = 7;
@@ -139,14 +102,6 @@ export interface PremiumCheck {
   upgradeUrl?: string;
 }
 
-/** Batas bawah tanggal periode (hari/bulan) untuk query kuota. */
-function periodStart(period: "day" | "month"): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  if (period === "month") d.setDate(1);
-  return d;
-}
-
 const NOT_CONFIGURED: PremiumStatus = {
   isPremium: false,
   tier: null,
@@ -157,14 +112,14 @@ const NOT_CONFIGURED: PremiumStatus = {
 export function isDevAllAccessEnabled(): boolean {
   return (
     process.env.EUREKA_DEV_ALL_ACCESS === "true" &&
-    process.env.NODE_ENV !== "production"
+    process.env.NODE_ENV === "development"
   );
 }
 
 /**
  * Baca status premium user dari DB. Bila Supabase belum dikonfigurasi
  * (mode dev), semua user dianggap non-premium. Status murni dari
- * `premium_until` (pembayaran Pakasir one-time = 30 hari) — tanpa lisensi.
+ * `premium_until` (pembayaran satu kali = 30 hari) — tanpa lisensi.
  */
 export async function getPremiumStatus(
   userId: string
@@ -197,14 +152,7 @@ export async function getPremiumStatus(
     : 0;
 
   // Kedaluwarsa lokal → nonaktifkan.
-  if ((data.is_premium === true && untilMs && untilMs <= now) || !data.is_premium) {
-    if (data.is_premium === true && untilMs && untilMs <= now) {
-      await client
-        .from("users")
-        .update({ is_premium: false })
-        .eq("id", userId)
-        .maybeSingle();
-    }
+  if (data.is_premium !== true || (data.premium_until && (!Number.isFinite(untilMs) || untilMs <= now))) {
     return {
       isPremium: false,
       tier: (data.premium_tier as PremiumTier) ?? null,
@@ -217,52 +165,6 @@ export async function getPremiumStatus(
     tier: (data.premium_tier as PremiumTier) ?? null,
     premiumUntil: data.premium_until ?? null,
   };
-}
-
-/** Hitung pemakaian fitur oleh user sejak awal periode. */
-async function countUsage(
-  userId: string,
-  feature: PremiumFeature,
-  period: "day" | "month"
-): Promise<number> {
-  const client = db();
-  const since = periodStart(period).toISOString();
-
-  if (feature === "assistant-chat") {
-    // Jumlah pesan user hari ini di semua sesi milik user.
-    const { data: sessions, error: sessErr } = await client
-      .from("ai_chat_sessions")
-      .select("id")
-      .eq("user_id", userId);
-    if (sessErr || !sessions?.length) return 0;
-    const ids = sessions.map((s) => s.id as string);
-    const { count, error } = await client
-      .from("ai_chat_messages")
-      .select("id", { count: "exact", head: true })
-      .in("session_id", ids)
-      .eq("role", "user")
-      .gte("created_at", since);
-    return error ? 0 : (count ?? 0);
-  }
-
-  if (feature === "note-generate") {
-    // Jumlah catatan yang dibuat bulan ini (semua generate masuk sini).
-    const { count, error } = await client
-      .from("notes")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("created_at", since);
-    return error ? 0 : (count ?? 0);
-  }
-
-  // Fitur berbasis feature_usage (quiz, flashcards, bab-regenerate).
-  const { count, error } = await client
-    .from("feature_usage")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("feature", feature)
-    .gte("used_at", since);
-  return error ? 0 : (count ?? 0);
 }
 
 /** Catat satu pemakaian fitur (dipanggil setelah berhasil). */
@@ -279,51 +181,14 @@ export async function recordFeatureUsage(
   }
 }
 
-/**
- * Enforce premium: periksa status + kuota untuk sebuah fitur.
- * Return `{ ok: true }` bila boleh lanjut, atau `{ ok: false, status: 402,
- * upgradeUrl }` dengan pesan yang bisa langsung jadi respons API.
- */
-export async function enforcePremium(
-  userId: string,
-  feature: PremiumFeature
-): Promise<PremiumCheck> {
-  const status = await getPremiumStatus(userId);
-  if (status.isPremium) return { ok: true };
-
-  const limit = FEATURE_LIMITS[feature];
-  if (limit.premiumOnly) {
-    return {
-      ok: false,
-      error: `${premiumFeatureLabel(
-        feature
-      )} hanya untuk pengguna Pro. Upgrade untuk akses tanpa batas.`,
-      status: 402,
-      upgradeUrl: UPGRADE_URL,
-    };
-  }
-
-  let used = 0;
-  try {
-    used = await countUsage(userId, feature, limit.period);
-  } catch (e) {
-    // Supabase belum dikonfigurasi (mode dev) → jangan blokir.
-    console.warn("[premium] hitung kuota dilewati (dev tanpa DB):", e);
-    return { ok: true };
-  }
-  if (used >= limit.limit) {
-    const periodLabel = limit.period === "day" ? "hari ini" : "bulan ini";
-    return {
-      ok: false,
-      error: `Kamu sudah memakai ${premiumFeatureLabel(
-        feature
-      )} ${used} kali ${periodLabel} (batas gratis ${limit.limit}). Upgrade ke Pro untuk akses tanpa batas.`,
-      status: 402,
-      upgradeUrl: UPGRADE_URL,
-    };
-  }
-
-  return { ok: true };
+export async function enforcePremium(userId: string, feature: PremiumFeature): Promise<PremiumCheck> {
+  if ((await getPremiumStatus(userId)).isPremium) return { ok: true };
+  return {
+    ok: false,
+    error: `${premiumFeatureLabel(feature)} tersedia di Eureka Pro.`,
+    status: 402,
+    upgradeUrl: UPGRADE_URL,
+  };
 }
 
 function premiumFeatureLabel(feature: PremiumFeature): string {

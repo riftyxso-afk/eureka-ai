@@ -119,7 +119,7 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/onboarding/analyze", onboardingAnalyze);
   count++;
 
-  // ─── Payments (langganan Pakasir) ───────────────────────
+  // ─── Payments ──────────────────────────────────────────
   const paymentsCheckout = await import("@/app/api/payments/checkout/route");
   const paymentsWebhook = await import("@/app/api/payments/webhook/route");
   const paymentsStatus = await import("@/app/api/payments/status/route");
@@ -130,6 +130,8 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   );
   const paymentsHistory = await import("@/app/api/payments/history/route");
   const paymentsInvoice = await import("@/app/api/payments/invoice/route");
+  const mayarConfirm = await import("@/app/api/payments/mayar/confirm/route");
+  const mayarWebhook = await import("@/app/api/payments/mayar/webhook/route");
   mount(app, "/api/payments/checkout", paymentsCheckout);
   mount(app, "/api/payments/webhook", paymentsWebhook);
   mount(app, "/api/payments/status", paymentsStatus);
@@ -138,7 +140,9 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/payments/validate-code", paymentsValidateCode);
   mount(app, "/api/payments/history", paymentsHistory);
   mount(app, "/api/payments/invoice", paymentsInvoice);
-  count += 8;
+  mount(app, "/api/payments/mayar/confirm", mayarConfirm);
+  mount(app, "/api/payments/mayar/webhook", mayarWebhook);
+  count += 10;
 
   // ─── Profile ───────────────────────────────────────────
   const profile = await import("@/app/api/profile/route");

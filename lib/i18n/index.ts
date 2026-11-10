@@ -167,23 +167,23 @@ export const dictionaries = {
       gratis: "Gratis",
       perBulan: "/bulan",
       gratisFeatures: [
-        "Chat AI Socratic (batas harian)",
-        "3 catatan otomatis per bulan",
-        "Kuis & kartu hafalan dasar",
-        "Streak, XP & papan peringkat",
+        "Akun dan profil pribadi",
+        "Lihat manfaat dan harga Pro",
+        "Upgrade kapan saja",
+        "Pengaturan akun dan keamanan",
       ],
       terpopuler: "Terpopuler",
       pro: "Pro",
       proFeatures: [
         "Semua fitur paket Gratis",
-        "Chat AI tanpa batas",
-        "Catatan otomatis tanpa batas",
+        "Chat AI dan pencarian web",
+        "Catatan AI, bab, dan mindmap",
         "Kolaborasi real-time dengan teman",
         "Akses fitur baru lebih dulu",
       ],
       berlangganan: "Berlangganan Pro",
       pembayaran:
-        "Pembayaran aman via Pakasir — QRIS, e-wallet, VA. Aktif otomatis setelah terverifikasi.",
+        "Pembayaran aman via Mayar — QRIS, e-wallet, VA. Aktif otomatis setelah terverifikasi.",
     },
     // ── Landing FAQ ───────────────────────────────────────
     faq: {
@@ -196,7 +196,7 @@ export const dictionaries = {
         },
         {
           q: "Apakah Eureka.AI gratis?",
-          a: "Ya. Paket Gratis tersedia selamanya: chat AI dengan batas harian, 3 catatan otomatis per bulan, serta kuis dan kartu hafalan dasar. Upgrade ke Pro (Rp 15.000/bulan) untuk akses tanpa batas.",
+          a: "Pendaftaran akun gratis. Fitur belajar seperti chat AI, catatan, bab, kuis, flashcard, dan panggilan suara memerlukan Eureka Pro seharga Rp 15.000 untuk 30 hari.",
         },
         {
           q: "Bagaimana cara membuat catatan otomatis?",
@@ -212,7 +212,7 @@ export const dictionaries = {
         },
         {
           q: "Aplikasi belajar AI gratis di Indonesia apa?",
-          a: "Eureka.AI adalah aplikasi belajar AI gratis untuk pelajar Indonesia. Tanpa biaya, kamu bisa chat dengan AI tutor, membuat 3 catatan otomatis per bulan, dan mengerjakan kuis. Cukup daftar dengan email atau Google — tanpa kartu kredit.",
+          a: "Eureka.AI menyediakan akun gratis untuk pelajar Indonesia. Chat AI, pembuatan catatan, kuis, dan flashcard tersedia di paket Pro Rp 15.000 untuk 30 hari.",
         },
         {
           q: "Bisakah Eureka.AI membuat rangkuman dari YouTube?",
@@ -245,7 +245,7 @@ export const dictionaries = {
       alreadyPro: "Kamu Sudah Pro!",
       upgrade: "Tingkatkan ke Pro",
       subtitle:
-        "Harga Eureka.AI — AI Tutor Socratic untuk pelajar Indonesia. Mulai gratis selamanya, upgrade Pro untuk belajar tanpa batas.",
+        "Eureka Pro Rp 15.000 untuk 30 hari. Akses chat AI, catatan, bab, mindmap, kuis, dan flashcard.",
       activeUntil: "Langganan aktif —",
       until: "hingga",
       hello: "Halo",
@@ -255,7 +255,7 @@ export const dictionaries = {
       proActiveDesc:
         "Semua fitur Pro sudah terbuka. Terima kasih sudah berlangganan!",
       topUp: "Top Up Pro (Perpanjang 30 Hari)",
-      toPakar: "Ke Pakasir…",
+      toPakar: "Ke Mayar…",
       refreshStatus: "Muat ulang status",
       backHome: "Kembali ke Home",
       cancelSubscription: "Batalkan Langganan",
@@ -283,7 +283,7 @@ export const dictionaries = {
       modelsNote:
         "Semua model bisa dipilih manual di Model Store; mode Kilat/Seimbang/Mendalam otomatis memilihkan yang terbaik untukmu.",
       payNote:
-        "Pembayaran aman via Pakasir — QRIS, e-wallet, VA. Status premium aktif otomatis setelah pembayaran terverifikasi.",
+        "Pembayaran aman via Mayar — QRIS, e-wallet, VA. Status premium aktif otomatis setelah pembayaran terverifikasi.",
       later: "Nanti aja",
       purchaseHistory: "Riwayat Pembelian",
       loadingHistory: "Memuat riwayat...",
@@ -914,23 +914,23 @@ export const dictionaries = {
       gratis: "Free",
       perBulan: "/month",
       gratisFeatures: [
-        "Socratic AI chat (daily limit)",
-        "3 auto-generated notes per month",
-        "Basic quizzes & flashcards",
-        "Streaks, XP & leaderboard",
+        "Personal account and profile",
+        "Explore Pro benefits and pricing",
+        "Upgrade whenever you are ready",
+        "Account and security settings",
       ],
       terpopuler: "Most popular",
       pro: "Pro",
       proFeatures: [
         "Everything in Free",
-        "Unlimited AI chat",
-        "Unlimited auto-generated notes",
+        "AI chat and web search",
+        "AI notes, chapters, and mindmaps",
         "Real-time collaboration with friends",
         "Early access to new features",
       ],
       berlangganan: "Subscribe to Pro",
       pembayaran:
-        "Secure payments via Pakasir — QRIS, e-wallet, VA. Auto-activated after verification.",
+        "Secure payments via Mayar — QRIS, e-wallet, VA. Auto-activated after verification.",
     },
     faq: {
       label: "FAQ",
@@ -942,7 +942,7 @@ export const dictionaries = {
         },
         {
           q: "Is Eureka.AI free?",
-          a: "Yes. The Free plan lasts forever: AI chat with a daily limit, 3 auto-generated notes per month, plus basic quizzes and flashcards. Upgrade to Pro (Rp 15.000/month) for unlimited access.",
+          a: "Account registration is free. Study features including AI chat, notes, chapters, quizzes, flashcards, and voice calls require Eureka Pro at Rp 15.000 for 30 days.",
         },
         {
           q: "How do I create auto-generated notes?",
@@ -958,7 +958,7 @@ export const dictionaries = {
         },
         {
           q: "What free AI learning app is available in Indonesia?",
-          a: "Eureka.AI is a free AI learning app for Indonesian students. At no cost you can chat with an AI tutor, create 3 auto-generated notes per month, and take quizzes. Just sign up with email or Google — no credit card.",
+          a: "Eureka.AI offers free account registration for Indonesian students. AI chat, notes, quizzes, and flashcards are included in Pro at Rp 15.000 for 30 days.",
         },
         {
           q: "Can Eureka.AI summarize YouTube videos?",
@@ -989,7 +989,7 @@ export const dictionaries = {
       alreadyPro: "You're Already Pro!",
       upgrade: "Upgrade to Pro",
       subtitle:
-        "Eureka.AI pricing — Socratic AI Tutor for Indonesian students. Start free forever, upgrade to Pro for unlimited learning.",
+        "Eureka Pro at Rp 15.000 for 30 days. Access AI chat, notes, chapters, mindmaps, quizzes, and flashcards.",
       activeUntil: "Subscription active —",
       until: "until",
       hello: "Hi",
@@ -1000,7 +1000,7 @@ export const dictionaries = {
       proActiveDesc:
         "All Pro features are unlocked. Thanks for subscribing!",
       topUp: "Top Up Pro (Renew 30 Days)",
-      toPakar: "To Pakasir…",
+      toPakar: "To Mayar…",
       refreshStatus: "Refresh status",
       backHome: "Back to Home",
       cancelSubscription: "Cancel Subscription",
@@ -1028,7 +1028,7 @@ export const dictionaries = {
       modelsNote:
         "Every model can be picked manually in the Model Store; Kilat/Seimbang/Mendalam modes automatically choose the best one for you.",
       payNote:
-        "Secure payments via Pakasir — QRIS, e-wallet, VA. Premium activates automatically after payment is verified.",
+        "Secure payments via Mayar — QRIS, e-wallet, VA. Premium activates automatically after payment is verified.",
       later: "Maybe later",
       purchaseHistory: "Purchase History",
       loadingHistory: "Loading history...",

@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { buildNotePdfBuffer } from "@/lib/notePdf";
 import { recordActivity } from "@/lib/progress-store";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -24,7 +24,7 @@ export async function GET(
     const userId = String(req.nextUrl.searchParams.get("userId") ?? "").trim();
 
     // Wajib login; userId dari query harus cocok dengan token sesi.
-    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    const auth = await requirePro(req.headers.get("authorization"), userId);
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

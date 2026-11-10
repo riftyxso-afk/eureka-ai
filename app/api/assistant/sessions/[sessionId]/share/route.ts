@@ -5,7 +5,7 @@ import {
   getMessages,
   getSession,
 } from "@/lib/assistant/store";
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -29,7 +29,7 @@ export async function POST(
         { status: 400 }
       );
     }
-    const auth = await authorizeAssistantUser(
+    const auth = await requirePro(
       req.headers.get("authorization"),
       rawUserId
     );

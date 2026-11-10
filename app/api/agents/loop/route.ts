@@ -17,7 +17,7 @@
  */
 import { NextRequest } from "next/server";
 
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { getProfileMd } from "@/lib/profile";
 
 import {
@@ -129,8 +129,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Verifikasi token wajib & cocok dengan userId body (pola requireAuth existing).
-  const auth = await requireAuth(req.headers.get("authorization"), bodyUserId);
+  // Verifikasi token wajib & cocok dengan userId body (pola requirePro existing).
+  const auth = await requirePro(req.headers.get("authorization"), bodyUserId);
   if (auth.error || !auth.userId) {
     return respondJson({ error: auth.error ?? "Tidak terautentikasi." }, auth.status ?? 401);
   }

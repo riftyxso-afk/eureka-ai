@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
     const userId = auth.userId;
 
-    const [userRes, historyRes] = await Promise.all([
+    const [userRes, historyRes, mayarRes] = await Promise.all([
       db()
         .from("users")
         .select(
@@ -51,10 +51,14 @@ export async function GET(req: NextRequest) {
         .select("order_id, amount, tier, status, paid_at, created_at")
         .eq("user_id", userId)
         .order("created_at", { ascending: false }),
+      db().from("mayar_payment_requests")
+        .select("order_id, mayar_id, amount, tier, status, paid_at, created_at")
+        .eq("user_id", userId).order("created_at", { ascending: false }),
     ]);
 
     if (userRes.error) throw userRes.error;
     if (historyRes.error) throw historyRes.error;
+    if (mayarRes.error) throw mayarRes.error;
 
     const user = userRes.data as
       | {
@@ -66,8 +70,12 @@ export async function GET(req: NextRequest) {
         }
       | null;
 
-    const history = (historyRes.data ?? []).map((h) => ({
+    const history = [
+      ...(historyRes.data ?? []).map(row => ({ ...row, provider: "pakasir" as const })),
+      ...(mayarRes.data ?? []).map(row => ({ ...row, provider: "mayar" as const })),
+    ].sort((a, b) => b.created_at.localeCompare(a.created_at)).map((h) => ({
       orderId: h.order_id,
+      provider: h.provider,
       amount: Number(h.amount) || 0,
       tier: TIER_LABEL[String(h.tier ?? "")] ?? String(h.tier ?? "normal"),
       status: h.status,

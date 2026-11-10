@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { embedTexts } from "@/lib/rag/embed";
 import { searchChunks } from "@/lib/rag/store";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     // Wajib login; userId dari body harus cocok dengan token sesi — RAG
     // hanya boleh berjalan atas data milik pemilik sesi.
-    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    const auth = await requirePro(req.headers.get("authorization"), userId);
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

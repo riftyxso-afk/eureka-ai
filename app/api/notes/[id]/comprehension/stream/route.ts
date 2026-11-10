@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { TextEncoder } from "util";
 
 import { getNoteWithChunks } from "@/lib/rag/store";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { aiChatStream, extractJsonObject, hasAiKey } from "@/lib/ai";
 import {
   buildComprehensionPrompt,
@@ -44,7 +44,7 @@ export async function POST(
           userId?: unknown;
         } | null;
         const userId = String(body?.userId ?? "").trim().slice(0, 80);
-        const auth = await requireAuth(
+        const auth = await requirePro(
           req.headers.get("authorization"),
           userId
         );

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
 import { aiChatJson, aiChatStream, extractJsonObject } from "@/lib/ai";
 import { mindmapBranch, type MindmapBranch } from "@/lib/mindmapStream";
@@ -9,7 +9,7 @@ import type { NoteChapter } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 180;
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth(request.headers.get("authorization"));
+  const auth = await requirePro(request.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const { id } = await params;
   const { data, error } = await db().from("notes").select("title,chapters").eq("id", id).eq("user_id", auth.userId).maybeSingle();

@@ -5,7 +5,7 @@ import { aiChat, hasAiKey } from "@/lib/ai";
 import { db } from "@/lib/supabase/admin";
 import { getProfileMd } from "@/lib/profile";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { languageFromRequest } from "@/lib/locale";
 
 export const runtime = "nodejs";
@@ -45,7 +45,7 @@ export async function POST(
 
     // Wajib login; userId dari body harus cocok dengan token sesi.
     const userId = String(body?.userId ?? "").trim();
-    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    const auth = await requirePro(req.headers.get("authorization"), userId);
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

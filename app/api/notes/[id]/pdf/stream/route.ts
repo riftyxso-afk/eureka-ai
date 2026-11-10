@@ -34,7 +34,7 @@ import {
 import { recordActivity } from "@/lib/progress-store";
 import { acquirePdfSlot, releasePdfSlot } from "@/lib/jobQueue";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,7 +129,7 @@ export async function GET(
     const token = req.nextUrl.searchParams.get("token") ?? "";
     if (token) authHeader = `Bearer ${token}`;
   }
-  const auth = await requireAuth(authHeader, userId);
+  const auth = await requirePro(authHeader, userId);
   if (auth.error) {
     return Response.json({ error: auth.error }, { status: auth.status ?? 401 });
   }

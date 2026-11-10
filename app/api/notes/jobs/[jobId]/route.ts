@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { cancelJob, getJob } from "@/lib/jobQueue";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requireAuth, requirePro } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export async function GET(
     const { jobId } = await params;
 
     // Wajib login; job hanya boleh dibaca pemiliknya.
-    const auth = await requireAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

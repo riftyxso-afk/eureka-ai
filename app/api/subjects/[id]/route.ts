@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { deleteSubject } from "@/lib/subjects-store";
-import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -10,11 +10,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
+    const userId = auth.userId;
     if (!userId) {
       return NextResponse.json(
-        { error: "Autentikasi diperlukan." },
-        { status: 401 }
+        { error: auth.error },
+        { status: auth.status ?? 401 }
       );
     }
     const { id } = await params;

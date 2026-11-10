@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { getSubjects } from "@/lib/subjects-store";
 import { db } from "@/lib/supabase/admin";
@@ -12,7 +12,7 @@ const normalize = (value: string) => value.normalize("NFKC").trim().toLocaleLowe
 const publicCards = (cards: SavedCard[]) => cards.map(({ id, front, back }) => ({ id, front, back }));
 
 async function authorize(req: NextRequest, context: Context, noteId: unknown) {
-  const auth = await requireAuth(req.headers.get("authorization"));
+  const auth = await requirePro(req.headers.get("authorization"));
   if ("error" in auth) return { response: NextResponse.json({ error: auth.error }, { status: auth.status }) };
   if (typeof noteId !== "string" || !noteId.trim() || noteId.length > 100) {
     return { response: NextResponse.json({ error: "Catatan tidak valid." }, { status: 400 }) };

@@ -31,7 +31,9 @@ export default function AuthGuard({ children, hideLoader = false }: { children: 
       }
       if (cancelled) return;
       if (!isLoggedIn()) {
-        router.replace("/login");
+        const current = new URL(window.location.href);
+        const mayarReturn = current.searchParams.get("upgrade") === "mayar";
+        router.replace(mayarReturn ? `/login?next=${encodeURIComponent(current.pathname + current.search)}` : "/login");
         return;
       }
       

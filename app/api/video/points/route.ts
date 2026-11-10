@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { hasAiKey } from "@/lib/ai";
 import {
-  authorizeAssistantUser,
-  isBetaTester,
+  requirePro,
 } from "@/lib/assistant/auth";
 import { extractYoutubeVideoId } from "@/lib/assistant/videoUrl";
 import { languageFromRequest } from "@/lib/locale";
@@ -39,7 +38,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const auth = await authorizeAssistantUser(
+    const auth = await requirePro(
       req.headers.get("authorization"),
       rawUserId
     );
@@ -51,12 +50,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Fitur video hanya untuk beta tester (akses lewat /join).
-    if (!(await isBetaTester(auth.userId))) {
-      return NextResponse.json(
-        { error: "Fitur ini khusus beta tester. Gabung lewat /join dulu ya." },
-        { status: 403 }
-      );
-    }
 
     // Cache hit → langsung tanpa rate limit & tanpa AI (murni baca memori).
     const videoId = extractYoutubeVideoId(url);

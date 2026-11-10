@@ -1,5 +1,5 @@
 import { elevenLabsFetch, hasElevenLabsKey } from "@/lib/audio/elevenlabs";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
 
@@ -83,7 +83,7 @@ ${AI_SAFETY_GUARDRAIL}` }] },
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth(request.headers.get("authorization"));
+  const auth = await requirePro(request.headers.get("authorization"));
   if (!auth.userId) return Response.json({ error: auth.error }, { status: auth.status ?? 401 });
 
   ensureRateLimitPrune();

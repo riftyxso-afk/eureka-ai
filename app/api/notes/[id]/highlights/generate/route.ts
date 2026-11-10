@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import {
   generateHighlightsForChapters,
   type AiHighlightEvent,
@@ -40,7 +40,7 @@ export async function POST(
       };
 
       try {
-        const auth = await requireAuth(req.headers.get("authorization"));
+        const auth = await requirePro(req.headers.get("authorization"));
         if ("error" in auth) {
           send({ type: "error", error: auth.error });
           controller.close();

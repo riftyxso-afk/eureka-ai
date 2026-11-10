@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "./apiClient";
 import { getUserId } from "./identity";
 import { syncAuthSession, isLoggedIn } from "./auth";
+export const PREMIUM_UPDATED_EVENT = "eureka-premium-updated";
 
 export interface PremiumStatus {
   isPremium: boolean;
@@ -83,8 +84,13 @@ export function usePremium() {
   useEffect(() => {
     mounted.current = true;
     void refresh();
+    const onUpdate = () => { void refresh(); };
+    window.addEventListener(PREMIUM_UPDATED_EVENT, onUpdate);
+    window.addEventListener("focus", onUpdate);
     return () => {
       mounted.current = false;
+      window.removeEventListener(PREMIUM_UPDATED_EVENT, onUpdate);
+      window.removeEventListener("focus", onUpdate);
     };
   }, [refresh]);
 

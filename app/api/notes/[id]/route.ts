@@ -5,7 +5,7 @@ import {
   getNoteWithChunks,
   updateNote,
 } from "@/lib/rag/store";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requireAuth, requirePro } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
 import { aiChatStream, hasAiKey } from "@/lib/ai";
 import type { NoteChapter } from "@/lib/types";
@@ -13,7 +13,7 @@ import type { NoteChapter } from "@/lib/types";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth(req.headers.get("authorization"));
+  const auth = await requirePro(req.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const { id } = await params;
   const body = await req.json().catch(() => null);
@@ -86,7 +86,7 @@ export async function GET(
     const { id } = await params;
 
     // Wajib login; kepemilikan dicek di bawah.
-    const auth = await requireAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -143,7 +143,7 @@ export async function PATCH(
     const { id } = await params;
 
     // Wajib login; kepemilikan dicek sebelum update.
-    const auth = await requireAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

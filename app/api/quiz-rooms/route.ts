@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { createRoom, QuizLiveError } from "@/lib/quizLive";
 
 export const runtime = "nodejs";
@@ -11,11 +11,12 @@ export const runtime = "nodejs";
  */
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
+    const userId = auth.userId;
     if (!userId) {
       return NextResponse.json(
         { error: "Autentikasi diperlukan. Silakan masuk ulang." },
-        { status: 401 }
+        { status: auth.status ?? 401 }
       );
     }
 

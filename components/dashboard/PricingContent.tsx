@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronDown, CreditCard, Gift, History, Loader2, Printer } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, CreditCard, History, Loader2, Printer } from "lucide-react";
 import { toast } from "@yusufceng1z/ding-react";
 import ThemeSwitch from "@/components/ui/ThemeSwitch";
 import SlideToConfirm from "@/components/ui/SlideToConfirm";
@@ -15,6 +15,7 @@ import { getUserId } from "@/lib/identity";
 import { isLoggedIn, syncAuthSession } from "@/lib/auth";
 import { useI18n } from "@/context/LocaleContext";
 import { captureProductEvent } from "@/lib/productAnalytics";
+import { isPaymentId } from "@/lib/paymentIds";
 import "@/app/pricing/pricing.css";
 
 const TIER_LABEL: Record<string, string> = {
@@ -24,6 +25,7 @@ const TIER_LABEL: Record<string, string> = {
 };
 
 interface PaymentHistoryItem {
+  provider?: "mayar" | "pakasir";
   orderId: string;
   amount: number;
   tier: string;
@@ -40,7 +42,9 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
   const { dict, locale } = useI18n();
   const p = dict.pricing;
   const pricingPath = v2 ? "/dashboard-v2/pricing" : "/pricing";
-  const PERKS = p.perks;
+  const PERKS = locale === "en"
+    ? ["AI chat and web search", "AI notes with chapters and mindmaps", "Quizzes, flashcards, and comprehension practice", "Voice calls with Momo and Lala", "Study planner and subject tools"]
+    : ["Chat AI dan pencarian web", "Catatan AI lengkap dengan bab dan mindmap", "Kuis, flashcard, dan latihan pemahaman", "Panggilan suara dengan Momo dan Lala", "Jadwal belajar dan pengelolaan mata pelajaran"];
   const en = locale === "en";
   const router = useRouter();
   const { isPremium, tier, premiumUntil, loading, refresh } = usePremium();
@@ -107,7 +111,6 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
   const checkoutLock = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [discountCode, setDiscountCode] = useState("");
-  const [claimingTrial, setClaimingTrial] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const cancelDialog = useRef<HTMLDialogElement>(null);
 
@@ -158,7 +161,7 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
   };
 
   const choosePlan = async () => {
-    if (checkoutLock.current || validating || claimingTrial || cancelling) return;
+    if (checkoutLock.current || validating || cancelling) return;
     checkoutLock.current = true;
     setError(null);
     setBusy(true);
@@ -188,20 +191,18 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
       });
       const body = (await res.json().catch(() => null)) as {
         link?: string;
-        activated?: boolean;
+        transactionId?: string;
         error?: string;
       } | null;
-      if (!res.ok || (!body?.link && !body?.activated)) {
+      if (!res.ok || !body?.link) {
         setError(body?.error ?? p.errPayment);
         return;
       }
       if (v2) captureProductEvent({ name: "v2_pro_checkout_started", properties: { surface: "pricing" } });
-      // Kode gratis 100% → sudah aktif langsung, tanpa diarahkan ke Pakasir.
-      if (body.activated) {
-        await refresh();
-        return;
+      if (isPaymentId(body.transactionId)) {
+        try { sessionStorage.setItem("eureka-pending-checkout", body.transactionId); } catch { /* Return URL also carries the order. */ }
       }
-      // Redirect ke halaman pembayaran Pakasir.
+      // Redirect ke halaman pembayaran Mayar.
       window.location.href = body.link as string;
       redirecting = true;
     } catch (e) {
@@ -214,42 +215,6 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
     }
   };
 
-  const claimTrial = async () => {
-    setError(null);
-    setClaimingTrial(true);
-    try {
-      // Wajib akun asli (sync sesi) — trial dicatat per akun di server.
-      await syncAuthSession().catch(() => undefined);
-      if (!isLoggedIn()) {
-        setError(p.errLoginTrial);
-        router.push(`/${locale}/login?next=${encodeURIComponent(`/${locale}${pricingPath}`)}`);
-        return;
-      }
-      const userId = getUserId();
-      if (!userId) {
-        setError(p.errLoginTrial);
-        return;
-      }
-      const res = await apiFetch("/api/payments/trial", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-      const body = (await res.json().catch(() => null)) as {
-        ok?: boolean;
-        error?: string;
-      } | null;
-      if (!res.ok || !body?.ok) {
-        setError(body?.error ?? p.errTrial);
-        return;
-      }
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : p.errTrial);
-    } finally {
-      setClaimingTrial(false);
-    }
-  };
 
   const cancelPlan = async () => {
     setError(null);
@@ -333,7 +298,7 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
   const basePrice = formatRupiah(TIER_PRICES.normal);
   const displayPrice = formatRupiah(appliedCode?.finalAmount ?? TIER_PRICES.normal);
   const paymentLabel = busy ? p.toPakar : en ? "Slide to continue" : "Geser untuk lanjut bayar";
-  const checkoutDisabled = busy || validating || claimingTrial || cancelling ||
+  const checkoutDisabled = busy || validating || cancelling ||
     (!!discountCode.trim() && !appliedCode);
 
   return (
@@ -346,7 +311,7 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
             "@type": "Product",
             name: "Eureka.AI Pro",
             description:
-              "AI Tutor Socratic untuk pelajar Indonesia: chat AI tanpa batas, catatan otomatis dari materi, kuis & kartu hafalan, dan kolaborasi real-time.",
+              "AI Tutor Socratic untuk pelajar Indonesia: chat AI dengan manfaat Pro, catatan otomatis dari materi, kuis & kartu hafalan, dan kolaborasi real-time.",
             brand: { "@type": "Brand", name: "Eureka.AI" },
             offers: {
               "@type": "AggregateOffer",
@@ -438,15 +403,12 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
               {error && <p className="pro-error" role="alert">{error}</p>}
               <SlideToConfirm label={paymentLabel} busy={busy} disabled={checkoutDisabled} onConfirm={() => void choosePlan()} />
               <button className="pro-alternative" type="button" disabled={checkoutDisabled} onClick={() => void choosePlan()}>{en ? "Continue without sliding" : "Lanjut tanpa menggeser"}</button>
-              {!isPremium && <button className="pro-trial" type="button" disabled={claimingTrial || busy} onClick={() => void claimTrial()}>
-                {claimingTrial ? <Loader2 className="animate-spin" size={17} /> : <Gift size={17} />} {claimingTrial ? p.activating : p.freeTrial7}
-              </button>}
             </>}
           </section>
         </section>
         {/* ── Riwayat Pembelian (semua status: premium & non-premium) ── */}
         {signedIn && (
-          <div className="pro-history">
+          <div className="pro-history" id="riwayat">
             <h2 className="flex items-center gap-2 text-lg font-extrabold text-clay-dark">
               <History size={20} className="text-clay-primary" />
               {p.purchaseHistory}
@@ -491,6 +453,10 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
                       >
                         {h.status === "paid" ? p.paid : p.unpaid}
                       </span>
+                      {h.provider === "mayar" && h.status !== "paid" && isPaymentId(h.orderId) && <Link
+                        className="pro-recheck-payment" href={`/dashboard-v2?upgrade=mayar&order=${h.orderId}`}>
+                        {en ? "Check payment" : "Cek pembayaran"}
+                      </Link>}
                       <button
                         onClick={() => void printInvoice(h.orderId)}
                         disabled={printingId === h.orderId}

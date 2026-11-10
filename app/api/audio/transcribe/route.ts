@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { transcribeRecording, TranscriptionError } from "@/lib/audio/transcribe";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const rawUserId = String(form.get("userId") ?? "").trim();
     const audio = form.get("audio");
 
-    const auth = await authorizeAssistantUser(
+    const auth = await requirePro(
       req.headers.get("authorization"),
       rawUserId
     );

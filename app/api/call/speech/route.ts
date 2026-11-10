@@ -1,12 +1,12 @@
 import { elevenLabsFetch, hasElevenLabsKey } from "@/lib/audio/elevenlabs";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth(request.headers.get("authorization"));
+  const auth = await requirePro(request.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const body = await request.json().catch(() => null);
   const text = typeof body?.text === "string" ? body.text.trim() : "";

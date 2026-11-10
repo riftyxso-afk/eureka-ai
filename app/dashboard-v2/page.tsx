@@ -34,6 +34,8 @@ import SpeechInput from "@/components/asisten/SpeechInput";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import CallIntroBanner from "@/components/dashboard/CallIntroBanner";
 import { apiFetch } from "@/lib/apiClient";
+import { usePremium } from "@/lib/usePremium";
+import { ProLockedCard } from "@/components/ProGate";
 import { getUserId } from "@/lib/identity";
 import { useV2Progress } from "@/components/dashboard/V2Progress";
 import { supabase } from "@/lib/supabase/client";
@@ -51,6 +53,7 @@ function sourceOf(note: Note) {
 }
 
 export default function DashboardV2() {
+  const { isPremium, loading: planLoading } = usePremium();
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -136,14 +139,16 @@ export default function DashboardV2() {
   useEffect(() => {
     const controller = new AbortController();
     setSubject(new URLSearchParams(window.location.search).get("subject") ?? "");
-    void load(controller.signal);
+    if (!planLoading && isPremium) void load(controller.signal);
+    else if (!planLoading) setLoading(false);
     const refresh = () => void load(controller.signal);
     window.addEventListener("note-ready", refresh);
     return () => { controller.abort(); window.removeEventListener("note-ready", refresh); };
-  }, [load]);
+  }, [load, planLoading, isPremium]);
   const shown = useMemo(() => notes.filter(note => (filter === "Semua" || sourceOf(note) === filter) && (!subject || note.subject === subject) && `${note.title} ${note.summary ?? ""}`.toLocaleLowerCase("id").includes(query.toLocaleLowerCase("id"))).sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.createdAt.localeCompare(a.createdAt)), [notes, query, subject, filter]);
   const prefs: NoteCreatePrefs = { generationMode: effort === "Mendalam" ? "lengkap" : "cepat", chapterCount: effort === "Kilat" ? 2 : effort === "Mendalam" ? 5 : 3, studyMode: effort === "Kilat" ? "ringkas" : effort === "Mendalam" ? "lengkap" : "standar", noteType: "rangkuman" };
   function submit(text: string) {
+    if (!isPremium) { router.push("/dashboard-v2/pricing"); return; }
     if (generation.busy || chatLock.current) return;
     if (mode === "ask") { void askMomo(text.trim()); return; }
     if (files.length) { setInputError(""); void generation.start(text.trim() || "Buat catatan dari materi terlampir", prefs, files); return; }
@@ -157,13 +162,14 @@ export default function DashboardV2() {
     <header className="dv2-topbar">
       <V2MobileSidebar desktop />
       <Link className="dv2-brand" href="/dashboard-v2"><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka! <span>V2 · Beta</span></Link>
-      <nav aria-label="Navigasi Dashboard V2" className="dv2-topnav"><Link href="/dashboard-v2#dv2-notes-title"><FolderOpen trigger="parent" size={16} />Catatan</Link><Link href="/dashboard-v2/tanya-momo"><MessageCircle trigger="parent" size={16} />Tanya Momo</Link></nav>
+      <nav aria-label="Navigasi Dashboard V2" className="dv2-topnav"><Link href={isPremium ? "/dashboard-v2#dv2-notes-title" : "/dashboard-v2/pricing"}><FolderOpen trigger="parent" size={16} />Catatan</Link><Link href="/dashboard-v2/tanya-momo"><MessageCircle trigger="parent" size={16} />Tanya Momo</Link></nav>
       <div className="dv2-account"><ThemeSwitch /><PageTutorial guideId="dashboard" /><Link href="/dashboard-v2/streaks" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard-v2/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/dashboard-v2/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
     </header>
     <main className="dv2-main">
       <section className="dv2-workspace" aria-labelledby="dv2-title">
         <div className="dv2-greeting"><div className="dv2-momo" data-momo-splash-target><MomoCompanion mode={effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal"} thinking={openingChat} question={draft} /></div><h1 id="dv2-title">Mau belajar apa hari ini?</h1></div>
-        <div className="dv2-compose-area">
+        <div className={`dv2-compose-area${!planLoading && !isPremium ? " is-pro-locked" : ""}`}>
+          {planLoading ? <p role="status">Memeriksa paket…</p> : !isPremium ? <ProLockedCard /> : <>
           {generation.job ? <PromptNoteProgress generation={generation} /> : <>
           {mode === "note" && files.length > 0 && <DocumentAttachments files={files} onRemove={removeAttachment} />}
           <div className="dv2-prompt">
@@ -196,16 +202,17 @@ export default function DashboardV2() {
         {inputError && <p className="dv2-error" role="alert">{inputError}</p>}
         {openingChat && <p className="dv2-chat-opening" role="status">Membuka percakapan…</p>}
         </>}
+        </>}
         </div>
 
       </section>
-      <section className="dv2-library" aria-labelledby="dv2-notes-title"><div className="dv2-library-heading"><div><h2 id="dv2-notes-title">Catatanmu <span>{notes.length}</span></h2><p>Simpan rasa ingin tahu. Lanjutkan kapan saja.</p></div><button className="dv2-button" onClick={() => fileInput.current?.click()}><Plus trigger="parent" size={16} />Tambah materi</button></div>
+      {isPremium && <section className="dv2-library" aria-labelledby="dv2-notes-title"><div className="dv2-library-heading"><div><h2 id="dv2-notes-title">Catatanmu <span>{notes.length}</span></h2><p>Simpan rasa ingin tahu. Lanjutkan kapan saja.</p></div><button className="dv2-button" onClick={() => isPremium ? fileInput.current?.click() : router.push("/dashboard-v2/pricing")}><Plus trigger="parent" size={16} />Tambah materi</button></div>
         <div className="dv2-library-tools"><div className="dv2-toolbar"><label className="dv2-search"><Search trigger="parent" size={16} /><input aria-label="Cari catatan" placeholder="Cari judul atau isi catatan…" value={query} onChange={event => setQuery(event.target.value)} /></label><select aria-label="Filter mata pelajaran" value={subject} onChange={event => setSubject(event.target.value)}><option value="">Semua mata pelajaran</option>{[...new Set(notes.map(note => note.subject))].sort().map(value => <option key={value}>{value}</option>)}</select><div className="dv2-view" role="group" aria-label="Tampilan catatan"><button aria-label="Galeri" aria-pressed={view === "grid"} onClick={() => setView("grid")}><Grid2X2 trigger="parent" size={17} /></button><button aria-label="Daftar" aria-pressed={view === "list"} onClick={() => setView("list")}><List trigger="parent" size={18} /></button></div></div>
         <div className="dv2-filters" role="group" aria-label="Jenis sumber">{FILTERS.map(value => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value}</button>)}<button onClick={() => void load()} aria-label="Muat ulang catatan"><RefreshCw trigger="parent" size={15} /></button></div>
-        </div>{loading ? <div className="dv2-note-grid" role="status" aria-label="Memuat catatan">{[1, 2, 3].map(id => <div className="dv2-skeleton" key={id} />)}</div> : loadError ? <div className="dv2-empty" role="alert"><History trigger="parent" size={28} /><h3>Catatan belum bisa dimuat</h3><p>{loadError}</p><button className="dv2-button" onClick={() => void load()}>Coba lagi</button></div> : shown.length === 0 ? <div className="dv2-empty"><BookOpen trigger="parent" size={32} /><h3>{notes.length ? "Belum ada catatan yang cocok" : "Catatan pertamamu dimulai dari sebuah ide"}</h3><p>{notes.length ? "Coba kata kunci atau filter lain." : "Tulis topik di atas, tempel tautan, atau unggah materi untuk mulai belajar."}</p>{notes.length > 0 && <button className="dv2-button" onClick={() => { setQuery(""); setFilter("Semua"); setSubject(""); }}>Reset filter</button>}</div> : <div className={`dv2-note-grid ${view === "list" ? "is-list" : ""}`}>{shown.map(note => <Link className="dv2-note" key={note.id} href={`/dashboard-v2/note/${encodeURIComponent(note.id)}`}><div className="dv2-note-preview"><span className="dv2-note-type"><FileText trigger="parent" size={13} />{sourceOf(note)}</span><h3>{note.title}</h3><p>{note.summary || "Buka catatan untuk membaca materi dan bab selengkapnya."}</p></div><div className="dv2-note-info"><strong>{note.title}</strong><span>{new Date(note.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}{note.pinned ? " · Disematkan" : ""}<ArrowRight trigger="parent" size={16} /></span></div></Link>)}</div>}
-      </section>
+        </div>{!planLoading && !isPremium ? <p className="dv2-empty">Tes pemahaman, catatan, dan bab tersedia di <Link href="/dashboard-v2/pricing">Eureka Pro</Link>.</p> : loading ? <div className="dv2-note-grid" role="status" aria-label="Memuat catatan">{[1, 2, 3].map(id => <div className="dv2-skeleton" key={id} />)}</div> : loadError ? <div className="dv2-empty" role="alert"><History trigger="parent" size={28} /><h3>Catatan belum bisa dimuat</h3><p>{loadError}</p><button className="dv2-button" onClick={() => void load()}>Coba lagi</button></div> : shown.length === 0 ? <div className="dv2-empty"><BookOpen trigger="parent" size={32} /><h3>{notes.length ? "Belum ada catatan yang cocok" : "Catatan pertamamu dimulai dari sebuah ide"}</h3><p>{notes.length ? "Coba kata kunci atau filter lain." : "Tulis topik di atas, tempel tautan, atau unggah materi untuk mulai belajar."}</p>{notes.length > 0 && <button className="dv2-button" onClick={() => { setQuery(""); setFilter("Semua"); setSubject(""); }}>Reset filter</button>}</div> : <div className={`dv2-note-grid ${view === "list" ? "is-list" : ""}`}>{shown.map(note => <Link className="dv2-note" key={note.id} href={`/dashboard-v2/note/${encodeURIComponent(note.id)}`}><div className="dv2-note-preview"><span className="dv2-note-type"><FileText trigger="parent" size={13} />{sourceOf(note)}</span><h3>{note.title}</h3><p>{note.summary || "Buka catatan untuk membaca materi dan bab selengkapnya."}</p></div><div className="dv2-note-info"><strong>{note.title}</strong><span>{new Date(note.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}{note.pinned ? " · Disematkan" : ""}<ArrowRight trigger="parent" size={16} /></span></div></Link>)}</div>}
+      </section>}
     </main>
-    <CallIntroBanner paused={Boolean(callOpen || openingChat || generation.busy)} onTry={() => setCallOpen("chat")} />
+    {isPremium && <CallIntroBanner paused={Boolean(callOpen || openingChat || generation.busy)} onTry={() => setCallOpen("chat")} />}
     <AiCallModal open={callOpen !== null} chat={callOpen === "chat"} onClose={() => setCallOpen(null)} />
     <input ref={fileInput} className="sr-only" type="file" multiple aria-label="Lampirkan materi belajar" accept=".pdf,.doc,.docx,.ppt,.pptx,.xlsx,.xls,.csv,.txt,.md,.rtf,.odt,.mp3,.wav,.m4a,.ogg,.flac,.aac,.mp4,.webm,.mov" onChange={event => { attach(event.target.files); event.target.value = ""; }} />
   </div>;

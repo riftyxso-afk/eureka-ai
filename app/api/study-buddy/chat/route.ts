@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { BuddyCharacter, ChatMessage } from '@/lib/study-buddy/buddyTypes';
 import { BUDDY_TEMPLATES } from '@/lib/study-buddy/buddyTemplates';
-import { requireAuth } from '@/lib/assistant/auth';
+import { requirePro } from '@/lib/assistant/auth';
 import { languageFromRequest } from '@/lib/locale';
 import { AI_SAFETY_GUARDRAIL } from '@/lib/prompts/safety';
 import { aiChatJson, extractJsonObject, hasAiKey } from '@/lib/ai';
@@ -187,7 +187,7 @@ function answerQuiz(
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

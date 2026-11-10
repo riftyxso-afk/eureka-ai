@@ -8,12 +8,14 @@ const source = ts.transpileModule(readFileSync(new URL("../lib/assistant/auth.ts
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 
-function authFor(environment, configured = false) {
+function authFor(environment, configured = false, premium = false) {
   const exports = {};
   runInNewContext(source, {
     exports,
     process: { env: { NODE_ENV: environment, ALLOW_INSECURE_DEV_AUTH: "true" } },
-    require: () => ({
+    require: name => name === "../premium" ? {
+      getPremiumStatus: async () => ({ isPremium: premium }),
+    } : ({
       isSupabaseConfigured: () => configured,
       db: () => ({
         auth: {
@@ -24,7 +26,7 @@ function authFor(environment, configured = false) {
       }),
     }),
   });
-  return exports.requireAuth;
+  return Object.assign(exports.requireAuth, { requirePro: exports.requirePro });
 }
 
 test("insecure fallback requires development even when explicitly enabled", async () => {
@@ -39,4 +41,13 @@ test("configured authentication uses the verified user and rejects invalid or mi
   assert.equal((await requireAuth("Bearer invalid", "owner")).status, 401);
   assert.equal((await requireAuth("Bearer valid", "another-user")).status, 403);
   assert.equal((await requireAuth("Bearer valid", "owner")).userId, "owner");
+});
+
+test("Pro entitlement cannot replace authentication and cannot be borrowed with a supplied user ID", async () => {
+  const free = authFor("production", true).requirePro;
+  assert.equal((await free("Bearer valid", "owner")).status, 402);
+  assert.equal((await free(null, "owner")).status, 401);
+  const pro = authFor("production", true, true).requirePro;
+  assert.equal((await pro("Bearer valid", "another-user")).status, 403);
+  assert.equal((await pro("Bearer valid", "owner")).userId, "owner");
 });

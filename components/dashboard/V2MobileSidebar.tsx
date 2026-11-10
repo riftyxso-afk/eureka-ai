@@ -25,6 +25,7 @@ import Grid from "kubai-icons-react/icons/grid";
 import Flame from "kubai-icons-react/icons/flame";
 import Crown from "kubai-icons-react/icons/crown";
 import User from "kubai-icons-react/icons/user";
+import { usePremium } from "@/lib/usePremium";
 
 const BASE = "/dashboard-v2";
 const navigationIcons = [Grid, NotebookPen, MessageCircle, BookOpen, Trophy, CalendarDays, GraduationCap, Flame, User, Crown];
@@ -52,6 +53,7 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
   sessions?: readonly AssistantChatSession[];
 }) {
   const id = useId();
+  const { isPremium, loading: planLoading } = usePremium();
   const pathname = usePathname().replace(/^\/(id|en)(?=\/)/, "");
   const dialog = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState("");
@@ -109,11 +111,13 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
           <section className="v2-drawer-group" key={group.label} aria-label={group.label}>
             <p className="v2-drawer-label">{group.label}</p>
             {group.items.map(item => {
+              const locked = !planLoading && !isPremium && navigation.indexOf(item) >= 1 && navigation.indexOf(item) <= 6;
               const Icon = navigationIcons[navigation.indexOf(item)];
               const active = item.href === BASE ? pathname === BASE
                 : !item.href.includes("#") && (pathname === item.href || pathname.startsWith(item.href + "/"));
               return <Link key={item.href} href={item.href} onClick={follow} aria-current={active ? "page" : undefined}>
                 <span className="v2-menu-art" aria-hidden="true"><Icon size="100%" trigger="parent" color={item.image === 0 || item.image === 8 ? "#e9b13b" : item.image === 6 ? "#f18d5c" : "#8253d4"} /></span><span>{item.label}</span>
+                {locked && <span className="v2-drawer-pro">Pro</span>}
                 {active && <span className="v2-drawer-active-dot" aria-hidden="true" />}
               </Link>;
             })}

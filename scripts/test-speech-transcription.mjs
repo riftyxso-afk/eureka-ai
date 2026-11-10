@@ -85,7 +85,7 @@ function route({ auth = { userId: "ordinary-user" }, limited = false } = {}) {
   let language;
   const provider = load("lib/audio/transcribe.ts", {});
   const { POST } = load("app/api/audio/transcribe/route.ts", {
-    "@/lib/assistant/auth": { authorizeAssistantUser: async () => auth },
+    "@/lib/assistant/auth": { requirePro: async () => auth },
     "@/lib/audio/transcribe": { ...provider, transcribeRecording: async (_audio, _filename, selectedLanguage) => {
       calls++;
       language = selectedLanguage;
@@ -104,7 +104,7 @@ function request(audio = new Blob(["audio"], { type: "audio/webm" }), locale) {
   });
 }
 
-test("An ordinary signed-in account can transcribe without a beta or Pro flag", async () => {
+test("A Pro account can transcribe without a beta flag", async () => {
   const handler = route();
   const result = await handler.POST(request());
   assert.equal(result.status, 200);
@@ -284,7 +284,7 @@ test("Lala only issues a model-bound single-use token to authenticated callers",
   const dependencies = {
     "@/lib/audio/elevenlabs": { hasElevenLabsKey: () => false },
     "@/lib/assistant/auth": {
-      requireAuth: async authorization => authorization ? { userId: "ordinary-user" } : { status: 401 },
+      requirePro: async authorization => authorization ? { userId: "ordinary-user" } : { status: 401 },
     },
     "@/lib/rateLimit": { ensureRateLimitPrune() {}, checkRateLimit: () => ({ ok: true }) },
     "@/lib/prompts/safety": { AI_SAFETY_GUARDRAIL: "Safety policy" },
@@ -371,7 +371,7 @@ test("Voice searches for news without a freshness keyword and waits for evidence
     },
     "@/lib/serverAnalytics": { captureServerEvent: async () => {} },
     "@/lib/after": { runAfter() {} },
-    "@/lib/assistant/auth": { requireAuth: async () => ({ userId: "ordinary-user" }) },
+    "@/lib/assistant/auth": { requirePro: async () => ({ userId: "ordinary-user" }) },
     "@/lib/prompts/safety": { AI_SAFETY_GUARDRAIL: "" },
     "@/lib/prompts/momoPersona": { momoPersona: () => "" },
     "@/lib/rateLimit": { ensureRateLimitPrune() {}, checkRateLimit: () => ({ ok: true }) },
@@ -412,7 +412,7 @@ test("Speech starts on the first streamed sentence before the AI finishes", asyn
     },
     "@/lib/serverAnalytics": { captureServerEvent: async () => {} },
     "@/lib/after": { runAfter() {} },
-    "@/lib/assistant/auth": { requireAuth: async () => ({ userId: "ordinary-user" }) },
+    "@/lib/assistant/auth": { requirePro: async () => ({ userId: "ordinary-user" }) },
     "@/lib/prompts/safety": { AI_SAFETY_GUARDRAIL: "" },
     "@/lib/prompts/momoPersona": { momoPersona: () => "" },
     "@/lib/rateLimit": { ensureRateLimitPrune() {}, checkRateLimit: () => ({ ok: true }) },

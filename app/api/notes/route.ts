@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getNoteWithChunks, listNotes, saveNoteWithChunks } from "@/lib/rag/store";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { randomUUID } from "node:crypto";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
     if (!auth.userId) return NextResponse.json({ error: auth.error }, { status: auth.status ?? 401 });
     const body = await req.json().catch(() => null);
     const title = typeof body?.title === "string" ? body.title.trim() : "";
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const userId = String(req.nextUrl.searchParams.get("userId") ?? "").trim();
-    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    const auth = await requirePro(req.headers.get("authorization"), userId);
     if (!auth.userId) {
       return NextResponse.json({ error: auth.error }, { status: auth.status ?? 401 });
     }

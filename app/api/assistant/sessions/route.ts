@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createSession, listSessions } from "@/lib/assistant/store";
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const rawUserId = String(
       req.nextUrl.searchParams.get("userId") ?? ""
     ).trim();
-    const auth = await authorizeAssistantUser(
+    const auth = await requirePro(
       req.headers.get("authorization"),
       rawUserId
     );
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       userId?: string;
     } | null;
     const rawUserId = String(body?.userId ?? "").trim();
-    const auth = await authorizeAssistantUser(
+    const auth = await requirePro(
       req.headers.get("authorization"),
       rawUserId
     );

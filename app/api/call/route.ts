@@ -1,7 +1,7 @@
 import { aiChatStream, hasAiKey } from "@/lib/ai";
 import { captureServerEvent } from "@/lib/serverAnalytics";
 import { runAfter } from "@/lib/after";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
 import { momoPersona } from "@/lib/prompts/momoPersona";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
@@ -68,7 +68,7 @@ function readHistory(value: unknown): Turn[] {
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const auth = await requireAuth(request.headers.get("authorization"), typeof body?.userId === "string" ? body.userId.trim() : undefined);
+  const auth = await requirePro(request.headers.get("authorization"), typeof body?.userId === "string" ? body.userId.trim() : undefined);
   if (!auth.userId) return Response.json({ error: auth.error }, { status: auth.status ?? 401 });
 
   const question = typeof body?.question === "string" ? body.question.trim().slice(0, 2000) : "";

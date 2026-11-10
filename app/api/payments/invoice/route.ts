@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
+import { isPaymentId } from "@/lib/paymentIds";
 import { buildInvoicePdfBuffer } from "@/lib/invoicePdf";
 
 export const runtime = "nodejs";
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
   try {
     // Ambil order dari pakasir_payment_requests
     const { data: order, error: orderErr } = await db()
-      .from("pakasir_payment_requests")
+      .from(isPaymentId(orderId) ? "mayar_payment_requests" : "pakasir_payment_requests")
       .select("order_id, amount, tier, status, paid_at, created_at")
       .eq("order_id", orderId)
       .eq("user_id", userId)

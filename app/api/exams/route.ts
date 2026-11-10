@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { addExam, deleteExam, listExams } from "@/lib/exams-store";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       );
     }
     // Wajib login; userId dari query harus cocok dengan token sesi.
-    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    const auth = await requirePro(req.headers.get("authorization"), userId);
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       );
     }
     // Wajib login; userId dari body harus cocok dengan token sesi.
-    const auth = await requireAuth(req.headers.get("authorization"), userId);
+    const auth = await requirePro(req.headers.get("authorization"), userId);
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

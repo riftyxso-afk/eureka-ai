@@ -138,3 +138,13 @@ html:has(.v2-mobile-drawer[open]) { overflow: hidden; }
     border-end-start-radius: 7px;
   }
 }
+.v2-drawer-pro {
+  margin-left: auto;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 800;
+  background: rgb(var(--clay-primary) / .12);
+  color: rgb(var(--clay-primary));
+}

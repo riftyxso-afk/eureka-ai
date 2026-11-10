@@ -8,7 +8,7 @@ import {
   updateArtifactMessage,
 } from "@/lib/assistant/store";
 import { editMessageArtifact } from "@/lib/assistant/artifacts";
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 
@@ -21,7 +21,7 @@ export async function GET(
     const rawUserId = String(
       req.nextUrl.searchParams.get("userId") ?? ""
     ).trim();
-    const auth = await authorizeAssistantUser(
+    const auth = await requirePro(
       req.headers.get("authorization"),
       rawUserId
     );
@@ -67,7 +67,7 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    const auth = await authorizeAssistantUser(
+    const auth = await requirePro(
       req.headers.get("authorization"),
       rawUserId
     );
@@ -113,7 +113,7 @@ export async function DELETE(
     const rawUserId = String(
       req.nextUrl.searchParams.get("userId") ?? ""
     ).trim();
-    const auth = await authorizeAssistantUser(
+    const auth = await requirePro(
       req.headers.get("authorization"),
       rawUserId
     );

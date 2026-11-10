@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { getNoteWithChunks } from "@/lib/rag/store";
 import { db } from "@/lib/supabase/admin";
 
@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; chapterId: string }> }
 ) {
   try {
-    const auth = await requireAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -74,7 +74,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string; chapterId: string }> }
 ) {
   try {
-    const auth = await requireAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

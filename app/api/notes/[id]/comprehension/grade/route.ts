@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import {
   gradeEssayAnswers,
   type ComprehensionQuestion,
@@ -13,7 +13,7 @@ export async function POST(
   req: NextRequest
 ) {
   try {
-    const auth = await requireAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

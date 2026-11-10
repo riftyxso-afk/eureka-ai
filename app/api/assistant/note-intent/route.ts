@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { aiChatJson, extractJsonObject, hasAiKey } from "@/lib/ai";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth(request.headers.get("authorization"));
+  const auth = await requirePro(request.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   ensureRateLimitPrune();
   if (!checkRateLimit(`note-intent:${auth.userId}`, 40, 60 * 60 * 1000).ok) return NextResponse.json({ error: "Terlalu banyak permintaan. Coba lagi nanti." }, { status: 429 });

@@ -39,7 +39,6 @@ import {
 } from "@/lib/assistant/prompt";
 import {
   authorizeAssistantUser,
-  isBetaTester,
 } from "@/lib/assistant/auth";
 import { enforcePremium, getPremiumStatus, UPGRADE_URL } from "@/lib/premium";
 import {
@@ -615,7 +614,7 @@ export async function POST(req: NextRequest) {
         // (akses lewat /join) — cek hanya saat ada video agar tanpa video tidak
         // ada query tambahan ke DB.
         const videoAllowed =
-          !!activeVideoUrl && (await isBetaTester(userId));
+          !!activeVideoUrl && isPremiumUser;
         let videoContextMd = "";
         if (videoAllowed) {
           try {

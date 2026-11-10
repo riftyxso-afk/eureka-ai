@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSubjects, addSubject } from "@/lib/subjects-store";
 import { listNotes } from "@/lib/rag/store";
-import { getUserIdFromAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
 import { buildSubjectJourney } from "@/lib/subject-journey";
 
@@ -10,11 +10,12 @@ export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
+    const userId = auth.userId;
     if (!userId) {
       return NextResponse.json(
-        { error: "Autentikasi diperlukan." },
-        { status: 401 }
+        { error: auth.error },
+        { status: auth.status ?? 401 }
       );
     }
     const [subjects, notes] = await Promise.all([
@@ -43,11 +44,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getUserIdFromAuth(req.headers.get("authorization"));
+    const auth = await requirePro(req.headers.get("authorization"));
+    const userId = auth.userId;
     if (!userId) {
       return NextResponse.json(
-        { error: "Autentikasi diperlukan." },
-        { status: 401 }
+        { error: auth.error },
+        { status: auth.status ?? 401 }
       );
     }
     const body = await req.json();

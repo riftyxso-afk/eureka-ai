@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { aiChatJson, extractJsonObject, hasAiKey } from "@/lib/ai";
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { getMessages, getSession } from "@/lib/assistant/store";
 import { parseAssistantSuggestions } from "@/lib/assistant/suggestions";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const sessionId = String(body?.sessionId ?? "").trim();
     const rawUserId = String(body?.userId ?? "").trim();
     if (!sessionId || !rawUserId) return NextResponse.json({ error: "Sesi dan pengguna diperlukan." }, { status: 400 });
-    const auth = await authorizeAssistantUser(req.headers.get("authorization"), rawUserId);
+    const auth = await requirePro(req.headers.get("authorization"), rawUserId);
     if (!auth.userId) return NextResponse.json({ error: auth.error }, { status: auth.status ?? 401 });
     if (!hasAiKey()) return NextResponse.json({ error: "Saran belum tersedia." }, { status: 503 });
     if (!await getSession(sessionId, auth.userId)) return NextResponse.json({ error: "Sesi tidak ditemukan." }, { status: 404 });

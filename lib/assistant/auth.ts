@@ -11,7 +11,8 @@
  * pengecualian adalah mode dev eksplisit via env ALLOW_INSECURE_DEV_AUTH=true
  * (hanya untuk pengembangan lokal, tidak pernah aktif di produksi).
  */
-import { db, CONFIG_ERROR_MSG, isSupabaseConfigured } from "../supabase/admin";
+import { db, isSupabaseConfigured } from "../supabase/admin";
+import { getPremiumStatus } from "../premium";
 
 export interface AssistantAuthResult {
   userId: string;
@@ -91,6 +92,13 @@ export async function authorizeAssistantUser(
   paramUserId: string
 ): Promise<AssistantAuthResult> {
   return requireAuth(authHeader, paramUserId);
+}
+
+/** Authenticate first so a supplied user ID cannot borrow another account's Pro access. */
+export async function requirePro(authHeader: string | null, paramUserId?: string): Promise<AssistantAuthResult> {
+  const auth = await requireAuth(authHeader, paramUserId);
+  if (!auth.userId || (await getPremiumStatus(auth.userId)).isPremium) return auth;
+  return { userId: "", status: 402, error: "Fitur ini tersedia di Eureka Pro." };
 }
 
 /**

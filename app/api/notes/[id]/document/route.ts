@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/assistant/auth";
+import { requirePro } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import type { NoteChapter } from "@/lib/types";
@@ -9,7 +9,7 @@ import { serializeNoteEmbedding } from "@/lib/rag/vector";
 
 export const runtime = "nodejs";
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth(request.headers.get("authorization"));
+  const auth = await requirePro(request.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const body = await request.json().catch(() => null);
   if (typeof body?.content !== "string" || body.content.length > 200000 || typeof body.original !== "string" || typeof body.title !== "string" || !body.title.trim() || body.title.length > 200 || typeof body.originalTitle !== "string") return NextResponse.json({ error: "Isi atau judul catatan tidak valid." }, { status: 400 });

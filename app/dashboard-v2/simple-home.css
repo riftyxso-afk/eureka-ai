@@ -132,3 +132,12 @@
 }
 .dv2.dv2-simple .dv2-prompt .prompt-bar__field { padding: 4px 8px; gap: 4px; }
 .dv2.dv2-simple .dv2-prompt .prompt-bar__bar { margin-top: 2px; }
+.dv2.dv2-simple .dv2-compose-area.is-pro-locked {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.dv2.dv2-simple .dv2-workspace:has(.is-pro-locked) {
+  min-height: auto;
+  padding-block: clamp(44px, 10svh, 96px) 40px;
+}
