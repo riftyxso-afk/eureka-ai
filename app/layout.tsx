@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./mobile.css";
+import "./momo-splash.css";
+import MomoSplash from "./MomoSplash";
 
 // Font self-hosted lokal — tidak perlu download dari Google Fonts saat build (offline/proxy aman).
 // File woff2 di public/fonts/ diunduh sekali dari fonts.gstatic.com (Nunito variable, 5 subset).
@@ -146,6 +148,8 @@ export default async function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem("eureka_theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.classList.add("dark");}catch(e){}})();`,
           }}
         />
+        <link rel="preload" as="image" href="/loading/momo-blink.gif" media="(prefers-reduced-motion: no-preference)" />
+        <MomoSplash />
         <LocaleProvider initialLocale={locale}>
           <ThemeProvider>
             <AppToaster />

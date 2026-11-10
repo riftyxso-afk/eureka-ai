@@ -1,0 +1,52 @@
+.momo-splash {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .momo-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    isolation: isolate;
+    pointer-events: none;
+    animation: momo-splash-dismiss 220ms ease-out 580ms forwards;
+  }
+
+  .momo-splash::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #fbf9ff;
+    transition: opacity 300ms ease-out;
+  }
+
+  .dark .momo-splash::before {
+    background: #191919;
+  }
+
+  .momo-splash:is([data-state="waiting"], [data-state="flying"]) {
+    animation: none;
+  }
+
+  .momo-splash[data-state="flying"]::before { opacity: 0; }
+  .momo-splash[data-state="fading"] { animation-delay: 0ms; }
+  .momo-splash[data-state="done"] { display: none; }
+
+  .momo-splash-icon {
+    width: clamp(88px, 18vw, 116px);
+    aspect-ratio: 1;
+    border-radius: 25%;
+    background: url("/loading/momo-blink.gif") center / contain no-repeat;
+    box-shadow: 0 10px 30px rgb(75 36 159 / .17);
+  }
+
+  @keyframes momo-splash-dismiss {
+    to {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
+}

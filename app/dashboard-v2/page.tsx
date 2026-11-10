@@ -161,7 +161,7 @@ export default function DashboardV2() {
     </header>
     <main className="dv2-main">
       <section className="dv2-workspace" aria-labelledby="dv2-title">
-        <div className="dv2-greeting"><div className="dv2-momo"><MomoCompanion mode={effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal"} thinking={openingChat} question={draft} /></div><h1 id="dv2-title">Mau belajar apa hari ini?</h1></div>
+        <div className="dv2-greeting"><div className="dv2-momo" data-momo-splash-target><MomoCompanion mode={effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal"} thinking={openingChat} question={draft} /></div><h1 id="dv2-title">Mau belajar apa hari ini?</h1></div>
         <div className="dv2-compose-area">
           {generation.job ? <PromptNoteProgress generation={generation} /> : <>
           {mode === "note" && files.length > 0 && <DocumentAttachments files={files} onRemove={removeAttachment} />}
