@@ -1,13 +1,14 @@
 .artifact-workspace {
   --artifact-surface: rgb(var(--clay-cream));
-  --artifact-soft: color-mix(in srgb, var(--artifact-surface) 95%, rgb(var(--clay-primary)));
-  --artifact-rule: rgb(var(--clay-primary) / .16);
+  --artifact-soft: color-mix(in srgb, var(--artifact-surface) 96%, rgb(var(--clay-dark)));
+  --artifact-rule: rgb(var(--clay-dark) / .09);
   display: flex;
   flex: 0 0 min(44vw, 620px);
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  border-inline-start: 1px solid var(--artifact-rule);
+  border-inline-start: 0;
+  box-shadow: -8px 0 24px rgb(0 0 0 / .04);
   background: var(--artifact-surface);
   color: rgb(var(--clay-dark));
 }
@@ -16,15 +17,15 @@
 .artifact-workspace-footer {
   flex: none;
   padding-inline: clamp(16px, 3vw, 32px);
-  background: var(--artifact-soft);
+  background: var(--artifact-surface);
 }
 
-.artifact-workspace-header { padding-block: 12px 18px; border-bottom: 1px solid var(--artifact-rule); }
+.artifact-workspace-header { padding-block: 18px 12px; border-bottom: 0; }
 .artifact-workspace-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; }
 .artifact-heading { display: grid; gap: 5px; min-width: 0; }
 .artifact-workspace-top p { display: flex; align-items: center; gap: 8px; color: rgb(var(--clay-muted)); font-size: 13px; font-weight: 800; }
 .artifact-workspace-top p svg { color: rgb(var(--clay-primary)); }
-.artifact-workspace-header h2 { font-size: clamp(20px, 2.3vw, 28px); font-weight: 900; line-height: 1.2; overflow-wrap: anywhere; }
+.artifact-workspace-header h2 { font-size: clamp(17px, 1.5vw, 21px); font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
 .artifact-workspace-header h2:focus { outline: none; }
 .artifact-file-picker { display: grid; gap: 4px; margin-top: 12px; color: rgb(var(--clay-muted)); font-size: 12px; font-weight: 750; }
 .artifact-file-picker select {
@@ -32,9 +33,9 @@
   min-width: 0;
   min-height: 44px;
   padding-inline: 10px;
-  border: 1px solid var(--artifact-rule);
+  border: 1px solid transparent;
   border-radius: 9px;
-  background: var(--artifact-surface);
+  background: var(--artifact-soft);
   color: rgb(var(--clay-dark));
   font-size: 13px;
 }
@@ -43,7 +44,7 @@
 .artifact-document, .artifact-editor, .artifact-terminal { max-width: 64ch; margin-inline: auto; overflow-wrap: anywhere; }
 .artifact-document { font-size: 15px; line-height: 1.7; }
 .artifact-document .asisten-md > :first-child { margin-top: 0; }
-.artifact-source { display: flex; align-items: flex-start; gap: 8px; margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--artifact-rule); color: rgb(var(--clay-muted)); font-size: 13px; }
+.artifact-source { display: flex; align-items: flex-start; gap: 8px; margin-top: 24px; padding-top: 14px; color: rgb(var(--clay-muted)); font-size: 13px; }
 .artifact-source svg { flex: none; margin-top: 3px; }
 .artifact-editor { min-height: 100%; display: flex; flex-direction: column; gap: 8px; }
 .artifact-editor label, .artifact-terminal > p { font-size: 13px; font-weight: 800; }
@@ -51,7 +52,7 @@
 .artifact-terminal pre { margin-block: 12px; padding: 16px; border-radius: 12px; background: #221c30; color: #f0e9fc; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.65; }
 .artifact-image { display: block; width: auto; max-width: 100%; max-height: 65dvh; object-fit: contain; margin-inline: auto; border-radius: 12px; }
 
-.artifact-workspace-footer { padding-block: 12px; border-top: 1px solid var(--artifact-rule); }
+.artifact-workspace-footer { padding-block: 12px; border-top: 0; }
 .artifact-action-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .artifact-action {
   display: inline-flex;
@@ -61,16 +62,20 @@
   justify-content: center;
   gap: 7px;
   padding-inline: 12px;
-  border: 1px solid var(--artifact-rule);
+  border: 1px solid transparent;
   border-radius: 10px;
-  background: var(--artifact-surface);
+  background: var(--artifact-soft);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 650;
+  box-shadow: none;
 }
 .artifact-icon-action { padding-inline: 0; border-color: transparent; background: transparent; }
 .artifact-action.is-primary { border-color: transparent; background: #7540c6; color: white; }
 .artifact-action:active { filter: brightness(.94); }
 .artifact-action:disabled { opacity: .55; cursor: not-allowed; }
+@media (hover: hover) {
+  .artifact-action:not(:disabled):hover { filter: brightness(.96); }
+}
 .artifact-workspace :is(button, a, textarea, select):focus-visible { outline: 2px solid rgb(var(--clay-primary)); outline-offset: 2px; }
 .artifact-workspace-status, .artifact-error { font-size: 12px; font-weight: 700; }
 .artifact-workspace-status { color: rgb(var(--clay-muted)); }

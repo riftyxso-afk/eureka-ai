@@ -53,18 +53,16 @@ import PageTutorial from "@/components/tutorial/PageTutorial";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { copyText } from "@/lib/assistant/clipboard";
 import { markdownToPlainText } from "@/lib/assistant/plainText";
-import {
-  Check,
-  Copy,
-  Ellipsis,
-  Crown,
-  FileText,
-  Hand,
-  LayoutDashboard,
-  Plus,
-  Share2,
-  Sparkles,
-} from "lucide-react";
+import Copy from "kubai-icons-react/icons/copy";
+import Crown from "kubai-icons-react/icons/crown";
+import FileText from "kubai-icons-react/icons/file-text";
+import Hand from "kubai-icons-react/icons/hand";
+import LayoutDashboard from "kubai-icons-react/icons/grid";
+import Share2 from "kubai-icons-react/icons/share";
+import Sparkles from "kubai-icons-react/icons/sparkles";
+import Check from "kubai-icons-react/icons/circle-check";
+import Ellipsis from "kubai-icons-react/icons/more-horizontal";
+import Plus from "kubai-icons-react/icons/circle-plus";
 import Link from "next/link";
 
 export default function ChatPage() {
@@ -292,7 +290,7 @@ export default function ChatPage() {
                     aria-label={l.openDashboard}
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-clay-primary hover:bg-clay-primary/10 lg:hidden"
                   >
-                    <LayoutDashboard size={18} />
+                    <LayoutDashboard trigger="parent" size={18} />
                   </Link></div>
                   <div className="min-w-0">
                     <h1 className="truncate text-sm font-extrabold text-clay-dark sm:text-base">
@@ -307,7 +305,7 @@ export default function ChatPage() {
                       className="hidden shrink-0 items-center gap-1 rounded-clay-full bg-[rgb(var(--accent-coral))]/15 px-2.5 py-1 text-[10.5px] font-extrabold text-[rgb(var(--accent-coral))] sm:inline-flex"
                       data-testid="loop-iteration-indicator"
                     >
-                      <Sparkles size={11} className="fill-current" />
+                      <Sparkles trigger="parent" size={11} className="fill-current" />
                       Iterasi {Math.max(1, chat.loop.iteration)}/{chat.loop.maxIterations}
                     </span>
                   )}
@@ -330,7 +328,7 @@ export default function ChatPage() {
                           data-testid="chat-toggle-canvas"
                           className="relative flex min-h-11 w-11 items-center justify-center rounded-xl text-clay-primary hover:bg-clay-primary/10 disabled:opacity-50"
                         >
-                          <FileText size={16} />
+                          <FileText trigger="parent" size={16} />
                           <span
                             className={`absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-extrabold ${
                               chat.canvas.open
@@ -350,7 +348,7 @@ export default function ChatPage() {
                         data-testid="chat-copy-all"
                         className="hidden min-h-11 w-11 items-center justify-center rounded-xl text-clay-muted hover:bg-clay-beige hover:text-clay-dark disabled:opacity-50 sm:flex"
                       >
-                        {copiedAll ? <Check size={16} className="text-clay-success" /> : <Copy size={16} />}
+                        {copiedAll ? <Check trigger="parent" size={16} className="text-clay-success" /> : <Copy trigger="parent" size={16} />}
                       </button>
                       {/* Aksi primer header — satu-satunya tombol solid. */}
                       <button
@@ -361,7 +359,7 @@ export default function ChatPage() {
                         data-testid="chat-share"
                         className="hidden min-h-11 items-center gap-1.5 rounded-xl bg-violet-700 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-violet-800 disabled:opacity-50 sm:inline-flex"
                       >
-                        <Share2 size={14} />
+                        <Share2 trigger="parent" size={14} />
                         <span>{l.share}</span>
                       </button>
                       <details className="chat-mobile-actions sm:hidden" onKeyDown={(event) => {
@@ -370,7 +368,7 @@ export default function ChatPage() {
                           event.currentTarget.querySelector("summary")?.focus();
                         }
                       }}>
-                        <summary aria-label="Opsi percakapan"><Ellipsis size={20} aria-hidden="true" /></summary>
+                        <summary aria-label="Opsi percakapan"><Ellipsis trigger="parent" size={20} aria-hidden="true" /></summary>
                         <div className="chat-mobile-action-list">
                           <button type="button" disabled={chat.sending} onClick={(event) => {
                             const menu = event.currentTarget.closest("details");
@@ -379,11 +377,11 @@ export default function ChatPage() {
                               menu.querySelector("summary")?.focus();
                             }
                             void handleCopyAll();
-                          }}><Copy size={16} aria-hidden="true" /> {l.copyAll}</button>
+                          }}><Copy trigger="parent" size={16} aria-hidden="true" /> {l.copyAll}</button>
                           <button type="button" disabled={chat.sending} onClick={(event) => {
                             event.currentTarget.closest("details")?.removeAttribute("open");
                             setShareOpen(true);
-                          }}><Share2 size={16} aria-hidden="true" /> {l.share}</button>
+                          }}><Share2 trigger="parent" size={16} aria-hidden="true" /> {l.share}</button>
                         </div>
                       </details>
                     </>
@@ -395,7 +393,7 @@ export default function ChatPage() {
                     data-testid="chat-new-top"
                     className="flex min-h-11 w-11 items-center justify-center rounded-xl text-clay-primary hover:bg-clay-primary/10"
                   >
-                    <Plus size={16} />
+                    <Plus trigger="parent" size={16} />
                   </button>
                 </div>
               </div>
@@ -417,7 +415,7 @@ export default function ChatPage() {
               <MomoCompanion mode={momoMode} className="momo-chat-empty" />
               <h2 className="mt-4 flex items-center justify-center gap-2 text-lg font-extrabold text-clay-dark sm:text-xl">
                 {l.emptyTitle}{" "}
-                <Hand size={22} className="shrink-0 text-clay-primary" />
+                <Hand trigger="parent" size={22} className="shrink-0 text-clay-primary" />
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-relaxed text-clay-muted">
                 {l.emptyDesc1}{" "}
@@ -507,7 +505,7 @@ export default function ChatPage() {
                     className="block w-full rounded-clay-md border-3 border-clay-borderLight bg-clay-primary px-5 py-3 text-center text-sm font-extrabold text-white shadow-clay-btn transition-all hover:brightness-110 active:translate-y-0.5"
                   >
                     <span className="inline-flex items-center gap-1.5">
-                      <Crown size={16} /> {l.upgrade}
+                      <Crown trigger="parent" size={16} /> {l.upgrade}
                     </span>
                   </Link>
                 </div>

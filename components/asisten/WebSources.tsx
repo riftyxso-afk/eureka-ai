@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ArrowUpRight, ChevronDown } from "lucide-react";
+import ArrowUpRight from "kubai-icons-react/icons/arrow-up-right";
+import ChevronDown from "kubai-icons-react/icons/chevron-down";
 import { normalizeWebResults } from "@/lib/assistant/webSources";
 import type { WebSearchItem } from "@/lib/assistant/types";
 import "./web-search.css";
@@ -28,14 +29,14 @@ export default function WebSources({ results }: { results: WebSearchItem[] }) {
     <button type="button" className="web-sources-toggle" aria-expanded={expanded} aria-controls={id}
       onClick={() => setExpanded(value => !value)} aria-label={`${expanded ? "Tutup" : "Buka"} ${sources.length} sumber web`}>
       <span className="web-sources-logos" aria-hidden="true">{sites.slice(0, 6).map(source => <SiteLogo key={source.domain} domain={source.domain} />)}</span>
-      <span className="sr-only">{sources.length} sumber</span><ChevronDown size={14} aria-hidden="true" />
+      <span className="sr-only">{sources.length} sumber</span><ChevronDown trigger="parent" size={14} aria-hidden="true" />
     </button>
     <div id={id} hidden={!expanded}>
     <ul>{sources.map(source => <li key={source.url}>
       <a href={source.url} target="_blank" rel="noopener noreferrer" title={source.title}>
         <SiteLogo key={source.domain} domain={source.domain} />
         <span><small>{source.domain}</small><strong>{source.title}</strong></span>
-        <ArrowUpRight size={13} aria-hidden="true" />
+        <ArrowUpRight trigger="parent" size={13} aria-hidden="true" />
       </a>
     </li>)}</ul></div>
   </section>;

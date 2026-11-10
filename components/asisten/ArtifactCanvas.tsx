@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Download, FileText, ImageIcon, Pencil, Save, Terminal, X } from "lucide-react";
+import Copy from "kubai-icons-react/icons/copy";
+import Download from "kubai-icons-react/icons/download";
+import FileText from "kubai-icons-react/icons/file-text";
+import ImageIcon from "kubai-icons-react/icons/image";
+import Pencil from "kubai-icons-react/icons/pencil";
+import Save from "kubai-icons-react/icons/save";
+import Terminal from "kubai-icons-react/icons/terminal";
+import Check from "kubai-icons-react/icons/circle-check";
+import X from "kubai-icons-react/icons/circle-x";
 import MarkdownView from "@/components/asisten/MarkdownView";
 import type { Artifact } from "@/lib/agents/types";
 import "./artifact-workspace.css";
@@ -96,7 +104,7 @@ function ArtifactWorkspace({
             <p><FormatIcon size={16} aria-hidden="true" />{label}<span aria-hidden="true">·</span> Versi {active.version}</p>
             <h2 id="artifact-workspace-title" ref={titleRef} tabIndex={-1}>{active.title}</h2>
           </div>
-          <button className="artifact-action artifact-icon-action" type="button" onClick={onClose} aria-label="Tutup artifact"><X size={21} aria-hidden="true" /></button>
+          <button className="artifact-action artifact-icon-action" type="button" onClick={onClose} aria-label="Tutup artifact"><X trigger="parent" size={21} aria-hidden="true" /></button>
         </div>
         {artifacts.length > 1 && (
           <label className="artifact-file-picker">
@@ -120,7 +128,7 @@ function ArtifactWorkspace({
           ) : (
             <article className="artifact-document">
               <MarkdownView content={documentText} />
-              {source && <p className="artifact-source"><FileText size={15} aria-hidden="true" /> Sumber: {source[1].trim()}</p>}
+              {source && <p className="artifact-source"><FileText trigger="parent" size={15} aria-hidden="true" /> Sumber: {source[1].trim()}</p>}
             </article>
           )
         ) : active.type === "terminal" ? (
@@ -145,19 +153,19 @@ function ArtifactWorkspace({
           {editing ? (
             <>
               <button className="artifact-action" type="button" disabled={saving} onClick={() => { setDraft(null); setFeedback(null); }}>Batal</button>
-              <button className="artifact-action is-primary" type="button" onClick={save} disabled={busy}><Save size={17} aria-hidden="true" />Simpan versi</button>
+              <button className="artifact-action is-primary" type="button" onClick={save} disabled={busy}><Save trigger="parent" size={17} aria-hidden="true" />Simpan versi</button>
             </>
           ) : (
             <>
               <button className="artifact-action" type="button" onClick={copy} aria-label="Salin artifact">
-                {feedback && !feedback.error ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
+                {feedback && !feedback.error ? <Check trigger="parent" size={17} aria-hidden="true" /> : <Copy trigger="parent" size={17} aria-hidden="true" />}
                 Salin
               </button>
               {active.type === "markdown" && onEditSave && (
-                <button className="artifact-action is-primary" type="button" disabled={busy} onClick={() => { setDraft(active.content); setFeedback(null); }}><Pencil size={17} aria-hidden="true" />Edit dokumen</button>
+                <button className="artifact-action is-primary" type="button" disabled={busy} onClick={() => { setDraft(active.content); setFeedback(null); }}><Pencil trigger="parent" size={17} aria-hidden="true" />Edit dokumen</button>
               )}
               {active.type === "image" && (
-                <a className="artifact-action is-primary" href={active.content} download={`${active.title || "artifact"}.png`}><Download size={17} aria-hidden="true" />Unduh gambar</a>
+                <a className="artifact-action is-primary" href={active.content} download={`${active.title || "artifact"}.png`}><Download trigger="parent" size={17} aria-hidden="true" />Unduh gambar</a>
               )}
             </>
           )}

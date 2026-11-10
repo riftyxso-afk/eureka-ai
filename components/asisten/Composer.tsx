@@ -5,29 +5,26 @@ import { AnimatePresence, motion } from "framer-motion";
 import { BorderBeam } from "border-beam";
 import PromptBar, { type PromptSource } from "./reactbits/PromptBar";
 import VoicePill from "./reactbits/VoicePill";
-import {
-  AtSign,
-  BookOpen,
-  Brain,
-  Check,
-  ChevronDown,
-  ClipboardList,
-  Gem,
-  Globe,
-  Layers,
-  Leaf,
-  Loader2,
-  Mic,
-  Paperclip,
-  PhoneCall,
-  Plus,
-  Send,
-  Square,
-  Sparkles,
-  Terminal,
-  X,
-  Zap,
-} from "lucide-react";
+import AtSign from "kubai-icons-react/icons/at-sign";
+import BookOpen from "kubai-icons-react/icons/book-open";
+import Brain from "kubai-icons-react/icons/brain";
+import ChevronDown from "kubai-icons-react/icons/chevron-down";
+import ClipboardList from "kubai-icons-react/icons/clipboard";
+import Gem from "kubai-icons-react/icons/gem";
+import Globe from "kubai-icons-react/icons/globe";
+import Layers from "kubai-icons-react/icons/layers";
+import Leaf from "kubai-icons-react/icons/leaf";
+import Mic from "kubai-icons-react/icons/mic";
+import Paperclip from "kubai-icons-react/icons/paperclip";
+import PhoneCall from "kubai-icons-react/icons/phone-call";
+import Send from "kubai-icons-react/icons/send";
+import Square from "kubai-icons-react/icons/square";
+import Sparkles from "kubai-icons-react/icons/sparkles";
+import Terminal from "kubai-icons-react/icons/terminal";
+import Check from "kubai-icons-react/icons/circle-check";
+import Plus from "kubai-icons-react/icons/circle-plus";
+import X from "kubai-icons-react/icons/circle-x";
+import { Loader2, Zap } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import { ModelStore } from "@/components/asisten/ModelStore";
@@ -205,7 +202,7 @@ function PlusRow({
         <span className="block truncate text-[12.5px] font-extrabold text-clay-dark">{label}</span>
         <span className="block truncate text-[10.5px] font-semibold text-clay-muted">{desc}</span>
       </span>
-      {active && <Check size={13} className="shrink-0 text-clay-primary" />}
+      {active && <Check trigger="parent" size={13} className="shrink-0 text-clay-primary" />}
     </button>
   );
 }
@@ -743,9 +740,9 @@ export default function Composer({
 
   if (reactBits) {
     const sources: PromptSource[] = [
-      { key: "file", name: "Foto & file", description: "Pilih dari perangkat", icon: <Paperclip size={16} />, attach: true },
-      { key: "web", name: "Pencarian web", description: webSearch ? "Aktif — pilih untuk mematikan" : "Cari informasi di web", icon: <Globe size={16} /> },
-      ...notes.filter((note) => !mentionIds.includes(note.id)).map((note) => ({ key: `note:${note.id}`, name: note.title, description: note.subject || "Catatan", icon: <BookOpen size={16} /> })),
+      { key: "file", name: "Foto & file", description: "Pilih dari perangkat", icon: <Paperclip trigger="parent" size={16} />, attach: true },
+      { key: "web", name: "Pencarian web", description: webSearch ? "Aktif — pilih untuk mematikan" : "Cari informasi di web", icon: <Globe trigger="parent" size={16} /> },
+      ...notes.filter((note) => !mentionIds.includes(note.id)).map((note) => ({ key: `note:${note.id}`, name: note.title, description: note.subject || "Catatan", icon: <BookOpen trigger="parent" size={16} /> })),
     ];
     const models = [{ key: "auto", name: "Otomatis", tag: "Eureka" }, ...MODEL_CATALOG.filter((model) => !model.premiumOnly || isPremium).map((model) => ({ key: model.id, name: model.name, tag: model.available ? model.brand : "Tidak tersedia", logo: model.logo, disabled: !model.available }))];
     return (
@@ -794,7 +791,7 @@ export default function Composer({
                   key={id}
                   className="inline-flex items-center gap-1 rounded-clay-full border-2 border-clay-primary/40 bg-clay-primary/10 px-3 py-1 text-[12px] font-extrabold text-clay-primary"
                 >
-                  <AtSign size={12} className="shrink-0" />
+                  <AtSign trigger="parent" size={12} className="shrink-0" />
                   <span className="max-w-[160px] truncate">
                     {note?.title ?? "Catatan"}
                   </span>
@@ -810,7 +807,7 @@ export default function Composer({
             })}
             {attachment && (
               <span className="inline-flex max-w-full items-center gap-1.5 rounded-clay-full border-2 border-clay-primary/40 bg-clay-primary/10 px-3 py-1 text-[12px] font-extrabold text-clay-primary">
-                <Paperclip size={12} className="shrink-0" />
+                <Paperclip trigger="parent" size={12} className="shrink-0" />
                 <span className="truncate">{attachment.filename}</span>
                 <span className="shrink-0 text-[10px] font-bold text-clay-muted">
                   {formatBytes(
@@ -915,7 +912,7 @@ export default function Composer({
                           : "bg-clay-primary/10 text-clay-primary hover:bg-clay-primary/15"
                       } ${compact ? "!min-h-[40px] !min-w-[40px]" : "!min-h-[38px] !min-w-[38px]"}`}
                     >
-                      <Plus
+                      <Plus trigger="parent"
                         size={compact ? 15 : 17}
                         strokeWidth={2.4}
                         className={`transition-transform duration-200 ${plusOpen ? "rotate-45" : ""}`}
@@ -933,7 +930,7 @@ export default function Composer({
                         >
                           {/* Lampirkan catatan */}
                           <PlusRow
-                            icon={<AtSign size={15} />}
+                            icon={<AtSign trigger="parent" size={15} />}
                             label="Lampirkan catatan"
                             desc="Ketik @ untuk memilih catatanmu"
                             onClick={() => {
@@ -957,7 +954,7 @@ export default function Composer({
                           />
                           {/* Pencarian web — toggle */}
                           <PlusRow
-                            icon={<Globe size={15} />}
+                            icon={<Globe trigger="parent" size={15} />}
                             label="Pencarian web"
                             desc="Cari info terbaru sebelum menjawab"
                             active={webSearch}
@@ -965,7 +962,7 @@ export default function Composer({
                           />
                           {/* Upload file */}
                           <PlusRow
-                            icon={<Paperclip size={15} />}
+                            icon={<Paperclip trigger="parent" size={15} />}
                             label="Lampirkan file"
                             desc="PDF, Word, PPT, gambar…"
                             onClick={() => {
@@ -976,7 +973,7 @@ export default function Composer({
                           {/* Mode Eureka Multi Agent (toggle loop) */}
                           {showMultiAgentToggle && (
                             <PlusRow
-                              icon={<Sparkles size={15} />}
+                              icon={<Sparkles trigger="parent" size={15} />}
                               label="Eureka Multi Agent"
                               desc={multiAgentOn ? "Mode loop tutoring aktif — klik untuk matikan" : "Aktifkan loop tutoring & artifact canvas"}
                               active={multiAgentOn}
@@ -987,7 +984,7 @@ export default function Composer({
                           )}
                           {/* Reasoning — toggle */}
                           <PlusRow
-                            icon={<Brain size={15} />}
+                            icon={<Brain trigger="parent" size={15} />}
                             label="Reasoning"
                             desc={reasoning ? "Model thinking aktif" : "Model biasa — lebih cepat"}
                             active={reasoning}
@@ -1002,7 +999,7 @@ export default function Composer({
                           {/* Rekam suara (beta) */}
                           {isBeta && (
                             <PlusRow
-                              icon={transcribing ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
+                              icon={transcribing ? <Loader2 size={15} className="animate-spin" /> : <Mic trigger="parent" size={15} />}
                               label={recording ? "Berhenti rekam" : "Rekam suara"}
                               desc="Bicara → otomatis jadi teks"
                               active={recording}
@@ -1015,7 +1012,7 @@ export default function Composer({
                           {/* Panggilan AI (beta) */}
                           {isBeta && onCall && (
                             <PlusRow
-                              icon={<PhoneCall size={15} />}
+                              icon={<PhoneCall trigger="parent" size={15} />}
                               label="Panggilan AI"
                               desc="Tanya jawab suara langsung"
                               onClick={() => {
@@ -1101,7 +1098,7 @@ export default function Composer({
                             <span className="hidden whitespace-nowrap leading-none sm:inline">{cur.label}</span>
                           </>
                         )}
-                        <ChevronDown size={10} />
+                        <ChevronDown trigger="parent" size={10} />
                       </button>
                     );
                   })()}
@@ -1149,7 +1146,7 @@ export default function Composer({
                                 {o.label}
                               </span>
                               {active && (
-                                <Check size={13} className="shrink-0 text-clay-primary" />
+                                <Check trigger="parent" size={13} className="shrink-0 text-clay-primary" />
                               )}
                             </button>
                           );
@@ -1167,7 +1164,7 @@ export default function Composer({
                           >
                             <span className="flex items-center gap-2">
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
-                                <Sparkles size={12} />
+                                <Sparkles trigger="parent" size={12} />
                               </span>
                               <span className="text-[12.5px] font-extrabold text-clay-dark">
                                 More models
@@ -1179,10 +1176,10 @@ export default function Composer({
                                 const nm = modelDisplayName(selectedModel);
                                 return nm.length > 16 ? nm.slice(0, 16) + "…" : nm;
                               })()}
-                                <X size={9} />
+                                <X trigger="parent" size={9} />
                               </span>
                             ) : (
-                              <ChevronDown size={12} className="-rotate-90 text-clay-muted" />
+                              <ChevronDown trigger="parent" size={12} className="-rotate-90 text-clay-muted" />
                             )}
                           </button>
                         </div>
@@ -1198,7 +1195,7 @@ export default function Composer({
                     aria-label="Hentikan"
                     data-testid="asisten-stop"
                   >
-                    <Square size={compact ? 13 : 15} className="fill-current" />
+                    <Square trigger="parent" size={compact ? 13 : 15} className="fill-current" />
                     {!compact && <span className="whitespace-nowrap leading-none">Stop</span>}
                   </button>
                 ) : (
@@ -1213,7 +1210,7 @@ export default function Composer({
                     aria-label="Kirim"
                     data-testid="asisten-send"
                   >
-                    <Send size={compact ? 14 : 16} />
+                    <Send trigger="parent" size={compact ? 14 : 16} />
                   </button>
                 )}
               </div>
@@ -1234,7 +1231,7 @@ export default function Composer({
                 className="absolute bottom-full left-2 z-30 mb-2 max-h-[60dvh] w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
               >
                 <div className="flex items-center gap-2 border-b-2 border-clay-borderLight px-3.5 py-2.5 text-xs font-extrabold text-clay-muted">
-                  <Terminal size={14} className="text-clay-primary" />
+                  <Terminal trigger="parent" size={14} className="text-clay-primary" />
                   Perintah chat — pilih lalu tekan Enter
                 </div>
                 <div className="max-h-[min(14rem,45dvh)] overflow-y-auto p-1.5">
@@ -1282,7 +1279,7 @@ export default function Composer({
                 className="absolute bottom-full left-2 z-30 mb-2 max-h-[60dvh] w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
               >
                 <div className="flex items-center gap-2 border-b-2 border-clay-borderLight px-3.5 py-2.5 text-xs font-extrabold text-clay-muted">
-                  <BookOpen size={14} className="text-clay-primary" />
+                  <BookOpen trigger="parent" size={14} className="text-clay-primary" />
                   Lampirkan catatan{mentionQuery ? ` — "…${mentionQuery}"` : ""}
                 </div>
                 <div className="max-h-[min(14rem,45dvh)] overflow-y-auto p-1.5">
@@ -1306,7 +1303,7 @@ export default function Composer({
                       }`}
                     >
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-clay-beige">
-                        <AtSign size={13} className="text-clay-primary" />
+                        <AtSign trigger="parent" size={13} className="text-clay-primary" />
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-[13.5px] font-extrabold text-clay-dark">
@@ -1352,7 +1349,7 @@ export default function Composer({
               <div className="flex items-center justify-between border-b-2 border-clay-borderLight/60 px-4 py-3">
                 <div>
                   <h2 className="text-sm font-extrabold text-clay-dark">
-                    <Sparkles size={14} className="mr-1.5 inline text-clay-primary" />
+                    <Sparkles trigger="parent" size={14} className="mr-1.5 inline text-clay-primary" />
                     Model Store
                   </h2>
                   <p className="mt-0.5 text-[11px] font-semibold text-clay-muted">
@@ -1365,7 +1362,7 @@ export default function Composer({
                   aria-label="Tutup"
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-clay-beige text-clay-muted transition-colors hover:text-clay-dark"
                 >
-                  <X size={15} />
+                  <X trigger="parent" size={15} />
                 </button>
               </div>
               <div className="px-1 py-1">

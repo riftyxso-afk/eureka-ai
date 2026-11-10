@@ -5,7 +5,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ThemeSwitch from "@/components/ui/ThemeSwitch";
-import { ArrowRight, BookOpen, FileText, Flame, FolderOpen, Globe, Grid2X2, History, List, MessageCircle, Mic, Plus, RefreshCw, Search, Trophy, Upload, Crown } from "lucide-react";
+import ArrowRight from "kubai-icons-react/icons/arrow-right";
+import BookOpen from "kubai-icons-react/icons/book-open";
+import FileText from "kubai-icons-react/icons/file-text";
+import Flame from "kubai-icons-react/icons/flame";
+import FolderOpen from "kubai-icons-react/icons/folder-open";
+import Globe from "kubai-icons-react/icons/globe";
+import Grid2X2 from "kubai-icons-react/icons/grid";
+import History from "kubai-icons-react/icons/history";
+import List from "kubai-icons-react/icons/list";
+import MessageCircle from "kubai-icons-react/icons/message-circle";
+import Mic from "kubai-icons-react/icons/mic";
+import Search from "kubai-icons-react/icons/search";
+import Trophy from "kubai-icons-react/icons/trophy";
+import Crown from "kubai-icons-react/icons/crown";
+import Plus from "kubai-icons-react/icons/circle-plus";
+import RefreshCw from "kubai-icons-react/icons/sync";
+import { Upload } from "lucide-react";
 import PromptBar from "@/components/asisten/reactbits/PromptBar";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
 import DocumentAttachments from "@/components/dashboard/DocumentAttachments";
@@ -140,8 +156,8 @@ export default function DashboardV2() {
     <header className="dv2-topbar">
       <V2MobileSidebar desktop />
       <Link className="dv2-brand" href="/dashboard-v2">eureka! <span>V2 · Beta</span></Link>
-      <nav aria-label="Navigasi Dashboard V2" className="dv2-topnav"><Link href="/dashboard-v2#dv2-notes-title"><FolderOpen size={16} />Catatan</Link><Link href="/dashboard-v2/tanya-momo"><MessageCircle size={16} />Tanya Momo</Link></nav>
-      <div className="dv2-account"><ThemeSwitch /><PageTutorial guideId="dashboard" /><Link href="/dashboard/streaks" className="dv2-stat dv2-streak"><Flame size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard/profil" className="dv2-stat dv2-level"><Trophy size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/pricing" className="dv2-stat dv2-upgrade"><Crown size={16} />Upgrade</Link></div>
+      <nav aria-label="Navigasi Dashboard V2" className="dv2-topnav"><Link href="/dashboard-v2#dv2-notes-title"><FolderOpen trigger="parent" size={16} />Catatan</Link><Link href="/dashboard-v2/tanya-momo"><MessageCircle trigger="parent" size={16} />Tanya Momo</Link></nav>
+      <div className="dv2-account"><ThemeSwitch /><PageTutorial guideId="dashboard" /><Link href="/dashboard/streaks" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
     </header>
     <main className="dv2-main">
       <section className="dv2-workspace" aria-labelledby="dv2-title">
@@ -164,10 +180,10 @@ export default function DashboardV2() {
                   onClick={() => { setMode("note"); setInputError(""); }}>Note</button>
               </div>}
               voiceSlot={<button type="button" className="prompt-bar__tool" aria-label="Bicara dengan Momo"
-                title="Bicara dengan Momo" disabled={openingChat} onClick={() => setVoice(true)}><Mic size={17} /></button>}
+                title="Bicara dengan Momo" disabled={openingChat} onClick={() => setVoice(true)}><Mic trigger="parent" size={17} /></button>}
               sources={[
                 { key: "upload", name: "Unggah materi", description: "Dokumen, slide, atau audio", icon: <Upload size={16} /> },
-                { key: "web", name: "Tautan web", description: "Ringkas artikel menjadi catatan", icon: <Globe size={16} /> },
+                { key: "web", name: "Tautan web", description: "Ringkas artikel menjadi catatan", icon: <Globe trigger="parent" size={16} /> },
                 { key: "youtube", name: "YouTube", description: "Pelajari isi video", icon: <span className="dv2-youtube-logo" aria-hidden="true" /> },
               ]}
               onAttach={() => fileInput.current?.click()}
@@ -180,10 +196,10 @@ export default function DashboardV2() {
         </div>
 
       </section>
-      <section className="dv2-library" aria-labelledby="dv2-notes-title"><div className="dv2-library-heading"><div><h2 id="dv2-notes-title">Catatanmu <span>{notes.length}</span></h2><p>Simpan rasa ingin tahu. Lanjutkan kapan saja.</p></div><button className="dv2-button" onClick={() => fileInput.current?.click()}><Plus size={16} />Tambah materi</button></div>
-        <div className="dv2-library-tools"><div className="dv2-toolbar"><label className="dv2-search"><Search size={16} /><input aria-label="Cari catatan" placeholder="Cari judul atau isi catatan…" value={query} onChange={event => setQuery(event.target.value)} /></label><select aria-label="Filter mata pelajaran" value={subject} onChange={event => setSubject(event.target.value)}><option value="">Semua mata pelajaran</option>{[...new Set(notes.map(note => note.subject))].sort().map(value => <option key={value}>{value}</option>)}</select><div className="dv2-view" role="group" aria-label="Tampilan catatan"><button aria-label="Galeri" aria-pressed={view === "grid"} onClick={() => setView("grid")}><Grid2X2 size={17} /></button><button aria-label="Daftar" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={18} /></button></div></div>
-        <div className="dv2-filters" role="group" aria-label="Jenis sumber">{FILTERS.map(value => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value}</button>)}<button onClick={() => void load()} aria-label="Muat ulang catatan"><RefreshCw size={15} /></button></div>
-        </div>{loading ? <div className="dv2-note-grid" role="status" aria-label="Memuat catatan">{[1, 2, 3].map(id => <div className="dv2-skeleton" key={id} />)}</div> : loadError ? <div className="dv2-empty" role="alert"><History size={28} /><h3>Catatan belum bisa dimuat</h3><p>{loadError}</p><button className="dv2-button" onClick={() => void load()}>Coba lagi</button></div> : shown.length === 0 ? <div className="dv2-empty"><BookOpen size={32} /><h3>{notes.length ? "Belum ada catatan yang cocok" : "Catatan pertamamu dimulai dari sebuah ide"}</h3><p>{notes.length ? "Coba kata kunci atau filter lain." : "Tulis topik di atas, tempel tautan, atau unggah materi untuk mulai belajar."}</p>{notes.length > 0 && <button className="dv2-button" onClick={() => { setQuery(""); setFilter("Semua"); setSubject(""); }}>Reset filter</button>}</div> : <div className={`dv2-note-grid ${view === "list" ? "is-list" : ""}`}>{shown.map(note => <Link className="dv2-note" key={note.id} href={`/dashboard-v2/note/${encodeURIComponent(note.id)}`}><div className="dv2-note-preview"><span className="dv2-note-type"><FileText size={13} />{sourceOf(note)}</span><h3>{note.title}</h3><p>{note.summary || "Buka catatan untuk membaca materi dan bab selengkapnya."}</p></div><div className="dv2-note-info"><strong>{note.title}</strong><span>{new Date(note.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}{note.pinned ? " · Disematkan" : ""}<ArrowRight size={16} /></span></div></Link>)}</div>}
+      <section className="dv2-library" aria-labelledby="dv2-notes-title"><div className="dv2-library-heading"><div><h2 id="dv2-notes-title">Catatanmu <span>{notes.length}</span></h2><p>Simpan rasa ingin tahu. Lanjutkan kapan saja.</p></div><button className="dv2-button" onClick={() => fileInput.current?.click()}><Plus trigger="parent" size={16} />Tambah materi</button></div>
+        <div className="dv2-library-tools"><div className="dv2-toolbar"><label className="dv2-search"><Search trigger="parent" size={16} /><input aria-label="Cari catatan" placeholder="Cari judul atau isi catatan…" value={query} onChange={event => setQuery(event.target.value)} /></label><select aria-label="Filter mata pelajaran" value={subject} onChange={event => setSubject(event.target.value)}><option value="">Semua mata pelajaran</option>{[...new Set(notes.map(note => note.subject))].sort().map(value => <option key={value}>{value}</option>)}</select><div className="dv2-view" role="group" aria-label="Tampilan catatan"><button aria-label="Galeri" aria-pressed={view === "grid"} onClick={() => setView("grid")}><Grid2X2 trigger="parent" size={17} /></button><button aria-label="Daftar" aria-pressed={view === "list"} onClick={() => setView("list")}><List trigger="parent" size={18} /></button></div></div>
+        <div className="dv2-filters" role="group" aria-label="Jenis sumber">{FILTERS.map(value => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value}</button>)}<button onClick={() => void load()} aria-label="Muat ulang catatan"><RefreshCw trigger="parent" size={15} /></button></div>
+        </div>{loading ? <div className="dv2-note-grid" role="status" aria-label="Memuat catatan">{[1, 2, 3].map(id => <div className="dv2-skeleton" key={id} />)}</div> : loadError ? <div className="dv2-empty" role="alert"><History trigger="parent" size={28} /><h3>Catatan belum bisa dimuat</h3><p>{loadError}</p><button className="dv2-button" onClick={() => void load()}>Coba lagi</button></div> : shown.length === 0 ? <div className="dv2-empty"><BookOpen trigger="parent" size={32} /><h3>{notes.length ? "Belum ada catatan yang cocok" : "Catatan pertamamu dimulai dari sebuah ide"}</h3><p>{notes.length ? "Coba kata kunci atau filter lain." : "Tulis topik di atas, tempel tautan, atau unggah materi untuk mulai belajar."}</p>{notes.length > 0 && <button className="dv2-button" onClick={() => { setQuery(""); setFilter("Semua"); setSubject(""); }}>Reset filter</button>}</div> : <div className={`dv2-note-grid ${view === "list" ? "is-list" : ""}`}>{shown.map(note => <Link className="dv2-note" key={note.id} href={`/dashboard-v2/note/${encodeURIComponent(note.id)}`}><div className="dv2-note-preview"><span className="dv2-note-type"><FileText trigger="parent" size={13} />{sourceOf(note)}</span><h3>{note.title}</h3><p>{note.summary || "Buka catatan untuk membaca materi dan bab selengkapnya."}</p></div><div className="dv2-note-info"><strong>{note.title}</strong><span>{new Date(note.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}{note.pinned ? " · Disematkan" : ""}<ArrowRight trigger="parent" size={16} /></span></div></Link>)}</div>}
       </section>
     </main>
     <input ref={fileInput} className="sr-only" type="file" multiple aria-label="Lampirkan materi belajar" accept=".pdf,.doc,.docx,.ppt,.pptx,.xlsx,.xls,.csv,.txt,.md,.rtf,.odt,.mp3,.wav,.m4a,.ogg,.flac,.aac,.mp4,.webm,.mov" onChange={event => { attach(event.target.files); event.target.value = ""; }} />

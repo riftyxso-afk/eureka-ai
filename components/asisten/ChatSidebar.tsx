@@ -6,16 +6,14 @@ import { isDashboardV2 } from "@/lib/v2Navigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import {
-  MessageSquarePlus,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Pencil,
-  Plus,
-  Trash2,
-  Search,
-  House,
-} from "lucide-react";
+import MessageSquarePlus from "kubai-icons-react/icons/message-square-plus";
+import PanelLeftClose from "kubai-icons-react/icons/sidebar";
+import PanelLeftOpen from "kubai-icons-react/icons/sidebar";
+import Pencil from "kubai-icons-react/icons/pencil";
+import Trash2 from "kubai-icons-react/icons/trash";
+import Search from "kubai-icons-react/icons/search";
+import Plus from "kubai-icons-react/icons/circle-plus";
+import { House } from "lucide-react";
 import type { AssistantChatSession } from "@/lib/assistant/types";
 
 interface ChatSidebarProps {
@@ -90,7 +88,7 @@ export default function ChatSidebar({
       <div className="momo-sidebar-reopen hidden lg:flex">
         <button type="button" onClick={toggleCollapsed} title="Buka sidebar"
           aria-label="Buka sidebar" aria-expanded={false}>
-          <PanelLeftOpen size={20} />
+          <PanelLeftOpen trigger="parent" size={20} />
         </button>
       </div>
     );
@@ -98,14 +96,14 @@ export default function ChatSidebar({
 
   return (
     <div className="momo-sidebar hidden h-full w-[260px] shrink-0 flex-col gap-2 border-r border-clay-borderLight/60 bg-clay-cream p-3 transition-[width] duration-200 ease-in-out lg:flex">
-      <div className="momo-sidebar-top"><Link href={homePath} className="momo-sidebar-brand" aria-label="Eureka dashboard">eureka<span>!</span></Link><button type="button" className="momo-sidebar-collapse" onClick={toggleCollapsed} aria-label="Tutup sidebar" title="Tutup sidebar"><PanelLeftClose size={18} /></button></div>
-      <button type="button" onClick={onNew} className="momo-sidebar-new" data-testid="momo-sidebar-new"><Plus size={17} /> Chat baru</button>
+      <div className="momo-sidebar-top"><Link href={homePath} className="momo-sidebar-brand" aria-label="Eureka dashboard">eureka<span>!</span></Link><button type="button" className="momo-sidebar-collapse" onClick={toggleCollapsed} aria-label="Tutup sidebar" title="Tutup sidebar"><PanelLeftClose trigger="parent" size={18} /></button></div>
+      <button type="button" onClick={onNew} className="momo-sidebar-new" data-testid="momo-sidebar-new"><Plus trigger="parent" size={17} /> Chat baru</button>
       <Link href={homePath} className="momo-sidebar-nav-link"><House size={17} /> Dashboard</Link>
       {/* Header + tombol chat baru & collapse */}
       <div className="momo-sidebar-history-head">
         {searchOpen ? <input ref={searchRef} className="momo-sidebar-search" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") { setSearchOpen(false); setQuery(""); } }} placeholder="Cari percakapan" aria-label="Cari percakapan" /> : <span>Riwayat</span>}
         <div className="flex items-center gap-1">
-          <button type="button" className="momo-sidebar-search-button" aria-label={searchOpen ? "Tutup pencarian" : "Cari percakapan"} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); setQuery(""); }}><Search size={16} /></button>
+          <button type="button" className="momo-sidebar-search-button" aria-label={searchOpen ? "Tutup pencarian" : "Cari percakapan"} aria-expanded={searchOpen} onClick={() => { setSearchOpen(!searchOpen); setQuery(""); }}><Search trigger="parent" size={16} /></button>
           <button
             onClick={onNew}
             title="Chat baru"
@@ -113,7 +111,7 @@ export default function ChatSidebar({
             aria-label="Chat baru"
             data-testid="asisten-new-chat"
           >
-            <Plus size={15} /> <span className="hidden xl:inline">Baru</span>
+            <Plus trigger="parent" size={15} /> <span className="hidden xl:inline">Baru</span>
           </button>
         </div>
       </div>
@@ -184,7 +182,7 @@ export default function ChatSidebar({
                 className="shrink-0 rounded-full p-1.5 text-clay-muted opacity-0 transition-opacity hover:bg-white hover:text-clay-primary group-hover:opacity-100"
                 aria-label="Ubah judul"
               >
-                <Pencil size={13} />
+                <Pencil trigger="parent" size={13} />
               </button>
               <button
                 onClick={async () => {
@@ -194,7 +192,7 @@ export default function ChatSidebar({
                 className="shrink-0 rounded-full p-1.5 text-clay-muted opacity-0 transition-opacity hover:bg-white hover:text-red-500 group-hover:opacity-100"
                 aria-label="Hapus"
               >
-                <Trash2 size={13} />
+                <Trash2 trigger="parent" size={13} />
               </button>
             </div>
           );
@@ -250,7 +248,7 @@ export function MobileSessionButton({
         aria-label="Riwayat chat"
         aria-expanded={open}
       >
-        <MessageSquarePlus size={18} />
+        <MessageSquarePlus trigger="parent" size={18} />
       </button>
       {/* Dropdown di-render via portal ke body: topbar chat punya
           overflow-hidden (animasi header) & main overflow-hidden yang

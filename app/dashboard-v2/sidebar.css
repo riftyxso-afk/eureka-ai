@@ -5,8 +5,6 @@
   width: 34px;
   height: 34px;
   flex: none;
-  background: url("/illustrations/study-menu-atlas.png") no-repeat;
-  background-size: 300% 300%;
 }
 
 @media (max-width: 700px) {

@@ -2,13 +2,19 @@
 
 import { isValidElement, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { animate, useMotionValue, useMotionValueEvent, useReducedMotion } from 'motion/react';
-import {
-  ChevronDown as ArrowDown01Icon, Paperclip as Attachment01Icon,
-  CalendarDays as Calendar03Icon, X as Cancel01Icon,
-  ChartLine as ChartLineData01Icon, File as File02Icon, Globe as Globe02Icon,
-  CircleHelp as HelpCircleIcon, Mail as Mail01Icon, Mic as Mic01Icon,
-  Plus as PlusSignIcon, Sparkles as SparklesIcon, Check as Tick02Icon
-} from 'lucide-react';
+import ArrowDown01Icon from "kubai-icons-react/icons/chevron-down";
+import Attachment01Icon from "kubai-icons-react/icons/paperclip";
+import Calendar03Icon from "kubai-icons-react/icons/calendar-days";
+import ChartLineData01Icon from "kubai-icons-react/icons/chart-line";
+import File02Icon from "kubai-icons-react/icons/file";
+import Globe02Icon from "kubai-icons-react/icons/globe";
+import HelpCircleIcon from "kubai-icons-react/icons/circle-help";
+import Mail01Icon from "kubai-icons-react/icons/mail";
+import Mic01Icon from "kubai-icons-react/icons/mic";
+import SparklesIcon from "kubai-icons-react/icons/sparkles";
+import Cancel01Icon from "kubai-icons-react/icons/circle-x";
+import PlusSignIcon from "kubai-icons-react/icons/circle-plus";
+import Tick02Icon from "kubai-icons-react/icons/circle-check";
 import './PromptBar.css';
 
 const HugeiconsIcon = ({ icon: Icon, ...props }) => <Icon {...props} />;

@@ -3,10 +3,26 @@
 import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Search, X } from "lucide-react";
+import Menu from "kubai-icons-react/icons/menu";
+import Search from "kubai-icons-react/icons/search";
+import X from "kubai-icons-react/icons/circle-x";
 import type { AssistantChatSession } from "@/lib/assistant/types";
+import BookOpen from "kubai-icons-react/icons/book-open";
+import NotebookPen from "kubai-icons-react/icons/notebook-pen";
+import Network from "kubai-icons-react/icons/network";
+import ListChecks from "kubai-icons-react/icons/list-checks";
+import Layers from "kubai-icons-react/icons/layers";
+import FolderOpen from "kubai-icons-react/icons/folder-open";
+import MessageCircle from "kubai-icons-react/icons/message-circle";
+import Headphones from "kubai-icons-react/icons/headphones";
+import StickyNote from "kubai-icons-react/icons/sticky-note";
+import GraduationCap from "kubai-icons-react/icons/graduation-cap";
+import CalendarDays from "kubai-icons-react/icons/calendar-days";
+import Trophy from "kubai-icons-react/icons/trophy";
+import Grid from "kubai-icons-react/icons/grid";
 
 const BASE = "/dashboard-v2";
+const navigationIcons = [Grid, NotebookPen, MessageCircle, BookOpen, Trophy, CalendarDays, GraduationCap];
 const navigation = [
   { label: "Beranda", href: BASE, image: 0 },
   { label: "Koleksi catatan", href: BASE + "#dv2-notes-title", image: 1 },
@@ -18,9 +34,8 @@ const navigation = [
 ];
 
 export function V2MenuArt({ index }: { index: number }) {
-  return <span className="v2-menu-art" aria-hidden="true" style={{
-    backgroundPosition: `${index % 3 * 50}% ${Math.floor(index / 3) * 50}%`,
-  }} />;
+  const Icon = [BookOpen, NotebookPen, Network, ListChecks, Layers, FolderOpen, MessageCircle, Headphones, StickyNote][index] ?? BookOpen;
+  return <span className="v2-menu-art" aria-hidden="true"><Icon size="100%" trigger="parent" color={index === 0 || index === 8 ? "#e9b13b" : index === 6 ? "#f18d5c" : "#8253d4"} /></span>;
 }
 
 export default function V2MobileSidebar({ sections = [], sessions, desktop = false }: {
@@ -81,10 +96,11 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
           <section className="v2-drawer-group" key={group.label} aria-label={group.label}>
             <p className="v2-drawer-label">{group.label}</p>
             {group.items.map(item => {
+              const Icon = navigationIcons[navigation.indexOf(item)];
               const active = item.href === BASE ? pathname === BASE
                 : !item.href.includes("#") && (pathname === item.href || pathname.startsWith(item.href + "/"));
               return <Link key={item.href} href={item.href} onClick={follow} aria-current={active ? "page" : undefined}>
-                <V2MenuArt index={item.image} /><span>{item.label}</span>
+                <span className="v2-menu-art" aria-hidden="true"><Icon size="100%" trigger="parent" color={item.image === 0 || item.image === 8 ? "#e9b13b" : item.image === 6 ? "#f18d5c" : "#8253d4"} /></span><span>{item.label}</span>
                 {active && <span className="v2-drawer-active-dot" aria-hidden="true" />}
               </Link>;
             })}

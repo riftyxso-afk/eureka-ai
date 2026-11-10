@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft as ArrowLeft01Icon, Mic as Mic01Icon } from 'lucide-react';
+import ArrowLeft01Icon from "kubai-icons-react/icons/arrow-left";
+import Mic01Icon from "kubai-icons-react/icons/mic";
 import './VoicePill.css';
 
 const HugeiconsIcon = ({ icon: Icon, ...props }) => <Icon {...props} />;

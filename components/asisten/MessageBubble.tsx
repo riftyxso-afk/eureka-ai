@@ -3,7 +3,14 @@
 import { useMemo, useState } from "react";
 import { parseArtifactMessage } from "@/lib/assistant/artifacts";
 import { motion } from "framer-motion";
-import { ArrowUpRight, BookMarked, Check, Copy, FileText, Info, Paperclip, RefreshCw } from "lucide-react";
+import ArrowUpRight from "kubai-icons-react/icons/arrow-up-right";
+import BookMarked from "kubai-icons-react/icons/book-marked";
+import Copy from "kubai-icons-react/icons/copy";
+import FileText from "kubai-icons-react/icons/file-text";
+import Info from "kubai-icons-react/icons/info";
+import Paperclip from "kubai-icons-react/icons/paperclip";
+import Check from "kubai-icons-react/icons/circle-check";
+import RefreshCw from "kubai-icons-react/icons/sync";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
 import { citedNoteSources } from "@/lib/assistant/citedSources";
@@ -60,7 +67,7 @@ function CopyButton({ content }: { content: string }) {
       title="Salin pesan sebagai teks bersih"
       className="chat-message-copy inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-clay-full text-clay-muted transition-opacity duration-100 hover:bg-clay-beige hover:text-clay-primary focus-visible:opacity-100 active:scale-95"
     >
-      {copied ? <Check size={13} className="text-clay-success" /> : <Copy size={13} />}
+      {copied ? <Check trigger="parent" size={13} className="text-clay-success" /> : <Copy trigger="parent" size={13} />}
     </button>
   );
 }
@@ -144,13 +151,13 @@ export default function MessageBubble({
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {message.mentions.length > 0 && (
                   <span className="inline-flex items-center gap-1 rounded-clay-full bg-clay-cream/20 px-2 py-0.5 text-[10.5px] font-extrabold">
-                    <BookMarked size={11} />
+                    <BookMarked trigger="parent" size={11} />
                     {message.mentions.length} catatan
                   </span>
                 )}
                 {message.attachmentName && (
                   <span className="inline-flex items-center gap-1 rounded-clay-full bg-clay-cream/20 px-2 py-0.5 text-[10.5px] font-extrabold">
-                    <Paperclip size={11} />
+                    <Paperclip trigger="parent" size={11} />
                     {message.attachmentName.slice(0, 40)}
                   </span>
                 )}
@@ -199,9 +206,9 @@ export default function MessageBubble({
             onClick={() => onOpenArtifacts(`${message.id}:artifact:${index}`)}
             className="flex min-h-11 max-w-full items-center gap-2 self-start border-b border-clay-primary/20 py-2 text-start text-sm font-bold text-clay-dark hover:text-clay-primary focus-visible:outline-2 focus-visible:outline-clay-primary"
           >
-            <FileText size={17} className="shrink-0 text-clay-primary" aria-hidden="true" />
+            <FileText trigger="parent" size={17} className="shrink-0 text-clay-primary" aria-hidden="true" />
             <span className="min-w-0 [overflow-wrap:anywhere]">{artifact.title || "Buka artifact"}</span>
-            <ArrowUpRight size={15} className="shrink-0 text-clay-muted" aria-hidden="true" />
+            <ArrowUpRight trigger="parent" size={15} className="shrink-0 text-clay-muted" aria-hidden="true" />
           </button>
         ))}
 
@@ -220,7 +227,7 @@ export default function MessageBubble({
                     : modelDisplayName(message.model)
                 }
               >
-                <Info size={13} />
+                <Info trigger="parent" size={13} />
               </span>
             )}
             {displayContent && <CopyButton content={displayContent} />}
@@ -236,7 +243,7 @@ export default function MessageBubble({
             onClick={onRetry}
             className="inline-flex items-center gap-1.5 self-start rounded-clay-full border-3 border-clay-secondary bg-clay-cream px-4 py-1.5 text-xs font-extrabold text-clay-secondary shadow-clay-sm transition-all duration-75 hover:-translate-y-0.5 active:translate-y-1"
           >
-            <RefreshCw size={13} /> Coba lagi
+            <RefreshCw trigger="parent" size={13} /> Coba lagi
           </button>
         )}
       </div>
