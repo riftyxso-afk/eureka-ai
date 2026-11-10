@@ -272,14 +272,14 @@ test("Lala only issues a model-bound single-use token to authenticated callers",
   assert.equal(upstream, 1);
 });
 
-test("Voice search uses the current topic and waits for evidence before speech", async () => {
+test("Voice searches for news without a freshness keyword and waits for evidence before speech", async () => {
   let resolveSearch;
   let searched = false;
   let generated = false;
   const search = new Promise(resolve => { resolveSearch = resolve; });
   const { POST } = load("app/api/call/route.ts", {
     "@/lib/firecrawl": { searchWeb: async query => {
-      assert.equal(query, "Cuaca Bandung hari ini");
+      assert.equal(query, "Ada berita apa di Bandung terkini");
       searched = true;
       return search;
     } },
@@ -290,8 +290,9 @@ test("Voice search uses the current topic and waits for evidence before speech",
       hasAiKey: () => true,
       aiChatStream: async ({ system }) => {
         generated = true;
-        assert.match(system, /Prakiraan BMKG Bandung/);
-        return { content: "Menurut BMKG, Bandung berpotensi hujan." };
+        assert.match(system, /Berita Bandung/);
+        assert.match(system, /Eureka sudah melakukan pencarian web/);
+        return { content: "Ada kabar dari Bandung." };
       },
     },
     "@/lib/serverAnalytics": { captureServerEvent: async () => {} },
@@ -304,7 +305,7 @@ test("Voice search uses the current topic and waits for evidence before speech",
   const response = await POST(new Request("https://eureka.example/api/call", {
     method: "POST",
     body: JSON.stringify({
-      question: "Cuaca Bandung hari ini", stream: true,
+      question: "Ada berita apa di Bandung", stream: true,
       history: [{ role: "user", content: "Siapa penemu telepon?" }],
     }),
   }));
@@ -313,7 +314,7 @@ test("Voice search uses the current topic and waits for evidence before speech",
   assert.equal(JSON.parse(new TextDecoder().decode(first.value)).type, "searching");
   assert.equal(searched, true);
   assert.equal(generated, false);
-  resolveSearch([{ title: "Prakiraan BMKG Bandung", url: "https://bmkg.go.id", description: "Potensi hujan" }]);
+  resolveSearch([{ title: "Berita Bandung", url: "https://www.bandung.go.id", description: "Agenda kota" }]);
   assert.equal(JSON.parse(new TextDecoder().decode((await reader.read()).value)).type, "text");
   await reader.cancel();
 });
