@@ -32,6 +32,7 @@ import { usePromptNoteJob } from "@/components/dashboard/usePromptNoteJob";
 import PromptNoteProgress from "@/components/dashboard/PromptNoteProgress";
 import SpeechInput from "@/components/asisten/SpeechInput";
 import AiCallModal from "@/components/assistant/AiCallModal";
+import CallIntroBanner from "@/components/dashboard/CallIntroBanner";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { useV2Progress } from "@/components/dashboard/V2Progress";
@@ -68,7 +69,7 @@ export default function DashboardV2() {
   const [effort, setEffort] = useState("Seimbang");
   const { stats } = useV2Progress();
   const [inputError, setInputError] = useState("");
-  const [callOpen, setCallOpen] = useState(false);
+  const [callOpen, setCallOpen] = useState<"default" | "chat" | null>(null);
   useEffect(() => {
     if (generation.job?.status === "done" && generation.job.noteId) router.push(`/dashboard-v2/note/${encodeURIComponent(generation.job.noteId)}`);
   }, [generation.job?.status, generation.job?.noteId, router]);
@@ -183,7 +184,7 @@ export default function DashboardV2() {
                   onText={text => { setInputError(""); setDraft(previous => previous + (previous && !/\s$/.test(previous) ? " " : "") + text); }}
                   onError={setInputError} />}
               sources={[
-                ...(mode === "ask" && !openingChat ? [{ key: "momo-call", name: "Panggilan Momo", description: "Ngobrol langsung dengan suara", icon: <PhoneCall size={16} />, action: () => setCallOpen(true) }] : []),
+                ...(mode === "ask" && !openingChat ? [{ key: "momo-call", name: "Panggilan Momo", description: "Ngobrol langsung dengan suara", icon: <PhoneCall size={16} />, action: () => setCallOpen("default") }] : []),
                 { key: "upload", name: "Unggah materi", description: "Dokumen, slide, atau audio", icon: <Upload size={16} /> },
                 { key: "web", name: "Tautan web", description: "Ringkas artikel menjadi catatan", icon: <Globe trigger="parent" size={16} /> },
                 { key: "youtube", name: "YouTube", description: "Pelajari isi video", icon: <span className="dv2-youtube-logo" aria-hidden="true" /> },
@@ -204,7 +205,8 @@ export default function DashboardV2() {
         </div>{loading ? <div className="dv2-note-grid" role="status" aria-label="Memuat catatan">{[1, 2, 3].map(id => <div className="dv2-skeleton" key={id} />)}</div> : loadError ? <div className="dv2-empty" role="alert"><History trigger="parent" size={28} /><h3>Catatan belum bisa dimuat</h3><p>{loadError}</p><button className="dv2-button" onClick={() => void load()}>Coba lagi</button></div> : shown.length === 0 ? <div className="dv2-empty"><BookOpen trigger="parent" size={32} /><h3>{notes.length ? "Belum ada catatan yang cocok" : "Catatan pertamamu dimulai dari sebuah ide"}</h3><p>{notes.length ? "Coba kata kunci atau filter lain." : "Tulis topik di atas, tempel tautan, atau unggah materi untuk mulai belajar."}</p>{notes.length > 0 && <button className="dv2-button" onClick={() => { setQuery(""); setFilter("Semua"); setSubject(""); }}>Reset filter</button>}</div> : <div className={`dv2-note-grid ${view === "list" ? "is-list" : ""}`}>{shown.map(note => <Link className="dv2-note" key={note.id} href={`/dashboard-v2/note/${encodeURIComponent(note.id)}`}><div className="dv2-note-preview"><span className="dv2-note-type"><FileText trigger="parent" size={13} />{sourceOf(note)}</span><h3>{note.title}</h3><p>{note.summary || "Buka catatan untuk membaca materi dan bab selengkapnya."}</p></div><div className="dv2-note-info"><strong>{note.title}</strong><span>{new Date(note.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}{note.pinned ? " · Disematkan" : ""}<ArrowRight trigger="parent" size={16} /></span></div></Link>)}</div>}
       </section>
     </main>
-    <AiCallModal open={callOpen} onClose={() => setCallOpen(false)} />
+    <CallIntroBanner paused={Boolean(callOpen || openingChat || generation.busy)} onTry={() => setCallOpen("chat")} />
+    <AiCallModal open={callOpen !== null} chat={callOpen === "chat"} onClose={() => setCallOpen(null)} />
     <input ref={fileInput} className="sr-only" type="file" multiple aria-label="Lampirkan materi belajar" accept=".pdf,.doc,.docx,.ppt,.pptx,.xlsx,.xls,.csv,.txt,.md,.rtf,.odt,.mp3,.wav,.m4a,.ogg,.flac,.aac,.mp4,.webm,.mov" onChange={event => { attach(event.target.files); event.target.value = ""; }} />
   </div>;
 }

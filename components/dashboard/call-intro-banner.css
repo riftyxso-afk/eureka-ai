@@ -1,0 +1,55 @@
+.call-intro {
+  position: fixed;
+  inset: 0;
+  width: min(calc(100% - 32px), 500px);
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: #fff;
+  color: #211633;
+  box-shadow: 0 20px 70px #120b3040;
+  overscroll-behavior: contain;
+  overflow: auto;
+}
+.dark .call-intro { background: #211c2b; color: #f6efff; }
+.call-intro::backdrop { background: #14101acc; }
+.call-intro-art { position: relative; background: #1c133e; }
+.call-intro-art img { width: 100%; height: auto; aspect-ratio: 2 / 1; display: block; object-fit: cover; }
+.call-intro-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  color: white;
+  background: #171026b8;
+}
+.call-intro-content { padding: 22px clamp(18px, 5vw, 30px) 26px; }
+.call-intro-badge { color: #6536a8; font-size: 11px; letter-spacing: .08em; font-weight: 800; }
+.dark .call-intro-badge { color: #d5b4ff; }
+.call-intro h2 { margin: 8px 0; font-size: clamp(23px, 5vw, 30px); line-height: 1.18; font-weight: 850; text-wrap: balance; }
+.call-intro p { margin: 0; color: #60556e; font-size: 14px; line-height: 1.55; }
+.dark .call-intro p { color: #cec1dd; }
+.call-intro-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 20px; }
+.call-intro-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; padding: 8px 16px; border: 0; border-radius: 12px; font: inherit; font-weight: 800; }
+.call-intro-try { background: #703bc7; color: white; }
+.call-intro-later { background: transparent; color: inherit; }
+.call-intro button:focus-visible { outline: 2px solid #9a62e4; outline-offset: 3px; }
+@media (hover: hover) {
+  .call-intro-try:hover { background: #5e2eb0; }
+  .call-intro-later:hover { background: #8a5fc41a; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .call-intro[open] { animation: call-intro-enter 220ms cubic-bezier(.23, 1, .32, 1) both; }
+  @keyframes call-intro-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
