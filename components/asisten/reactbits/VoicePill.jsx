@@ -99,8 +99,11 @@ const openMic = async (s, requestId) => {
   if (!Ctx || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw new Error('unsupported');
   s.audio ??= { ctx: new Ctx() };
   const a = s.audio;
-  if (a.ctx.state === 'suspended') await a.ctx.resume();
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // Some mobile browsers resume Web Audio only after the microphone is granted.
+  if (a.ctx.state === 'suspended') void a.ctx.resume().catch(() => {});
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+  });
   if (!s.listening || s.requestId !== requestId) {
     stream.getTracks().forEach(t => t.stop());
     return;
@@ -111,6 +114,7 @@ const openMic = async (s, requestId) => {
   a.analyser.fftSize = 256;
   a.analyser.smoothingTimeConstant = 0;
   a.src.connect(a.analyser);
+  if (a.ctx.state === 'suspended') void a.ctx.resume().catch(() => {});
   a.buf = new Uint8Array(a.analyser.frequencyBinCount);
   return stream;
 };

@@ -3,13 +3,14 @@ export class TranscriptionError extends Error {
   constructor(message: string, public status = 502) { super(message); }
 }
 
-export async function transcribeRecording(audio: Blob, filename: string): Promise<string> {
+export async function transcribeRecording(audio: Blob, filename: string, language: "id" | "en" = "id"): Promise<string> {
   const key = process.env.ELEVENLABS_API_KEY?.trim();
   if (!key) throw new TranscriptionError("Transkripsi suara belum dikonfigurasi. Coba lagi nanti.", 503);
   const form = new FormData();
   form.append("file", audio, filename);
   form.append("model_id", process.env.ELEVENLABS_STT_MODEL?.trim() || "scribe_v2");
-  // Auto-detect the language, including Indonesian and mixed-language speech.
+  form.append("language_code", language);
+  form.append("timestamps_granularity", "none");
   form.append("tag_audio_events", "false");
   form.append("diarize", "false");
   let response: Response;

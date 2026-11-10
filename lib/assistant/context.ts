@@ -9,6 +9,7 @@
 import { db } from "../supabase/admin";
 import { getProfileMd } from "../profile";
 import { levelInfoForXp } from "../progress-store";
+import { summarizeStreak } from "../streak";
 import { embedTexts } from "../rag/embed";
 import { searchTextChunks } from "../rag/store";
 import { NOTE_EMBEDDING_DIMENSIONS } from "../rag/vector";
@@ -177,7 +178,7 @@ export async function buildProgressSummary(userId: string): Promise<string> {
       ? progress.active_days
       : [];
     const { level } = levelInfoForXp(xp);
-    const streak = computeStreak(activeDays);
+    const streak = summarizeStreak(activeDays).current;
 
     const dueCards = (cards ?? []).filter(
       (c: Record<string, unknown>) =>
@@ -211,26 +212,6 @@ export async function buildProgressSummary(userId: string): Promise<string> {
     console.warn("[assistant/context] buildProgressSummary:", e);
     return "";
   }
-}
-
-/** Hitung streak hari berturut-turut dari daftar tanggal "YYYY-MM-DD". */
-function computeStreak(activeDays: string[]): number {
-  const days = new Set(activeDays);
-  let streak = 0;
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
-  if (!days.has(key(cursor))) cursor.setDate(cursor.getDate() - 1);
-  while (days.has(key(cursor))) {
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
-
-function key(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 /**

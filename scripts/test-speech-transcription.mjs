@@ -14,7 +14,7 @@ function load(file, dependencies, globals = {}) {
   const exports = {};
   vm.runInNewContext(source, {
     exports, require: name => name in dependencies ? dependencies[name] : require(name),
-    Blob, FormData, Response, AbortSignal, console, process: { env: {} }, ...globals,
+    Blob, FormData, Response, AbortController, AbortSignal, console, process: { env: {} }, ...globals,
   }, { filename: file });
   return exports;
 }
@@ -28,6 +28,7 @@ test("ElevenLabs receives the real audio and STT settings, including Safari M4A"
       assert.equal(url, "https://api.elevenlabs.io/v1/speech-to-text");
       assert.equal(options.headers["xi-api-key"], "test-only");
       assert.equal(options.body.get("model_id"), "scribe_v2");
+      assert.equal(options.body.get("language_code"), "id");
       assert.equal(options.body.get("file").name, "rekaman.m4a");
       assert.equal(await options.body.get("file").text(), "recorded bytes");
       return Response.json({ text: "  Jelaskan hukum Newton.  " });
@@ -50,19 +51,26 @@ test("Empty speech, quota errors and missing credentials produce useful errors",
 
 function route({ auth = { userId: "ordinary-user" }, limited = false } = {}) {
   let calls = 0;
+  let language;
   const provider = load("lib/audio/transcribe.ts", {});
   const { POST } = load("app/api/audio/transcribe/route.ts", {
     "@/lib/assistant/auth": { authorizeAssistantUser: async () => auth },
-    "@/lib/audio/transcribe": { ...provider, transcribeRecording: async () => { calls++; return "Halo Momo"; } },
+    "@/lib/audio/transcribe": { ...provider, transcribeRecording: async (_audio, _filename, selectedLanguage) => {
+      calls++;
+      language = selectedLanguage;
+      return "Halo Momo";
+    } },
     "@/lib/rateLimit": { ensureRateLimitPrune() {}, checkRateLimit: () => ({ ok: !limited }) },
   });
-  return { POST, calls: () => calls };
+  return { POST, calls: () => calls, language: () => language };
 }
-function request(audio = new Blob(["audio"], { type: "audio/webm" })) {
+function request(audio = new Blob(["audio"], { type: "audio/webm" }), locale) {
   const form = new FormData();
   form.set("userId", "ordinary-user");
   if (audio) form.set("audio", audio, "rekaman.webm");
-  return new Request("http://localhost/api/audio/transcribe", { method: "POST", body: form });
+  return new Request("http://localhost/api/audio/transcribe", {
+    method: "POST", body: form, headers: locale ? { "x-locale": locale } : undefined,
+  });
 }
 
 test("An ordinary signed-in account can transcribe without a beta or Pro flag", async () => {
@@ -71,6 +79,102 @@ test("An ordinary signed-in account can transcribe without a beta or Pro flag", 
   assert.equal(result.status, 200);
   assert.deepEqual(await result.json(), { ok: true, text: "Halo Momo" });
   assert.equal(handler.calls(), 1);
+  assert.equal(handler.language(), "id");
+});
+
+test("Dictation uses the Eureka language with Indonesian as its default", async () => {
+  for (const [locale, expected] of [["id", "id"], ["en", "en"], ["unknown", "id"]]) {
+    const handler = route();
+    assert.equal((await handler.POST(request(undefined, locale))).status, 200);
+    assert.equal(handler.language(), expected);
+  }
+});
+
+test("Realtime calls send Indonesian PCM and suppress speaker echo until playback ends", async () => {
+  const audioNode = { connect() {}, disconnect() {} };
+  let socket, worklet, source, playback;
+  let now = 1000;
+  let answers = 0;
+  const { useMomoCall } = load("components/assistant/useMomoCall.ts", {
+    react: {
+      useState: value => [value, () => {}],
+      useRef: current => ({ current }),
+      useEffect() {},
+      useCallback: callback => callback,
+    },
+    "@/lib/apiClient": {
+      getClientLocale: () => "id",
+      async apiFetch(path) {
+        if (path === "/api/call/session") return Response.json({ token: "test-only" });
+        if (path === "/api/call") { answers++; return Response.json({ reply: "Halo!" }); }
+        return new Response(new Uint8Array(9600));
+      },
+    },
+    "@/lib/identity": { getUserId: () => "ordinary-user" },
+    "./recordCallTurns": {},
+  }, {
+    window: { AudioContext: true, setTimeout: () => 1, clearTimeout() {} },
+    navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [], getAudioTracks: () => [] }) } },
+    performance: { now: () => now },
+    URLSearchParams, btoa,
+    AudioContext: class {
+      state = "running";
+      currentTime = 0;
+      audioWorklet = { addModule: async () => {} };
+      resume = async () => {};
+      close = async () => {};
+      createAnalyser = () => ({ ...audioNode });
+      createMediaStreamSource = () => audioNode;
+      createBuffer = (_channels, frames, rate) => ({ duration: frames / rate, getChannelData: () => new Float32Array(frames) });
+      createBufferSource = () => (source = {
+        ...audioNode, start() {}, stop() {}, addEventListener: (_event, done) => { playback = done; },
+      });
+    },
+    AudioWorkletNode: class {
+      port = { close() {} };
+      connect() {}
+      disconnect() {}
+      constructor() { worklet = this; }
+    },
+    WebSocket: class {
+      static OPEN = 1;
+      readyState = 1;
+      bufferedAmount = 0;
+      sent = [];
+      constructor(url) { this.url = new URL(url); socket = this; }
+      send(chunk) { this.sent.push(JSON.parse(chunk)); }
+      close() {}
+    },
+  });
+  const call = useMomoCall();
+  const message = (message_type, text) => socket.onmessage({ data: JSON.stringify({ message_type, text }) });
+  const chunk = () => {
+    worklet.port.onmessage({ data: new Uint8Array(3200).fill(1).buffer });
+    return socket.sent.at(-1).audio_base_64;
+  };
+  try {
+    await call.start();
+    assert.equal(socket.url.searchParams.get("language_code"), "id");
+    message("session_started");
+    const liveAudio = chunk();
+    message("committed_transcript", "Halo Momo");
+    await new Promise(resolve => setImmediate(resolve));
+    assert.ok(playback);
+    const silence = btoa("\0".repeat(3200));
+    assert.equal(chunk(), silence);
+    message("committed_transcript", "Gema dari speaker");
+    assert.equal(answers, 1);
+    source.onended();
+    playback();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(chunk(), silence);
+    now += 200;
+    assert.equal(chunk(), liveAudio);
+    call.toggleMute();
+    assert.equal(chunk(), silence);
+  } finally {
+    call.stop();
+  }
 });
 
 test("Unauthenticated users and rate-limited requests never reach the provider", async () => {

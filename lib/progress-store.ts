@@ -4,6 +4,7 @@
  */
 import { db } from "./supabase/admin";
 import { listFriends } from "./friends-store";
+import { studyDay, summarizeStreak, type StreakSummary } from "./streak";
 
 export const LEVEL_TITLE = "PELAJAR KONSISTEN";
 
@@ -66,37 +67,22 @@ export interface ProgressStats {
   levelTitle: string;
   streak: number;
   longestStreak: number;
+  streakDetails: StreakSummary;
   totalDays: number;
   dueCards: number;
   rank: number | null;
   recentActivity: ActivityEntry[];
 }
 
-function todayKey(d: Date = new Date()): string {
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
-}
-
 async function loadUserProgress(userId: string): Promise<UserProgress> {
   const client = db();
-  const { data: row } = await client
-    .from("progress")
-    .select("xp, active_days")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  const { data: cards } = await client
-    .from("flashcards")
-    .select("id, note_id, front, back, due_date, review_count")
-    .eq("user_id", userId);
-
-  const { data: log } = await client
-    .from("activity_log")
-    .select("xp, label, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [{ data: row, error }, { data: cards }, { data: log }] = await Promise.all([
+    client.from("progress").select("xp, active_days").eq("user_id", userId).maybeSingle(),
+    client.from("flashcards").select("id, note_id, front, back, due_date, review_count").eq("user_id", userId),
+    client.from("activity_log").select("xp, label, created_at").eq("user_id", userId)
+      .order("created_at", { ascending: false }).limit(50),
+  ]);
+  if (error) throw error;
 
   return {
     xp: row?.xp ?? 0,
@@ -133,7 +119,7 @@ export async function recordActivity(
 
   const prevXp = row?.xp ?? 0;
   const prevDays = row?.active_days ?? [];
-  const key = todayKey();
+  const key = studyDay();
   const nextDays = prevDays.includes(key)
     ? prevDays
     : [...prevDays, key].sort();
@@ -219,35 +205,6 @@ export async function reviewAllCards(
   return data.length;
 }
 
-function calcStreak(activeDays: string[]): number {
-  const set = new Set(activeDays);
-  const d = new Date();
-  if (!set.has(todayKey(d))) d.setDate(d.getDate() - 1);
-  let streak = 0;
-  while (set.has(todayKey(d))) {
-    streak++;
-    d.setDate(d.getDate() - 1);
-  }
-  return streak;
-}
-
-function calcLongestStreak(activeDays: string[]): number {
-  const days = [...activeDays].sort();
-  if (days.length === 0) return 0;
-  let longest = 1;
-  let run = 1;
-  for (let i = 1; i < days.length; i++) {
-    const diff = (Date.parse(days[i]) - Date.parse(days[i - 1])) / 86400000;
-    if (diff === 1) {
-      run++;
-    } else {
-      longest = Math.max(longest, run);
-      run = 1;
-    }
-  }
-  return Math.max(longest, run);
-}
-
 /**
  * Statistik progres: XP, level, streak, kartu jatuh tempo, dan peringkat
  * di antara diri sendiri + teman (berdasarkan XP).
@@ -284,15 +241,17 @@ export async function getStats(userId: string): Promise<ProgressStats> {
   }
 
   const info = levelInfoForXp(p.xp);
+  const streakDetails = summarizeStreak(p.activeDays, now);
   return {
     xp: p.xp,
     level: info.level,
     xpInLevel: info.xpInLevel,
     xpToNext: info.xpToNext,
     levelTitle: LEVEL_TITLE,
-    streak: calcStreak(p.activeDays),
-    longestStreak: calcLongestStreak(p.activeDays),
-    totalDays: p.activeDays.length,
+    streak: streakDetails.current,
+    longestStreak: streakDetails.longest,
+    streakDetails,
+    totalDays: streakDetails.totalDays,
     dueCards,
     rank,
     recentActivity: p.activityLog,

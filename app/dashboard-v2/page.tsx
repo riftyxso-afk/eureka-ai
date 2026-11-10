@@ -34,6 +34,7 @@ import SpeechInput from "@/components/asisten/SpeechInput";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
+import { useV2Progress } from "@/components/dashboard/V2Progress";
 import { supabase } from "@/lib/supabase/client";
 import { PENDING_PROMPT_KEY, type PendingPrompt } from "@/lib/assistant/pendingPrompt";
 import type { Note } from "@/lib/types";
@@ -65,7 +66,7 @@ export default function DashboardV2() {
   const [openingChat, setOpeningChat] = useState(false);
   const chatLock = useRef(false);
   const [effort, setEffort] = useState("Seimbang");
-  const [stats, setStats] = useState<{ streak: number; level: number } | null>(null);
+  const { stats } = useV2Progress();
   const [inputError, setInputError] = useState("");
   const [callOpen, setCallOpen] = useState(false);
   useEffect(() => {
@@ -135,9 +136,6 @@ export default function DashboardV2() {
     const controller = new AbortController();
     setSubject(new URLSearchParams(window.location.search).get("subject") ?? "");
     void load(controller.signal);
-    void apiFetch(`/api/progress?userId=${encodeURIComponent(getUserId())}`, { signal: controller.signal }).then(async response => {
-      if (response.ok) { const data = await response.json(); if (data.stats) setStats(data.stats); }
-    }).catch(() => {});
     const refresh = () => void load(controller.signal);
     window.addEventListener("note-ready", refresh);
     return () => { controller.abort(); window.removeEventListener("note-ready", refresh); };
@@ -159,7 +157,7 @@ export default function DashboardV2() {
       <V2MobileSidebar desktop />
       <Link className="dv2-brand" href="/dashboard-v2"><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka! <span>V2 · Beta</span></Link>
       <nav aria-label="Navigasi Dashboard V2" className="dv2-topnav"><Link href="/dashboard-v2#dv2-notes-title"><FolderOpen trigger="parent" size={16} />Catatan</Link><Link href="/dashboard-v2/tanya-momo"><MessageCircle trigger="parent" size={16} />Tanya Momo</Link></nav>
-      <div className="dv2-account"><ThemeSwitch /><PageTutorial guideId="dashboard" /><Link href="/dashboard/streaks" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
+      <div className="dv2-account"><ThemeSwitch /><PageTutorial guideId="dashboard" /><Link href="/dashboard-v2/streaks" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard-v2/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/dashboard-v2/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
     </header>
     <main className="dv2-main">
       <section className="dv2-workspace" aria-labelledby="dv2-title">

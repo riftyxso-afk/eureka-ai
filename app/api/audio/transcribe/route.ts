@@ -67,7 +67,8 @@ export async function POST(req: NextRequest) {
       audio instanceof Blob && typeof (audio as { name?: unknown }).name === "string"
         ? String((audio as { name: string }).name)
         : `rekaman-${Date.now()}.webm`;
-    const text = await transcribeRecording(audio, filename);
+    const language = req.headers.get("x-locale") === "en" ? "en" : "id";
+    const text = await transcribeRecording(audio, filename, language);
     return NextResponse.json({ ok: true, text });
   } catch (e) {
     if (e instanceof TranscriptionError) return NextResponse.json({ error: e.message }, { status: e.status });

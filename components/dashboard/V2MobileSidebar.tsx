@@ -22,9 +22,12 @@ import GraduationCap from "kubai-icons-react/icons/graduation-cap";
 import CalendarDays from "kubai-icons-react/icons/calendar-days";
 import Trophy from "kubai-icons-react/icons/trophy";
 import Grid from "kubai-icons-react/icons/grid";
+import Flame from "kubai-icons-react/icons/flame";
+import Crown from "kubai-icons-react/icons/crown";
+import User from "kubai-icons-react/icons/user";
 
 const BASE = "/dashboard-v2";
-const navigationIcons = [Grid, NotebookPen, MessageCircle, BookOpen, Trophy, CalendarDays, GraduationCap];
+const navigationIcons = [Grid, NotebookPen, MessageCircle, BookOpen, Trophy, CalendarDays, GraduationCap, Flame, User, Crown];
 const navigation = [
   { label: "Beranda", href: BASE, image: 0 },
   { label: "Koleksi catatan", href: BASE + "#dv2-notes-title", image: 1 },
@@ -33,10 +36,13 @@ const navigation = [
   { label: "Misi", href: BASE + "/misi", image: 3 },
   { label: "Jadwal", href: BASE + "/jadwal", image: 8 },
   { label: "Kursus", href: BASE + "/kursus", image: 4 },
+  { label: "Streak", href: BASE + "/streaks", image: 9 },
+  { label: "Profil", href: BASE + "/profil", image: 10 },
+  { label: "Paket Pro", href: BASE + "/pricing", image: 11 },
 ];
 
 export function V2MenuArt({ index }: { index: number }) {
-  const Icon = [BookOpen, NotebookPen, Network, ListChecks, Layers, FolderOpen, MessageCircle, Headphones, StickyNote][index] ?? BookOpen;
+  const Icon = [BookOpen, NotebookPen, Network, ListChecks, Layers, FolderOpen, MessageCircle, Headphones, StickyNote, Flame, User, Crown][index] ?? BookOpen;
   return <span className="v2-menu-art" aria-hidden="true"><Icon size="100%" trigger="parent" color={index === 0 || index === 8 ? "#e9b13b" : index === 6 ? "#f18d5c" : "#8253d4"} /></span>;
 }
 
@@ -94,7 +100,8 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
       </label>
       <nav aria-label="Navigasi Eureka">
         {[{ label: "Utama", items: links.filter(item => navigation.indexOf(item) < 3) },
-          { label: "Belajar", items: links.filter(item => navigation.indexOf(item) >= 3) }].map(group => group.items.length > 0 &&
+          { label: "Belajar", items: links.filter(item => navigation.indexOf(item) >= 3 && navigation.indexOf(item) < 7) },
+          { label: "Akun", items: links.filter(item => navigation.indexOf(item) >= 7) }].map(group => group.items.length > 0 &&
           <section className="v2-drawer-group" key={group.label} aria-label={group.label}>
             <p className="v2-drawer-label">{group.label}</p>
             {group.items.map(item => {

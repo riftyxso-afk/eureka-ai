@@ -30,7 +30,7 @@ export function recordCallTurns(
     if (volume > 0.018) lastSpeechAt = now;
 
     if (recording) {
-      if (recording.state === "recording" && (now - lastSpeechAt >= 850 || now - startedAt >= 25_000)) {
+      if (recording.state === "recording" && (now - lastSpeechAt >= 1_100 || now - startedAt >= 25_000)) {
         recording.stop();
       }
       return;

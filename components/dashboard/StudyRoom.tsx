@@ -25,6 +25,7 @@ import Crown from "kubai-icons-react/icons/crown";
 import Check from "kubai-icons-react/icons/circle-check";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
+import { useV2Progress } from "@/components/dashboard/V2Progress";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
 import V2MobileSidebar, { V2MenuArt } from "./V2MobileSidebar";
 import PageTutorial from "@/components/tutorial/PageTutorial";
@@ -63,7 +64,7 @@ export default function StudyRoom({ noteId, initialEditor = false, initialChapte
   const [read, setRead] = useState<number[]>([]);
   const [sourceFiles, setSourceFiles] = useState<{ name: string; size: number }[]>([]);
   const [dirty, setDirty] = useState(false);
-  const [stats, setStats] = useState<{ streak: number; level: number } | null>(null);
+  const { stats } = useV2Progress();
   useEffect(() => { if (!matchMedia("(max-width:700px)").matches) return; const frame = requestAnimationFrame(() => document.querySelector('.sr-main')?.scrollIntoView({ block: "start" })); return () => cancelAnimationFrame(frame); }, [tab]);
   const key = `eureka:v2:reading:${getUserId()}:${noteId}`;
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -78,7 +79,6 @@ export default function StudyRoom({ noteId, initialEditor = false, initialChapte
   }, [noteId]);
   useEffect(() => {
     const controller = new AbortController(); void load(controller.signal);
-    void apiFetch(`/api/progress?userId=${encodeURIComponent(getUserId())}`, { signal: controller.signal }).then(async response => { if (response.ok) { const data = await response.json(); if (data.stats) setStats(data.stats); } }).catch(() => {});
     try {
       const values = JSON.parse(localStorage.getItem(key) || "[]");
       if (Array.isArray(values)) setRead(values.filter(value => Number.isInteger(value)));
@@ -110,7 +110,7 @@ export default function StudyRoom({ noteId, initialEditor = false, initialChapte
   const activeChapter = chapters.find(chapter => chapter.id === chapterId);
   const sources = [...new Map([...(note?.references ?? []), ...chapters.flatMap(chapter => chapter.sources ?? []), ...(note?.sourceUrl ? [{ title: "Materi sumber", url: note.sourceUrl, snippet: "" }] : [])].filter(source => httpUrl(source.url)).map(source => [source.url, source])).values()];
   return <div className="dv2 sr-room">
-    <header className="dv2-topbar sr-topbar" onClickCapture={event => { if (dirty && event.target instanceof Element && event.target.closest("a")) { event.preventDefault(); toast.warning("Simpan atau batalkan perubahan editor sebelum berpindah halaman."); } }}><V2MobileSidebar sections={MENU.map(item => ({ id: item.id, label: item.label, active: tab === item.id, select: () => navigate(item.id) }))} /><Link className="dv2-brand" href="/dashboard-v2" onClick={event => { if (dirty) { event.preventDefault(); toast.warning("Simpan perubahan editor sebelum kembali."); } }}><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka!<span>Ruang belajar</span></Link><span className="sr-breadcrumb">{note?.title ?? "Menyiapkan materi"}</span><div className="dv2-account"><ThemeSwitch /><PageTutorial guideId={`room-${tab}`} ready={!loading && !!note} /><Link className="dv2-stat dv2-streak" href="/dashboard/streaks"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link className="dv2-stat dv2-level" href="/dashboard/profil"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link className="dv2-stat dv2-upgrade" href="/pricing"><Crown trigger="parent" size={16} />Upgrade</Link></div></header>
+    <header className="dv2-topbar sr-topbar" onClickCapture={event => { if (dirty && event.target instanceof Element && event.target.closest("a")) { event.preventDefault(); toast.warning("Simpan atau batalkan perubahan editor sebelum berpindah halaman."); } }}><V2MobileSidebar sections={MENU.map(item => ({ id: item.id, label: item.label, active: tab === item.id, select: () => navigate(item.id) }))} /><Link className="dv2-brand" href="/dashboard-v2" onClick={event => { if (dirty) { event.preventDefault(); toast.warning("Simpan perubahan editor sebelum kembali."); } }}><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka!<span>Ruang belajar</span></Link><span className="sr-breadcrumb">{note?.title ?? "Menyiapkan materi"}</span><div className="dv2-account"><ThemeSwitch /><PageTutorial guideId={`room-${tab}`} ready={!loading && !!note} /><Link className="dv2-stat dv2-streak" href="/dashboard-v2/streaks"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link className="dv2-stat dv2-level" href="/dashboard-v2/profil"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link className="dv2-stat dv2-upgrade" href="/dashboard-v2/pricing"><Crown trigger="parent" size={16} />Upgrade</Link></div></header>
     <div className="sr-layout"><nav id="study-navigation" className="sr-nav" aria-label="Menu ruang belajar">{MENU.map((item, index) => <button key={item.id} aria-pressed={tab === item.id} onClick={() => navigate(item.id)}><V2MenuArt index={index} /><span>{item.label}</span>{(item.id === "mindmap" || item.id === "podcast") && <small className="rm-nav-beta">Beta</small>}</button>)}</nav>
       <main className={`sr-main ${tab === "mindmap" ? "is-mindmap" : ""}`}>
         {loading ? <div className="sr-loading" role="status"><div className="sr-momo"><MomoCompanion mode="fast" thinking /></div><p>Momo sedang membuka materi…</p></div> : error ? <div className="dv2-empty" role="alert"><h1>Materi belum bisa dibuka</h1><p>{error}</p><button className="dv2-button" onClick={() => void load()}>Coba lagi</button></div> : note && <>
