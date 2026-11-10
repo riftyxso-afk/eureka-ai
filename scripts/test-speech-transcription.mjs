@@ -14,7 +14,7 @@ function load(file, dependencies, globals = {}) {
   const exports = {};
   vm.runInNewContext(source, {
     exports, require: name => name in dependencies ? dependencies[name] : name === "./elevenlabs" ? load("lib/audio/elevenlabs.ts", {}, globals) : require(name),
-    Blob, FormData, Headers, Response, AbortController, AbortSignal, console, process: { env: {} }, ...globals,
+    Blob, FormData, Headers, Response, ReadableStream, TextDecoder, TextEncoder, AbortController, AbortSignal, console, process: { env: {} }, ...globals,
   }, { filename: file });
   return exports;
 }
@@ -143,6 +143,7 @@ test("Realtime calls send Indonesian PCM and suppress speaker echo until playbac
     },
     "@/lib/identity": { getUserId: () => "ordinary-user" },
     "./recordCallTurns": {},
+    "@/lib/audio/callReply": load("lib/audio/callReply.ts", {}),
   }, {
     window: { AudioContext: true, setTimeout: () => 1, clearTimeout() {} },
     navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [], getAudioTracks: () => [] }) } },
@@ -206,6 +207,49 @@ test("Realtime calls send Indonesian PCM and suppress speaker echo until playbac
   } finally {
     call.stop();
   }
+});
+
+test("Speech starts on the first streamed sentence before the AI finishes", async () => {
+  let finish;
+  const waiting = new Promise(resolve => { finish = resolve; });
+  let speechReady;
+  const firstSpeech = new Promise(resolve => { speechReady = resolve; });
+  const { POST } = load("app/api/call/route.ts", {
+    "@/lib/ai": {
+      hasAiKey: () => true,
+      aiChatStream: async (_options, emit) => {
+        emit({ type: "token", text: "Halo, saya akan membantu kamu. " });
+        await waiting;
+        emit({ type: "token", text: "Mari kita mulai." });
+        return { content: "Halo, saya akan membantu kamu. Mari kita mulai." };
+      },
+    },
+    "@/lib/serverAnalytics": { captureServerEvent: async () => {} },
+    "@/lib/after": { runAfter() {} },
+    "@/lib/assistant/auth": { requireAuth: async () => ({ userId: "ordinary-user" }) },
+    "@/lib/prompts/safety": { AI_SAFETY_GUARDRAIL: "" },
+    "@/lib/prompts/momoPersona": { momoPersona: () => "" },
+    "@/lib/rateLimit": { ensureRateLimitPrune() {}, checkRateLimit: () => ({ ok: true }) },
+  });
+  const response = await POST(new Request("https://eureka.example/api/call", {
+    method: "POST", body: JSON.stringify({ question: "Halo", stream: true }),
+  }));
+  const { readCallReply } = load("lib/audio/callReply.ts", {});
+  const speech = [];
+  const reading = readCallReply(response, () => {}, text => { speech.push(text); speechReady(); });
+  await firstSpeech;
+  assert.deepEqual(speech, ["Halo, saya akan membantu kamu."]);
+  finish();
+  assert.equal(await reading, "Halo, saya akan membantu kamu. Mari kita mulai.");
+  assert.deepEqual(speech, ["Halo, saya akan membantu kamu.", "Mari kita mulai."]);
+});
+
+test("An interrupted AI reply is reported instead of being accepted as complete", async () => {
+  const { readCallReply } = load("lib/audio/callReply.ts", {});
+  const response = new Response(JSON.stringify({ type: "text", text: "Jawaban parsial" }) + "\n", {
+    headers: { "Content-Type": "application/x-ndjson" },
+  });
+  await assert.rejects(() => readCallReply(response, () => {}, () => {}), /terputus/);
 });
 
 test("Unauthenticated users and rate-limited requests never reach the provider", async () => {

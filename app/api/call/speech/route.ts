@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
   const model = process.env.ELEVENLABS_CALL_MODEL_ID?.trim() || "eleven_flash_v2_5";
   if (!configured) return NextResponse.json({ error: "Suara ElevenLabs belum dikonfigurasi." }, { status: 503 });
   ensureRateLimitPrune();
-  if (!checkRateLimit(`call-audio:${auth.userId}`, 30, 60 * 60 * 1000).ok) return NextResponse.json({ error: "Batas suara tercapai. Coba lagi nanti." }, { status: 429 });
+  // A streamed call reply uses at most two speech segments.
+  if (!checkRateLimit(`call-audio:${auth.userId}`, 60, 60 * 60 * 1000).ok) return NextResponse.json({ error: "Batas suara tercapai. Coba lagi nanti." }, { status: 429 });
   try {
     const endpoint = `text-to-speech/${encodeURIComponent(voice)}/stream`;
     const response = await elevenLabsFetch(`https://api.elevenlabs.io/v1/${endpoint}?output_format=pcm_24000`, {

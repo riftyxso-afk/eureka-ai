@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, getClientLocale } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { recordCallTurns } from "./recordCallTurns";
+import { readCallReply } from "@/lib/audio/callReply";
 
 type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "speaking";
 type Turn = { role: "user" | "assistant"; content: string };
@@ -118,7 +119,7 @@ async function playPcm(response: Response, session: Session, playback: Playback,
       const bytes = new Uint8Array(pending.length + value.length);
       bytes.set(pending);
       bytes.set(value, pending.length);
-      if (bytes.length < 9600) {
+      if (bytes.length < 2400) {
         pending = bytes;
         continue;
       }
@@ -186,33 +187,42 @@ export function useMomoCall() {
     setTranscript(question);
     setReply("");
 
+    let audioQueue = Promise.resolve();
+    let audioError: unknown;
+    const queueSpeech = (text: string) => {
+      if (!isCurrent() || signal.aborted || audioError) return;
+      const pending = apiFetch("/api/call/speech", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }), signal,
+      }).catch((cause: unknown) => cause);
+      audioQueue = audioQueue.then(async () => {
+        const speech = await pending;
+        if (!(speech instanceof Response)) throw speech;
+        if (!isCurrent() || signal.aborted || audioError) { void speech.body?.cancel().catch(() => {}); return; }
+        if (!speech.ok) throw new Error(await readError(speech, "Suara Momo belum bisa diputar."));
+        await playPcm(speech, session, playback, () => {
+          if (!isCurrent()) return;
+          session.recorder?.discard();
+          session.speaking = true;
+          setPhase("speaking");
+        });
+      }).catch((cause: unknown) => { audioError = cause; });
+    };
     try {
       const response = await apiFetch("/api/call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, history: session.history }),
+        body: JSON.stringify({ question, history: session.history, stream: true }),
         signal,
       });
       if (!response.ok) throw new Error(await readError(response, "Momo belum bisa menjawab."));
-      const { reply: text } = await response.json() as { reply: string };
+      const text = await readCallReply(response, value => { if (isCurrent()) setReply(value); }, queueSpeech);
       if (!isCurrent()) return;
       session.history = [...session.history, { role: "user", content: question }, { role: "assistant", content: text }].slice(-12) as Turn[];
       setReply(text);
 
-      const speech = await apiFetch("/api/call/speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-        signal,
-      });
-      if (!speech.ok) throw new Error(await readError(speech, "Suara Momo belum bisa diputar."));
-      if (!isCurrent()) return;
-      await playPcm(speech, session, playback, () => {
-        if (!isCurrent()) return;
-        session.recorder?.discard();
-        session.speaking = true;
-        setPhase("speaking");
-      });
+      await audioQueue;
+      if (audioError) throw audioError;
     } catch (cause) {
       if (isCurrent() && !signal.aborted) {
         setError(cause instanceof Error ? cause.message : "Panggilan sempat terputus.");
@@ -364,7 +374,7 @@ export function useMomoCall() {
         const params = new URLSearchParams({
           token, model_id: "scribe_v2_realtime", audio_format: "pcm_16000",
           language_code: getClientLocale() === "en" ? "en" : "id",
-          commit_strategy: "vad", vad_silence_threshold_secs: "1.1",
+          commit_strategy: "vad", vad_silence_threshold_secs: "0.8",
         });
         const capture = new AudioWorkletNode(context, "momo-call-capture");
         session.capture = capture;

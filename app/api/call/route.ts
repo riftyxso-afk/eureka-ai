@@ -1,5 +1,6 @@
 import { aiChatStream, hasAiKey } from "@/lib/ai";
 import { captureServerEvent } from "@/lib/serverAnalytics";
+import { runAfter } from "@/lib/after";
 import { requireAuth } from "@/lib/assistant/auth";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
 import { momoPersona } from "@/lib/prompts/momoPersona";
@@ -38,6 +39,53 @@ export async function POST(request: Request) {
     return Response.json({ error: "Batas percakapan suara tercapai. Coba lagi nanti." }, { status: 429 });
   }
   try {
+    if (body.stream === true) {
+      const controller = new AbortController();
+      const signal = AbortSignal.any([request.signal, controller.signal, AbortSignal.timeout(30_000)]);
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async start(output) {
+          let text = "";
+          let spoken = 0;
+          let cancelled = false;
+          const send = (message: object) => {
+            if (signal.aborted || cancelled) return;
+            try { output.enqueue(encoder.encode(JSON.stringify(message) + "\n")); }
+            catch { cancelled = true; controller.abort(); }
+          };
+          try {
+            const result = await aiChatStream({
+              system: `${VOICE_SYSTEM}\n\n${AI_SAFETY_GUARDRAIL}`,
+              user: question, history: readHistory(body.history),
+              maxTokens: 180, reasoning: false, speedMode: "fast", signal,
+            }, event => {
+              if (event.type !== "token") return;
+              text += event.text;
+              send({ type: "text", text: event.text });
+              // At most two speech requests: start the first complete sentence
+              // early, then synthesize the remainder while that sentence plays.
+              const boundary = !spoken ? [...text.matchAll(/[.!?](?=\s)/g)].find(match => match.index >= 20) : undefined;
+              if (!spoken && boundary) {
+                spoken = boundary.index + 1;
+                send({ type: "speech", text: text.slice(0, spoken).trim() });
+              }
+            });
+            if (!text) { text = result.content; send({ type: "text", text }); }
+            const rest = text.slice(spoken).trim();
+            if (!text.trim()) throw new Error("Empty voice response");
+            if (rest) send({ type: "speech", text: rest });
+            send({ type: "done" });
+            if (!signal.aborted) runAfter(async () => { await captureServerEvent(auth.userId, "momo_call_answered"); });
+          } catch {
+            send({ type: "error", error: "Momo belum bisa menyelesaikan jawaban. Coba lagi." });
+          } finally {
+            if (!cancelled) { try { output.close(); } catch { /* Caller disconnected. */ } }
+          }
+        },
+        cancel() { controller.abort(); },
+      });
+      return new Response(stream, { headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store, no-transform", "X-Accel-Buffering": "no" } });
+    }
     const { content } = await aiChatStream({
       system: `${VOICE_SYSTEM}\n\n${AI_SAFETY_GUARDRAIL}`,
       user: question,
@@ -49,7 +97,7 @@ export async function POST(request: Request) {
     });
     const reply = content.trim();
     if (reply) {
-      await captureServerEvent(auth.userId, "momo_call_answered");
+      runAfter(async () => { await captureServerEvent(auth.userId, "momo_call_answered"); });
       return Response.json({ ok: true, reply });
     }
   } catch {
