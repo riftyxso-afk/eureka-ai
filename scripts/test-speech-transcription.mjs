@@ -161,7 +161,7 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
       } },
     },
     performance: { now: () => now },
-    URL, URLSearchParams, btoa,
+    URL, URLSearchParams, btoa, atob,
     window: { setTimeout: () => 1, clearTimeout() {}, AudioContext: class {
       state = "running";
       currentTime = 0;
@@ -244,6 +244,13 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
     message("partial_transcript", "Sudah, tutup saja");
     assert.equal(voiceEnds, 0);
     message("committed_transcript", "Sudah, tutup saja.");
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(spoken.at(-1), /aku tutup panggilannya sekarang/);
+    assert.equal(voiceEnds, 0);
+    assert.equal(stoppedTracks, 0);
+    source.onended();
+    playback();
+    await new Promise(resolve => setImmediate(resolve));
     assert.equal(voiceEnds, 1);
     assert.equal(stoppedTracks, 1);
     assert.equal(answers, 1);
@@ -254,6 +261,17 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
     live({ inputTranscription: { text: "tutup saja." } });
     assert.equal(voiceEnds, 1);
     live({ turnComplete: true });
+    assert.match(socket.sent.at(-1).realtimeInput.text, /aku tutup panggilannya sekarang/);
+    live({
+      modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: btoa("\0".repeat(4800)) } }] },
+      turnComplete: true,
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(voiceEnds, 1);
+    assert.equal(stoppedTracks, 1);
+    source.onended();
+    playback();
+    await new Promise(resolve => setImmediate(resolve));
     assert.equal(voiceEnds, 2);
     assert.equal(stoppedTracks, 2);
   } finally {

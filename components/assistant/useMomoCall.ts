@@ -27,6 +27,7 @@ type Session = {
   history: Turn[];
   muted: boolean;
   speaking: boolean;
+  ending?: boolean;
   echoUntil: number;
   freshSpeech: boolean;
   timers: Set<number>;
@@ -131,7 +132,7 @@ function hasVoice(bytes: Uint8Array) {
 }
 
 function micBlocked(session: Session) {
-  return session.muted || session.speaking || performance.now() < session.echoUntil;
+  return session.ending || session.muted || session.speaking || performance.now() < session.echoUntil;
 }
 
 function stopPlayback(session: Session) {
@@ -277,16 +278,23 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     setPhase("idle");
   }
 
-  function endOnCommand(text: string) {
-    if (!wantsToEndCall(text)) return false;
+  function finishVoiceEnd(session: Session) {
+    if (active.current !== session) return;
     stop();
     setPhase("idle");
     onVoiceEnd?.();
-    return true;
+  }
+
+  function beginFarewell(session: Session) {
+    session.ending = true;
+    stopPlayback(session);
+    session.timers.add(window.setTimeout(() => finishVoiceEnd(session), 8_000));
   }
 
   async function answer(session: Session, question: string, greeting?: string) {
-    if (!greeting && endOnCommand(question)) return;
+    if (session.ending) return;
+    const farewell = !greeting && wantsToEndCall(question);
+    if (farewell) beginFarewell(session);
     stopPlayback(session);
     const playback: Playback = { controller: new AbortController(), sources: new Set() };
     session.playback = playback;
@@ -326,7 +334,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
       }).catch((cause: unknown) => { audioError = cause; });
     };
     try {
-      const immediate = greeting ?? correctionReply(question);
+      const immediate = farewell ? "Oke, aku tutup panggilannya sekarang, ya. Sampai jumpa!" : greeting ?? correctionReply(question);
       if (immediate) {
         replyText = immediate;
         showReply(immediate);
@@ -356,8 +364,11 @@ export function useMomoCall(onVoiceEnd?: () => void) {
       }
     } finally {
       if (isCurrent()) {
-        stopPlayback(session);
-        setPhase("listening");
+        if (farewell) finishVoiceEnd(session);
+        else {
+          stopPlayback(session);
+          setPhase("listening");
+        }
       }
     }
   }
@@ -400,7 +411,11 @@ export function useMomoCall(onVoiceEnd?: () => void) {
       if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
     };
     const connectionFailed = () => {
-      if (active.current === session) fail("Panggilan Lala terputus. Coba lagi atau pilih Momo.");
+      if (active.current !== session) return;
+      if (session.ending) {
+        closeAudioInput();
+        if (!session.playback) finishVoiceEnd(session);
+      } else fail("Panggilan Lala terputus. Coba lagi atau pilih Momo.");
     };
     const setupTimer = window.setTimeout(connectionFailed, CONNECT_TIMEOUT);
     session.timers.add(setupTimer);
@@ -408,7 +423,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
       if (ready) send({ realtimeInput: { audioStreamEnd: true } });
     };
     capture.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
-      if (!ready || session.muted || active.current !== session) return;
+      if (!ready || session.muted || session.ending || active.current !== session) return;
       if (socket.bufferedAmount > 128_000) { connectionFailed(); return; }
       const data = btoa(String.fromCharCode(...new Uint8Array(event.data)));
       send({ realtimeInput: { audio: { data, mimeType: "audio/pcm;rate=16000" } } });
@@ -439,6 +454,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
           playback.controller.signal.removeEventListener("abort", closeAudioInput);
           if (active.current !== session || session.playback !== playback) return;
           audioInput = undefined;
+          if (session.ending) { finishVoiceEnd(session); return; }
           stopPlayback(session);
           setPhase("listening");
         });
@@ -556,7 +572,19 @@ export function useMomoCall(onVoiceEnd?: () => void) {
           setTranscript(inputText);
           if (!session.speaking && !content.outputTranscription?.text) setReply("");
         }
-        if (!session.muted && (content.inputTranscription?.finished || content.turnComplete) && endOnCommand(inputText)) return;
+        if (!session.ending && !session.muted && wantsToEndCall(inputText)) {
+          if (content.turnComplete) {
+            beginFarewell(session);
+            outputText = "";
+            inputText = "";
+            setReply("");
+            setPhase("thinking");
+            send({ realtimeInput: { text: language === "en"
+              ? "Say this farewell aloud now, without calling any tool: Okay, I'll end the call now. See you!"
+              : "Ucapkan kalimat pamit ini sekarang, tanpa memanggil alat: Oke, aku tutup panggilannya sekarang, ya. Sampai jumpa!" } });
+          }
+          return;
+        }
         if (!content.interrupted) {
           if (content.outputTranscription?.text) {
             outputText += content.outputTranscription.text;
@@ -782,7 +810,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
           const bytes = new Uint8Array(event.data);
           // Browser echo cancellation runs before this gate. Keep the first
           // voiced chunk so opening the gate doesn't cut the start of a word.
-          if (session.speaking && !session.muted && !interruptionAudio && hasVoice(bytes)) {
+          if (!session.ending && session.speaking && !session.muted && !interruptionAudio && hasVoice(bytes)) {
             if (previousVoiced) {
               interruptionAudio = true;
               sendAudio(previousVoiced);
@@ -792,7 +820,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
             }
           }
           previousVoiced = undefined;
-          const canInterrupt = session.speaking && !session.muted && interruptionAudio;
+          const canInterrupt = !session.ending && session.speaking && !session.muted && interruptionAudio;
           if (!canInterrupt) interruptionAudio = false;
           if (!micBlocked(session) && !session.freshSpeech && hasVoice(bytes)) session.freshSpeech = true;
           sendAudio(micBlocked(session) && !canInterrupt ? new Uint8Array(bytes.length) : bytes);
@@ -809,7 +837,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
             return;
           }
           const text = typeof message.text === "string" ? message.text.trim() : "";
-          const maySpeak = !session.muted && (session.speaking ? interruptionAudio : !micBlocked(session));
+          const maySpeak = !session.ending && !session.muted && (session.speaking ? interruptionAudio : !micBlocked(session));
           const words = spokenWords(text);
           const echo = session.speaking && words && ` ${session.playback?.spoken ?? ""} `.includes(` ${words} `);
           if (message.message_type === "partial_transcript" && words && maySpeak && !echo) {
