@@ -1,7 +1,5 @@
 /**
- * Facade backward-compatible — delegasi ke cuelume adapter.
- * Semua pemanggilan existing `import { playCompletionSound } from "@/lib/notifySound"`
- * tetap jalan, tapi engine di baliknya sekarang cuelume + fallback Web Audio.
+ * Suara notifikasi dan pencapaian Eureka.
  */
 export {
   playCompletionSound,
