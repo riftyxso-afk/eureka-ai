@@ -12,19 +12,18 @@ export async function POST(request: NextRequest) {
   if (!text || text.length > 5000) return NextResponse.json({ error: "Teks harus berisi 1–5.000 karakter." }, { status: 400 });
   const key = process.env.ELEVENLABS_API_KEY?.trim();
   const voice = process.env.ELEVENLABS_VOICE_ID?.trim() || "hpp4J3VqNfWAUOO0d1Us";
-  const model = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_v4";
+  const model = process.env.ELEVENLABS_CALL_MODEL_ID?.trim() || "eleven_flash_v2_5";
   if (!key) return NextResponse.json({ error: "Suara ElevenLabs belum dikonfigurasi." }, { status: 503 });
   ensureRateLimitPrune();
   if (!checkRateLimit(`call-audio:${auth.userId}`, 30, 60 * 60 * 1000).ok) return NextResponse.json({ error: "Batas suara tercapai. Coba lagi nanti." }, { status: 429 });
   try {
-    const dialogue = model.startsWith("eleven_v4");
-    const endpoint = dialogue ? "text-to-dialogue" : `text-to-speech/${encodeURIComponent(voice)}`;
-    const response = await fetch(`https://api.elevenlabs.io/v1/${endpoint}?output_format=mp3_44100_128`, {
+    const endpoint = `text-to-speech/${encodeURIComponent(voice)}/stream`;
+    const response = await fetch(`https://api.elevenlabs.io/v1/${endpoint}?output_format=pcm_24000`, {
       method: "POST", headers: { "xi-api-key": key, "Content-Type": "application/json" },
-      body: JSON.stringify(dialogue ? { inputs: [{ text, voice_id: voice }], model_id: model, language_code: "id" } : { text, model_id: model, language_code: "id" }),
+      body: JSON.stringify({ text, model_id: model }),
       signal: AbortSignal.any([request.signal, AbortSignal.timeout(90000)]),
     });
     if (!response.ok || !response.body) return NextResponse.json({ error: response.status === 402 ? "Paket atau kuota ElevenLabs tidak mendukung suara ini." : "Suara belum bisa dibuat. Coba lagi." }, { status: 502 });
-    return new Response(response.body, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "private, no-store" } });
+    return new Response(response.body, { headers: { "Content-Type": "application/octet-stream", "Cache-Control": "private, no-store" } });
   } catch { return NextResponse.json({ error: "Layanan suara belum dapat dihubungi." }, { status: 502 }); }
 }

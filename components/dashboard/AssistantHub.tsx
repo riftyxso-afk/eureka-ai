@@ -36,7 +36,6 @@ import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSideb
 import MomoCompanion, { type MomoMode } from "@/components/asisten/MomoCompanion";
 import Composer from "@/components/asisten/Composer";
 import AiCallModal from "@/components/assistant/AiCallModal";
-import { useBeta } from "@/lib/useBeta";
 import ThemeSwitch from "@/components/ui/ThemeSwitch";
 import { useI18n } from "@/context/LocaleContext";
 
@@ -63,7 +62,6 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
   const [composerPrefill, setComposerPrefill] = useState("");
   const [composerKey, setComposerKey] = useState(0);
   const [loadingCard, setLoadingCard] = useState<"tanya" | "tugas" | null>(null);
-  const { isBeta } = useBeta();
   const { dict, locale } = useI18n();
   const l = dict.home;
   const heroAnchor = useRef<HTMLDivElement>(null);
@@ -260,7 +258,6 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
                 disabled={planningAction || !!launching || (!standalone && chat.sessionsLoading)}
                 placeholder={standalone ? "Tanya Eureka apa saja…" : "Ketik @ untuk fitur"}
                 initialValue={composerPrefill}
-                isBeta={isBeta}
                 onCall={() => setCallOpen(true)}
                 noteWizardPrompt={wizardPrompt}
                 onNoteWizardClose={() => setWizardPrompt(null)}

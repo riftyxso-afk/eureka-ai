@@ -1,445 +1,106 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { GraduationCap, Loader2, Mic, PhoneOff, X } from "lucide-react";
-import { apiFetch } from "@/lib/apiClient";
-import { VoiceRing } from "voice-ring";
-import { getUserId } from "@/lib/identity";
+import { useEffect, useRef, useState } from "react";
+import { AudioLines, Mic, MicOff, SlidersHorizontal, X } from "lucide-react";
+import { useMomoCall } from "./useMomoCall";
+import "./momo-call.css";
 
-type CallPhase = "idle" | "listening" | "thinking" | "speaking";
-
-/** Minimal interface Web Speech API (untuk TypeScript tanpa lib.dom tambahan). */
-interface SpeechRecognitionResultEvent {
-  results: ArrayLike<{ [j: number]: { transcript: string } }>;
-}
-interface SpeechRecognitionInstance {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  start: () => void;
-  stop: () => void;
-  onresult: ((e: SpeechRecognitionResultEvent) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-}
-type SpeechRecognitionCtor = new () => SpeechRecognitionInstance;
-
-const PHASE_HINTS: Record<CallPhase, string> = {
-  idle: "Tahan tombol untuk bicara",
-  listening: "Mendengarkan…",
-  thinking: "Eureka berpikir…",
-  speaking: "Eureka menjawab…",
+const labels = {
+  idle: "Bicara dengan Momo",
+  connecting: "Menghubungkan…",
+  listening: "Momo mendengarkan",
+  thinking: "Momo sedang berpikir",
+  speaking: "Momo sedang berbicara",
 };
 
-/** Jumlah bar visualizer. */
-const BARS = 7;
+export function MomoCallButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  return <button className="momo-call-trigger" type="button" title="Panggilan suara dengan Momo"
+    aria-label="Panggilan suara dengan Momo" onClick={onClick} disabled={disabled}>
+    <AudioLines size={18} aria-hidden="true" />
+  </button>;
+}
 
-/**
- * Modal panggilan suara AI (beta) — near-realtime hold-to-talk.
- * STT: Web Speech API (browser) → server AI → TTS: speechSynthesis (id-ID).
- */
-export default function AiCallModal({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  const [phase, setPhase] = useState<CallPhase>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [transcript, setTranscript] = useState("");
-  const [reply, setReply] = useState("");
-
-  const holdingRef = useRef(false);
-  const transcriptRef = useRef("");
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const speakerRef = useRef<HTMLAudioElement | null>(null);
-  const speakerContextRef = useRef<AudioContext | null>(null);
-  const speakerAnalyserRef = useRef<AnalyserNode | null>(null);
-  const speakerUrlRef = useRef("");
-  const speechRequestRef = useRef<AbortController | null>(null);
-  const callRequestRef = useRef<AbortController | null>(null);
-  const ringSamplesRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(1024));
-  const ringLevel = useCallback(() => {
-    const analyser = speakerAnalyserRef.current ?? analyserRef.current;
-    if (!analyser) return 0;
-    if (ringSamplesRef.current.length !== analyser.fftSize) ringSamplesRef.current = new Uint8Array(analyser.fftSize);
-    const samples = ringSamplesRef.current;
-    analyser.getByteTimeDomainData(samples);
-    let total = 0;
-    for (const value of samples) total += ((value - 128) / 128) ** 2;
-    return Math.min(1, Math.sqrt(total / samples.length) * 4);
-  }, []);
-  const rafRef = useRef<number | null>(null);
-
-  const barEls = useRef<(HTMLSpanElement | null)[]>([]);
-
-  const stopMetering = useCallback(() => {
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
-    mediaStreamRef.current = null;
-    if (audioContextRef.current) {
-      void audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-    analyserRef.current = null;
-  }, []);
-
-  /** Animasikan bar visualizer mengikuti volume mikrofon (saat mendengar). */
-  const startMetering = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-      const ctx = new AudioContext();
-      audioContextRef.current = ctx;
-      const src = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 128;
-      src.connect(analyser);
-      analyserRef.current = analyser;
-
-      const buf = new Uint8Array(analyser.frequencyBinCount);
-      const tick = () => {
-        const a = analyserRef.current;
-        if (!a) return;
-        a.getByteFrequencyData(buf);
-        let sum = 0;
-        for (let i = 0; i < buf.length; i++) sum += buf[i];
-        const level = sum / buf.length / 255; // 0..1
-        barEls.current.forEach((el, i) => {
-          if (!el) return;
-          const base = 0.25 + 0.15 * Math.sin(i * 1.7);
-          const h = Math.max(0.15, Math.min(1, base + level * 1.4));
-          el.style.transform = `scaleY(${h})`;
-        });
-        rafRef.current = requestAnimationFrame(tick);
-      };
-      tick();
-    } catch {
-      // Mikrofon ditolak — metering tidak jalan, hanya visual idle.
-    }
-  }, []);
-
-  /** Bacakan jawaban dengan ElevenLabs. */
-  const speak = useCallback(async (text: string) => {
-    const controller = new AbortController();
-    speechRequestRef.current = controller;
-    const response = await apiFetch("/api/call/speech", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: controller.signal });
-    if (!response.ok) { const body = await response.json().catch(() => null); throw new Error(body?.error || "Suara belum bisa dibuat."); }
-    const blob = await response.blob();
-    if (controller.signal.aborted) return;
-    if (speakerUrlRef.current) URL.revokeObjectURL(speakerUrlRef.current);
-    const url = URL.createObjectURL(blob);
-    speakerUrlRef.current = url;
-    const audio = new Audio(url);
-    speakerRef.current = audio;
-    try {
-      const context = new AudioContext();
-      const source = context.createMediaElementSource(audio);
-      const analyser = context.createAnalyser();
-      analyser.fftSize = 1024;
-      source.connect(analyser); analyser.connect(context.destination);
-      speakerContextRef.current = context; speakerAnalyserRef.current = analyser;
-      await context.resume();
-    } catch { /* audio tetap diputar jika analisis tidak tersedia */ }
-    audio.onended = () => { setPhase("idle"); speakerAnalyserRef.current = null; void speakerContextRef.current?.close(); speakerContextRef.current = null; };
-    audio.onerror = () => { setPhase("idle"); setError("Suara belum bisa diputar."); };
-    await audio.play();
-    setPhase("speaking");
-  }, []);
-
-  const processTranscript = useCallback(async () => {
-    const q = transcriptRef.current.trim();
-    if (!q) { stopMetering(); setPhase("idle"); setError("Tidak mendengar suara. Coba lagi."); return; }
-    if (phase === "thinking" || phase === "speaking") return;
-    setPhase("thinking");
-    stopMetering();
-    barEls.current.forEach((el) => {
-      if (el) el.style.transform = "scaleY(0.9)";
-    });
-
-    const userId = getUserId();
-    if (!userId) {
-      setError("Silakan masuk dulu ya.");
-      setPhase("idle");
-      return;
-    }
-
-    try {
-      const controller = new AbortController();
-      callRequestRef.current = controller;
-      const res = await apiFetch("/api/call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, question: q }),
-        signal: controller.signal,
-      });
-      const body = (await res.json().catch(() => null)) as {
-        ok?: boolean;
-        reply?: string;
-        error?: string;
-      } | null;
-      if (!res.ok || !body?.ok) {
-        setError(body?.error ?? "Gagal memanggil AI. Coba lagi.");
-        setPhase("idle");
-        return;
-      }
-      if (controller.signal.aborted) return;
-      const answer = body.reply ?? "";
-      setReply(answer);
-      await speak(answer);
-    } catch (e) {
-      if ((e instanceof DOMException && e.name === "AbortError") || callRequestRef.current?.signal.aborted) return;
-      setError(
-        e instanceof Error ? e.message : "Gagal memanggil AI. Coba lagi."
-      );
-      setPhase("idle");
-    }
-  }, [phase, stopMetering, speak]);
-
-  /** Bicara (press & hold): mulai STT browser. */
-  const startListening = useCallback(async () => {
-    setError(null);
-    setTranscript("");
-    transcriptRef.current = "";
-    setReply("");
-    holdingRef.current = true;
-
-    if (typeof window === "undefined") return;
-    const w = window as unknown as {
-      SpeechRecognition?: SpeechRecognitionCtor;
-      webkitSpeechRecognition?: SpeechRecognitionCtor;
-    };
-    const SpeechRec = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-
-    if (!SpeechRec) {
-      setError(
-        "Browser kamu belum mendukung input suara (perlu Chrome/Edge). Gunakan tombol Rekam di composer sebagai alternatif."
-      );
-      setPhase("idle");
-      return;
-    }
-
-    const rec = new SpeechRec();
-    rec.lang = "id-ID";
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.onresult = (e) => {
-      let t = "";
-      for (let i = e.results.length - 1; i >= 0; i--) {
-        const r = e.results[i];
-        if (r && r[0] && typeof r[0].transcript === "string") {
-          t = r[0].transcript + t;
-          break;
-        }
-      }
-      transcriptRef.current = t.trim();
-      setTranscript(transcriptRef.current);
-    };
-    rec.onerror = () => {
-      setError("Tidak mendengar suara. Coba lagi.");
-      setPhase("idle");
-    };
-    rec.onend = () => {
-      holdingRef.current = false;
-      void processTranscript();
-    };
-    recognitionRef.current = rec;
-    setPhase("listening");
-    void startMetering();
-    try {
-      rec.start();
-    } catch {
-      setError("Input suara gagal dimulai. Coba lagi.");
-      setPhase("idle");
-    }
-  }, [processTranscript, startMetering]);
-
-  /** Lepas hold: stop STT, kirim teks ke /api/call, bacakan jawaban. */
-  const stopListening = useCallback(() => {
-    holdingRef.current = false;
-    try {
-      recognitionRef.current?.stop();
-    } catch {
-      // abaikan
-    }
-  }, []);
-
-  const cleanup = useCallback(() => {
-    holdingRef.current = false;
-    try {
-      if (recognitionRef.current) recognitionRef.current.onend = null;
-      recognitionRef.current?.stop();
-    } catch {
-      // abaikan
-    }
-    recognitionRef.current = null;
-    callRequestRef.current?.abort();
-    speechRequestRef.current?.abort();
-    speakerRef.current?.pause(); speakerRef.current = null;
-    speakerAnalyserRef.current = null;
-    void speakerContextRef.current?.close(); speakerContextRef.current = null;
-    if (speakerUrlRef.current) URL.revokeObjectURL(speakerUrlRef.current);
-    speakerUrlRef.current = "";
-    stopMetering();
-    setPhase("idle");
-    setTranscript("");
-    setReply("");
-    setError(null);
-    barEls.current.forEach((el) => {
-      if (el) el.style.transform = "scaleY(0.5)";
-    });
-  }, [stopMetering]);
+function CallScreen({ onClose }: { onClose: () => void }) {
+  const { phase, muted, error, transcript, reply, level, start, stop, toggleMute } = useMomoCall();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const cloud = useRef<HTMLSpanElement>(null);
+  const orb = useRef<HTMLDivElement>(null);
+  const [settings, setSettings] = useState(false);
+  const [captions, setCaptions] = useState(true);
 
   useEffect(() => {
-    if (!open) cleanup();
-    return () => {
-      if (open) cleanup();
+    const element = dialog.current;
+    if (element && !element.open) element.showModal();
+    return () => { if (element?.open) element.close(); };
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "listening" && phase !== "speaking") return;
+    const orbElement = orb.current;
+    const cloudElement = cloud.current;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let frame: number;
+    let energy = 0;
+    const tick = () => {
+      const sample = level();
+      energy += (sample - energy) * (sample > energy ? 0.36 : 0.12);
+      if (orbElement) orbElement.style.transform = reduced.matches ? "" : `scale(${1 + energy * 0.065})`;
+      if (cloudElement) cloudElement.style.transform = reduced.matches ? "" : `translateY(${energy * -12}%) rotate(${energy * 12}deg)`;
+      frame = requestAnimationFrame(tick);
     };
-  }, [open, cleanup]);
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(frame);
+      orbElement?.style.removeProperty("transform");
+      cloudElement?.style.removeProperty("transform");
+    };
+  }, [level, phase]);
 
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ scale: 0.9, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: 20 }}
-            transition={{ type: "spring", damping: 22, stiffness: 300 }}
-            className="relative w-full max-w-sm rounded-clay border-2 border-clay-borderLight bg-clay-beige p-6 text-center shadow-clay-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={onClose}
-              className="absolute right-3 top-3 rounded-full p-1.5 text-clay-muted hover:bg-clay-inputBg hover:text-clay-dark"
-              aria-label="Tutup panggilan"
-            >
-              <X size={16} />
-            </button>
+  function end() {
+    stop();
+    onClose();
+  }
 
-            {/* Avatar */}
-            <div aria-hidden="true" className="mx-auto flex justify-center"><VoiceRing size={180} state={phase === "thinking" ? "processing" : phase === "speaking" ? "speaking" : phase === "listening" ? "listening" : "idle"} level={ringLevel} emotion="calm" theme="light" /></div>
-            <div className="sr-only">
-            <div
-              className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full border-4 text-3xl transition-colors duration-300 ${
-                phase === "speaking"
-                  ? "border-green-400 bg-green-50"
-                  : phase === "listening"
-                    ? "animate-pulse border-clay-primary bg-clay-primary/15"
-                    : phase === "thinking"
-                      ? "border-amber-400 bg-amber-50"
-                      : "border-clay-borderLight bg-clay-cream"
-              }`}
-            >
-              {phase === "thinking" ? (
-                <Loader2 size={28} className="animate-spin text-amber-500" />
-              ) : (
-                <GraduationCap size={18} className="align-middle text-clay-primary" />
-              )}
-            </div>
-            </div>
+  return <dialog className="momo-call" ref={dialog} aria-labelledby="momo-call-title"
+    onCancel={event => { event.preventDefault(); end(); }}>
+    <header className="momo-call-header">
+      <h2 id="momo-call-title">Panggilan Momo</h2>
+      <button type="button" className="momo-call-settings" aria-label="Pengaturan panggilan"
+        aria-expanded={settings} aria-controls="momo-call-settings-panel" onClick={() => setSettings(value => !value)}>
+        <SlidersHorizontal size={18} aria-hidden="true" />
+      </button>
+      {settings && <div className="momo-call-settings-panel" id="momo-call-settings-panel">
+        <label><input type="checkbox" checked={captions} onChange={event => setCaptions(event.target.checked)} /> Tampilkan transkrip</label>
+      </div>}
+    </header>
+    <div className="momo-call-stage">
+      <div ref={orb} className="momo-call-orb" data-phase={phase} aria-hidden="true">
+        <span ref={cloud} className="momo-call-cloud" />
+      </div>
+      <p className="momo-call-status" role="status">
+        {muted && phase === "listening" ? "Mikrofon dimatikan" : labels[phase]}
+      </p>
+    </div>
+    <div className="momo-call-text">
+      {error && <p className="momo-call-error" role="alert">{error}</p>}
+      {!error && phase === "idle" && <p>Ketuk mikrofon untuk mulai ngobrol.</p>}
+      {captions && phase !== "idle" && (reply || transcript) && <p className="momo-call-caption">{reply || transcript}</p>}
+    </div>
+    <footer className="momo-call-controls">
+      <button type="button" disabled={phase === "connecting"} className="momo-call-control"
+        aria-label={phase === "idle" ? "Mulai panggilan" : muted ? "Aktifkan mikrofon" : "Bisukan mikrofon"}
+        title={phase === "idle" ? "Mulai panggilan" : muted ? "Aktifkan mikrofon" : "Bisukan mikrofon"}
+        aria-pressed={phase === "idle" || phase === "connecting" ? undefined : muted}
+        onClick={() => phase === "idle" ? void start() : toggleMute()}>
+        {muted ? <MicOff size={21} aria-hidden="true" /> : <Mic size={21} aria-hidden="true" />}
+      </button>
+      <button type="button" className="momo-call-control" onClick={end} title="Akhiri panggilan" aria-label="Akhiri panggilan">
+        <X size={22} aria-hidden="true" />
+      </button>
+    </footer>
+  </dialog>;
+}
 
-            <h2 className="mt-3 text-lg font-extrabold">Panggilan Eureka</h2>
-
-            {/* Visualizer */}
-            <div
-              className="mt-4 flex h-16 items-center justify-center gap-1.5"
-              aria-hidden
-            >
-              {Array.from({ length: BARS }).map((_, i) => (
-                <span
-                  key={i}
-                  ref={(el) => {
-                    barEls.current[i] = el;
-                  }}
-                  className={`w-2.5 origin-center rounded-full transition-colors duration-300 ${
-                    phase === "speaking"
-                      ? "bg-green-400"
-                      : phase === "listening"
-                        ? "bg-clay-primary"
-                        : phase === "thinking"
-                          ? "bg-amber-400"
-                          : "bg-clay-shadow/40"
-                  }`}
-                  style={{ height: "100%", transform: "scaleY(0.5)" }}
-                />
-              ))}
-            </div>
-
-            <p className="mt-2 text-sm font-extrabold text-clay-muted">
-              {PHASE_HINTS[phase]}
-            </p>
-
-            {/* Transkrip & jawaban */}
-            {(transcript || reply) && (
-              <div className="mt-3 space-y-2 text-left">
-                {transcript && (
-                  <p className="rounded-clay-md bg-clay-inputBg px-3 py-2 text-[13px] font-semibold text-clay-dark">
-                    <span className="font-extrabold text-clay-muted">Kamu:</span>{" "}
-                    {transcript}
-                  </p>
-                )}
-                {reply && (
-                  <p className="rounded-clay-md border-2 border-green-200 bg-green-50 px-3 py-2 text-[13px] font-semibold text-clay-dark">
-                    <span className="font-extrabold text-green-600">
-                      Eureka:
-                    </span>{" "}
-                    {reply}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {error && (
-              <p className="mt-3 rounded-clay-md border-2 border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
-                {error}
-              </p>
-            )}
-
-            {/* Hold-to-talk */}
-            <div className="mt-5 flex flex-col items-center gap-2">
-              <button
-                onPointerDown={() => void startListening()}
-                onPointerUp={stopListening}
-                onPointerLeave={stopListening}
-                onContextMenu={(e) => e.preventDefault()}
-                disabled={phase === "thinking" || phase === "speaking"}
-                className={`flex h-16 w-16 items-center justify-center rounded-full border-4 transition-all duration-75 select-none touch-none active:scale-95 ${
-                  phase === "listening"
-                    ? "border-red-400 bg-red-500 text-white"
-                    : "border-clay-primary bg-clay-primary text-white"
-                } disabled:opacity-60`}
-                aria-label="Tahan untuk bicara"
-              >
-                <Mic size={26} />
-              </button>
-              <p className="text-[11px] font-bold text-clay-muted">
-                Tekan &amp; tahan untuk bicara · lepas untuk kirim
-              </p>
-              <button
-                onClick={onClose}
-                className="mt-1 flex items-center gap-1.5 text-xs font-extrabold text-red-500 hover:underline"
-              >
-                <PhoneOff size={13} /> Akhiri panggilan
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+export default function AiCallModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return open ? <CallScreen onClose={onClose} /> : null;
 }

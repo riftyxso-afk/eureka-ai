@@ -550,7 +550,6 @@ export default function ChatPage() {
           sending={chat.sending}
           disabled={planningAction || chat.loading || chat.sessionsLoading}
           initialMentions={importedNoteId ? [importedNoteId] : []}
-          isBeta={isBeta}
           onCall={() => setCallOpen(true)}
           noteWizardPrompt={wizardPrompt}
           onNoteWizardClose={() => {

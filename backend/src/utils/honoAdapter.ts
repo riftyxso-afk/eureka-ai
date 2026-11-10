@@ -30,6 +30,7 @@ function toNextRequest(c: Context): NextRequest {
     method: raw.method,
     headers: raw.headers,
     body: raw.body ?? undefined,
+    signal: raw.signal,
   });
 }
 

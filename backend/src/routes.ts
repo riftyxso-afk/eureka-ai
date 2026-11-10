@@ -157,10 +157,12 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/audio/transcribe", audioTranscribe);
   count++;
 
-  // ─── Call (percakapan suara AI, beta) ──────────────────
+  // ─── Call (percakapan suara AI) ───────────────────────
   const call = await import("@/app/api/call/route");
+  const callSession = await import("@/app/api/call/session/route");
   mount(app, "/api/call", call);
-  count++;
+  mount(app, "/api/call/session", callSession);
+  count += 2;
 
   // ─── Referral (program ajak teman) ─────────────────────
   const referral = await import("@/app/api/referral/route");

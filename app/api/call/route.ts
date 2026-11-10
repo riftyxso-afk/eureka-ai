@@ -1,94 +1,55 @@
-import { NextRequest, NextResponse } from "next/server";
-
-import { aiChat, hasAiKey } from "@/lib/ai";
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
-import { db } from "@/lib/supabase/admin";
+import { aiChatStream, hasAiKey } from "@/lib/ai";
+import { requireAuth } from "@/lib/assistant/auth";
 import { AI_SAFETY_GUARDRAIL } from "@/lib/prompts/safety";
 import { momoPersona } from "@/lib/prompts/momoPersona";
+import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const VOICE_SYSTEM = `${momoPersona()}
-Bimbing siswa lewat pertanyaan bertahap — jangan langsung memberi jawaban final.
-Jawaban maksimal 3–4 kalimat karena akan dibacakan. Gunakan kalimat yang mudah didengar.
-Saat siswa menunjukkan pemahaman, sebutkan secara singkat bagian yang tepat.
-Saat siswa salah, jangan menghakimi — beri petunjuk kecil dan dorong dia mencoba lagi.
-Sesekali gunakan contoh nyata agar mudah dibayangkan.`;
+Ini percakapan suara. Ikuti bahasa pengguna. Jawab langsung dalam 1–3 kalimat yang mudah didengar,
+tanpa Markdown, emoji, atau daftar. Gunakan riwayat untuk memahami pertanyaan lanjutan.
+Jika pengguna butuh bantuan belajar, beri contoh atau petunjuk singkat yang relevan.`;
 
-/**
- * POST /api/call
- * Body: { userId: string, question: string }
- * Jawaban singkat untuk percakapan suara (beta tester) — dibacakan TTS.
- */
-export async function POST(req: NextRequest) {
+type Turn = { role: "user" | "assistant"; content: string };
+
+function readHistory(value: unknown): Turn[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(-12).flatMap(turn => {
+    if ((turn?.role !== "user" && turn?.role !== "assistant") || typeof turn.content !== "string") return [];
+    const content = turn.content.trim().slice(0, 2000);
+    return content ? [{ role: turn.role, content }] : [];
+  });
+}
+
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  const auth = await requireAuth(request.headers.get("authorization"), typeof body?.userId === "string" ? body.userId.trim() : undefined);
+  if (!auth.userId) return Response.json({ error: auth.error }, { status: auth.status ?? 401 });
+
+  const question = typeof body?.question === "string" ? body.question.trim().slice(0, 2000) : "";
+  if (!question) return Response.json({ error: "Pertanyaan kosong." }, { status: 400 });
+  if (!hasAiKey()) return Response.json({ error: "Momo belum bisa menjawab saat ini." }, { status: 503 });
+
+  ensureRateLimitPrune();
+  if (!checkRateLimit(`call-reply:${auth.userId}`, 60, 3_600_000).ok) {
+    return Response.json({ error: "Batas percakapan suara tercapai. Coba lagi nanti." }, { status: 429 });
+  }
   try {
-    const body = (await req.json().catch(() => null)) as {
-      userId?: unknown;
-      question?: unknown;
-    } | null;
-    const rawUserId = String(body?.userId ?? "").trim();
-    const question = String(body?.question ?? "").trim().slice(0, 2000);
-
-    const auth = await authorizeAssistantUser(
-      req.headers.get("authorization"),
-      rawUserId
-    );
-    if (!auth.userId) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: auth.status ?? 401 }
-      );
-    }
-
-    // Hanya beta tester.
-    const { data: user } = await db()
-      .from("users")
-      .select("is_beta")
-      .eq("id", auth.userId)
-      .maybeSingle();
-    if (user?.is_beta !== true) {
-      return NextResponse.json(
-        { error: "Fitur ini khusus beta tester. Gabung lewat /join dulu ya." },
-        { status: 403 }
-      );
-    }
-
-    if (!question) {
-      return NextResponse.json(
-        { error: "Pertanyaan kosong." },
-        { status: 400 }
-      );
-    }
-
-    if (!hasAiKey()) {
-      return NextResponse.json(
-        {
-          reply:
-            "API key AI belum diatur. Isi OPENAGENTIC_API_KEY di .env.local dulu ya.",
-        },
-        { status: 200 }
-      );
-    }
-
-    const raw = await aiChat({
+    const { content } = await aiChatStream({
       system: `${VOICE_SYSTEM}\n\n${AI_SAFETY_GUARDRAIL}`,
       user: question,
-      maxTokens: 400,
-      temperature: 0.8,
+      history: readHistory(body.history),
+      maxTokens: 240,
+      reasoning: false,
       speedMode: "fast",
+      signal: AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]),
     });
-    const reply = raw.trim();
-    if (!reply) {
-      return NextResponse.json(
-        { error: "AI tidak menjawab. Coba lagi ya 🙏" },
-        { status: 502 }
-      );
-    }
-    return NextResponse.json({ ok: true, reply });
-  } catch (e) {
-    const msg = "Gagal memanggil AI suara. Coba lagi ya.";
-    console.error("[api/call] POST", e);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const reply = content.trim();
+    if (reply) return Response.json({ ok: true, reply });
+  } catch {
+    // Keep upstream errors out of the call UI.
   }
+  return Response.json({ error: "Momo belum bisa menjawab. Coba lagi." }, { status: 502 });
 }
