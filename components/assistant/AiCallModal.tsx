@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, SlidersHorizontal, X } from "lucide-react";
+import { ChevronRight, Mic, MicOff, SlidersHorizontal, X } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import { useMomoCall, type CallProvider } from "./useMomoCall";
 import "./momo-call.css";
@@ -80,7 +80,7 @@ function CallScreen({ onClose }: { onClose: () => void }) {
   if (!provider) return <dialog className="momo-call is-choosing" ref={dialog} aria-labelledby="momo-call-title"
     onCancel={event => { event.preventDefault(); end(); }}>
     <header className="momo-call-header">
-      <h2 id="momo-call-title">Pilih teman bicara</h2>
+      <h2 id="momo-call-title">Mau ngobrol dengan siapa?</h2>
       <button type="button" className="momo-call-settings" aria-label="Tutup pilihan" onClick={end}>
         <X size={22} aria-hidden="true" />
       </button>
@@ -89,11 +89,13 @@ function CallScreen({ onClose }: { onClose: () => void }) {
       <div className="momo-call-picker" role="group" aria-label="Teman bicara">
         <button type="button" onClick={() => choose("momo")}>
           <span className="momo-call-swatch" aria-hidden="true" />
-          <span><strong>Momo</strong><small>Bahas pelan-pelan dan bantu kamu memahami.</small></span>
+          <span className="momo-call-option-copy"><strong>Momo</strong><small>Bantu kamu memahami topik langkah demi langkah.</small></span>
+          <ChevronRight className="momo-call-option-arrow" size={18} aria-hidden="true" />
         </button>
         <button type="button" disabled={lalaAvailable !== true} onClick={() => choose("lala")}>
           <span className="momo-call-swatch is-lala" aria-hidden="true" />
-          <span><strong>Lala</strong><small>Jawab langsung, singkat, dan cepat.</small></span>
+          <span className="momo-call-option-copy"><strong>Lala</strong><small>Jawaban cepat dan langsung ke inti.</small></span>
+          <ChevronRight className="momo-call-option-arrow" size={18} aria-hidden="true" />
         </button>
       </div>
       {lalaAvailable !== true && <p role="status">

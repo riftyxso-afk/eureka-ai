@@ -46,40 +46,47 @@
   padding: max(14px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 4px max(24px, env(safe-area-inset-left));
 }
 .momo-call.is-choosing[open] {
-  height: auto;
-  grid-template-rows: auto auto;
+  display: block;
+  width: min(calc(100% - 32px), 420px);
+  height: fit-content;
+  min-height: 0;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 24px;
 }
-.momo-call-choice { padding: 12px 24px 24px; }
+.momo-call.is-choosing .momo-call-header { gap: 12px; padding: 14px 16px 2px 24px; }
+.momo-call.is-choosing h2 { font-size: 20px; line-height: 1.25; }
+.momo-call-choice { padding: 4px 16px 16px; }
 .momo-call-choice > p {
-  margin: 12px 0 0;
+  margin: 6px 8px 4px;
   color: var(--call-muted);
   font-size: 13px;
 }
 .momo-call-picker {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
-  border-radius: 16px;
-  background: var(--call-control);
+  display: flex;
+  flex-direction: column;
 }
 .momo-call-picker button {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
-  min-height: 46px;
+  gap: 12px;
+  padding: 12px 8px;
+  min-height: 70px;
   border: 1px solid transparent;
   border-radius: 12px;
-  background: var(--call-bg);
+  background: transparent;
   color: var(--call-ink);
   text-align: left;
-  box-shadow: 0 1px 3px rgb(0 0 0 / .1);
+  transition: background-color 150ms ease;
 }
 .momo-call-picker button:disabled { opacity: .55; }
-.momo-call-picker strong { font-size: 13px; }
-.momo-call-picker small { display: block; color: var(--call-muted); font-size: 11px; line-height: 1.4; }
-.momo-call-swatch { flex: none; width: 19px; aspect-ratio: 1; border-radius: 50%; background: linear-gradient(150deg, #ddf8ff, #1689f5); }
+.momo-call-option-copy { display: grid; gap: 3px; }
+.momo-call-picker strong { font-size: 15px; line-height: 1.3; }
+.momo-call-picker small { color: var(--call-muted); font-size: 13px; line-height: 1.45; }
+.momo-call-option-arrow { color: var(--call-muted); }
+.momo-call-swatch { width: 40px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 30% 24%, #eefcff, #83d8ff 49%, #1689f5 85%); }
 .momo-call-swatch.is-lala { background: linear-gradient(150deg, #baf9d7, #a679eb 72%, #5b38a4); }
 .momo-call-header h2 { margin: 0; font-size: 15px; font-weight: 750; }
 .momo-call-settings, .momo-call-control {
@@ -189,38 +196,30 @@
 .momo-call-control:active, .momo-call-settings:active { transform: scale(.94); }
 .momo-call button:focus-visible { outline: 2px solid #2588e5; outline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) {
-  .momo-call-control:not(:disabled):hover, .momo-call-settings:hover { background: var(--call-hover); }
+  .momo-call-control:not(:disabled):hover, .momo-call-settings:hover,
+  .momo-call-picker button:enabled:hover { background: var(--call-hover); }
 }
 @media (max-width: 600px) {
   .momo-call { width: 100%; height: 100dvh; border-radius: 0; box-shadow: none; }
-  .momo-call.is-choosing { width: min(100% - 32px, 480px); border-radius: 24px; }
-  .momo-call-choice { padding: 0 24px 18px; }
-  .momo-call-picker {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding: 0;
-    background: transparent;
+  .momo-call.is-choosing[open] {
+    inset: auto 0 0;
+    width: 100%;
+    max-height: calc(100dvh - max(16px, env(safe-area-inset-top)));
+    margin: 0;
+    border-radius: 24px 24px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation-name: momo-call-sheet-enter;
   }
-  .momo-call-picker button {
-    min-height: 56px;
-    gap: 12px;
-    padding: 0 4px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  .momo-call-picker button + button {
-    border-top: 1px solid var(--call-control);
-  }
-  .momo-call-picker strong { font-size: 15px; }
-  .momo-call-swatch { width: 26px; }
+}
+@keyframes momo-call-sheet-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 @media (max-height: 460px) {
   .momo-call-orb { width: 84px; }
   .momo-call-status { top: calc(50% + 47px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .momo-call[open], .momo-call-orb[data-phase] .momo-call-cloud { animation: none; }
+  .momo-call[open], .momo-call.is-choosing[open], .momo-call-orb[data-phase] .momo-call-cloud { animation: none; }
   .momo-call button { transition: none; }
 }
