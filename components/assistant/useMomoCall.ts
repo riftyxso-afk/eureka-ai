@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
+import { getUserId } from "@/lib/identity";
+import { recordCallTurns } from "./recordCallTurns";
 
-type Phase = "idle" | "connecting" | "listening" | "thinking" | "speaking";
+type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "speaking";
 type Turn = { role: "user" | "assistant"; content: string };
 type Playback = { controller: AbortController; sources: Set<AudioBufferSourceNode> };
 type Session = {
@@ -12,6 +14,9 @@ type Session = {
   stream?: MediaStream;
   socket?: WebSocket;
   capture?: AudioWorkletNode;
+  micSource?: MediaStreamAudioSourceNode;
+  recorder?: ReturnType<typeof recordCallTurns>;
+  transcription?: AbortController;
   mic?: AnalyserNode;
   speaker: AnalyserNode;
   playback?: Playback;
@@ -22,7 +27,7 @@ type Session = {
   timers: Set<number>;
 };
 
-const CONNECT_TIMEOUT = 15_000;
+const CONNECT_TIMEOUT = 9_000;
 const SESSION_TIMEOUT = 12 * 60_000;
 const SPEAKER_RATE = 24_000;
 
@@ -43,11 +48,26 @@ function dispose(session: Session) {
   session.controller.abort();
   session.timers.forEach(timer => window.clearTimeout(timer));
   stopPlayback(session);
-  session.capture?.disconnect();
-  if (session.capture) session.capture.port.onmessage = null;
-  session.socket?.close();
+  session.recorder?.stop();
+  session.transcription?.abort();
+  disconnectRealtime(session);
   session.stream?.getTracks().forEach(track => track.stop());
   void session.context.close().catch(() => {});
+}
+
+function disconnectRealtime(session: Session) {
+  if (session.capture) {
+    session.capture.port.onmessage = null;
+    session.capture.port.close();
+    session.micSource?.disconnect(session.capture);
+    session.capture.disconnect();
+    session.capture = undefined;
+  }
+  if (session.socket) {
+    session.socket.onmessage = session.socket.onerror = session.socket.onclose = null;
+    session.socket.close();
+    session.socket = undefined;
+  }
 }
 
 async function readError(response: Response, fallback: string) {
@@ -121,6 +141,7 @@ export function useMomoCall() {
   const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
   const [reply, setReply] = useState("");
+  const [backup, setBackup] = useState(false);
   const active = useRef<Session | null>(null);
   const meterSamples = useRef(new Float32Array(512));
 
@@ -200,6 +221,7 @@ export function useMomoCall() {
   async function start() {
     if (active.current) return;
     setMuted(false);
+    setBackup(false);
     setError("");
     setTranscript("");
     setReply("");
@@ -215,7 +237,7 @@ export function useMomoCall() {
       fail("Audio tidak bisa dimulai di perangkat ini.");
       return;
     }
-    setPhase("connecting");
+    setPhase("permission");
     const speaker = context.createAnalyser();
     speaker.fftSize = 512;
     speaker.connect(context.destination);
@@ -225,98 +247,164 @@ export function useMomoCall() {
     };
     active.current = session;
     const isCurrent = () => active.current === session;
-    const connectTimer = window.setTimeout(() => {
-      if (isCurrent()) fail("Koneksi suara terlalu lama. Coba lagi.");
-    }, CONNECT_TIMEOUT);
-    session.timers.add(connectTimer);
+    const interrupt = () => {
+      if (!session.playback) return;
+      stopPlayback(session);
+      setReply("");
+      setPhase("listening");
+    };
 
     try {
-      const resume = context.resume();
-      const microphone = navigator.mediaDevices.getUserMedia({
+      // Unlock playback inside the click, then attach the mic before waiting for
+      // Web Audio. Some mobile browsers only start the context after mic access.
+      void context.resume().catch(() => {});
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      }).then(stream => {
-        if (!isCurrent()) stream.getTracks().forEach(track => track.stop());
-        else session.stream = stream;
-        return stream;
       });
-      const [stream] = await Promise.all([microphone, resume, context.audioWorklet.addModule("/audio/call-capture.js")]);
-      if (!isCurrent()) return;
-
-      const response = await apiFetch("/api/call/session", { method: "POST", signal: session.controller.signal });
-      if (!response.ok) throw new Error(await readError(response, "Koneksi suara gagal."));
-      const { token } = await response.json() as { token: string };
-      if (!isCurrent()) return;
-
-      const params = new URLSearchParams({
-        token, model_id: "scribe_v2_realtime", audio_format: "pcm_16000",
-        commit_strategy: "vad", vad_silence_threshold_secs: "0.8",
-      });
-      const socket = new WebSocket(`wss://api.elevenlabs.io/v1/speech-to-text/realtime?${params}`);
-      session.socket = socket;
+      if (!isCurrent()) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      session.stream = stream;
       const mic = context.createAnalyser();
       mic.fftSize = 512;
       session.mic = mic;
       const source = context.createMediaStreamSource(stream);
+      session.micSource = source;
       source.connect(mic);
-      const capture = new AudioWorkletNode(context, "momo-call-capture");
-      session.capture = capture;
-      source.connect(capture);
-      // The processor writes no output. Connecting it keeps capture active on Safari.
-      capture.connect(context.destination);
       for (const track of stream.getAudioTracks()) {
         track.onended = () => { if (isCurrent()) fail("Mikrofon terputus. Coba mulai panggilan lagi."); };
       }
 
-      let ready = false;
-      capture.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
-        if (!ready || !isCurrent() || session.muted || socket.readyState !== WebSocket.OPEN) return;
-        if (socket.bufferedAmount > 128_000) {
-          fail("Koneksi terlalu lambat untuk percakapan suara. Coba lagi.");
+      setPhase("connecting");
+      const audioTimer = window.setTimeout(() => {
+        if (isCurrent() && context.state !== "running") fail("Audio perangkat belum aktif. Ketuk mikrofon untuk mencoba lagi.");
+      }, 5_000);
+      session.timers.add(audioTimer);
+      await context.resume();
+      window.clearTimeout(audioTimer);
+      if (!isCurrent()) return;
+
+      session.timers.add(window.setTimeout(() => {
+        if (isCurrent()) fail("Sesi suara selesai. Mulai lagi untuk melanjutkan.");
+      }, SESSION_TIMEOUT));
+
+      const realtime = new AbortController();
+      const switchToRecording = () => {
+        if (!isCurrent() || session.recorder || realtime.signal.aborted) return;
+        window.clearTimeout(connectTimer);
+        realtime.abort();
+        disconnectRealtime(session);
+        if (typeof MediaRecorder === "undefined") {
+          fail("Koneksi realtime gagal dan browser ini tidak mendukung rekaman suara.");
           return;
         }
-        const bytes = new Uint8Array(event.data);
-        socket.send(JSON.stringify({
-          message_type: "input_audio_chunk", audio_base_64: btoa(String.fromCharCode(...bytes)),
-          sample_rate: 16000, commit: false,
-        }));
+        session.recorder = recordCallTurns(stream, mic, () => session.muted, interrupt, async audio => {
+          if (!isCurrent()) return;
+          const controller = new AbortController();
+          session.transcription = controller;
+          const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]);
+          setError("");
+          setReply("");
+          setTranscript("");
+          setPhase("thinking");
+          try {
+            const extension = /mp4/i.test(audio.type) ? "m4a" : /ogg/i.test(audio.type) ? "ogg" : "webm";
+            const form = new FormData();
+            form.append("userId", getUserId());
+            form.append("audio", audio, `panggilan.${extension}`);
+            const response = await apiFetch("/api/audio/transcribe", { method: "POST", body: form, signal });
+            if (!response.ok) throw new Error(await readError(response, "Ucapan belum bisa ditranskripsi."));
+            const { text } = await response.json() as { text?: string };
+            if (!isCurrent() || controller.signal.aborted || session.muted) return;
+            if (text?.trim()) void answer(session, text.trim());
+            else setPhase("listening");
+          } catch (cause) {
+            if (!isCurrent() || controller.signal.aborted) return;
+            setError(signal.aborted ? "Transkripsi terlalu lama. Coba bicara lagi." : cause instanceof Error ? cause.message : "Ucapan belum bisa ditranskripsi.");
+            setPhase("listening");
+          } finally {
+            if (session.transcription === controller) session.transcription = undefined;
+          }
+        }, () => { if (isCurrent()) fail("Rekaman suara terputus. Coba mulai lagi."); });
+        setBackup(true);
+        if (!session.playback) setTranscript("");
+        setPhase(session.speaking ? "speaking" : session.playback ? "thinking" : "listening");
       };
 
-      socket.onmessage = event => {
-        if (!isCurrent() || typeof event.data !== "string") return;
-        let message: { message_type?: string; text?: string };
-        try { message = JSON.parse(event.data); } catch { return; }
-        if (message.message_type === "session_started") {
-          ready = true;
-          window.clearTimeout(connectTimer);
-          session.timers.add(window.setTimeout(() => {
-            if (isCurrent()) fail("Sesi suara selesai. Mulai lagi untuk melanjutkan.");
-          }, SESSION_TIMEOUT));
-          setPhase("listening");
+      const connectTimer = window.setTimeout(switchToRecording, CONNECT_TIMEOUT);
+      session.timers.add(connectTimer);
+      try {
+        await context.audioWorklet.addModule("/audio/call-capture.js");
+        if (!isCurrent() || realtime.signal.aborted) return;
+        const signal = AbortSignal.any([session.controller.signal, realtime.signal]);
+        const response = await apiFetch("/api/call/session", { method: "POST", signal });
+        if (!isCurrent() || signal.aborted) return;
+        if (!response.ok) {
+          if ([401, 403, 429].includes(response.status)) {
+            const message = await readError(response, "Sesi suara tidak tersedia.");
+            if (isCurrent() && !signal.aborted) fail(message);
+          } else switchToRecording();
           return;
         }
-        const text = typeof message.text === "string" ? message.text.trim() : "";
-        if (message.message_type === "partial_transcript" && text && !session.muted) {
-          session.freshSpeech = true;
-          if (session.playback) {
-            stopPlayback(session);
-            setReply("");
+        const { token } = await response.json() as { token: string };
+        if (!isCurrent() || signal.aborted) return;
+
+        const params = new URLSearchParams({
+          token, model_id: "scribe_v2_realtime", audio_format: "pcm_16000",
+          commit_strategy: "vad", vad_silence_threshold_secs: "0.8",
+        });
+        const capture = new AudioWorkletNode(context, "momo-call-capture");
+        session.capture = capture;
+        source.connect(capture);
+        // The processor writes no output. This keeps capture active on Safari.
+        capture.connect(context.destination);
+        const socket = new WebSocket(`wss://api.elevenlabs.io/v1/speech-to-text/realtime?${params}`);
+        session.socket = socket;
+
+        let ready = false;
+        capture.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
+          if (!ready || !isCurrent() || session.muted || socket.readyState !== WebSocket.OPEN) return;
+          if (socket.bufferedAmount > 128_000) { switchToRecording(); return; }
+          const bytes = new Uint8Array(event.data);
+          socket.send(JSON.stringify({
+            message_type: "input_audio_chunk", audio_base_64: btoa(String.fromCharCode(...bytes)),
+            sample_rate: 16000, commit: false,
+          }));
+        };
+
+        socket.onmessage = event => {
+          if (!isCurrent() || typeof event.data !== "string") return;
+          let message: { message_type?: string; text?: string };
+          try { message = JSON.parse(event.data); } catch { return; }
+          if (message.message_type === "session_started") {
+            ready = true;
+            window.clearTimeout(connectTimer);
             setPhase("listening");
+            return;
           }
-          setTranscript(text);
-        } else if (message.message_type === "committed_transcript" && text && !session.muted && session.freshSpeech) {
-          void answer(session, text);
-        } else if (message.message_type === "error" || message.message_type?.endsWith("_error") || message.message_type === "quota_exceeded") {
-          fail("Layanan transkripsi realtime terputus. Coba lagi.");
-        }
-      };
-      socket.onclose = () => { if (isCurrent()) fail("Panggilan terputus. Coba mulai lagi."); };
-      socket.onerror = () => { if (isCurrent()) fail("Koneksi suara gagal. Coba lagi."); };
+          const text = typeof message.text === "string" ? message.text.trim() : "";
+          if (message.message_type === "partial_transcript" && text && !session.muted) {
+            session.freshSpeech = true;
+            interrupt();
+            setTranscript(text);
+          } else if (message.message_type === "committed_transcript" && text && !session.muted && session.freshSpeech) {
+            void answer(session, text);
+          } else if (message.message_type === "error" || message.message_type?.endsWith("_error") || message.message_type === "quota_exceeded") {
+            switchToRecording();
+          }
+        };
+        socket.onclose = switchToRecording;
+        socket.onerror = switchToRecording;
+      } catch {
+        switchToRecording();
+      }
     } catch (cause) {
       if (!isCurrent()) return;
       if (cause instanceof DOMException && /NotAllowed|NotFound|NotReadable/.test(cause.name)) {
         fail("Mikrofon tidak bisa digunakan. Periksa izin mikrofon lalu coba lagi.");
       } else {
-        fail(cause instanceof Error ? cause.message : "Panggilan suara gagal dimulai.");
+        fail("Audio perangkat belum bisa dimulai. Coba lagi.");
       }
     }
   }
@@ -327,6 +415,11 @@ export function useMomoCall() {
     session.muted = !session.muted;
     for (const track of session.stream.getAudioTracks()) track.enabled = !session.muted;
     if (session.muted) {
+      session.recorder?.discard();
+      if (session.transcription) {
+        session.transcription.abort();
+        setPhase("listening");
+      }
       session.freshSpeech = false;
       if (session.socket?.readyState === WebSocket.OPEN) {
         session.socket.send(JSON.stringify({ message_type: "input_audio_chunk", audio_base_64: "", commit: true, sample_rate: 16000 }));
@@ -335,5 +428,5 @@ export function useMomoCall() {
     setMuted(session.muted);
   }
 
-  return { phase, muted, error, transcript, reply, level, start, stop, toggleMute };
+  return { phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute };
 }

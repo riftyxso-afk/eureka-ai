@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { BorderBeam } from "border-beam";
 import PromptBar, { type PromptSource } from "./reactbits/PromptBar";
 import SpeechInput from "./SpeechInput";
-import { MomoCallButton } from "@/components/assistant/AiCallModal";
 import AtSign from "kubai-icons-react/icons/at-sign";
 import BookOpen from "kubai-icons-react/icons/book-open";
 import Brain from "kubai-icons-react/icons/brain";
@@ -632,6 +631,7 @@ export default function Composer({
 
   if (reactBits) {
     const sources: PromptSource[] = [
+      ...(onCall && !sending ? [{ key: "momo-call", name: "Panggilan Momo", description: "Ngobrol langsung dengan suara", icon: <PhoneCall trigger="parent" size={16} />, action: onCall }] : []),
       { key: "file", name: "Foto & file", description: "Pilih dari perangkat", icon: <Paperclip trigger="parent" size={16} />, attach: true },
       { key: "web", name: "Pencarian web", description: webSearch ? "Aktif — pilih untuk mematikan" : "Cari informasi di web", icon: <Globe trigger="parent" size={16} /> },
       ...notes.filter((note) => !mentionIds.includes(note.id)).map((note) => ({ key: `note:${note.id}`, name: note.title, description: note.subject || "Catatan", icon: <BookOpen trigger="parent" size={16} /> })),
@@ -662,10 +662,7 @@ export default function Composer({
             setMentionIds([]); setAttachment(null); setAttachError(null); setStgOnce(false);
           }}
           onStop={onStop} background="rgb(var(--clay-cream))" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="#a983e8" width={760} radius={18} maxRows={5}
-          voiceSlot={<span className="momo-call-tools">
-            {speechInput}
-            {onCall && <MomoCallButton onClick={onCall} disabled={disabled || sending} />}
-          </span>}
+          voiceSlot={speechInput}
         />
         {showMultiAgentToggle && <button type="button" className="eureka-prompt-multi" aria-pressed={multiAgentOn} onClick={() => onMultiAgentToggle?.(!multiAgentOn)}>Multi Agent: {multiAgentOn ? "Aktif" : "Nonaktif"}</button>}
       </div>

@@ -1,27 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AudioLines, Mic, MicOff, SlidersHorizontal, X } from "lucide-react";
+import { Mic, MicOff, SlidersHorizontal, X } from "lucide-react";
 import { useMomoCall } from "./useMomoCall";
 import "./momo-call.css";
 
 const labels = {
   idle: "Bicara dengan Momo",
+  permission: "Menunggu izin mikrofon…",
   connecting: "Menghubungkan…",
   listening: "Momo mendengarkan",
   thinking: "Momo sedang berpikir",
   speaking: "Momo sedang berbicara",
 };
 
-export function MomoCallButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
-  return <button className="momo-call-trigger" type="button" title="Panggilan suara dengan Momo"
-    aria-label="Panggilan suara dengan Momo" onClick={onClick} disabled={disabled}>
-    <AudioLines size={18} aria-hidden="true" />
-  </button>;
-}
-
 function CallScreen({ onClose }: { onClose: () => void }) {
-  const { phase, muted, error, transcript, reply, level, start, stop, toggleMute } = useMomoCall();
+  const { phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute } = useMomoCall();
+  const waiting = phase === "permission" || phase === "connecting";
   const dialog = useRef<HTMLDialogElement>(null);
   const cloud = useRef<HTMLSpanElement>(null);
   const orb = useRef<HTMLDivElement>(null);
@@ -84,13 +79,14 @@ function CallScreen({ onClose }: { onClose: () => void }) {
     <div className="momo-call-text">
       {error && <p className="momo-call-error" role="alert">{error}</p>}
       {!error && phase === "idle" && <p>Ketuk mikrofon untuk mulai ngobrol.</p>}
+      {backup && !error && phase === "listening" && !muted && !transcript && <p>Bicara lalu jeda sebentar agar Momo bisa menjawab.</p>}
       {captions && phase !== "idle" && (reply || transcript) && <p className="momo-call-caption">{reply || transcript}</p>}
     </div>
     <footer className="momo-call-controls">
-      <button type="button" disabled={phase === "connecting"} className="momo-call-control"
+      <button type="button" disabled={waiting} className="momo-call-control"
         aria-label={phase === "idle" ? "Mulai panggilan" : muted ? "Aktifkan mikrofon" : "Bisukan mikrofon"}
         title={phase === "idle" ? "Mulai panggilan" : muted ? "Aktifkan mikrofon" : "Bisukan mikrofon"}
-        aria-pressed={phase === "idle" || phase === "connecting" ? undefined : muted}
+        aria-pressed={phase === "idle" || waiting ? undefined : muted}
         onClick={() => phase === "idle" ? void start() : toggleMute()}>
         {muted ? <MicOff size={21} aria-hidden="true" /> : <Mic size={21} aria-hidden="true" />}
       </button>

@@ -22,7 +22,7 @@ import Trophy from "kubai-icons-react/icons/trophy";
 import Crown from "kubai-icons-react/icons/crown";
 import Plus from "kubai-icons-react/icons/circle-plus";
 import RefreshCw from "kubai-icons-react/icons/sync";
-import { Upload } from "lucide-react";
+import { PhoneCall, Upload } from "lucide-react";
 import PromptBar from "@/components/asisten/reactbits/PromptBar";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
 import DocumentAttachments from "@/components/dashboard/DocumentAttachments";
@@ -31,7 +31,7 @@ import PageTutorial from "@/components/tutorial/PageTutorial";
 import { usePromptNoteJob } from "@/components/dashboard/usePromptNoteJob";
 import PromptNoteProgress from "@/components/dashboard/PromptNoteProgress";
 import SpeechInput from "@/components/asisten/SpeechInput";
-import AiCallModal, { MomoCallButton } from "@/components/assistant/AiCallModal";
+import AiCallModal from "@/components/assistant/AiCallModal";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { supabase } from "@/lib/supabase/client";
@@ -181,13 +181,11 @@ export default function DashboardV2() {
                 <button type="button" aria-pressed={mode === "note"} disabled={openingChat}
                   onClick={() => { setMode("note"); setInputError(""); }}>Note</button>
               </div>}
-              voiceSlot={<span className="momo-call-tools">
-                <SpeechInput userId={getUserId()} disabled={openingChat || generation.busy}
+              voiceSlot={<SpeechInput userId={getUserId()} disabled={openingChat || generation.busy}
                   onText={text => { setInputError(""); setDraft(previous => previous + (previous && !/\s$/.test(previous) ? " " : "") + text); }}
-                  onError={setInputError} />
-                {mode === "ask" && <MomoCallButton onClick={() => setCallOpen(true)} disabled={openingChat || generation.busy} />}
-              </span>}
+                  onError={setInputError} />}
               sources={[
+                ...(mode === "ask" && !openingChat ? [{ key: "momo-call", name: "Panggilan Momo", description: "Ngobrol langsung dengan suara", icon: <PhoneCall size={16} />, action: () => setCallOpen(true) }] : []),
                 { key: "upload", name: "Unggah materi", description: "Dokumen, slide, atau audio", icon: <Upload size={16} /> },
                 { key: "web", name: "Tautan web", description: "Ringkas artikel menjadi catatan", icon: <Globe trigger="parent" size={16} /> },
                 { key: "youtube", name: "YouTube", description: "Pelajari isi video", icon: <span className="dv2-youtube-logo" aria-hidden="true" /> },

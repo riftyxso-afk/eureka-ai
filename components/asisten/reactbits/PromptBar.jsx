@@ -203,7 +203,7 @@ export default function PromptBar({
   }, [open, onModelMenuHeightChange]);
   const query = plusOpen ? '' : (token?.query ?? '');
   const list = open === 'at'
-    ? sources.filter(source => source.name.toLowerCase().includes(query))
+    ? sources.filter(source => (plusOpen || !source.action) && source.name.toLowerCase().includes(query))
     : open === 'slash'
       ? commands.filter(command => command.name.replace(/^\//, '').toLowerCase().startsWith(query))
       : open === 'model' ? models : [];
@@ -400,6 +400,11 @@ export default function PromptBar({
   const fillAt = i => (i === efforts.length - 1 ? '100%' : `calc(${stepAt(i)} + 7px)`);
 
   const pick = row => {
+    if (plusOpen && row.action) {
+      closeMenus();
+      row.action();
+      return;
+    }
     if (open === 'model') {
       if (row.disabled) return;
       setModelKey(row.key);
@@ -655,7 +660,7 @@ export default function PromptBar({
           {sources.length > 0 && <button
             type="button"
             className="prompt-bar__tool"
-            aria-label="Add files and sources"
+            aria-label="Tambah file dan alat"
             disabled={disabled}
             aria-expanded={plusOpen}
             data-on={plusOpen ? '' : undefined}

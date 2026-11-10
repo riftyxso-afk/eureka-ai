@@ -1,18 +1,3 @@
-.momo-call-tools { display: inline-flex; align-items: center; flex: none; gap: 2px; }
-.momo-call-trigger {
-  display: inline-grid;
-  flex: none;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border-radius: 50%;
-  color: rgb(var(--clay-dark));
-  transition: background-color 150ms ease, transform 120ms ease-out;
-}
-.momo-call-trigger:disabled { opacity: .45; }
-.momo-call-trigger:active { transform: scale(.94); }
-
 .momo-call {
   --call-bg: #fff;
   --call-ink: #161c22;
@@ -155,10 +140,9 @@
 .momo-call-control[aria-pressed="true"] { background: #dbe9f9; color: #193d65; }
 .momo-call-control:disabled { opacity: .55; }
 .momo-call-control:active, .momo-call-settings:active { transform: scale(.94); }
-.momo-call button:focus-visible, .momo-call-trigger:focus-visible { outline: 2px solid #2588e5; outline-offset: 3px; }
+.momo-call button:focus-visible { outline: 2px solid #2588e5; outline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) {
   .momo-call-control:not(:disabled):hover, .momo-call-settings:hover { background: var(--call-hover); }
-  .momo-call-trigger:not(:disabled):hover { background: rgb(var(--clay-dark) / .08); }
 }
 @media (max-width: 600px) {
   .momo-call { width: 100%; height: 100dvh; border-radius: 0; box-shadow: none; }
@@ -169,5 +153,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .momo-call[open], .momo-call-orb[data-phase] .momo-call-cloud { animation: none; }
-  .momo-call button, .momo-call-trigger { transition: none; }
+  .momo-call button { transition: none; }
 }
