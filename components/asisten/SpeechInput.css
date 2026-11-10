@@ -1,0 +1,10 @@
+.speech-input { --speech-bg: #f1f0f3; --speech-ink: #55515d; --speech-accent: #7540d0; position: relative; display: inline-flex; align-items: center; flex-shrink: 0; }
+.dark .speech-input { --speech-bg: #30302e; --speech-ink: #dedbd5; --speech-accent: #c9b4f4; }
+.speech-input__processing { position: absolute; right: 0; bottom: calc(100% + 8px); white-space: nowrap; padding: 7px 10px; border-radius: 9px; background: var(--speech-bg); color: var(--speech-ink); font-size: 11px; pointer-events: none; }
+/* Give the expanded recorder room without increasing the mobile composer. */
+@media (max-width: 600px) {
+  .prompt-bar__bar:has(.voice-pill[data-state="listening"]) > :not(.speech-input):not(.prompt-bar__spacer):not(.prompt-bar__send) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}

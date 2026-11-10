@@ -17,7 +17,6 @@ import Grid2X2 from "kubai-icons-react/icons/grid";
 import History from "kubai-icons-react/icons/history";
 import List from "kubai-icons-react/icons/list";
 import MessageCircle from "kubai-icons-react/icons/message-circle";
-import Mic from "kubai-icons-react/icons/mic";
 import Search from "kubai-icons-react/icons/search";
 import Trophy from "kubai-icons-react/icons/trophy";
 import Crown from "kubai-icons-react/icons/crown";
@@ -31,7 +30,7 @@ import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
 import PageTutorial from "@/components/tutorial/PageTutorial";
 import { usePromptNoteJob } from "@/components/dashboard/usePromptNoteJob";
 import PromptNoteProgress from "@/components/dashboard/PromptNoteProgress";
-import AiCallModal from "@/components/assistant/AiCallModal";
+import SpeechInput from "@/components/asisten/SpeechInput";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { supabase } from "@/lib/supabase/client";
@@ -60,7 +59,6 @@ export default function DashboardV2() {
   const [filter, setFilter] = useState("Semua");
   const [subject, setSubject] = useState("");
   const [view, setView] = useState("grid");
-  const [voice, setVoice] = useState(false);
   const generation = usePromptNoteJob();
   const [mode, setMode] = useState<"ask" | "note">("ask");
   const [openingChat, setOpeningChat] = useState(false);
@@ -181,8 +179,9 @@ export default function DashboardV2() {
                 <button type="button" aria-pressed={mode === "note"} disabled={openingChat}
                   onClick={() => { setMode("note"); setInputError(""); }}>Note</button>
               </div>}
-              voiceSlot={<button type="button" className="prompt-bar__tool" aria-label="Bicara dengan Momo"
-                title="Bicara dengan Momo" disabled={openingChat} onClick={() => setVoice(true)}><Mic trigger="parent" size={17} /></button>}
+              voiceSlot={<SpeechInput userId={getUserId()} disabled={openingChat || generation.busy}
+                onText={text => { setInputError(""); setDraft(previous => previous + (previous && !/\s$/.test(previous) ? " " : "") + text); }}
+                onError={setInputError} />}
               sources={[
                 { key: "upload", name: "Unggah materi", description: "Dokumen, slide, atau audio", icon: <Upload size={16} /> },
                 { key: "web", name: "Tautan web", description: "Ringkas artikel menjadi catatan", icon: <Globe trigger="parent" size={16} /> },
@@ -205,6 +204,5 @@ export default function DashboardV2() {
       </section>
     </main>
     <input ref={fileInput} className="sr-only" type="file" multiple aria-label="Lampirkan materi belajar" accept=".pdf,.doc,.docx,.ppt,.pptx,.xlsx,.xls,.csv,.txt,.md,.rtf,.odt,.mp3,.wav,.m4a,.ogg,.flac,.aac,.mp4,.webm,.mov" onChange={event => { attach(event.target.files); event.target.value = ""; }} />
-    <AiCallModal open={voice} onClose={() => setVoice(false)} />
   </div>;
 }

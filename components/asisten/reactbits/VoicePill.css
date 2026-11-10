@@ -84,7 +84,11 @@
 
 .voice-pill[data-state='listening'] .voice-pill__capsule {
   clip-path: inset(0 0 round var(--vp-radius));
+  box-shadow: 0 4px 16px rgb(0 0 0 / .12), inset 0 1px 0 rgb(255 255 255 / .08);
 }
+
+.voice-pill:focus-visible { outline: 2px solid var(--vp-accent); outline-offset: 4px; }
+.voice-pill[aria-busy='true'] { opacity: .65; }
 
 .voice-pill__time {
   position: absolute;

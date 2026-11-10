@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import ArrowLeft01Icon from "kubai-icons-react/icons/arrow-left";
-import Mic01Icon from "kubai-icons-react/icons/mic";
 import './VoicePill.css';
 
 const HugeiconsIcon = ({ icon: Icon, ...props }) => <Icon {...props} />;
@@ -95,14 +94,14 @@ const clock = ms => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 
-const openMic = async s => {
+const openMic = async (s, requestId) => {
   const Ctx = window.AudioContext || window.webkitAudioContext;
-  if (!Ctx || !navigator.mediaDevices?.getUserMedia) throw new Error('unsupported');
+  if (!Ctx || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw new Error('unsupported');
   s.audio ??= { ctx: new Ctx() };
   const a = s.audio;
-  if (a.ctx.state === 'suspended') a.ctx.resume();
+  if (a.ctx.state === 'suspended') await a.ctx.resume();
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  if (!s.listening) {
+  if (!s.listening || s.requestId !== requestId) {
     stream.getTracks().forEach(t => t.stop());
     return;
   }
@@ -113,6 +112,7 @@ const openMic = async s => {
   a.analyser.smoothingTimeConstant = 0;
   a.src.connect(a.analyser);
   a.buf = new Uint8Array(a.analyser.frequencyBinCount);
+  return stream;
 };
 const closeMic = s => {
   const a = s.audio;
@@ -123,7 +123,17 @@ const closeMic = s => {
   a.src = null;
   a.analyser = null;
   a.buf = null;
+  if (a.ctx.state === 'running') void a.ctx.suspend().catch(() => {});
 };
+
+// Microphone artwork supplied with the Voice Pill reference.
+function ProCapsuleMic({ size }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="7.5" y="2.5" width="9" height="12" rx="4.5" fill="currentColor" fillOpacity=".12" />
+    <path d="M10 5.5h4M9.5 8.5h5M10 11.5h4" strokeWidth="1.2" opacity=".65" />
+    <path d="m9.5 14.5 1 7h3l1-7" strokeWidth="1.6" /><path d="M10 17.5h4" strokeWidth="1.2" opacity=".4" />
+  </svg>;
+}
 
 export default function VoicePill({
   accentColor = '#f5f5f5',
@@ -144,7 +154,7 @@ export default function VoicePill({
   pressScale = 0.95,
   mode = 'auto',
   holdAfter = 300,
-  reactive = 'simulated',
+  reactive = 'mic',
   disabled = false,
   ariaLabel = 'Dictate',
   onStart,
@@ -153,6 +163,7 @@ export default function VoicePill({
   className = ''
 }) {
   const [listening, setListening] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const [pressed, setPressed] = useState(false);
   const [input, setInput] = useState('pointer');
   const timeRef = useRef(null);
@@ -160,6 +171,7 @@ export default function VoicePill({
   const waveRef = useRef(null);
   const st = useRef({
     listening: false,
+    requestId: 0,
     pointerId: null,
     ownPress: false,
     downX: 0,
@@ -175,8 +187,7 @@ export default function VoicePill({
     t0: 0,
     audio: null
   });
-  const cfg = useRef({});
-  cfg.current = {
+  const config = {
     attack,
     release,
     sensitivity,
@@ -193,6 +204,8 @@ export default function VoicePill({
     onStop,
     maxDuration
   };
+  const cfg = useRef(config);
+  useLayoutEffect(() => { cfg.current = config; });
 
   const frame = now => {
     const s = st.current;
@@ -211,7 +224,7 @@ export default function VoicePill({
       const text = clock(now - s.startedAt);
       if (timeRef.current.textContent !== text) timeRef.current.textContent = text;
     }
-    if (s.listening && c.waveform && waveRef.current) drawWave(s, waveRef.current, s.env, c.accentColor, c.floor);
+    if (s.listening && c.waveform && waveRef.current) drawWave(s, waveRef.current, s.env, s.waveColor || c.accentColor, c.floor);
     s.raf = s.listening ? requestAnimationFrame(frame) : 0;
   };
 
@@ -228,24 +241,34 @@ export default function VoicePill({
     s.t0 = s.startedAt;
     s.last = s.startedAt;
     if (timeRef.current) timeRef.current.textContent = '0:00';
-    setListening(true);
     setInput(kind);
-    if (!s.raf) s.raf = requestAnimationFrame(frame);
-    if (c.maxDuration > 0) s.limitTimer = window.setTimeout(() => end('limit'), c.maxDuration);
+    const requestId = ++s.requestId;
+    const ready = stream => {
+      if (!s.listening || s.requestId !== requestId) return;
+      c.onStart?.({ source: c.reactive, stream });
+      s.startedAt = performance.now();
+      s.last = s.startedAt;
+      s.waveColor = getComputedStyle(rootRef.current).getPropertyValue('--vp-accent').trim();
+      setRequesting(false);
+      setListening(true);
+      if (!s.raf) s.raf = requestAnimationFrame(frame);
+      if (c.maxDuration > 0) s.limitTimer = window.setTimeout(() => end('limit'), c.maxDuration);
+    };
     if (c.reactive === 'mic') {
-      openMic(s).then(() => {
-        if (s.listening && s.audio?.stream) c.onStart?.({ source: 'mic', stream: s.audio.stream });
-      }).catch(() => end('mic-denied'));
-    } else c.onStart?.({ source: c.reactive });
+      setRequesting(true);
+      openMic(s, requestId).then(stream => { if (stream) ready(stream); }).catch(() => { if (s.requestId === requestId) end('mic-denied'); });
+    } else ready();
   };
   const end = reason => {
     const s = st.current;
     const c = cfg.current;
     if (!s.listening) return;
     s.listening = false;
+    s.requestId += 1;
     window.clearTimeout(s.limitTimer);
     c.onStop?.({ reason, duration: Math.round(performance.now() - s.startedAt) });
     closeMic(s);
+    setRequesting(false);
     setListening(false);
     setInput(reason === 'key' || reason === 'escape' ? 'key' : 'pointer');
   };
@@ -314,11 +337,7 @@ export default function VoicePill({
       end('escape');
       return;
     }
-    if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) {
-      e.preventDefault();
-      if (st.current.listening) end('key');
-      else begin('key');
-    }
+    // Native button activation emits a click for Enter/Space and assistive technology.
   };
   const onClick = e => {
     if (e.detail === 0 && st.current.pointerId === null && !e.nativeEvent.pointerType) {
@@ -328,7 +347,7 @@ export default function VoicePill({
   };
 
   useEffect(() => {
-    if (!pressed) return undefined;
+    if (!listening && !requesting) return undefined;
     const stop = () => end('blur');
     const onVis = () => {
       if (document.hidden) stop();
@@ -339,34 +358,33 @@ export default function VoicePill({
       window.removeEventListener('blur', stop);
       document.removeEventListener('visibilitychange', onVis);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pressed]);
+  }, [listening, requesting]);
   useEffect(() => {
     if (disabled) end('disabled');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
   useEffect(() => {
     const s = st.current;
     return () => {
       end('unmount');
       cancelAnimationFrame(s.raf);
-      s.audio?.ctx.close();
+      void s.audio?.ctx.close().catch(() => {});
+      s.audio = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const radius = shape === 'rounded' ? Math.round(size * 0.29) : size / 2;
   const hit = Math.max(0, Math.min(10, (44 - size) / 2));
   const timeSize = Math.max(10, Math.round(size * 0.36));
   const clockW = showTime ? Math.round(timeSize * 2.5) + 4 : 0;
-  const waveW = waveform ? Math.round(size * 1.9) : 0;
+  const waveW = waveform ? Math.round(size * 2.4) : 0;
   const extra = clockW + waveW;
 
   return (
     <button
       type="button"
       disabled={disabled}
-      aria-label={ariaLabel}
+      aria-label={requesting ? 'Menunggu izin mikrofon. Klik untuk membatalkan' : listening ? 'Selesai merekam dan ubah menjadi teks' : ariaLabel}
+      aria-busy={requesting}
       aria-pressed={listening}
       className={`voice-pill${className ? ` ${className}` : ''}`}
       data-state={listening ? 'listening' : 'idle'}
@@ -377,7 +395,7 @@ export default function VoicePill({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerCancel={() => { st.current.pointerId = null; setPressed(false); settleSlide(); end('cancel'); }}
       onLostPointerCapture={onPointerUp}
       onKeyDown={onKeyDown}
       onClick={onClick}
@@ -405,7 +423,7 @@ export default function VoicePill({
       {slideToCancel ? (
         <span className="voice-pill__cancel" aria-hidden="true">
           <HugeiconsIcon icon={ArrowLeft01Icon} size={12} strokeWidth={2.2} />
-          <span>Cancel</span>
+          <span>Batal</span>
         </span>
       ) : null}
       {showTime ? (
@@ -415,7 +433,7 @@ export default function VoicePill({
       ) : null}
       <span className="voice-pill__glyph">
         <span className="voice-pill__mic">
-          <HugeiconsIcon icon={Mic01Icon} size={Math.round(size * 0.54)} strokeWidth={2} />
+          <ProCapsuleMic size={Math.round(size * 0.54)} />
         </span>
         <span className="voice-pill__stop" aria-hidden="true" />
       </span>

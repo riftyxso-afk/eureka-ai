@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
-import { db } from "@/lib/supabase/admin";
-import { transcribeAudioVideo } from "@/lib/rag/extract";
+import { transcribeRecording, TranscriptionError } from "@/lib/audio/transcribe";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -13,7 +12,7 @@ const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 /**
  * POST /api/audio/transcribe
  * FormData: { userId: string, audio: Blob }
- * Transkripsi rekaman suara (beta tester) → teks.
+ * Transkripsi rekaman suara → teks untuk semua akun yang sudah login.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -38,19 +37,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hanya beta tester.
-    const { data: user } = await db()
-      .from("users")
-      .select("is_beta")
-      .eq("id", auth.userId)
-      .maybeSingle();
-    if (user?.is_beta !== true) {
-      return NextResponse.json(
-        { error: "Fitur ini khusus beta tester. Gabung lewat /join dulu ya." },
-        { status: 403 }
-      );
-    }
-
     // Rate limit: maks 20 transkripsi/jam per user.
     ensureRateLimitPrune();
     const rl = checkRateLimit(`transcribe:${auth.userId}`, 20, 60 * 60 * 1000);
@@ -67,28 +53,24 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const bytes = Buffer.from(await audio.arrayBuffer());
-    if (bytes.byteLength > MAX_BYTES) {
+    if (audio.size > MAX_BYTES) {
       return NextResponse.json(
         { error: "Audio terlalu besar (maks 8 MB)." },
         { status: 413 }
       );
+    }
+    if (!audio.size || !/^(audio\/|video\/(webm|mp4))/i.test(audio.type)) {
+      return NextResponse.json({ error: "Gunakan rekaman audio yang valid." }, { status: 400 });
     }
 
     const filename =
       audio instanceof Blob && typeof (audio as { name?: unknown }).name === "string"
         ? String((audio as { name: string }).name)
         : `rekaman-${Date.now()}.webm`;
-    const result = await transcribeAudioVideo(bytes, filename);
-
-    if (!result.text.trim()) {
-      return NextResponse.json(
-        { error: "Tidak ada suara yang terdeteksi. Coba bicara lebih jelas." },
-        { status: 422 }
-      );
-    }
-    return NextResponse.json({ ok: true, text: result.text.trim() });
+    const text = await transcribeRecording(audio, filename);
+    return NextResponse.json({ ok: true, text });
   } catch (e) {
+    if (e instanceof TranscriptionError) return NextResponse.json({ error: e.message }, { status: e.status });
     const msg = "Gagal mentranskripsi audio. Coba lagi ya.";
     console.error("[api/audio/transcribe] POST", e);
     return NextResponse.json({ error: msg }, { status: 500 });
