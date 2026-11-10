@@ -10,8 +10,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const VOICE_SYSTEM = `${momoPersona()}
-Ini percakapan suara. Ikuti bahasa pengguna. Jawab langsung dalam 1–3 kalimat yang mudah didengar,
-tanpa Markdown, emoji, atau daftar. Gunakan riwayat untuk memahami pertanyaan lanjutan.
+Ini percakapan suara yang santai. Ikuti bahasa pengguna. Jawab langsung dalam 1–3 kalimat pendek
+yang terdengar natural saat dibaca, tanpa Markdown, emoji, daftar, atau sapaan berulang.
+Jika pengguna membetulkan ucapannya dan menyebut maksud baru, tanggapi maksud yang terbaru.
+Jika pengguna bilang ucapannya salah tetapi belum menyebut maksudnya, tanyakan dengan singkat apa maksudnya.
+Gunakan riwayat untuk memahami pertanyaan lanjutan dan koreksi.
 Jika pengguna butuh bantuan belajar, beri contoh atau petunjuk singkat yang relevan.`;
 
 type Turn = { role: "user" | "assistant"; content: string };
@@ -64,7 +67,7 @@ export async function POST(request: Request) {
               send({ type: "text", text: event.text });
               // At most two speech requests: start the first complete sentence
               // early, then synthesize the remainder while that sentence plays.
-              const boundary = !spoken ? [...text.matchAll(/[.!?](?=\s)/g)].find(match => match.index >= 20) : undefined;
+              const boundary = !spoken ? [...text.matchAll(/[.!?](?=\s)/g)].find(match => match.index >= 10) : undefined;
               if (!spoken && boundary) {
                 spoken = boundary.index + 1;
                 send({ type: "speech", text: text.slice(0, spoken).trim() });

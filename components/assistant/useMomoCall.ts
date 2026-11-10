@@ -7,8 +7,9 @@ import { recordCallTurns } from "./recordCallTurns";
 import { readCallReply } from "@/lib/audio/callReply";
 
 type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "speaking";
+export type CallProvider = "momo" | "lala";
 type Turn = { role: "user" | "assistant"; content: string };
-type Playback = { controller: AbortController; sources: Set<AudioBufferSourceNode> };
+type Playback = { controller: AbortController; sources: Set<AudioBufferSourceNode>; spoken?: string };
 type Session = {
   controller: AbortController;
   context: AudioContext;
@@ -18,6 +19,7 @@ type Session = {
   micSource?: MediaStreamAudioSourceNode;
   recorder?: ReturnType<typeof recordCallTurns>;
   transcription?: AbortController;
+  endMicStream?: () => void;
   mic?: AnalyserNode;
   speaker: AnalyserNode;
   playback?: Playback;
@@ -29,9 +31,44 @@ type Session = {
   timers: Set<number>;
 };
 
+type LiveMessage = {
+  setupComplete?: object;
+  serverContent?: {
+    interrupted?: boolean;
+    turnComplete?: boolean;
+    inputTranscription?: { text?: string };
+    outputTranscription?: { text?: string };
+    modelTurn?: { parts?: { inlineData?: { data?: string; mimeType?: string } }[] };
+  };
+};
+
 const CONNECT_TIMEOUT = 9_000;
 const SESSION_TIMEOUT = 12 * 60_000;
 const SPEAKER_RATE = 24_000;
+
+function spokenWords(text: string) {
+  return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+function correctionReply(question: string) {
+  const words = spokenWords(question);
+  if (/^(?:(?:eh|oh|maaf|bentar|sebentar|tunggu) )?(?:(?:aku|saya) )?(?:salaha?(?: ngomong)?|keliru|maksudku|maksud saya)$/.test(words)) {
+    return "Oh, maksudmu apa tadi?";
+  }
+  if (/^(?:oh |wait |sorry )?(?:i meant|i said it wrong|that was wrong)$/.test(words)) {
+    return "Oh, what did you mean?";
+  }
+}
+
+function hasVoice(bytes: Uint8Array) {
+  const pcm = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let energy = 0;
+  for (let i = 0; i + 1 < bytes.length; i += 2) {
+    const sample = pcm.getInt16(i, true) / 32768;
+    energy += sample * sample;
+  }
+  return energy > bytes.length / 2 * 0.025 ** 2;
+}
 
 function micBlocked(session: Session) {
   return session.muted || session.speaking || performance.now() < session.echoUntil;
@@ -104,7 +141,7 @@ async function playPcm(response: Response, session: Session, playback: Playback,
       source.disconnect();
       playback.sources.delete(source);
     };
-    nextTime = Math.max(nextTime, session.context.currentTime + 0.06);
+    if (nextTime < session.context.currentTime || !last) nextTime = session.context.currentTime + 0.035;
     source.start(nextTime);
     nextTime += buffer.duration;
     if (!last) onPlaying();
@@ -176,7 +213,7 @@ export function useMomoCall() {
     setPhase("idle");
   }
 
-  async function answer(session: Session, question: string) {
+  async function answer(session: Session, question: string, greeting?: string) {
     stopPlayback(session);
     const playback: Playback = { controller: new AbortController(), sources: new Set() };
     session.playback = playback;
@@ -186,9 +223,15 @@ export function useMomoCall() {
     setError("");
     setTranscript(question);
     setReply("");
+    const history = session.history.slice(-12);
+    if (question) session.history = [...history, { role: "user", content: question }];
 
     let audioQueue = Promise.resolve();
     let audioError: unknown;
+    let replyText = "";
+    const showReply = (value: string) => {
+      if (isCurrent()) setReply(value);
+    };
     const queueSpeech = (text: string) => {
       if (!isCurrent() || signal.aborted || audioError) return;
       const pending = apiFetch("/api/call/speech", {
@@ -202,6 +245,7 @@ export function useMomoCall() {
         if (!speech.ok) throw new Error(await readError(speech, "Suara Momo belum bisa diputar."));
         await playPcm(speech, session, playback, () => {
           if (!isCurrent()) return;
+          playback.spoken = spokenWords(text);
           session.recorder?.discard();
           session.speaking = true;
           setPhase("speaking");
@@ -209,20 +253,28 @@ export function useMomoCall() {
       }).catch((cause: unknown) => { audioError = cause; });
     };
     try {
-      const response = await apiFetch("/api/call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, history: session.history, stream: true }),
-        signal,
-      });
-      if (!response.ok) throw new Error(await readError(response, "Momo belum bisa menjawab."));
-      const text = await readCallReply(response, value => { if (isCurrent()) setReply(value); }, queueSpeech);
-      if (!isCurrent()) return;
-      session.history = [...session.history, { role: "user", content: question }, { role: "assistant", content: text }].slice(-12) as Turn[];
-      setReply(text);
+      const immediate = greeting ?? correctionReply(question);
+      if (immediate) {
+        replyText = immediate;
+        showReply(immediate);
+        queueSpeech(immediate);
+      } else {
+        const response = await apiFetch("/api/call", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, history, stream: true }),
+          signal,
+        });
+        if (!response.ok) throw new Error(await readError(response, "Momo belum bisa menjawab."));
+        replyText = await readCallReply(response, showReply, queueSpeech);
+      }
 
       await audioQueue;
       if (audioError) throw audioError;
+      if (isCurrent() && question) {
+        const turn: Turn = { role: "assistant", content: replyText };
+        session.history = [...session.history, turn].slice(-12);
+      }
     } catch (cause) {
       if (isCurrent() && !signal.aborted) {
         setError(cause instanceof Error ? cause.message : "Panggilan sempat terputus.");
@@ -235,7 +287,139 @@ export function useMomoCall() {
     }
   }
 
-  async function start() {
+  async function connectLala(session: Session, language: "id" | "en") {
+    const signal = AbortSignal.any([session.controller.signal, AbortSignal.timeout(CONNECT_TIMEOUT)]);
+    const [response] = await Promise.all([
+      apiFetch("/api/call/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "lala", language }),
+        signal,
+      }),
+      session.context.audioWorklet.addModule("/audio/call-capture.js"),
+    ]);
+    if (active.current !== session) return;
+    if (!response.ok) throw new Error(await readError(response, "Lala belum bisa terhubung."));
+    const { token, model } = await response.json() as { token: string; model: string };
+    if (active.current !== session) return;
+    if (!token || !model) throw new Error("Sesi Lala belum tersedia.");
+
+    const url = new URL("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained");
+    url.searchParams.set("access_token", token);
+    const socket = new WebSocket(url);
+    socket.binaryType = "arraybuffer";
+    session.socket = socket;
+    const capture = new AudioWorkletNode(session.context, "momo-call-capture");
+    session.capture = capture;
+    session.micSource?.connect(capture);
+    capture.connect(session.context.destination);
+
+    let ready = false;
+    let inputText = "";
+    let outputText = "";
+    let audioInput: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const send = (message: object) => {
+      if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+    };
+    const connectionFailed = () => {
+      if (active.current === session) fail("Panggilan Lala terputus. Coba lagi atau pilih Momo.");
+    };
+    const setupTimer = window.setTimeout(connectionFailed, CONNECT_TIMEOUT);
+    session.timers.add(setupTimer);
+    session.endMicStream = () => {
+      if (ready) send({ realtimeInput: { audioStreamEnd: true } });
+    };
+    capture.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
+      if (!ready || session.muted || active.current !== session) return;
+      if (socket.bufferedAmount > 128_000) { connectionFailed(); return; }
+      const data = btoa(String.fromCharCode(...new Uint8Array(event.data)));
+      send({ realtimeInput: { audio: { data, mimeType: "audio/pcm;rate=16000" } } });
+    };
+
+    function closeAudioInput() {
+      const input = audioInput;
+      audioInput = undefined;
+      input?.close();
+    }
+
+    function playChunk(data: string) {
+      if (!audioInput) {
+        stopPlayback(session);
+        const playback: Playback = { controller: new AbortController(), sources: new Set() };
+        session.playback = playback;
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) { audioInput = controller; },
+          cancel() { if (session.playback === playback) audioInput = undefined; },
+        });
+        playback.controller.signal.addEventListener("abort", closeAudioInput, { once: true });
+        void playPcm(new Response(stream), session, playback, () => {
+          session.speaking = true;
+          setPhase("speaking");
+        }).catch(() => {
+          if (active.current === session && session.playback === playback) setError("Suara Lala belum bisa diputar.");
+        }).finally(() => {
+          playback.controller.signal.removeEventListener("abort", closeAudioInput);
+          if (active.current !== session || session.playback !== playback) return;
+          audioInput = undefined;
+          stopPlayback(session);
+          setPhase("listening");
+        });
+      }
+      audioInput?.enqueue(Uint8Array.from(atob(data), character => character.charCodeAt(0)));
+    }
+
+    socket.onopen = () => send({ setup: { model } });
+    socket.onerror = connectionFailed;
+    socket.onclose = connectionFailed;
+    socket.onmessage = event => {
+      if (active.current !== session) return;
+      try {
+        const raw = typeof event.data === "string" ? event.data : new TextDecoder().decode(event.data);
+        const message = JSON.parse(raw) as LiveMessage;
+        if (message.setupComplete && !ready) {
+          ready = true;
+          window.clearTimeout(setupTimer);
+          setPhase("thinking");
+          send({ realtimeInput: { text: language === "en"
+            ? "Open the call by saying: Hi, I'm Lala. How can I help?"
+            : "Buka panggilan dengan berkata: Hai, aku Lala. Ada yang bisa aku bantu?" } });
+        }
+        const content = message.serverContent;
+        if (!content) return;
+        if (content.interrupted) {
+          stopPlayback(session);
+          outputText = "";
+          setReply("");
+          setPhase("listening");
+        }
+        if (content.inputTranscription?.text) {
+          inputText += content.inputTranscription.text;
+          setTranscript(inputText);
+          if (!session.speaking && !content.outputTranscription?.text) setReply("");
+        }
+        if (!content.interrupted) {
+          if (content.outputTranscription?.text) {
+            outputText += content.outputTranscription.text;
+            setReply(outputText);
+          }
+          for (const part of content.modelTurn?.parts ?? []) {
+            const audio = part.inlineData;
+            if (audio?.data && audio.mimeType?.startsWith("audio/pcm")) playChunk(audio.data);
+          }
+        }
+        if (content.turnComplete) {
+          closeAudioInput();
+          inputText = "";
+          outputText = "";
+          if (!session.playback) setPhase("listening");
+        }
+      } catch {
+        connectionFailed();
+      }
+    };
+  }
+
+  async function start(provider: CallProvider = "momo") {
     if (active.current) return;
     setMuted(false);
     setBackup(false);
@@ -264,6 +448,15 @@ export function useMomoCall() {
     };
     active.current = session;
     const isCurrent = () => active.current === session;
+    const language = getClientLocale() === "en" ? "en" : "id";
+    let greeted = false;
+    const greet = () => {
+      if (greeted) return;
+      greeted = true;
+      void answer(session, "", language === "en"
+        ? "Hi, I'm Momo. How can I help?"
+        : "Hai, aku Momo. Ada yang bisa aku bantu?");
+    };
     const interrupt = () => {
       if (!session.playback) return;
       stopPlayback(session);
@@ -304,7 +497,17 @@ export function useMomoCall() {
 
       session.timers.add(window.setTimeout(() => {
         if (isCurrent()) fail("Sesi suara selesai. Mulai lagi untuk melanjutkan.");
-      }, SESSION_TIMEOUT));
+      }, provider === "lala" ? 9 * 60_000 : SESSION_TIMEOUT));
+
+      if (provider === "lala") {
+        try {
+          await connectLala(session, language);
+        } catch (cause) {
+          if (isCurrent()) fail(cause instanceof Error && cause.name === "Error"
+            ? cause.message : "Lala belum bisa terhubung. Coba lagi atau pilih Momo.");
+        }
+        return;
+      }
 
       const realtime = new AbortController();
       const switchToRecording = () => {
@@ -351,15 +554,17 @@ export function useMomoCall() {
         setBackup(true);
         if (!session.playback) setTranscript("");
         setPhase(session.speaking ? "speaking" : session.playback ? "thinking" : "listening");
+        greet();
       };
 
       const connectTimer = window.setTimeout(switchToRecording, CONNECT_TIMEOUT);
       session.timers.add(connectTimer);
       try {
-        await context.audioWorklet.addModule("/audio/call-capture.js");
-        if (!isCurrent() || realtime.signal.aborted) return;
         const signal = AbortSignal.any([session.controller.signal, realtime.signal]);
-        const response = await apiFetch("/api/call/session", { method: "POST", signal });
+        const [response] = await Promise.all([
+          apiFetch("/api/call/session", { method: "POST", signal }),
+          context.audioWorklet.addModule("/audio/call-capture.js"),
+        ]);
         if (!isCurrent() || signal.aborted) return;
         if (!response.ok) {
           if ([401, 403, 429].includes(response.status)) {
@@ -373,8 +578,8 @@ export function useMomoCall() {
 
         const params = new URLSearchParams({
           token, model_id: "scribe_v2_realtime", audio_format: "pcm_16000",
-          language_code: getClientLocale() === "en" ? "en" : "id",
-          commit_strategy: "vad", vad_silence_threshold_secs: "0.8",
+          language_code: language,
+          commit_strategy: "vad", vad_silence_threshold_secs: "0.65",
         });
         const capture = new AudioWorkletNode(context, "momo-call-capture");
         session.capture = capture;
@@ -385,18 +590,32 @@ export function useMomoCall() {
         session.socket = socket;
 
         let ready = false;
-        let silentChunk = "";
+        let previousVoiced: Uint8Array | undefined;
+        let interruptionAudio = false;
+        const sendAudio = (audio: Uint8Array) => socket.send(JSON.stringify({
+          message_type: "input_audio_chunk", audio_base_64: btoa(String.fromCharCode(...audio)),
+          sample_rate: 16000, commit: false,
+        }));
         capture.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
           if (!ready || !isCurrent() || socket.readyState !== WebSocket.OPEN) return;
           if (socket.bufferedAmount > 128_000) { switchToRecording(); return; }
           const bytes = new Uint8Array(event.data);
-          const audio = micBlocked(session)
-            ? (silentChunk ||= btoa("\0".repeat(bytes.length)))
-            : btoa(String.fromCharCode(...bytes));
-          socket.send(JSON.stringify({
-            message_type: "input_audio_chunk", audio_base_64: audio,
-            sample_rate: 16000, commit: false,
-          }));
+          // Browser echo cancellation runs before this gate. Keep the first
+          // voiced chunk so opening the gate doesn't cut the start of a word.
+          if (session.speaking && !session.muted && !interruptionAudio && hasVoice(bytes)) {
+            if (previousVoiced) {
+              interruptionAudio = true;
+              sendAudio(previousVoiced);
+            } else {
+              previousVoiced = bytes;
+              return;
+            }
+          }
+          previousVoiced = undefined;
+          const canInterrupt = session.speaking && !session.muted && interruptionAudio;
+          if (!canInterrupt) interruptionAudio = false;
+          if (!micBlocked(session) && !session.freshSpeech && hasVoice(bytes)) session.freshSpeech = true;
+          sendAudio(micBlocked(session) && !canInterrupt ? new Uint8Array(bytes.length) : bytes);
         };
 
         socket.onmessage = event => {
@@ -406,15 +625,22 @@ export function useMomoCall() {
           if (message.message_type === "session_started") {
             ready = true;
             window.clearTimeout(connectTimer);
-            setPhase("listening");
+            greet();
             return;
           }
           const text = typeof message.text === "string" ? message.text.trim() : "";
-          if (message.message_type === "partial_transcript" && text && !micBlocked(session)) {
+          const maySpeak = !session.muted && (session.speaking ? interruptionAudio : !micBlocked(session));
+          const words = spokenWords(text);
+          const echo = session.speaking && words && ` ${session.playback?.spoken ?? ""} `.includes(` ${words} `);
+          if (message.message_type === "partial_transcript" && words && maySpeak && !echo) {
             session.freshSpeech = true;
+            const wasSpeaking = session.speaking;
             interrupt();
+            if (wasSpeaking) session.echoUntil = 0;
             setTranscript(text);
-          } else if (message.message_type === "committed_transcript" && text && !micBlocked(session) && session.freshSpeech) {
+          } else if (message.message_type === "committed_transcript" && words && maySpeak && !echo && (session.freshSpeech || interruptionAudio)) {
+            session.freshSpeech = false;
+            interruptionAudio = false;
             void answer(session, text);
           } else if (message.message_type === "error" || message.message_type?.endsWith("_error") || message.message_type === "quota_exceeded" || message.message_type === "rate_limited") {
             switchToRecording();
@@ -441,13 +667,14 @@ export function useMomoCall() {
     session.muted = !session.muted;
     for (const track of session.stream.getAudioTracks()) track.enabled = !session.muted;
     if (session.muted) {
+      session.endMicStream?.();
       session.recorder?.discard();
       if (session.transcription) {
         session.transcription.abort();
         setPhase("listening");
       }
       session.freshSpeech = false;
-      if (session.socket?.readyState === WebSocket.OPEN) {
+      if (!session.endMicStream && session.socket?.readyState === WebSocket.OPEN) {
         session.socket.send(JSON.stringify({ message_type: "input_audio_chunk", audio_base_64: "", commit: true, sample_rate: 16000 }));
       }
     }

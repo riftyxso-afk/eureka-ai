@@ -121,11 +121,12 @@ test("Dictation uses the Eureka language with Indonesian as its default", async 
   }
 });
 
-test("Realtime calls send Indonesian PCM and suppress speaker echo until playback ends", async () => {
+test("Realtime calls greet once, suppress echo, and let users interrupt to correct themselves", async () => {
   const audioNode = { connect() {}, disconnect() {} };
   let socket, worklet, source, playback;
   let now = 1000;
   let answers = 0;
+  const spoken = [];
   const { useMomoCall } = load("components/assistant/useMomoCall.ts", {
     react: {
       useState: value => [value, () => {}],
@@ -135,9 +136,10 @@ test("Realtime calls send Indonesian PCM and suppress speaker echo until playbac
     },
     "@/lib/apiClient": {
       getClientLocale: () => "id",
-      async apiFetch(path) {
+      async apiFetch(path, init) {
         if (path === "/api/call/session") return Response.json({ token: "test-only" });
         if (path === "/api/call") { answers++; return Response.json({ reply: "Halo!" }); }
+        spoken.push(JSON.parse(init.body).text);
         return new Response(new Uint8Array(9600));
       },
     },
@@ -180,21 +182,41 @@ test("Realtime calls send Indonesian PCM and suppress speaker echo until playbac
   });
   const call = useMomoCall();
   const message = (message_type, text) => socket.onmessage({ data: JSON.stringify({ message_type, text }) });
-  const chunk = () => {
-    worklet.port.onmessage({ data: new Uint8Array(3200).fill(1).buffer });
+  const chunk = (amplitude = 1) => {
+    worklet.port.onmessage({ data: new Uint8Array(3200).fill(amplitude).buffer });
     return socket.sent.at(-1).audio_base_64;
   };
   try {
     await call.start();
     assert.equal(socket.url.searchParams.get("language_code"), "id");
     message("session_started");
-    const liveAudio = chunk();
-    message("committed_transcript", "Halo Momo");
+    message("session_started");
     await new Promise(resolve => setImmediate(resolve));
     assert.ok(playback);
+    assert.deepEqual(spoken, ["Hai, aku Momo. Ada yang bisa aku bantu?"]);
     const silence = btoa("\0".repeat(3200));
     assert.equal(chunk(), silence);
     message("committed_transcript", "Gema dari speaker");
+    assert.equal(answers, 0);
+    chunk(16);
+    assert.notEqual(chunk(16), silence);
+    message("partial_transcript", "Hai, aku Momo.");
+    assert.equal(chunk(), btoa("\x01".repeat(3200)));
+    message("partial_transcript", "Eh, salah");
+    message("committed_transcript", "Eh, salah.");
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(spoken, ["Hai, aku Momo. Ada yang bisa aku bantu?", "Oh, maksudmu apa tadi?"]);
+    assert.equal(answers, 0);
+    source.onended();
+    playback();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(chunk(), silence);
+    now += 200;
+    const liveAudio = chunk();
+    assert.notEqual(liveAudio, silence);
+    message("partial_transcript", "Maksudku energi");
+    message("committed_transcript", "Maksudku energi");
+    await new Promise(resolve => setImmediate(resolve));
     assert.equal(answers, 1);
     source.onended();
     playback();
@@ -207,6 +229,46 @@ test("Realtime calls send Indonesian PCM and suppress speaker echo until playbac
   } finally {
     call.stop();
   }
+});
+
+test("Lala only issues a model-bound single-use token to authenticated callers", async () => {
+  let upstream = 0;
+  const dependencies = {
+    "@/lib/audio/elevenlabs": { hasElevenLabsKey: () => false },
+    "@/lib/assistant/auth": {
+      requireAuth: async authorization => authorization ? { userId: "ordinary-user" } : { status: 401 },
+    },
+    "@/lib/rateLimit": { ensureRateLimitPrune() {}, checkRateLimit: () => ({ ok: true }) },
+    "@/lib/prompts/safety": { AI_SAFETY_GUARDRAIL: "Safety policy" },
+  };
+  const request = (signedIn = true) => new Request("https://eureka.example/api/call/session", {
+    method: "POST",
+    headers: signedIn ? { authorization: "Bearer test" } : {},
+    body: JSON.stringify({ provider: "lala", language: "id" }),
+  });
+  const disabled = load("app/api/call/session/route.ts", dependencies);
+  assert.deepEqual(await disabled.GET().json(), { lala: false });
+  assert.equal((await disabled.POST(request())).status, 503);
+  const enabled = load("app/api/call/session/route.ts", dependencies, {
+    process: { env: { GEMINI_API_KEY: "server-secret" } },
+    fetch: async (url, options) => {
+      upstream++;
+      assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/auth_tokens");
+      assert.equal(options.headers["x-goog-api-key"], "server-secret");
+      const body = JSON.parse(options.body);
+      assert.equal(body.uses, 1);
+      assert.equal(body.bidiGenerateContentSetup.model, "models/gemini-3.8-live");
+      assert.deepEqual(body.bidiGenerateContentSetup.generationConfig.responseModalities, ["AUDIO"]);
+      assert.match(body.bidiGenerateContentSetup.systemInstruction.parts[0].text, /Lala.*bahasa Indonesia/);
+      return Response.json({ name: "auth_tokens/test" });
+    },
+  });
+  assert.equal((await enabled.POST(request(false))).status, 401);
+  assert.equal(upstream, 0);
+  const result = await enabled.POST(request());
+  assert.equal(result.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await result.json(), { token: "auth_tokens/test", model: "models/gemini-3.8-live" });
+  assert.equal(upstream, 1);
 });
 
 test("Speech starts on the first streamed sentence before the AI finishes", async () => {
