@@ -13,7 +13,7 @@ const labels = {
 
 function CallScreen({ onClose }: { onClose: () => void }) {
   const { phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
-    workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete } = useMomoCall();
+    workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete } = useMomoCall(onClose);
   const waiting = phase === "permission" || phase === "connecting";
   const dialog = useRef<HTMLDialogElement>(null);
   const cloud = useRef<HTMLSpanElement>(null);

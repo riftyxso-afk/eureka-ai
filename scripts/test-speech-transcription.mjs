@@ -126,8 +126,10 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
   let socket, worklet, source, playback;
   let now = 1000;
   let answers = 0;
+  let voiceEnds = 0;
+  let stoppedTracks = 0;
   const micRequests = [];
-  const track = { readyState: "live", stop() {} };
+  const track = { readyState: "live", stop() { stoppedTracks++; } };
   const spoken = [];
   const { useMomoCall } = load("components/assistant/useMomoCall.ts", {
     react: {
@@ -139,7 +141,7 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
     "@/lib/apiClient": {
       getClientLocale: () => "id",
       async apiFetch(path, init) {
-        if (path === "/api/call/session") return Response.json({ token: "test-only" });
+        if (path === "/api/call/session") return Response.json({ token: "test-only", model: "models/gemini-test" });
         if (path === "/api/call") { answers++; return Response.json({ reply: "Halo!" }); }
         spoken.push(JSON.parse(init.body).text);
         return new Response(new Uint8Array(9600));
@@ -159,7 +161,7 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
       } },
     },
     performance: { now: () => now },
-    URLSearchParams, btoa,
+    URL, URLSearchParams, btoa,
     window: { setTimeout: () => 1, clearTimeout() {}, AudioContext: class {
       state = "running";
       currentTime = 0;
@@ -189,7 +191,7 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
       close() {}
     },
   });
-  const call = useMomoCall();
+  const call = useMomoCall(() => { voiceEnds++; });
   const message = (message_type, text) => socket.onmessage({ data: JSON.stringify({ message_type, text }) });
   const chunk = (amplitude = 1) => {
     worklet.port.onmessage({ data: new Uint8Array(3200).fill(amplitude).buffer });
@@ -226,8 +228,8 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
     now += 200;
     const liveAudio = chunk();
     assert.notEqual(liveAudio, silence);
-    message("partial_transcript", "Maksudku energi");
-    message("committed_transcript", "Maksudku energi");
+    message("partial_transcript", "Jangan tutup panggilan");
+    message("committed_transcript", "Jangan tutup panggilan");
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(answers, 1);
     source.onended();
@@ -238,6 +240,22 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
     assert.equal(chunk(), liveAudio);
     call.toggleMute();
     assert.equal(chunk(), silence);
+    call.toggleMute();
+    message("partial_transcript", "Sudah, tutup saja");
+    assert.equal(voiceEnds, 0);
+    message("committed_transcript", "Sudah, tutup saja.");
+    assert.equal(voiceEnds, 1);
+    assert.equal(stoppedTracks, 1);
+    assert.equal(answers, 1);
+
+    await call.start("lala");
+    const live = serverContent => socket.onmessage({ data: JSON.stringify({ serverContent }) });
+    live({ inputTranscription: { text: "Lala, sudah " } });
+    live({ inputTranscription: { text: "tutup saja." } });
+    assert.equal(voiceEnds, 1);
+    live({ turnComplete: true });
+    assert.equal(voiceEnds, 2);
+    assert.equal(stoppedTracks, 2);
   } finally {
     call.stop();
   }

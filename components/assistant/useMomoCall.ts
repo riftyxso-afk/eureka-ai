@@ -39,7 +39,7 @@ type LiveMessage = {
   serverContent?: {
     interrupted?: boolean;
     turnComplete?: boolean;
-    inputTranscription?: { text?: string };
+    inputTranscription?: { text?: string; finished?: boolean };
     outputTranscription?: { text?: string };
     modelTurn?: { parts?: { inlineData?: { data?: string; mimeType?: string } }[] };
   };
@@ -99,6 +99,15 @@ async function microphoneError(cause: unknown) {
 
 function spokenWords(text: string) {
   return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+function wantsToEndCall(text: string) {
+  const command = spokenWords(text)
+    .replace(/^(?:hei |hey )?(?:momo|lala) /, "")
+    .replace(/ (?:momo|lala)$/, "")
+    .replace(/^(?:sudah|udah|ya sudah|oke|ok|baik) /, "")
+    .replace(/^tolong /, "");
+  return /^(?:(?:tutup|akhiri|hentikan|putuskan)(?: (?:saja|aja))?(?: (?:panggilan|telepon)(?: ini)?)?|(?:end|hang up)(?: the call)?)(?: (?:saja|aja|ya|sekarang|please))?$/.test(command);
 }
 
 function correctionReply(question: string) {
@@ -230,7 +239,7 @@ async function playPcm(response: Response, session: Session, playback: Playback,
   }
 }
 
-export function useMomoCall() {
+export function useMomoCall(onVoiceEnd?: () => void) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [muted, setMuted] = useState(false);
   const [error, setError] = useState("");
@@ -268,7 +277,16 @@ export function useMomoCall() {
     setPhase("idle");
   }
 
+  function endOnCommand(text: string) {
+    if (!wantsToEndCall(text)) return false;
+    stop();
+    setPhase("idle");
+    onVoiceEnd?.();
+    return true;
+  }
+
   async function answer(session: Session, question: string, greeting?: string) {
+    if (!greeting && endOnCommand(question)) return;
     stopPlayback(session);
     const playback: Playback = { controller: new AbortController(), sources: new Set() };
     session.playback = playback;
@@ -538,6 +556,7 @@ export function useMomoCall() {
           setTranscript(inputText);
           if (!session.speaking && !content.outputTranscription?.text) setReply("");
         }
+        if (!session.muted && (content.inputTranscription?.finished || content.turnComplete) && endOnCommand(inputText)) return;
         if (!content.interrupted) {
           if (content.outputTranscription?.text) {
             outputText += content.outputTranscription.text;
