@@ -20,6 +20,7 @@ import {
 
 import ButtonClay from "@/components/ui/ButtonClay";
 import AuthShell from "@/components/auth/AuthShell";
+import ImportAccount from "@/components/auth/ImportAccount";
 import InputClay from "@/components/ui/InputClay";
 import GoogleIcon from "@/components/ui/GoogleIcon";
 import TurnstileCaptcha from "@/components/ui/TurnstileCaptcha";
@@ -254,6 +255,7 @@ export default function LoginPage() {
             <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
           </div>
 
+          <ImportAccount />
           {/* Pilih metode login */}
           <div className="mt-6 flex gap-2 rounded-clay-full border-3 border-clay-shadow/40 bg-clay-inputBg p-1 shadow-clay-inset">
             {(

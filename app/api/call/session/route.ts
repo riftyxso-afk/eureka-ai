@@ -1,3 +1,4 @@
+import { elevenLabsFetch, hasElevenLabsKey } from "@/lib/audio/elevenlabs";
 import { requireAuth } from "@/lib/assistant/auth";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
@@ -11,13 +12,13 @@ export async function POST(request: Request) {
   if (!checkRateLimit(`call-session:${auth.userId}`, 20, 3_600_000).ok) {
     return Response.json({ error: "Batas sesi suara tercapai. Coba lagi nanti." }, { status: 429 });
   }
-  const key = process.env.ELEVENLABS_API_KEY?.trim();
-  if (!key) return Response.json({ error: "Panggilan suara belum dikonfigurasi." }, { status: 503 });
+  const configured = hasElevenLabsKey();
+  if (!configured) return Response.json({ error: "Panggilan suara belum dikonfigurasi." }, { status: 503 });
 
   try {
-    const response = await fetch("https://api.elevenlabs.io/v1/single-use-token/realtime_scribe", {
+    const response = await elevenLabsFetch("https://api.elevenlabs.io/v1/single-use-token/realtime_scribe", {
       method: "POST",
-      headers: { "xi-api-key": key },
+
       signal: AbortSignal.any([request.signal, AbortSignal.timeout(12_000)]),
     });
     const data = await response.json();

@@ -1,3 +1,4 @@
+import { elevenLabsFetch, hasElevenLabsKey } from "@/lib/audio/elevenlabs";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/assistant/auth";
 import { db } from "@/lib/supabase/admin";
@@ -47,11 +48,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     const turns: PodcastTurn[] = body.turns;
     if (!Array.isArray(turns) || turns.length < 1 || turns.length > 24 || turns.some(t => !t || typeof t.text !== "string" || !t.text.trim() || t.text.length > 1400 || !hosts.some(h => h.id === t.host)) || turns.reduce((n, t) => n + t.text.length, 0) > 2000) return NextResponse.json({ error: "Bagian podcast tidak valid atau melebihi 2.000 karakter." }, { status: 400 });
-    const key = process.env.ELEVENLABS_API_KEY?.trim();
-    if (!key) return NextResponse.json({ error: "ElevenLabs belum dikonfigurasi." }, { status: 503 });
+    const configured = hasElevenLabsKey();
+    if (!configured) return NextResponse.json({ error: "ElevenLabs belum dikonfigurasi." }, { status: 503 });
     const model = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_v4";
-    const upstream = await fetch("https://api.elevenlabs.io/v1/text-to-dialogue/with-timestamps?output_format=pcm_24000", {
-      method: "POST", headers: { "xi-api-key": key, "Content-Type": "application/json" },
+    const upstream = await elevenLabsFetch("https://api.elevenlabs.io/v1/text-to-dialogue/with-timestamps?output_format=pcm_24000", {
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model_id: model.startsWith("eleven_v4") || model === "eleven_v3" ? model : "eleven_v3", language_code: body.language === "en" ? "en" : "id", inputs: turns.map(t => ({ text: t.text, voice_id: hosts.find(h => h.id === t.host)!.voiceId })) }),
       signal: AbortSignal.any([request.signal, AbortSignal.timeout(150000)]),
     });

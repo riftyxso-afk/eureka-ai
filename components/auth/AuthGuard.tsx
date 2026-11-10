@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn, needsOnboarding, syncAuthSession } from "@/lib/auth";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { restoreInstalledAccount } from "@/lib/installedAccount";
 
 /**
  * Guard autentikasi untuk halaman dashboard.
@@ -24,6 +25,7 @@ export default function AuthGuard({ children, hideLoader = false }: { children: 
     (async () => {
       try {
         await syncAuthSession();
+        if (!isLoggedIn()) await restoreInstalledAccount();
       } catch {
         // abaikan; isLoggedIn() tetap membaca cache
       }

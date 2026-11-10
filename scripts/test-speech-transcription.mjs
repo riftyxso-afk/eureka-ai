@@ -13,8 +13,8 @@ function load(file, dependencies, globals = {}) {
   }).outputText;
   const exports = {};
   vm.runInNewContext(source, {
-    exports, require: name => name in dependencies ? dependencies[name] : require(name),
-    Blob, FormData, Response, AbortController, AbortSignal, console, process: { env: {} }, ...globals,
+    exports, require: name => name in dependencies ? dependencies[name] : name === "./elevenlabs" ? load("lib/audio/elevenlabs.ts", {}, globals) : require(name),
+    Blob, FormData, Headers, Response, AbortController, AbortSignal, console, process: { env: {} }, ...globals,
   }, { filename: file });
   return exports;
 }
@@ -26,7 +26,7 @@ test("ElevenLabs receives the real audio and STT settings, including Safari M4A"
     fetch: async (url, options) => {
       called = true;
       assert.equal(url, "https://api.elevenlabs.io/v1/speech-to-text");
-      assert.equal(options.headers["xi-api-key"], "test-only");
+      assert.equal(options.headers.get("xi-api-key"), "test-only");
       assert.equal(options.body.get("model_id"), "scribe_v2");
       assert.equal(options.body.get("language_code"), "id");
       assert.equal(options.body.get("file").name, "rekaman.m4a");
@@ -47,6 +47,37 @@ test("Empty speech, quota errors and missing credentials produce useful errors",
   }
   const mod = load("lib/audio/transcribe.ts", {});
   await assert.rejects(() => mod.transcribeRecording(new Blob(["a"]), "a.webm"), error => error.status === 503);
+});
+
+test("ElevenLabs retries quota failures with the second key and preserves the request body", async () => {
+  for (const status of [400, 401, 402, 429]) {
+    const used = [];
+    const audio = new FormData();
+    audio.append("file", new Blob(["speech"]), "test.webm");
+    const helper = load("lib/audio/elevenlabs.ts", {}, {
+      process: { env: { ELEVENLABS_API_KEY: "primary", ELEVENLABS_API_KEY_FALLBACK: "backup" } },
+      fetch: async (_url, options) => {
+        used.push(options.headers.get("xi-api-key"));
+        assert.equal(options.body, audio);
+        return used.length === 1 ? Response.json({ detail: { status: "quota_exceeded" } }, { status }) : Response.json({ text: "Halo" });
+      },
+    });
+    const result = await helper.elevenLabsFetch("https://api.elevenlabs.io/v1/speech-to-text", { method: "POST", body: audio });
+    assert.equal(result.status, 200);
+    assert.deepEqual(used, ["primary", "backup"]);
+  }
+});
+
+test("ElevenLabs does not retry success, invalid keys, permissions or validation errors", async () => {
+  for (const status of [200, 400, 401, 403, 404]) {
+    let calls = 0;
+    const helper = load("lib/audio/elevenlabs.ts", {}, {
+      process: { env: { ELEVENLABS_API_KEY: "primary", ELEVENLABS_API_KEY_FALLBACK: "backup" } },
+      fetch: async () => { calls++; return Response.json({ detail: { status: "invalid_api_key" } }, { status }); },
+    });
+    assert.equal((await helper.elevenLabsFetch("https://api.elevenlabs.io/v1/voices")).status, status);
+    assert.equal(calls, 1);
+  }
 });
 
 function route({ auth = { userId: "ordinary-user" }, limited = false } = {}) {

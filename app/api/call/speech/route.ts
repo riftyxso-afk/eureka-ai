@@ -1,3 +1,4 @@
+import { elevenLabsFetch, hasElevenLabsKey } from "@/lib/audio/elevenlabs";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/assistant/auth";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
@@ -10,16 +11,16 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const text = typeof body?.text === "string" ? body.text.trim() : "";
   if (!text || text.length > 5000) return NextResponse.json({ error: "Teks harus berisi 1–5.000 karakter." }, { status: 400 });
-  const key = process.env.ELEVENLABS_API_KEY?.trim();
+  const configured = hasElevenLabsKey();
   const voice = process.env.ELEVENLABS_VOICE_ID?.trim() || "hpp4J3VqNfWAUOO0d1Us";
   const model = process.env.ELEVENLABS_CALL_MODEL_ID?.trim() || "eleven_flash_v2_5";
-  if (!key) return NextResponse.json({ error: "Suara ElevenLabs belum dikonfigurasi." }, { status: 503 });
+  if (!configured) return NextResponse.json({ error: "Suara ElevenLabs belum dikonfigurasi." }, { status: 503 });
   ensureRateLimitPrune();
   if (!checkRateLimit(`call-audio:${auth.userId}`, 30, 60 * 60 * 1000).ok) return NextResponse.json({ error: "Batas suara tercapai. Coba lagi nanti." }, { status: 429 });
   try {
     const endpoint = `text-to-speech/${encodeURIComponent(voice)}/stream`;
-    const response = await fetch(`https://api.elevenlabs.io/v1/${endpoint}?output_format=pcm_24000`, {
-      method: "POST", headers: { "xi-api-key": key, "Content-Type": "application/json" },
+    const response = await elevenLabsFetch(`https://api.elevenlabs.io/v1/${endpoint}?output_format=pcm_24000`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, model_id: model }),
       signal: AbortSignal.any([request.signal, AbortSignal.timeout(90000)]),
     });

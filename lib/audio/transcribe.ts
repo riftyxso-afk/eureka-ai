@@ -1,11 +1,11 @@
+import { elevenLabsFetch, hasElevenLabsKey } from "./elevenlabs";
 /** Server-only speech recognition. The API key never reaches the browser. */
 export class TranscriptionError extends Error {
   constructor(message: string, public status = 502) { super(message); }
 }
 
 export async function transcribeRecording(audio: Blob, filename: string, language: "id" | "en" = "id"): Promise<string> {
-  const key = process.env.ELEVENLABS_API_KEY?.trim();
-  if (!key) throw new TranscriptionError("Transkripsi suara belum dikonfigurasi. Coba lagi nanti.", 503);
+  if (!hasElevenLabsKey()) throw new TranscriptionError("Transkripsi suara belum dikonfigurasi. Coba lagi nanti.", 503);
   const form = new FormData();
   form.append("file", audio, filename);
   form.append("model_id", process.env.ELEVENLABS_STT_MODEL?.trim() || "scribe_v2");
@@ -15,8 +15,8 @@ export async function transcribeRecording(audio: Blob, filename: string, languag
   form.append("diarize", "false");
   let response: Response;
   try {
-    response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
-      method: "POST", headers: { "xi-api-key": key }, body: form,
+    response = await elevenLabsFetch("https://api.elevenlabs.io/v1/speech-to-text", {
+      method: "POST", body: form,
       signal: AbortSignal.timeout(90_000), cache: "no-store",
     });
   } catch {

@@ -549,6 +549,7 @@ export async function syncAuthSession(): Promise<void> {
 /** Keluar dari Supabase Auth. Sesi lokal dibersihkan segera;
  * signOut Supabase berjalan best-effort tanpa menahan navigasi. */
 export async function logoutUser(): Promise<void> {
+  if (typeof window !== "undefined") void fetch("/api/auth/install-account", { method: "DELETE" }).catch(() => {});
   resetAnalyticsUser();
   safeRemove(SESSION_KEY);
   clearIdentity();
