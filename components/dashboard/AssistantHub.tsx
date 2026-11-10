@@ -350,7 +350,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
       />
 
       {/* Panggilan suara AI (beta) */}
-      <AiCallModal open={callOpen} onClose={() => setCallOpen(false)} />
+      <AiCallModal chat={standalone} open={callOpen} onClose={() => setCallOpen(false)} />
 
       {/* Tutorial realtime untuk pengguna baru (spotlight) */}
       <TutorialHost />

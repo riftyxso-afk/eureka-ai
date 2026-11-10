@@ -693,7 +693,7 @@ export default function ChatPage() {
       />
 
       {/* Panggilan suara AI (beta) */}
-      <AiCallModal open={callOpen} onClose={() => setCallOpen(false)} />
+      <AiCallModal chat open={callOpen} onClose={() => setCallOpen(false)} />
 
       {/* Tampilan expand video: video kiri + poin-poin isi video di kanan */}
       <VideoViewOverlay

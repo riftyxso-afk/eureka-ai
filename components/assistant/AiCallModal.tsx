@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronRight, Mic, MicOff, SlidersHorizontal, X } from "lucide-react";
+import { ArrowUp, ChevronRight, Mic, MicOff, SlidersHorizontal, X } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import { useMomoCall, type CallProvider } from "./useMomoCall";
 import "./momo-call.css";
@@ -11,13 +11,16 @@ const labels = {
   connecting: "Menghubungkan…",
 };
 
-function CallScreen({ onClose }: { onClose: () => void }) {
+function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
   const { phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
-    workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete } = useMomoCall(onClose);
+    workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete, turns, showCurrent, sendText } = useMomoCall(onClose);
   const waiting = phase === "permission" || phase === "connecting";
   const dialog = useRef<HTMLDialogElement>(null);
   const cloud = useRef<HTMLSpanElement>(null);
   const orb = useRef<HTMLDivElement>(null);
+  const thread = useRef<HTMLDivElement>(null);
+  const followThread = useRef(true);
+  const [draft, setDraft] = useState("");
   const [settings, setSettings] = useState(false);
   const [captions, setCaptions] = useState(true);
   const [provider, setProvider] = useState<CallProvider | null>(null);
@@ -30,6 +33,11 @@ function CallScreen({ onClose }: { onClose: () => void }) {
     : phase === "working" ? (deleteTitle ? "Lala menunggu konfirmasi" : "Lala sedang mengerjakan permintaanmu…")
     : phase === "speaking" ? `${name} sedang berbicara`
     : labels[phase];
+
+  useEffect(() => {
+    const element = thread.current;
+    if (chat && followThread.current && element) element.scrollTop = element.scrollHeight;
+  }, [chat, turns, transcript, reply, captions, workspaceLinks, workspaceLoading, deleteTitle, error]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -106,7 +114,7 @@ function CallScreen({ onClose }: { onClose: () => void }) {
     </div>
   </dialog>;
 
-  return <dialog className="momo-call" data-provider={provider} ref={dialog} aria-labelledby="momo-call-title"
+  return <dialog className={`momo-call${chat ? " is-chat-call" : ""}`} data-provider={provider} ref={dialog} aria-labelledby="momo-call-title"
     onCancel={event => { event.preventDefault(); end(); }}>
     <header className="momo-call-header">
       <h2 id="momo-call-title">Panggilan {name}</h2>
@@ -126,7 +134,22 @@ function CallScreen({ onClose }: { onClose: () => void }) {
         {status}
       </p>
     </div>
-    <div className="momo-call-text" data-workspace={Boolean(deleteTitle || workspaceLoading || workspaceLinks.length)}>
+    <div className="momo-call-text" ref={thread} aria-label={chat ? "Transkrip panggilan" : undefined}
+      onScroll={chat ? event => {
+        const el = event.currentTarget;
+        followThread.current = el.scrollHeight - el.scrollTop - el.clientHeight < 56;
+      } : undefined}
+      data-workspace={Boolean(deleteTitle || workspaceLoading || workspaceLinks.length)}>
+      {chat && captions && <>
+        {turns.map((turn, index) => <div className="momo-call-turn" key={index}>
+          {turn.question && <p className="momo-call-user" aria-label="Kamu">{turn.question}</p>}
+          {turn.answer && <p className="momo-call-response" aria-label={name}>{turn.answer}</p>}
+        </div>)}
+        {showCurrent && <div className="momo-call-turn">
+          {transcript && <p className="momo-call-user" aria-label="Kamu">{transcript}</p>}
+          {reply && <p className="momo-call-response" aria-label={name}>{reply}</p>}
+        </div>}
+      </>}
       {deleteTitle && <div className="momo-call-confirm" role="group" aria-label="Konfirmasi hapus catatan">
         <p>Hapus catatan <strong>{deleteTitle}</strong>?</p>
         <div>
@@ -141,7 +164,7 @@ function CallScreen({ onClose }: { onClose: () => void }) {
       {error && <p className="momo-call-error" role="alert">{error}</p>}
       {!error && phase === "idle" && <p>Ketuk mikrofon untuk mulai ngobrol.</p>}
       {backup && !error && phase === "listening" && !muted && !transcript && <p>Bicara lalu jeda sebentar agar Momo bisa menjawab.</p>}
-      {captions && phase !== "idle" && (reply || transcript) && <p className="momo-call-caption">{reply || transcript}</p>}
+      {!chat && captions && phase !== "idle" && (reply || transcript) && <p className="momo-call-caption">{reply || transcript}</p>}
       {workspaceLinks.length > 0 && <p className="momo-call-result-hint">Buka hasilnya kapan saja, atau lanjut ngobrol di sini.</p>}
       {workspaceLinks.map(link => <a key={link.href} href={link.href} className="momo-call-result-link"
         onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) stop(); }}>
@@ -149,7 +172,16 @@ function CallScreen({ onClose }: { onClose: () => void }) {
         <ChevronRight size={17} aria-hidden="true" />
       </a>)}
     </div>
-    <footer className="momo-call-controls">
+    <form className="momo-call-controls" onSubmit={event => {
+      event.preventDefault();
+      if (chat && sendText(draft)) { followThread.current = true; setDraft(""); }
+    }}>
+      {chat && <>
+        <input aria-label="Ketik pesan saat panggilan" placeholder="Ketik pesan…" value={draft}
+          maxLength={2000} onChange={event => setDraft(event.target.value)} />
+        {draft.trim() && <button type="submit" className="momo-call-control momo-call-send"
+          disabled={phase !== "listening"} aria-label="Kirim pesan"><ArrowUp size={19} aria-hidden="true" /></button>}
+      </>}
       <button type="button" disabled={waiting} className="momo-call-control"
         aria-label={phase === "idle" ? "Mulai panggilan" : muted ? "Aktifkan mikrofon" : "Bisukan mikrofon"}
         title={phase === "idle" ? "Mulai panggilan" : muted ? "Aktifkan mikrofon" : "Bisukan mikrofon"}
@@ -160,10 +192,10 @@ function CallScreen({ onClose }: { onClose: () => void }) {
       <button type="button" className="momo-call-control" onClick={end} title="Akhiri panggilan" aria-label="Akhiri panggilan">
         <X size={22} aria-hidden="true" />
       </button>
-    </footer>
+    </form>
   </dialog>;
 }
 
-export default function AiCallModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return open ? <CallScreen onClose={onClose} /> : null;
+export default function AiCallModal({ open, onClose, chat = false }: { open: boolean; onClose: () => void; chat?: boolean }) {
+  return open ? <CallScreen onClose={onClose} chat={chat} /> : null;
 }

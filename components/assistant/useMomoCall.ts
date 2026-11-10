@@ -10,6 +10,7 @@ import { runLalaWorkspace, type LalaWorkspaceLink } from "./lalaWorkspace";
 type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "searching" | "working" | "speaking";
 export type CallProvider = "momo" | "lala";
 type Turn = { role: "user" | "assistant"; content: string };
+type CallTurn = { question: string; answer: string };
 type Playback = { controller: AbortController; sources: Set<AudioBufferSourceNode>; spoken?: string };
 type Session = {
   controller: AbortController;
@@ -21,6 +22,7 @@ type Session = {
   recorder?: ReturnType<typeof recordCallTurns>;
   transcription?: AbortController;
   endMicStream?: () => void;
+  sendText?: (text: string) => void;
   mic?: AnalyserNode;
   speaker: AnalyserNode;
   playback?: Playback;
@@ -246,6 +248,8 @@ export function useMomoCall(onVoiceEnd?: () => void) {
   const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
   const [reply, setReply] = useState("");
+  const [turns, setTurns] = useState<CallTurn[]>([]);
+  const [showCurrent, setShowCurrent] = useState(false);
   const [backup, setBackup] = useState(false);
   const [workspaceLinks, setWorkspaceLinks] = useState<LalaWorkspaceLink[]>([]);
   const [workspaceLoading, setWorkspaceLoading] = useState("");
@@ -291,6 +295,11 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     session.timers.add(window.setTimeout(() => finishVoiceEnd(session), 8_000));
   }
 
+  function archiveTurn(question: string, answer: string) {
+    if (question || answer) setTurns(previous => [...previous, { question, answer }].slice(-80));
+    setShowCurrent(false);
+  }
+
   async function answer(session: Session, question: string, greeting?: string) {
     if (session.ending) return;
     const farewell = !greeting && wantsToEndCall(question);
@@ -304,6 +313,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     setError("");
     setTranscript(question);
     setReply("");
+    setShowCurrent(true);
     const history = session.history.slice(-12);
     if (question) session.history = [...history, { role: "user", content: question }];
 
@@ -366,6 +376,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
       if (isCurrent()) {
         if (farewell) finishVoiceEnd(session);
         else {
+          archiveTurn(question, replyText);
           stopPlayback(session);
           setPhase("listening");
         }
@@ -555,6 +566,14 @@ export function useMomoCall(onVoiceEnd?: () => void) {
           ready = true;
           window.clearTimeout(setupTimer);
           setPhase("thinking");
+          session.sendText = text => {
+            inputText = text;
+            setTranscript(text);
+            setReply("");
+            setShowCurrent(true);
+            setPhase("thinking");
+            send({ realtimeInput: { text } });
+          };
           send({ realtimeInput: { text: language === "en"
             ? "Open the call by saying: Hi, I'm Lala. How can I help?"
             : "Buka panggilan dengan hangat: Hai, aku Lala! Mau ngobrol atau mau aku bantu bikin sesuatu?" } });
@@ -568,8 +587,10 @@ export function useMomoCall(onVoiceEnd?: () => void) {
           setPhase("listening");
         }
         if (content.inputTranscription?.text) {
+          if (!inputText && !outputText) setReply("");
           inputText += content.inputTranscription.text;
           setTranscript(inputText);
+          setShowCurrent(true);
           if (!session.speaking && !content.outputTranscription?.text) setReply("");
         }
         if (!session.ending && !session.muted && wantsToEndCall(inputText)) {
@@ -578,6 +599,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
             outputText = "";
             inputText = "";
             setReply("");
+            setShowCurrent(true);
             setPhase("thinking");
             send({ realtimeInput: { text: language === "en"
               ? "Say this farewell aloud now, without calling any tool: Okay, I'll end the call now. See you!"
@@ -589,6 +611,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
           if (content.outputTranscription?.text) {
             outputText += content.outputTranscription.text;
             setReply(outputText);
+            setShowCurrent(true);
           }
           for (const part of content.modelTurn?.parts ?? []) {
             const audio = part.inlineData;
@@ -597,6 +620,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
         }
         if (content.turnComplete) {
           closeAudioInput();
+          if (!session.ending) archiveTurn(inputText, outputText);
           inputText = "";
           outputText = "";
           if (!session.playback && searches.size === 0 && workspaceCalls.size === 0) setPhase("listening");
@@ -614,6 +638,8 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     setError("");
     setTranscript("");
     setReply("");
+    setTurns([]);
+    setShowCurrent(false);
     setWorkspaceLinks([]);
     setWorkspaceLoading("");
     setDeleteTitle("");
@@ -845,7 +871,9 @@ export function useMomoCall(onVoiceEnd?: () => void) {
             const wasSpeaking = session.speaking;
             interrupt();
             if (wasSpeaking) session.echoUntil = 0;
+            setReply("");
             setTranscript(text);
+            setShowCurrent(true);
           } else if (message.message_type === "committed_transcript" && words && maySpeak && !echo && (session.freshSpeech || interruptionAudio)) {
             session.freshSpeech = false;
             interruptionAudio = false;
@@ -885,9 +913,20 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     setMuted(session.muted);
   }
 
+  function sendText(text: string) {
+    const session = active.current;
+    const question = text.trim().slice(0, 2000);
+    if (!question || phase !== "listening" || !session || session.ending || session.transcription || session.playback) return false;
+    session.recorder?.discard();
+    if (session.sendText) session.sendText(question);
+    else void answer(session, question);
+    return true;
+  }
+
   return {
     phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
     workspaceLinks, workspaceLoading, deleteTitle,
+    turns, showCurrent, sendText,
     confirmWorkspaceDelete: (allowed: boolean) => deleteDecision.current?.(allowed),
   };
 }

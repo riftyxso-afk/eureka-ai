@@ -185,15 +185,15 @@
 .momo-call-text p:last-child { margin-bottom: auto; }
 .momo-call-caption { color: var(--call-ink); line-height: 1.55; }
 .momo-call-error { color: var(--call-ink); font-weight: 650; }
-.momo-call[open]:has(.momo-call-text[data-workspace="true"]) {
+.momo-call[open]:not(.is-chat-call):has(.momo-call-text[data-workspace="true"]) {
   grid-template-rows: auto minmax(0, 1fr) minmax(90px, 36%) auto;
 }
-.momo-call:has(.momo-call-text[data-workspace="true"]) .momo-call-stage {
+.momo-call:not(.is-chat-call):has(.momo-call-text[data-workspace="true"]) .momo-call-stage {
   align-content: center;
   gap: 10px;
 }
-.momo-call:has(.momo-call-text[data-workspace="true"]) .momo-call-orb { width: clamp(56px, 19dvh, 150px); }
-.momo-call:has(.momo-call-text[data-workspace="true"]) .momo-call-status { position: static; }
+.momo-call:not(.is-chat-call):has(.momo-call-text[data-workspace="true"]) .momo-call-orb { width: clamp(56px, 19dvh, 150px); }
+.momo-call:not(.is-chat-call):has(.momo-call-text[data-workspace="true"]) .momo-call-status { position: static; }
 .momo-call-text[data-workspace="true"] { justify-content: flex-start; gap: 10px; }
 .momo-call-work-progress {
   display: flex;
@@ -269,3 +269,78 @@
   .momo-call[open], .momo-call.is-choosing[open], .momo-call-orb[data-phase] .momo-call-cloud { animation: none; }
   .momo-call button { transition: none; }
 }
+
+/* The chat variant keeps voice and text in a single full-screen conversation. */
+.momo-call.is-chat-call[open] {
+  --call-bg: #fcfcfd;
+  --call-control: #eceef1;
+  --call-hover: #dfe4eb;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  border-radius: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  box-shadow: none;
+  animation: none;
+}
+.dark .momo-call.is-chat-call[open] {
+  --call-bg: #08090b;
+  --call-control: #202226;
+  --call-hover: #30333a;
+}
+.is-chat-call .momo-call-header { padding-bottom: 8px; }
+.is-chat-call .momo-call-text {
+  grid-row: 2;
+  display: block;
+  width: min(100%, 820px);
+  justify-self: center;
+  padding: 8px clamp(16px, 4vw, 26px) 20px;
+  text-align: start;
+}
+.is-chat-call .momo-call-text > :not(:last-child) { margin-bottom: 12px; }
+.is-chat-call .momo-call-turn { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.is-chat-call .momo-call-turn > p { margin: 0; white-space: pre-wrap; font-size: 15px; line-height: 1.6; }
+.is-chat-call .momo-call-turn > .momo-call-user {
+  align-self: flex-end;
+  max-width: 86%;
+  padding: 10px 15px;
+  border-radius: 20px;
+  background: #e0ecff;
+  color: #14335f;
+}
+.dark .is-chat-call .momo-call-user { background: #193e70; color: #f4f8ff; }
+.is-chat-call .momo-call-response { color: var(--call-ink); }
+.momo-call.is-chat-call .momo-call-stage {
+  grid-row: 3;
+  align-content: center;
+  gap: 8px;
+  padding: 8px 0 12px;
+}
+.momo-call.is-chat-call .momo-call-orb { width: clamp(44px, 11dvh, 92px); }
+.momo-call.is-chat-call .momo-call-status { position: static; font-size: 12px; }
+.is-chat-call .momo-call-controls {
+  width: min(calc(100% - 24px), 768px);
+  justify-self: center;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: max(14px, env(safe-area-inset-bottom));
+  border-radius: 30px;
+  background: var(--call-control);
+}
+.is-chat-call .momo-call-controls input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 6px 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--call-ink);
+  font: inherit;
+  font-size: 16px;
+}
+.is-chat-call .momo-call-controls input:focus-visible { outline: 2px solid #2588e5; outline-offset: -2px; border-radius: 16px; }
+.is-chat-call .momo-call-control { flex: none; width: 44px; height: 44px; background: var(--call-bg); }
+.is-chat-call .momo-call-control:last-child { background: #2563b7; color: #fff; }
+.is-chat-call .momo-call-control[aria-pressed="true"] { background: #dbe9f9; color: #193d65; }
+.is-chat-call .momo-call-result-link { max-width: 480px; }
