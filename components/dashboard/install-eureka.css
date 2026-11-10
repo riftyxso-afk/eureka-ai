@@ -1,0 +1,14 @@
+.eureka-install-trigger{position:fixed;left:16px;bottom:max(16px,env(safe-area-inset-bottom));z-index:25;padding:10px 14px;border:1px solid rgb(var(--clay-dark)/.1);border-radius:24px;background:rgb(var(--clay-cream));color:rgb(var(--clay-dark));font-size:12px;box-shadow:0 3px 14px #0000000d;min-height:44px}
+.eureka-install-dialog{width:min(440px,calc(100% - 24px));max-height:calc(100dvh - 32px);overflow:auto;margin:auto;padding:28px;border:0;border-radius:26px;background:rgb(var(--clay-cream));color:rgb(var(--clay-dark));box-shadow:0 24px 90px #0003}
+.eureka-install-dialog::backdrop{background:#1119;backdrop-filter:blur(5px)}
+.install-close{position:absolute;right:12px;top:8px;width:44px;height:44px;font-size:26px;color:rgb(var(--clay-muted))}
+.install-platforms{display:flex;gap:4px;margin:20px 0;padding:4px;background:rgb(var(--clay-dark)/.05);border-radius:14px}
+.install-platforms button{flex:1;min-height:40px;font-size:13px;border-radius:10px}.install-platforms button[aria-pressed=true]{background:rgb(var(--clay-cream));box-shadow:0 2px 5px #0001;font-weight:750}
+.install-preview{display:flex;min-height:190px;align-items:center;justify-content:center;flex-direction:column;gap:8px;border-radius:20px;background:linear-gradient(140deg,#f0e7ff,#e7edff);color:#302343}.install-preview img{border-radius:21px;box-shadow:0 8px 20px #55239926}.install-preview strong{font-size:12px}.install-preview-hint{margin-top:8px;padding:8px 16px;background:white;border-radius:12px;font-size:12px;animation:install-slide-in 220ms ease-out}
+.install-slide{min-height:155px;padding-top:24px;animation:install-slide-in 220ms ease-out}.install-slide small{font-size:10px;letter-spacing:.1em;color:rgb(var(--clay-muted))}.install-slide h2{font-size:22px;line-height:1.3;margin:8px 0 10px;font-weight:800}.install-slide p{font-size:14px;line-height:1.75;color:rgb(var(--clay-muted))}
+.install-dots{display:flex;justify-content:center;gap:6px;margin:12px 0}.install-dots button{width:32px;height:32px;position:relative}.install-dots button::after{content:"";position:absolute;inset:12px;border-radius:8px;background:#c7bdd5}.install-dots button[aria-current]::after{background:#7945d0}
+.install-actions{display:flex;gap:12px;align-items:center;justify-content:space-between}.install-actions button{min-height:44px;padding:10px 20px;font-size:14px;border-radius:14px}.install-actions button:last-child{background:#7945d0;color:white;font-weight:750}.install-status{font-size:12px;margin-top:12px}
+.eureka-install-dialog button:focus-visible,.eureka-install-trigger:focus-visible{outline:2px solid #9563e5;outline-offset:3px}
+@keyframes install-slide-in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){.install-slide,.install-preview-hint{animation:none}}
+@media(max-width:360px){.eureka-install-dialog{padding:22px}.install-preview{min-height:160px}.install-slide{min-height:175px}}

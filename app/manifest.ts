@@ -9,29 +9,31 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Eureka.AI — Bukan sekadar jawaban, tapi momen Eureka!",
-    short_name: "Eureka.AI",
+    short_name: "Eureka",
+    id: "/",
     description:
       "AI Tutor Socratic untuk semua pelajar Indonesia. Bukan sekadar memberi jawaban, tapi membimbingmu menemukan momen Eureka!",
     lang: "id",
-    start_url: "/dashboard",
+    start_url: "/id/dashboard-v2",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#FFF8EF",
+    background_color: "#ffffff",
     theme_color: "#7C3AED",
     icons: [
       {
-        src: "/logo.png",
-        sizes: "any",
+        src: "/icons/momo-192.png",
+        sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/logo.png",
-        sizes: "any",
+        src: "/icons/momo-maskable-512.png",
+        sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
       },
+      { src: "/icons/momo-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
     ],
   };
 }

@@ -1,5 +1,7 @@
 "use client";
 
+
+import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { isDashboardV2 } from "@/lib/v2Navigation";
@@ -96,7 +98,7 @@ export default function ChatSidebar({
 
   return (
     <div className="momo-sidebar hidden h-full w-[260px] shrink-0 flex-col gap-2 border-r border-clay-borderLight/60 bg-clay-cream p-3 transition-[width] duration-200 ease-in-out lg:flex">
-      <div className="momo-sidebar-top"><Link href={homePath} className="momo-sidebar-brand" aria-label="Eureka dashboard">eureka<span>!</span></Link><button type="button" className="momo-sidebar-collapse" onClick={toggleCollapsed} aria-label="Tutup sidebar" title="Tutup sidebar"><PanelLeftClose trigger="parent" size={18} /></button></div>
+      <div className="momo-sidebar-top"><Link href={homePath} className="momo-sidebar-brand" aria-label="Eureka dashboard"><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka<span>!</span></Link><button type="button" className="momo-sidebar-collapse" onClick={toggleCollapsed} aria-label="Tutup sidebar" title="Tutup sidebar"><PanelLeftClose trigger="parent" size={18} /></button></div>
       <button type="button" onClick={onNew} className="momo-sidebar-new" data-testid="momo-sidebar-new"><Plus trigger="parent" size={17} /> Chat baru</button>
       <Link href={homePath} className="momo-sidebar-nav-link"><House size={17} /> Dashboard</Link>
       {/* Header + tombol chat baru & collapse */}

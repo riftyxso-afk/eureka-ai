@@ -1,5 +1,7 @@
 "use client";
 
+
+import Image from "next/image";
 import { toast } from "@yusufceng1z/ding-react";
 
 import { useEffect, useRef, useState } from "react";
@@ -164,7 +166,7 @@ export const Sidebar = () => {
 
   const brand = (
     <Link href="/dashboard" className="eureka-sidebar-brand" aria-label="Eureka, dashboard" title={collapsed ? "Eureka" : undefined}>
-      {collapsed ? "e!" : "eureka!"}
+      <Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />{!collapsed && "eureka!"}
     </Link>
   );
 
@@ -206,7 +208,7 @@ export const Sidebar = () => {
         <button type="button" className="eureka-mobile-menu" onClick={() => mobileMenu.current?.showModal()} aria-label="Buka menu" aria-haspopup="dialog">
           <Menu size={22} aria-hidden="true" />
         </button>
-        <Link href="/dashboard" className="eureka-mobile-brand" aria-label="Eureka, dashboard">eureka!</Link>
+        <Link href="/dashboard" className="eureka-mobile-brand" aria-label="Eureka, dashboard"><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka!</Link>
         <nav aria-label="Akses cepat" className="eureka-mobile-shortcuts">
           <Link href="/dashboard/catatan" aria-current={activeMenuId(pathname) === "catatan" ? "true" : undefined}>
             <FileText size={18} aria-hidden="true" /><span>Catatan</span>
@@ -256,7 +258,7 @@ export const Sidebar = () => {
         }}
       >
         <div className="eureka-sidebar-mobile-header">
-          <Link href="/dashboard" className="eureka-sidebar-brand">eureka!</Link>
+          <Link href="/dashboard" className="eureka-sidebar-brand"><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka!</Link>
           <button type="button" onClick={() => mobileMenu.current?.close()} className="eureka-sidebar-close" aria-label="Tutup menu"><X size={20} /></button>
         </div>
         {navBody(true)}

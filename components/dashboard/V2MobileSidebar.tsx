@@ -1,5 +1,7 @@
 "use client";
 
+
+import Image from "next/image";
 import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -84,7 +86,7 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
         if (event.clientX >= right) close();
       }}>
       <header className="v2-drawer-heading">
-        <div className="v2-drawer-brand"><strong id={id + "-title"}>eureka!</strong><span>Ruang belajarmu</span></div>
+        <div className="v2-drawer-brand"><strong id={id + "-title"}><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka!</strong><span>Ruang belajarmu</span></div>
         <button type="button" aria-label="Tutup sidebar" onClick={close} autoFocus><X size={20} /></button>
       </header>
       <label className="v2-drawer-search"><Search size={17} aria-hidden="true" />

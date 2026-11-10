@@ -1,4 +1,6 @@
 "use client";
+
+import Image from "next/image";
 import "./mobile.css";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -155,7 +157,7 @@ export default function DashboardV2() {
   return <div className="dv2 dv2-simple">
     <header className="dv2-topbar">
       <V2MobileSidebar desktop />
-      <Link className="dv2-brand" href="/dashboard-v2">eureka! <span>V2 · Beta</span></Link>
+      <Link className="dv2-brand" href="/dashboard-v2"><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka! <span>V2 · Beta</span></Link>
       <nav aria-label="Navigasi Dashboard V2" className="dv2-topnav"><Link href="/dashboard-v2#dv2-notes-title"><FolderOpen trigger="parent" size={16} />Catatan</Link><Link href="/dashboard-v2/tanya-momo"><MessageCircle trigger="parent" size={16} />Tanya Momo</Link></nav>
       <div className="dv2-account"><ThemeSwitch /><PageTutorial guideId="dashboard" /><Link href="/dashboard/streaks" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
     </header>

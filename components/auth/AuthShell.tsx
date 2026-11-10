@@ -13,7 +13,7 @@ export default function AuthShell({ children, mode }: { children: ReactNode; mod
     <main className="auth-page">
       <header className="auth-header">
         <Link href="/" className="auth-brand" aria-label={en ? "Eureka.AI, home" : "Eureka.AI, beranda"}>
-          <span>eureka!</span>
+          <Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" /><span>eureka!</span>
         </Link>
         <Link href="/" className="auth-home">{en ? "Back to home" : "Kembali ke beranda"} <span aria-hidden="true">↗</span></Link>
       </header>
