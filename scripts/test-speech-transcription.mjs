@@ -259,6 +259,7 @@ test("Lala only issues a model-bound single-use token to authenticated callers",
       assert.equal(body.uses, 1);
       assert.equal(body.bidiGenerateContentSetup.model, "models/gemini-3.8-live");
       assert.deepEqual(body.bidiGenerateContentSetup.generationConfig.responseModalities, ["AUDIO"]);
+      assert.equal(body.bidiGenerateContentSetup.tools[0].functionDeclarations[0].name, "search_call_web");
       assert.match(body.bidiGenerateContentSetup.systemInstruction.parts[0].text, /Lala.*bahasa Indonesia/);
       return Response.json({ name: "auth_tokens/test" });
     },
@@ -271,12 +272,60 @@ test("Lala only issues a model-bound single-use token to authenticated callers",
   assert.equal(upstream, 1);
 });
 
+test("Voice search uses the current topic and waits for evidence before speech", async () => {
+  let resolveSearch;
+  let searched = false;
+  let generated = false;
+  const search = new Promise(resolve => { resolveSearch = resolve; });
+  const { POST } = load("app/api/call/route.ts", {
+    "@/lib/firecrawl": { searchWeb: async query => {
+      assert.equal(query, "Cuaca Bandung hari ini");
+      searched = true;
+      return search;
+    } },
+    "@/lib/assistant/webSearchQuery": load("lib/assistant/webSearchQuery.ts", {
+      "../firecrawl": { cleanSearchQuery: text => text.trim() },
+    }),
+    "@/lib/ai": {
+      hasAiKey: () => true,
+      aiChatStream: async ({ system }) => {
+        generated = true;
+        assert.match(system, /Prakiraan BMKG Bandung/);
+        return { content: "Menurut BMKG, Bandung berpotensi hujan." };
+      },
+    },
+    "@/lib/serverAnalytics": { captureServerEvent: async () => {} },
+    "@/lib/after": { runAfter() {} },
+    "@/lib/assistant/auth": { requireAuth: async () => ({ userId: "ordinary-user" }) },
+    "@/lib/prompts/safety": { AI_SAFETY_GUARDRAIL: "" },
+    "@/lib/prompts/momoPersona": { momoPersona: () => "" },
+    "@/lib/rateLimit": { ensureRateLimitPrune() {}, checkRateLimit: () => ({ ok: true }) },
+  });
+  const response = await POST(new Request("https://eureka.example/api/call", {
+    method: "POST",
+    body: JSON.stringify({
+      question: "Cuaca Bandung hari ini", stream: true,
+      history: [{ role: "user", content: "Siapa penemu telepon?" }],
+    }),
+  }));
+  const reader = response.body.getReader();
+  const first = await reader.read();
+  assert.equal(JSON.parse(new TextDecoder().decode(first.value)).type, "searching");
+  assert.equal(searched, true);
+  assert.equal(generated, false);
+  resolveSearch([{ title: "Prakiraan BMKG Bandung", url: "https://bmkg.go.id", description: "Potensi hujan" }]);
+  assert.equal(JSON.parse(new TextDecoder().decode((await reader.read()).value)).type, "text");
+  await reader.cancel();
+});
+
 test("Speech starts on the first streamed sentence before the AI finishes", async () => {
   let finish;
   const waiting = new Promise(resolve => { finish = resolve; });
   let speechReady;
   const firstSpeech = new Promise(resolve => { speechReady = resolve; });
   const { POST } = load("app/api/call/route.ts", {
+    "@/lib/firecrawl": { searchWeb: () => { throw new Error("A greeting should not search"); } },
+    "@/lib/assistant/webSearchQuery": {},
     "@/lib/ai": {
       hasAiKey: () => true,
       aiChatStream: async (_options, emit) => {

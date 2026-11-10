@@ -24,7 +24,8 @@ export function isTavilyConfigured(): boolean {
  */
 export async function tavilySearch(
   query: string,
-  limit = 3
+  limit = 3,
+  signal?: AbortSignal
 ): Promise<SearchResult[]> {
   const apiKey = getTavilyApiKey();
   if (!apiKey) return [];
@@ -40,7 +41,7 @@ export async function tavilySearch(
         search_depth: "basic",
         include_answer: false,
       }),
-      signal: AbortSignal.timeout(30000),
+      signal: signal ?? AbortSignal.timeout(30000),
     });
     if (!res.ok) {
       console.warn(`[tavilySearch] Search gagal (${res.status}).`);

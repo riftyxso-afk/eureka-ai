@@ -78,6 +78,7 @@
 }
 .momo-call-picker button:disabled { opacity: .55; }
 .momo-call-picker strong { font-size: 13px; }
+.momo-call-picker small { display: block; color: var(--call-muted); font-size: 11px; line-height: 1.4; }
 .momo-call-swatch { flex: none; width: 19px; aspect-ratio: 1; border-radius: 50%; background: linear-gradient(150deg, #ddf8ff, #1689f5); }
 .momo-call-swatch.is-lala { background: linear-gradient(150deg, #baf9d7, #a679eb 72%, #5b38a4); }
 .momo-call-header h2 { margin: 0; font-size: 15px; font-weight: 750; }
@@ -140,7 +141,7 @@
   rotate: -24deg;
   transform-origin: center;
 }
-.momo-call-orb[data-phase="thinking"] .momo-call-cloud,
+.momo-call-orb:is([data-phase="thinking"], [data-phase="searching"]) .momo-call-cloud,
 .momo-call-orb[data-phase="connecting"] .momo-call-cloud {
   animation: momo-call-current 2.4s cubic-bezier(.77, 0, .175, 1) infinite alternate;
 }

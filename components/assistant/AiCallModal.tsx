@@ -25,6 +25,7 @@ function CallScreen({ onClose }: { onClose: () => void }) {
   const status = phase === "idle" ? `Bicara dengan ${name}`
     : phase === "listening" ? (muted ? "Mikrofon dimatikan" : `${name} mendengarkan`)
     : phase === "thinking" ? `${name} sedang berpikir`
+    : phase === "searching" ? `${name} sedang mencari informasi…`
     : phase === "speaking" ? `${name} sedang berbicara`
     : labels[phase];
 
@@ -88,11 +89,11 @@ function CallScreen({ onClose }: { onClose: () => void }) {
       <div className="momo-call-picker" role="group" aria-label="Teman bicara">
         <button type="button" onClick={() => choose("momo")}>
           <span className="momo-call-swatch" aria-hidden="true" />
-          <strong>Momo</strong>
+          <span><strong>Momo</strong><small>Bahas pelan-pelan dan bantu kamu memahami.</small></span>
         </button>
         <button type="button" disabled={lalaAvailable !== true} onClick={() => choose("lala")}>
           <span className="momo-call-swatch is-lala" aria-hidden="true" />
-          <strong>Lala</strong>
+          <span><strong>Lala</strong><small>Jawab langsung, singkat, dan cepat.</small></span>
         </button>
       </div>
       {lalaAvailable !== true && <p role="status">

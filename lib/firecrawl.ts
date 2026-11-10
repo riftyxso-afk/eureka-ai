@@ -194,7 +194,7 @@ async function scrapeWithBody(url: string, withOptions: boolean): Promise<Respon
 }
 
 /** Cari materi relevan di web via Firecrawl (untuk validasi/penambah informasi). */
-export async function firecrawlSearch(query: string, limit = 3): Promise<SearchResult[]> {
+export async function firecrawlSearch(query: string, limit = 3, signal?: AbortSignal): Promise<SearchResult[]> {
   if (!FIRECRAWL_API_KEY) return [];
 
   let res = await fetch(FIRECRAWL_SEARCH_URL, {
@@ -209,7 +209,7 @@ export async function firecrawlSearch(query: string, limit = 3): Promise<SearchR
       country: "id",
       lang: "id",
     }),
-    signal: AbortSignal.timeout(30000),
+    signal: signal ?? AbortSignal.timeout(30000),
   });
   if (res.status === 400) {
     // Key opsional bisa berubah antar versi → coba body minimal
@@ -223,7 +223,7 @@ export async function firecrawlSearch(query: string, limit = 3): Promise<SearchR
         query: cleanSearchQuery(query).slice(0, 200),
         limit,
       }),
-      signal: AbortSignal.timeout(30000),
+      signal: signal ?? AbortSignal.timeout(30000),
     });
   }
 
@@ -269,12 +269,13 @@ export async function firecrawlSearch(query: string, limit = 3): Promise<SearchR
  */
 export async function searchWeb(
   query: string,
-  limit = 3
+  limit = 3,
+  signal?: AbortSignal
 ): Promise<SearchResult[]> {
   const clean = cleanSearchQuery(query).slice(0, 200);
-  let results = await firecrawlSearch(clean, limit);
-  if (results.length === 0 && isTavilyConfigured()) {
-    results = await tavilySearch(clean, limit);
+  let results = await firecrawlSearch(clean, limit, signal);
+  if (results.length === 0 && isTavilyConfigured() && !signal?.aborted) {
+    results = await tavilySearch(clean, limit, signal);
   }
   const seen = new Set<string>();
   return results

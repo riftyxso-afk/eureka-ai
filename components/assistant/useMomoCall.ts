@@ -6,7 +6,7 @@ import { getUserId } from "@/lib/identity";
 import { recordCallTurns } from "./recordCallTurns";
 import { readCallReply } from "@/lib/audio/callReply";
 
-type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "speaking";
+type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "searching" | "speaking";
 export type CallProvider = "momo" | "lala";
 type Turn = { role: "user" | "assistant"; content: string };
 type Playback = { controller: AbortController; sources: Set<AudioBufferSourceNode>; spoken?: string };
@@ -33,6 +33,8 @@ type Session = {
 
 type LiveMessage = {
   setupComplete?: object;
+  toolCall?: { functionCalls?: { id?: string; name?: string; args?: { query?: string } }[] };
+  toolCallCancellation?: { ids?: string[] };
   serverContent?: {
     interrupted?: boolean;
     turnComplete?: boolean;
@@ -266,7 +268,9 @@ export function useMomoCall() {
           signal,
         });
         if (!response.ok) throw new Error(await readError(response, "Momo belum bisa menjawab."));
-        replyText = await readCallReply(response, showReply, queueSpeech);
+        replyText = await readCallReply(response, showReply, queueSpeech, () => {
+          if (isCurrent()) setPhase("searching");
+        });
       }
 
       await audioQueue;
@@ -318,6 +322,7 @@ export function useMomoCall() {
     let inputText = "";
     let outputText = "";
     let audioInput: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const searches = new Map<string, AbortController>();
     const send = (message: object) => {
       if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
     };
@@ -368,6 +373,30 @@ export function useMomoCall() {
       audioInput?.enqueue(Uint8Array.from(atob(data), character => character.charCodeAt(0)));
     }
 
+    async function searchForLala(id: string, query: string) {
+      if (searches.has(id)) return;
+      const controller = new AbortController();
+      searches.set(id, controller);
+      const signal = AbortSignal.any([session.controller.signal, controller.signal]);
+      setPhase("searching");
+      let response: { results: unknown[]; date?: string } = { results: [] };
+      try {
+        const result = await apiFetch("/api/call", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "web-search", question: query.slice(0, 200) }),
+          signal,
+        });
+        if (result.ok) response = await result.json();
+      } catch {
+        // An empty result tells Lala the lookup could not verify the answer.
+      } finally {
+        searches.delete(id);
+      }
+      if (signal.aborted || active.current !== session) return;
+      send({ toolResponse: { functionResponses: [{ id, name: "search_call_web", response }] } });
+    }
+
     socket.onopen = () => send({ setup: { model } });
     socket.onerror = connectionFailed;
     socket.onclose = connectionFailed;
@@ -376,6 +405,13 @@ export function useMomoCall() {
       try {
         const raw = typeof event.data === "string" ? event.data : new TextDecoder().decode(event.data);
         const message = JSON.parse(raw) as LiveMessage;
+        for (const id of message.toolCallCancellation?.ids ?? []) searches.get(id)?.abort();
+        for (const call of message.toolCall?.functionCalls ?? []) {
+          if (call.name !== "search_call_web" || !call.id) continue;
+          const query = typeof call.args?.query === "string" ? call.args.query.trim() : "";
+          if (query) void searchForLala(call.id, query);
+          else send({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { results: [] } }] } });
+        }
         if (message.setupComplete && !ready) {
           ready = true;
           window.clearTimeout(setupTimer);
@@ -411,7 +447,7 @@ export function useMomoCall() {
           closeAudioInput();
           inputText = "";
           outputText = "";
-          if (!session.playback) setPhase("listening");
+          if (!session.playback && searches.size === 0) setPhase("listening");
         }
       } catch {
         connectionFailed();

@@ -1,5 +1,5 @@
 /** Read each speech segment as soon as it arrives, before generation completes. */
-export async function readCallReply(response: Response, onText: (text: string) => void, onSpeech: (text: string) => void) {
+export async function readCallReply(response: Response, onText: (text: string) => void, onSpeech: (text: string) => void, onSearch?: () => void) {
   if (!response.headers.get("content-type")?.includes("application/x-ndjson")) {
     const { reply } = await response.json() as { reply?: string };
     if (!reply?.trim()) throw new Error("Momo belum mengirim jawaban.");
@@ -14,6 +14,7 @@ export async function readCallReply(response: Response, onText: (text: string) =
     if (!value.trim()) return;
     const message = JSON.parse(value);
     if (message.type === "error") throw new Error(message.error || "Jawaban Momo terputus.");
+    if (message.type === "searching") onSearch?.();
     if (message.type === "text" && typeof message.text === "string") { text += message.text; onText(text); }
     if (message.type === "speech" && typeof message.text === "string") onSpeech(message.text);
     if (message.type === "done") complete = true;
