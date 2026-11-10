@@ -99,6 +99,10 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
         <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={sessions ? "Cari menu atau percakapan…" : "Cari menu…"} aria-label="Cari menu atau chat" />
       </label>
       <nav aria-label="Navigasi Eureka">
+        {tabs.length > 0 && <><p className="v2-drawer-label">DALAM CATATAN INI</p>
+          <div className="v2-drawer-branch">{tabs.map(item => <button type="button" key={item.id} aria-pressed={item.active} onClick={() => { close(); item.select(); }}>{item.label}</button>)}</div>
+        </>}
+
         {[{ label: "Utama", items: links.filter(item => navigation.indexOf(item) < 3) },
           { label: "Belajar", items: links.filter(item => navigation.indexOf(item) >= 3 && navigation.indexOf(item) < 7) },
           { label: "Akun", items: links.filter(item => navigation.indexOf(item) >= 7) }].map(group => group.items.length > 0 &&
@@ -115,9 +119,6 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
             })}
           </section>
         )}
-        {tabs.length > 0 && <><p className="v2-drawer-label">DALAM CATATAN INI</p>
-          <div className="v2-drawer-branch">{tabs.map(item => <button type="button" key={item.id} aria-pressed={item.active} onClick={() => { close(); item.select(); }}>{item.label}</button>)}</div>
-        </>}
         {(showNewChat || !!history?.length) && <><p className="v2-drawer-label">PERCAKAPAN</p>
           {showNewChat && <Link href={BASE + "/tanya-momo"} onClick={follow}>+ Chat baru</Link>}
           <div className="v2-drawer-branch">{history?.map(session => {

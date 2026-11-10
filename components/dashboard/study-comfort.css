@@ -1,0 +1,198 @@
+/* Shared reading rhythm for the V2 study room only. */
+.sr-room { --study-radius: 20px; }
+.sr-room .sr-layout { grid-template-columns: 210px minmax(0, 1fr); }
+.sr-room .sr-nav {
+  padding: 28px 16px; gap: 4px; top: 12px;
+  height: calc(100dvh - 100px); overscroll-behavior: contain;
+}
+.sr-room .sr-nav-caption { margin: 0 12px 16px; color: var(--v2-muted); font-size: 10px; font-weight: 750; letter-spacing: .08em; }
+.sr-room .sr-nav > button {
+  flex-direction: row; justify-content: flex-start; gap: 12px;
+  min-height: 48px; padding: 10px 12px; font-size: 13px;
+  text-align: left; border-radius: 12px; flex-shrink: 0;
+}
+.sr-room .sr-nav > button[aria-pressed=true] { background: var(--v2-surface); color: var(--v2-ink); }
+.sr-room .sr-nav > button::after { display: none; }
+.sr-room .sr-nav .v2-menu-art { width: 25px; height: 25px; flex: none; }
+.sr-room .sr-nav .rm-nav-beta { position: static; margin-left: auto; padding: 4px; font-size: 8px; background: var(--v2-surface); color: var(--v2-muted); }
+.sr-nav-progress { margin: auto 12px 0; padding-top: 32px; }
+.sr-nav-progress > span { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--v2-muted); }
+.sr-nav-progress strong { font-weight: 600; white-space: nowrap; }
+.sr-nav-progress progress { width: 100%; height: 5px; margin-top: 12px; appearance: none; border: 0; border-radius: 5px; overflow: hidden; background: var(--v2-surface); }
+.sr-nav-progress progress::-webkit-progress-bar { background: var(--v2-surface); }
+.sr-nav-progress progress::-webkit-progress-value { background: var(--v2-accent); border-radius: 5px; }
+.sr-nav-progress progress::-moz-progress-bar { background: var(--v2-accent); }
+.sr-room .sr-main { max-width: 1120px; padding: 40px clamp(24px, 4vw, 64px) 64px; }
+.sr-room .sr-main.is-mindmap { max-width: 1700px; padding-inline: 28px; }
+.sr-room :is(.sr-section-heading, .rm-feature-heading) { margin-bottom: 28px; }
+.sr-room :is(.sr-section-heading, .rm-feature-heading) h1 { font-size: clamp(24px, 2.3vw, 30px); letter-spacing: -.7px; line-height: 1.3; }
+.sr-room .rm-feature-heading p { max-width: 60ch; font-size: 14px; line-height: 1.7; }
+.sr-room .sr-hero { gap: 24px; padding: 28px; margin: 0 0 24px; border-radius: 24px; background: var(--v2-surface); }
+.sr-room .sr-hero h1 { font-size: clamp(25px, 2.6vw, 36px); line-height: 1.3; }
+.sr-room .sr-hero .sr-momo { width: 88px; height: 100px; }
+.sr-room .sr-progress progress::-webkit-progress-bar { background: var(--v2-line); }
+.sr-room .sr-continue { margin-bottom: 36px; }
+.sr-room .sr-continue strong { line-height: 1.6; }
+.sr-room .sr-chapters-heading h2 { font-size: 21px; }
+.sr-room .sr-path-scene .sr-chapter-card { border-color: transparent; background: var(--v2-surface); border-radius: 18px; padding: 22px; box-shadow: none; }
+.sr-room .sr-path-scene .sr-chapter-card h3 { font-size: 15px; line-height: 1.6; }
+.sr-room .sr-path-scene .sr-chapter-label { font-size: 10px; }
+.sr-room .sr-chapter-card .dv2-button { min-height: 44px; font-size: 12px !important; }
+.sr-room .sr-local-hint { font-size: 12px; }
+.sr-room .sr-editor { border-color: transparent; border-radius: var(--study-radius); }
+.sr-room .sr-editor-toolbar { gap: 4px; padding: 10px; border-bottom: 0; border-radius: 14px; background: var(--v2-surface); }
+.sr-room .sr-editor-toolbar > button { min-width: 38px; height: 38px; }
+.sr-room .sr-editor-toolbar select { background: var(--v2-bg); }
+.sr-room .sr-editor-savebar { padding: 14px 10px; font-size: 12px; }
+.sr-room .sr-editor-paper { max-width: 780px; padding: 32px 24px 40px; }
+.sr-room .sr-editor-content { font-size: 16px; line-height: 1.85; }
+.sr-room .sr-editor-title textarea { letter-spacing: -.6px; }
+.sr-room .sr-reader-footer { padding: 20px 0; margin-top: 0; flex-wrap: wrap; }
+.sr-room .sr-reader-footer > button { min-height: 44px; }
+.sr-chapter-pagination { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.sr-chapter-pagination button { min-width: 0; padding: 18px; text-align: left; border: 1px solid transparent; background: var(--v2-surface); color: var(--v2-ink); border-radius: 14px; }
+.sr-chapter-pagination span { display: block; font-size: 12px; color: var(--v2-muted); margin-bottom: 6px; }
+.sr-chapter-pagination strong { display: block; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.sr-chapter-pagination button:disabled { opacity: .45; }
+.sr-room .sp-page { max-width: 880px; }
+.sr-room :is(.sp-note-context, .rm-podcast-source) { padding: 14px 18px; border-radius: 14px; margin-bottom: 24px; }
+.sr-room .sp-setup { padding: 36px; border-color: transparent; background: var(--v2-surface); border-radius: 24px; }
+.sr-room .sp-setup > p { font-size: 15px; line-height: 1.8; }
+.sr-room .sp-setup legend { font-size: 13px; }
+.sr-room .sp-setup > .dv2-button { min-height: 48px; }
+.sr-room .sp-text-button { min-height: 44px; font-size: 12px !important; }
+.sr-room .sp-question-map { border: 0; background: var(--v2-surface); }
+.sr-room .sp-question-panel { border: 0; padding: 12px 0 24px; }
+.sr-room .sp-question-panel > h2 { font-size: 23px; line-height: 1.6; }
+.sr-room .sp-choices > button { min-height: 64px; padding: 16px; border-radius: 14px; }
+.sr-room .sp-choices > button > strong { font-size: 15px; line-height: 1.65; }
+.sr-room .sp-feedback, .sr-room .sp-feedback .asisten-md { font-size: 14px !important; }
+.sr-room .sp-review { border: 0; background: var(--v2-surface); }
+.sr-room .sp-device-hint { font-size: 12px; }
+.sr-room .rf-face { border-color: transparent; border-radius: 24px; box-shadow: none; padding: 32px; }
+.sr-room .rf-front { background: var(--v2-surface); }
+.sr-room .rf-face > strong { overflow-wrap: anywhere; line-height: 1.65; }
+.sr-room .rf-rating > button { min-height: 72px; border-radius: 14px; }
+.sr-room .rf-rating > button > span { font-size: 14px; }
+.sr-room .rm-map-layout { min-height: 540px; height: min(800px, calc(100dvh - 230px)); border: 1px solid var(--v2-line); border-radius: 20px; }
+.sr-room .rm-map-search { margin: 0; top: 12px; left: 12px; right: 12px; border-radius: 12px; min-height: 44px; }
+.sr-room .rm-map-controls button { width: 44px; height: 44px; }
+.sr-room .rm-map-reader { overscroll-behavior: contain; }
+.sr-room .rm-map-reader .sr-editor-paper { padding: 24px; }
+.sr-room .rm-reader-heading strong { white-space: normal; line-height: 1.6; }
+.sr-room .rm-reader-heading button { min-height: 44px; }
+.sr-room .rm-chat { max-width: 780px; }
+.sr-room .rm-chat-thread { scrollbar-width: thin; overscroll-behavior: contain; padding: 8px 4px 24px; }
+.sr-room .rm-chat-message .asisten-md { font-size: 16px; line-height: 1.85; }
+.sr-room .rm-chat-message.is-user { background: var(--v2-surface); color: var(--v2-ink); }
+.sr-room .rm-chat-welcome > p { font-size: 14px; }
+.sr-room .rm-chat-welcome button { background: var(--v2-surface); border-color: transparent; min-height: 64px; font-size: 12px; }
+.sr-room .rm-context-label { background: var(--v2-surface); color: var(--v2-muted); }
+.sr-room .rm-chat-composer { border-radius: 18px; padding: 12px 14px; box-shadow: none; }
+.sr-room .rm-chat .rm-chat-composer textarea { min-height: 42px; }
+.sr-room .rm-chat-composer button { min-width: 44px; height: 44px; }
+.sr-room .rm-source-card { position: relative; border-color: transparent; background: var(--v2-surface); border-radius: 18px; }
+.sr-room .rm-source-card p { font-size: 13px; }
+.sr-room .rm-host-preview { min-height: 44px; font-size: 12px; }
+.sr-room .rm-podcast-options button, .sr-room .rm-style-chips button { min-height: 44px; }
+.sr-room .rm-podcast-player { border: 0; background: var(--v2-surface); border-radius: 16px; }
+.sr-room .rm-podcast-player > a { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
+.sr-room .rm-sticky-board { gap: 24px; }
+.sr-room .rm-sticky-tools button { min-width: 36px; min-height: 36px; }
+.sr-room :is(button, a, select, summary):focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 3px; }
+
+/* Switch map/reader earlier, before either pane becomes a narrow column. */
+@media (min-width: 701px) and (max-width: 1199px) {
+  .sr-room .rm-map-pane-switch { display: flex; gap: 6px; padding: 5px; margin-bottom: 18px; background: var(--v2-surface); border-radius: 12px; }
+  .sr-room .rm-map-layout { display: block; height: auto; min-height: 0; }
+  .sr-room .rm-map-layout.show-map > .rm-map-reader, .sr-room .rm-map-layout.show-notes > .rm-map-side { display: none; }
+  .sr-room .rm-map-canvas { height: 60dvh; min-height: 420px; flex: none; }
+  .sr-room .rm-map-reader { border: 0; overflow: visible; }
+}
+@media (min-width: 701px) and (max-width: 1000px) {
+  .sr-room .sr-layout { grid-template-columns: 174px minmax(0, 1fr); }
+  .sr-room .sr-nav { padding-inline: 10px; }
+  .sr-room .sr-nav > button { font-size: 12px; gap: 8px; padding-inline: 8px; }
+  .sr-room .sr-nav .rm-nav-beta { display: none; }
+  .sr-room .sr-main { padding-inline: 24px; }
+  .sr-room .sr-hero { padding: 22px; }
+  .sr-room .sr-hero .sr-momo { display: none; }
+  .sr-room .sp-quiz-layout { grid-template-columns: 1fr; }
+  .sr-room .sp-question-map { position: static; }
+  .sr-room .sp-question-map > div:first-of-type { display: flex; flex-wrap: wrap; }
+  .sr-room .sp-question-map button { width: 44px; }
+  .sr-room .sp-question-map > .sr-momo { display: none; }
+}
+@media (max-width: 700px) {
+  .sr-room .sr-layout { display: block; }
+  .sr-room .sr-nav { display: none; }
+  .sr-room .sr-main, .sr-room .sr-main.is-mindmap { padding: 24px max(18px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); }
+  .sr-room :is(.sr-section-heading, .rm-feature-heading) { gap: 12px; margin-bottom: 24px; }
+  .sr-room :is(.sr-section-heading, .rm-feature-heading) h1 { font-size: 25px; }
+  .sr-room .sr-hero { padding: 20px; gap: 12px; align-items: center; border-radius: 20px; }
+  .sr-room .sr-hero .sr-momo { width: 48px; height: 64px; }
+  .sr-room .sr-hero h1 { font-size: 23px; margin-bottom: 16px; letter-spacing: -.5px; }
+  .sr-room .sr-eyebrow { font-size: 9px; }
+  .sr-room .sr-continue { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 28px; }
+  .sr-room .sr-continue > .dv2-button { justify-content: center; min-height: 48px; }
+  .sr-room .sr-continue > div { padding-inline: 4px; }
+  .sr-room .sr-chapters-heading { gap: 8px; }
+  .sr-room .sr-chapters-heading h2 { font-size: 20px; }
+  .sr-room .sr-chapters-heading > span { font-size: 11px; }
+  .sr-room .sr-path-scene .sr-path > li { grid-template-columns: 36px minmax(0, 1fr); gap: 12px; min-height: 0; padding-block: 8px; }
+  .sr-room .sr-path-scene .sr-node { width: 34px; height: 34px; margin-top: 24px; font-size: 14px; }
+  .sr-room .sr-path-scene .sr-chapter-card { flex-direction: column; align-items: stretch; gap: 12px; padding: 18px; min-height: 0; }
+  .sr-room .sr-chapter-card .dv2-button { align-self: flex-start; padding-inline: 18px; }
+  .sr-room .sr-section-heading select { font-size: 16px; width: 100%; }
+  .sr-room .sr-editor { border-radius: 0; }
+  .sr-room .sr-editor-toolbar { flex-wrap: nowrap; overflow-x: auto; padding: 6px; min-height: 56px; gap: 2px; border-radius: 12px; }
+  .sr-room .sr-editor-toolbar > button { min-width: 44px; min-height: 44px; flex: none; }
+  .sr-room .sr-editor-paper { padding: 24px 0; }
+  .sr-room .sr-editor-title textarea { font-size: 24px !important; }
+  .sr-room .sr-editor-savebar { padding: 12px 0; }
+  .sr-room .sr-reader-footer { gap: 12px; }
+  .sr-chapter-pagination { gap: 8px; }
+  .sr-chapter-pagination button { padding: 14px; }
+  .sr-chapter-pagination strong { font-size: 13px; }
+  .sr-room .sp-setup { padding: 24px 18px; border-radius: 20px; }
+  .sr-room .sp-setup h2 { font-size: 23px; }
+  .sr-room .sp-setup > .dv2-button { width: 100%; }
+  .sr-room .sp-setup fieldset button { padding-inline: 8px; }
+  .sr-room .sp-question-panel > h2 { font-size: 21px; }
+  .sr-room .sp-quiz-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .sr-room .sp-question-map { position: static; width: 100%; }
+  .sr-room .sp-question-map > div:first-of-type { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sr-room .sp-question-map > .sr-momo { display: none; }
+  .sr-room .sp-question-map button { min-width: 44px; min-height: 44px; }
+  .sr-room .sp-question-actions { gap: 10px; }
+  .sr-room .sp-question-actions > .dv2-button { flex: 1; justify-content: center; }
+  .sr-room .rf-face { padding: 24px 20px; min-height: 290px; }
+  .sr-room .rf-face > strong { font-size: 22px; }
+  .sr-room .rf-back > strong { font-size: 18px; }
+  .sr-room .rf-rating { gap: 10px; }
+  .sr-room .rf-rating > button { padding: 14px 10px; }
+  .sr-room .rf-rating > button > span { font-size: 12px; }
+  .sr-room .rm-map-layout { height: auto; min-height: 0; border-radius: 16px; }
+  .sr-room .rm-map-canvas { height: clamp(340px, 58dvh, 560px); min-height: 340px; }
+  .sr-room .rm-map-reader .sr-editor-paper { padding: 24px 0; }
+  .sr-room .rm-map-controls { left: 10px; bottom: 10px; padding: 3px; }
+  .sr-room .rm-map-hint { padding: 10px 12px; }
+  .sr-room .rm-chat-thread { min-height: 260px; max-height: 58dvh; }
+  .sr-room .rm-chat-welcome .sr-momo { width: 65px; height: 75px; }
+  .sr-room .rm-chat-welcome button { min-height: 48px; font-size: 13px; }
+  .sr-room .rm-chat-composer { bottom: max(8px, env(safe-area-inset-bottom)); padding: 10px 12px; }
+  .sr-room .rm-chat .rm-chat-composer textarea { min-height: 42px !important; }
+  .sr-room .rm-source-card { padding: 16px; }
+  .sr-room .rm-podcast-player { flex-wrap: wrap; gap: 10px; padding: 12px; }
+  .sr-room .rm-podcast-player > .rm-play { width: 44px; height: 44px; }
+  .sr-room .rm-podcast-player select { min-height: 44px; }
+  .sr-room .rm-sticky-board { grid-template-columns: minmax(0, 1fr); padding: 20px 4px; }
+  .sr-room .rm-sticky-tools button { min-width: 44px; min-height: 44px; }
+  .sr-room .rm-sticky-colors button { width: 28px; height: 28px; }
+}
+@media (hover: hover) {
+  .sr-room .sr-nav > button:hover, .sr-chapter-pagination button:not(:disabled):hover { background: var(--v2-surface); color: var(--v2-accent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sr-room *, .sr-room *::before, .sr-room *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
