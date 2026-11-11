@@ -1,5 +1,6 @@
 "use client";
 
+import ArrowUpRight from "kubai-icons-react/icons/arrow-up-right";
 import { useState } from "react";
 import type { StudyInteraction } from "@/lib/study-interaction";
 
@@ -23,14 +24,14 @@ export default function StudyActivities({ data, disabled, onSend, storageKey }: 
     </details>}
     {data.question && <fieldset className="study-chat-quiz">
       <legend>Coba jawab · {data.question.prompt}</legend>
-      {data.question.options.map((option, index) => <button type="button" key={index} aria-pressed={choice === index} onClick={() => setChoice(index)}>{String.fromCharCode(65 + index)}. {option}</button>)}
+      {data.question.options.map((option, index) => <button type="button" key={index} aria-pressed={choice === index} onClick={() => setChoice(index)}><span className="study-choice-letter">{String.fromCharCode(65 + index)}.</span> {option}</button>)}
       {choice !== null && <div role="status" className="study-chat-feedback">
         <strong>{choice === data.question.correct ? "Tepat!" : "Yuk, periksa lagi alasannya."}</strong><p>{data.question.explanation}</p>
         <button type="button" disabled={disabled} onClick={() => onSend("Aku menjawab " + data.question!.options[choice] + " untuk soal " + data.question!.prompt + ". Bantu aku memahami alasannya dengan contoh lain.")}>Bahas dengan Momo</button>
       </div>}
     </fieldset>}
     {data.suggestions.length > 0 && <div className="study-chat-suggestions">
-      {data.suggestions.map(prompt => <button type="button" disabled={disabled} key={prompt} onClick={() => onSend(prompt)}>{prompt} <span aria-hidden="true">↗</span></button>)}
+      {data.suggestions.map(prompt => <button type="button" disabled={disabled} key={prompt} onClick={() => onSend(prompt)}>{prompt} <ArrowUpRight size={15} aria-hidden="true" /></button>)}
     </div>}
   </div>;
 }

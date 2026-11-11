@@ -25,7 +25,7 @@
 .study-chat-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--learn-muted); font-size: .88rem; }
 .study-chat-new { padding: 10px; border-radius: 9px; background: var(--learn-surface); font-size: .85rem; }
 .study-chat-transcript { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; padding: 10px 20px 28px; }
-.study-chat-width { width: min(100%, 780px); margin-inline: auto; }
+.study-chat-width { width: min(100%, 736px); margin-inline: auto; }
 .study-chat-turn { margin-block: 22px 34px; overflow-wrap: anywhere; }
 .study-chat-turn.user { display: flex; justify-content: flex-end; }
 .study-chat-turn.user > p { max-width: min(90%, 580px); padding: 12px 17px; border-radius: 20px 20px 5px 20px; background: var(--learn-surface); white-space: pre-wrap; }
@@ -37,9 +37,9 @@
 .study-chat-response-actions li { margin-block: 6px; }
 .study-chat-response-actions a { color: var(--learn-accent); text-decoration: underline; text-underline-offset: 3px; }
 .study-chat-footer { padding: 10px 20px max(14px, env(safe-area-inset-bottom)); flex-shrink: 0; }
-.study-chat-composer { max-width: 780px; margin-inline: auto; border: 1px solid var(--learn-line); background: var(--learn-surface); border-radius: 22px; padding: 10px 12px; }
+.study-chat-composer { max-width: 736px; margin-inline: auto; border: 1px solid var(--learn-line); background: var(--learn-surface); border-radius: 22px; padding: 10px 12px; }
 .study-chat-composer:focus-within { border-color: var(--learn-accent); }
-.study-chat-composer textarea { display: block; width: 100%; resize: vertical; min-height: 52px; max-height: 180px; outline: none; border: 0; color: var(--learn-ink); background: transparent; font: inherit; padding: 3px 4px; }
+.study-chat-composer textarea { display: block; width: 100%; resize: none; field-sizing: content; min-height: 36px; max-height: min(160px, 20dvh); outline: none; border: 0; color: var(--learn-ink); background: transparent; font: inherit; padding: 3px 4px; }
 .study-chat-composer > div { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .study-chat-composer span { color: var(--learn-muted); font-size: .76rem; }
 .study-chat-composer button { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--learn-accent); color: var(--learn-bg); }
@@ -78,12 +78,50 @@
 .study-chat-research { margin-block: 12px; }
 .study-chat-research > summary { cursor: pointer; min-height: 44px; color: var(--learn-accent); }
 .study-chat-research .study-flow { width: 100%; margin: 0; }
+
+.study-chat-header { border-bottom: 1px solid var(--learn-line); }
+.study-chat-header > a, .study-chat-response-actions :is(button, summary), .study-chat-composer > div > span,
+.study-chat-research > summary, .study-chat-videos button span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.study-chat-header svg, .study-chat-response-actions svg, .study-chat-research summary svg { flex: none; }
+.study-chat-brand { color: var(--learn-accent); }
+.study-chat-new { min-height: 44px; font-weight: 700; }
+.study-chat-assistant-label { color: var(--learn-ink); }
+.study-chat-assistant-label img, .study-chat-empty img { flex: none; border-radius: 27%; }
+.study-chat-empty { max-width: 420px; margin: clamp(20px, 8vh, 90px) auto 0; }
+.study-chat-empty img { margin: 0 auto 18px; }
+.study-chat-empty h1 { line-height: 1.2; letter-spacing: -.025em; }
+.study-chat-empty p { line-height: 1.65; }
+.study-chat-research > summary { background: var(--learn-surface); border-radius: 12px; padding: 8px 12px; color: var(--learn-ink); font-size: .85rem; font-weight: 650; }
+.study-chat-research summary::-webkit-details-marker, .study-chat-response-actions summary::-webkit-details-marker { display: none; }
+.study-chat-research[open] > summary svg:last-child { transform: rotate(180deg); }
+.study-chat-research[open] > summary { margin-bottom: 12px; }
+.study-chat-turn .asisten-md { min-width: 0; line-height: 1.7; }
+.study-chat-turn .asisten-md pre { max-width: 100%; overflow-x: auto; }
+.study-chat-composer > div { margin-top: 4px; }
+.study-chat-composer { box-shadow: 0 3px 16px rgb(20 18 30 / .06); }
+.study-chat-composer > div > span { padding-inline-start: 4px; }
+.study-chat-composer button { width: 44px; height: 44px; }
+.study-chat-response-actions > button, .study-chat-response-actions summary { min-height: 44px; }
+.study-chat-response-actions button:hover, .study-chat-suggestions button:hover:enabled, .study-chat-new:hover { color: var(--learn-accent); }
+.study-chat-videos article:only-child { grid-column: 1 / -1; max-width: 520px; width: 100%; }
+.study-conversation summary:focus-visible { outline: 2px solid var(--learn-accent); outline-offset: 3px; }
 @media(max-width:640px) {
-  .study-chat-header { padding: 8px 12px; gap: 7px; flex-wrap: wrap; }
-  .study-chat-title { display: none; }
-  .study-chat-header .page-guide-launcher { margin-inline-start: auto; }
-  .study-chat-transcript { padding-inline: 14px; }
+  .study-chat-header { padding: 6px 10px; min-height: 56px; gap: 6px; }
+  .study-chat-title { font-size: .75rem; }
+  .study-chat-header .page-guide-launcher, .study-chat-header .study-chat-new { flex: none; width: 44px; min-height: 44px; justify-content: center; }
+  .study-chat-header .page-guide-launcher > span, .study-chat-new span { display: none; }
+  .study-chat-transcript { padding-inline: 16px; }
   .study-chat-footer { padding-inline: 10px; }
   .study-chat-composer textarea { font-size: 16px; }
   .study-chat-videos { grid-template-columns: minmax(0,1fr); }
+  .study-chat-turn { margin-block: 18px 26px; }
 }
+.study-chat-quiz > button, .study-chat-suggestions button { display: flex; align-items: center; gap: 9px; }
+.study-choice-letter { flex: none; display: grid; place-items: center; min-width: 24px; min-height: 24px; border-radius: 7px; background: var(--learn-surface); font-size: .78rem; font-weight: 700; }
+.study-chat-quiz button[aria-pressed=true] .study-choice-letter { background: var(--learn-accent); color: var(--learn-bg); }
+.study-chat-suggestions button > :last-child { flex: none; margin-inline-start: auto; }
+.study-chat-plan label:has(input:checked) span { text-decoration: line-through; color: var(--learn-muted); }

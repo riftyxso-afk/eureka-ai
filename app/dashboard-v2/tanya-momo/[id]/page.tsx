@@ -13,7 +13,7 @@ export default function Page() {
   const { id } = useParams<{ id: string }>();
   const params = useSearchParams();
   const explicit = params.get("mode") === "study";
-  const [detected, setDetected] = useState<{ id: string; messages: AssistantChatMessage[]; study: boolean } | null>(null);
+  const [detected, setDetected] = useState<{ id: string; messages: AssistantChatMessage[]; title?: string; study: boolean } | null>(null);
   useEffect(() => {
     if (explicit) return;
     const controller = new AbortController();
@@ -21,11 +21,11 @@ export default function Page() {
       if (!response.ok) return { messages: [] };
       return response.json();
     }).then(data => {
-      if (!controller.signal.aborted) setDetected({ id, messages: data.messages || [], study: data.messages?.some((message: AssistantChatMessage) => message.model === "eureka-study") ?? false });
+      if (!controller.signal.aborted) setDetected({ id, title: data.session?.title, messages: data.messages || [], study: data.messages?.some((message: AssistantChatMessage) => message.model === "eureka-study") ?? false });
     }).catch(() => { if (!controller.signal.aborted) setDetected({ id, messages: [], study: false }); });
     return () => controller.abort();
   }, [id, explicit]);
   if (explicit) return <StudyConversation key={id} sessionId={id} />;
   if (detected?.id !== id) return <LoadingStatus stage="synchronizing" detail="Memuat percakapan" />;
-  return detected.study ? <StudyConversation key={id} sessionId={id} initialMessages={detected.messages} /> : <ChatPage />;
+  return detected.study ? <StudyConversation key={id} sessionId={id} initialMessages={detected.messages} initialTitle={detected.title} /> : <ChatPage />;
 }
