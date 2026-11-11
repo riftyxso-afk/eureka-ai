@@ -1,0 +1,27 @@
+.studio-activity { display: grid; gap: 18px; margin-top: 12px; }
+.studio-activity h3 { font-weight: 800; }
+.studio-notice { padding: 12px 14px; border-radius: 12px; background: var(--flow-soft); color: var(--flow-muted); margin-top: 14px; }
+.studio-output, .studio-chart { padding-top: 18px; border-top: 1px solid var(--flow-border); }
+.studio-output > p, .studio-output > :is(ul,ol,details) { margin-top: 10px; }
+.studio-output a, .studio-paper-list a { color: var(--flow-accent); text-underline-offset: 3px; text-decoration: underline; }
+.studio-output .flow-button { text-decoration: none; }
+.studio-moments { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.studio-details { border-radius: 12px; background: var(--flow-soft); padding: 10px 14px; margin-top: 12px; }
+.studio-details summary { cursor: pointer; min-height: 40px; align-content: center; font-weight: 700; }
+.studio-details > :is(p,form,ul,ol,table) { margin-top: 8px; }
+.studio-observations, .studio-references { padding-inline-start: 1.25em; display: grid; gap: 10px; }
+.studio-observations { list-style: disc; }
+.studio-references { list-style: decimal; }
+.studio-references p { color: var(--flow-muted); margin-top: 4px; }
+.studio-chart figcaption { margin-bottom: 15px; }
+.studio-chart svg { width: 100%; color: var(--flow-accent); border-block: 1px solid var(--flow-border); background: var(--flow-soft); }
+.studio-chart-label, .studio-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.studio-chart-label { font-size: .76rem; color: var(--flow-muted); margin: 5px 0; }
+.studio-chart table { width: 100%; text-align: start; }
+.studio-chart th, .studio-chart td { padding: 6px; text-align: start; border-bottom: 1px solid var(--flow-border); }
+.studio-project-list, .studio-paper-list { display: grid; gap: 8px; }
+.studio-project-list button { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 10px 14px; border-radius: 12px; background: var(--flow-soft); text-align: start; }
+.studio-paper-list li { padding: 12px 0; border-bottom: 1px solid var(--flow-border); }
+.studio-paper-choice { display: flex; align-items: baseline; gap: 8px; }
+.studio-paper-choice input { accent-color: var(--flow-accent); }
+.studio-preline { white-space: pre-line; }

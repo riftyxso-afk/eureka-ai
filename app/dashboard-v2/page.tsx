@@ -18,6 +18,7 @@ import MomoCompanion from "@/components/asisten/MomoCompanion";
 import DocumentAttachments from "@/components/dashboard/DocumentAttachments";
 import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
 import PageTutorial from "@/components/tutorial/PageTutorial";
+import StudyMode from "@/components/dashboard/StudyMode";
 import ProfileChecklist from "@/components/tutorial/ProfileChecklist";
 import { usePromptNoteJob } from "@/components/dashboard/usePromptNoteJob";
 import PromptNoteProgress from "@/components/dashboard/PromptNoteProgress";
@@ -35,6 +36,7 @@ import { PENDING_PROMPT_KEY, type PendingPrompt } from "@/lib/assistant/pendingP
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import "./v2.css";
 import "./simple-home.css";
+import "./study-mode.css";
 
 export default function DashboardV2() {
   const { isPremium, loading: planLoading, error: planError, refresh: refreshPlan } = usePremium();
@@ -43,6 +45,7 @@ export default function DashboardV2() {
   const [files, setFiles] = useState<File[]>([]);
   const [draft, setDraft] = useState("");
   const generation = usePromptNoteJob();
+  const [workspace, setWorkspace] = useState<"chat" | "study">("chat");
   const [mode, setMode] = useState<"ask" | "note">("ask");
   const [openingChat, setOpeningChat] = useState(false);
   const chatLock = useRef(false);
@@ -56,11 +59,24 @@ export default function DashboardV2() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("mode") === "note") setMode("note");
+    else if (params.get("workspace") === "study") setWorkspace("study");
     // Keep previously shared collection links working after the move.
     if (params.has("subject") || window.location.hash === "#dv2-notes-title") {
       router.replace("/dashboard-v2/catatan" + (params.has("subject") ? "?subject=" + encodeURIComponent(params.get("subject") || "") : ""));
     }
   }, [router]);
+  function selectWorkspace(next: typeof workspace) {
+    setWorkspace(next);
+    const url = new URL(window.location.href);
+    if (next === "study") {
+      url.searchParams.delete("mode");
+      url.searchParams.set("workspace", "study");
+    } else {
+      url.searchParams.delete("workspace");
+    }
+    window.history.replaceState(null, "", url);
+  }
+
   function attach(selected: FileList | null) {
     if (!selected?.length || generation.busy || chatLock.current) return;
     const incoming = Array.from(selected);
@@ -124,14 +140,20 @@ export default function DashboardV2() {
     void generation.start(`Buat catatan tentang ${topic}`, prefs);
   }
   return <div className="dv2 dv2-simple">
-    <header className="dv2-topbar">
+    <header className="dv2-topbar dv2-mode-topbar">
       <V2MobileSidebar desktop />
       <Link className="dv2-brand" href="/dashboard-v2"><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka! <span>V2 · Beta</span></Link>
       <nav aria-label="Navigasi Dashboard V2" className="dv2-topnav"><Link href={isPremium ? "/dashboard-v2/catatan" : "/dashboard-v2/pricing"}><FolderOpen trigger="parent" size={16} />Catatan</Link><Link href="/dashboard-v2/tanya-momo"><MessageCircle trigger="parent" size={16} />Tanya Momo</Link></nav>
-      <div className="dv2-account"><PageTutorial guideId="dashboard" /><Link href="/dashboard-v2/aktivitas" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard-v2/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/dashboard-v2/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
+      <div className="dv2-workspace-toggle" role="group" aria-label="Mode Eureka" data-workspace={workspace}>
+        <span aria-hidden="true" />
+        <button type="button" aria-pressed={workspace === "chat"} onClick={() => selectWorkspace("chat")}>Chat</button>
+        <button type="button" aria-pressed={workspace === "study"} onClick={() => selectWorkspace("study")}>Belajar</button>
+      </div>
+      <div className="dv2-account"><PageTutorial guideId={workspace === "study" ? "study-mode" : "dashboard"} /><Link href="/dashboard-v2/aktivitas" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard-v2/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/dashboard-v2/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
     </header>
     <main className="dv2-main">
-      <section className="dv2-workspace" aria-labelledby="dv2-title">
+      <StudyMode active={workspace === "study"} />
+      <section className="dv2-workspace" hidden={workspace === "study"} aria-labelledby="dv2-title">
         <div className="dv2-greeting"><div className="dv2-momo" data-momo-splash-target><MomoCompanion mode={effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal"} thinking={openingChat} question={draft} /></div><h1 id="dv2-title">Mau belajar apa hari ini?</h1></div>
         <div className={`dv2-compose-area${!planLoading && !isPremium ? " is-pro-locked" : ""}`}>
           {planLoading ? <LoadingStatus stage="synchronizing" detail="Memeriksa paketmu" /> : planError ? <div className="eureka-pro-lock"><p role="alert">{planError}</p><button type="button" className="eureka-pro-cta" onClick={() => void refreshPlan()}>Coba lagi</button></div> : !isPremium ? <ProLockedCard /> : <>
@@ -174,7 +196,7 @@ export default function DashboardV2() {
 
     </main>
     <ProfileChecklist />
-    {isPremium && <CallIntroBanner paused={Boolean(callOpen || openingChat || generation.busy)} onTry={() => setCallOpen("chat")} />}
+    {isPremium && <CallIntroBanner paused={Boolean(callOpen || openingChat || generation.busy || workspace === "study")} onTry={() => setCallOpen("chat")} />}
     <AiCallModal open={callOpen !== null} chat={callOpen === "chat"} onClose={() => setCallOpen(null)} />
     <input ref={fileInput} className="sr-only" type="file" multiple aria-label="Lampirkan materi belajar" accept=".pdf,.doc,.docx,.ppt,.pptx,.xlsx,.xls,.csv,.txt,.md,.rtf,.odt,.mp3,.wav,.m4a,.ogg,.flac,.aac,.mp4,.webm,.mov" onChange={event => { attach(event.target.files); event.target.value = ""; }} />
   </div>;

@@ -10,6 +10,8 @@ import MissionAssessmentPanel from "@/components/dashboard/MissionAssessmentPane
 import { useDashboardNotes } from "@/components/dashboard/useDashboardNotes";
 import MarkdownView from "@/components/asisten/MarkdownView";
 import { apiFetch } from "@/lib/apiClient";
+import { STUDY_MISSION_DRAFT, type StudyMissionDraft } from "@/lib/study-mission-draft";
+import type { StudySource } from "@/lib/study-sources-types";
 import { getUserId } from "@/lib/identity";
 import "../study-flows.css";
 
@@ -20,6 +22,7 @@ type Course = {
   passes: number;
   question: string;
   feedback: string;
+  adaptive?: { days: number; sources: StudySource[]; review?: { chapter: number; source?: StudySource } };
   chapters: { title: string; material: string }[];
 };
 
@@ -41,6 +44,8 @@ export default function Page() {
   const [title, setTitle] = useState("");
   const [material, setMaterial] = useState("");
   const [noteId, setNoteId] = useState("");
+  const [adaptive, setAdaptive] = useState(false);
+  const [days, setDays] = useState("7");
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState<"create" | "answer" | null>(null);
   const [error, setError] = useState("");
@@ -67,6 +72,22 @@ export default function Page() {
     } catch {
       // Storage may be unavailable.
     }
+    if (new URL(window.location.href).searchParams.get("draf") === "belajar") {
+      try {
+        const draft: StudyMissionDraft = JSON.parse(sessionStorage.getItem(STUDY_MISSION_DRAFT) || "null");
+        if (draft?.owner === getUserId() && typeof draft.title === "string" && draft.title.trim().length >= 5) {
+          setTitle(draft.title.slice(0, 160));
+          setAdaptive(true);
+          setDays([1, 3, 7, 14, 30].includes(draft.days) ? String(draft.days) : "7");
+          setNoteId(typeof draft.noteId === "string" ? draft.noteId.slice(0, 100) : "");
+          setStep(2);
+          setEditing(true);
+          sessionStorage.removeItem(STUDY_MISSION_DRAFT);
+        }
+      } catch {
+        // The standard mission form is still available.
+      }
+    }
     setReady(true);
     return () => requestRef.current?.abort();
   }, []);
@@ -84,7 +105,7 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         signal: request.signal,
         body: JSON.stringify(action === "create"
-          ? { action, title: title.trim(), material, noteId: noteId || undefined }
+          ? { action, title: title.trim(), material, noteId: noteId || undefined, days: adaptive ? Number(days) : undefined }
           : { action, token: course?.token, answer: answer.trim() }),
       });
       const data = await res.json();
@@ -125,6 +146,8 @@ export default function Page() {
     setTitle("");
     setMaterial("");
     setNoteId("");
+    setAdaptive(false);
+    setDays("7");
     setEditing(true);
     setError("");
   }
@@ -190,6 +213,15 @@ export default function Page() {
                     <label>Materi tambahan <small>(opsional)</small>
                       <textarea maxLength={16000} value={material} onChange={event => setMaterial(event.target.value)} placeholder="Tempel materi atau tulis bagian yang masih sulit." />
                     </label>
+                    <label className="mission-adaptive-toggle">
+                      <input type="checkbox" checked={adaptive} onChange={event => setAdaptive(event.target.checked)} />
+                      <span><strong>Misi adaptif</strong><small>Gunakan judul tujuan untuk mencari bacaan dan video publik. Momo bisa memberi contoh yang lebih sederhana saat kamu kesulitan.</small></span>
+                    </label>
+                    {adaptive && <label>Target selesai
+                      <select value={days} onChange={event => setDays(event.target.value)}>
+                        {[1, 3, 7, 14, 30].map(day => <option key={day} value={day}>{day} hari</option>)}
+                      </select>
+                    </label>}
                     <Link className="flow-text-action" href="/dashboard-v2?mode=note">Buat catatan dari dokumen</Link>
                   </>}
                   {step === 2 && <>
@@ -197,6 +229,7 @@ export default function Page() {
                     <dl className="flow-summary">
                       <div><dt>Tujuan</dt><dd>{title.trim()}</dd></div>
                       <div><dt>Materi</dt><dd>{noteTitle || (noteId ? "Catatan yang dipilih" : material.trim() ? "Materi yang kamu tulis" : "Rekomendasi Momo")}</dd></div>
+                      {adaptive && <div><dt>Mode</dt><dd>Misi adaptif · {days} hari</dd></div>}
                       {material.trim() && <div><dt>Materi tambahan</dt><dd className="mission-summary-material">{material.trim()}</dd></div>}
                     </dl>
                     {course && <p className="flow-description">Misi baru akan menggantikan misi lama setelah selesai dibuat.</p>}
@@ -204,7 +237,7 @@ export default function Page() {
                   {error && <p className="flow-error" role="alert">{error}</p>}
                   <div className="flow-actions">
                     {step > 0 && <button className="flow-button secondary" type="button" onClick={() => { shouldFocus.current = true; setError(""); setStep(step - 1); }}><ArrowLeft size={16} /> Kembali</button>}
-                    {step === 0 && editing && <button className="flow-button secondary" type="button" onClick={() => { shouldFocus.current = true; setError(""); setEditing(false); }}>Batal</button>}
+                    {editing && course && <button className="flow-button secondary" type="button" onClick={() => { shouldFocus.current = true; setError(""); setEditing(false); }}>Batal</button>}
                     <button className="flow-button" type="submit" disabled={step === 0 && title.trim().length < 5}>
                       {step === 0 ? "Pilih materi" : step === 1 ? "Tinjau misi" : "Susun misi"} <ArrowRight size={16} />
                     </button>
@@ -220,10 +253,20 @@ export default function Page() {
                 <div>
                   <h2 id="mission-map-title">Peta misi</h2>
                   <p className="mission-track-heading">{course.index} dari {course.chapters.length} bab selesai</p>
+                  {course.adaptive && <p className="flow-description">Target belajar · {course.adaptive.days} hari</p>}
                   <progress value={course.index} max={course.chapters.length} aria-label="Progres misi" />
                 </div>
                 <button className="flow-text-action mission-manage" type="button" onClick={startNewMission}>Buat misi baru</button>
               </header>
+              {course.adaptive && <details className="studio-details">
+                <summary>Sumber pendamping</summary>
+                {course.adaptive.sources.length ? <ul className="mission-source-list">
+                  {course.adaptive.sources.map(source => <li key={source.url}>
+                    <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>
+                    {source.kind === "video" && <Link href={"/dashboard-v2/studio-belajar?video=" + encodeURIComponent(source.url)}>Tanya video</Link>}
+                  </li>)}
+                </ul> : <p className="flow-description">Sumber publik belum tersedia. Materi misi tetap bisa dibuka.</p>}
+              </details>}
               {course.index === course.chapters.length && <p className="flow-success" role="status">Semua bab misi selesai.</p>}
               {course.feedback && <div className="mission-feedback"><strong>Masukan terakhir dari Momo</strong><p>{course.feedback}</p></div>}
               {error && <p className="flow-error" role="alert">{error}</p>}
@@ -234,7 +277,7 @@ export default function Page() {
                     <li key={index} data-state={state}>
                       <button type="button" disabled={state === "locked"} onClick={() => changeChapter(index)}>
                         <StudyArt name={state === "done" ? "trophy" : state === "next" ? "target" : "notebook"} size={45} />
-                        <span><small>Bab {index + 1} · {state === "done" ? "Selesai" : state === "next" ? "Siap dibuka" : "Terkunci"}</small><strong>{chapter.title}</strong></span>
+                        <span><small>Bab {index + 1}{course.adaptive && ` · Hari ${1 + Math.floor(index * (course.adaptive.days - 1) / Math.max(1, course.chapters.length - 1))}`} · {state === "done" ? "Selesai" : state === "next" ? "Siap dibuka" : "Terkunci"}</small><strong>{chapter.title}</strong></span>
                         {state === "next" && <ArrowRight size={17} aria-hidden="true" />}
                       </button>
                     </li>
@@ -249,6 +292,12 @@ export default function Page() {
               <h2>{course.chapters[selected]?.title}</h2>
               {view === "practice" && course.feedback && (
                 <div className="mission-feedback"><strong>Masukan terakhir dari Momo</strong><p>{course.feedback}</p></div>
+              )}
+              {view === "practice" && course.adaptive?.review?.chapter === selected && course.adaptive.review.source && (
+                <div className="mission-feedback">
+                  <strong>Video untuk memperjelas konsep</strong>
+                  <p><a href={course.adaptive.review.source.url} target="_blank" rel="noopener noreferrer">{course.adaptive.review.source.title}</a></p>
+                </div>
               )}
               {view === "assessment" ? (
                 <MissionAssessmentPanel key={selected} token={course.token} chapterIndex={selected} onBack={() => showView("lesson")} />

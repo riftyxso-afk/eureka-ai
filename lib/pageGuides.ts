@@ -19,6 +19,18 @@ export const PAGE_GUIDES = {
     steps: ["Tulis topik atau lampirkan materi", "Kirim, lalu ikuti proses penyusunan", "Buka catatan untuk mulai belajar"],
     action: "Buat catatan pertama", target: ".dv2-compose-modes button:last-child, .dv2 textarea, [data-tutorial-id='create-note-btn']",
   },
+  "study-mode": {
+    label: "Mode Belajar", title: "Mulai dari tujuan belajarmu",
+    description: "Tulis target, pilih waktu atau catatan, lalu tinjau misi sebelum Momo membuat jalur belajar.",
+    steps: ["Pilih Belajar", "Tulis tujuan dan waktu", "Tinjau misi atau coba Studio"],
+    action: "Coba Mode Belajar", target: ".dv2-study-input textarea",
+  },
+  "study-studio": {
+    label: "Studio Belajar", title: "Uji ide dengan sumber yang bisa dibuka",
+    description: "Tanya video, latih argumen, baca data IDX, atau susun proyek riset bersama teman.",
+    steps: ["Pilih aktivitas", "Isi topik, video, atau kode saham", "Periksa sumber dan hasil"],
+    action: "Jelajahi Studio", target: ".studio-flow .flow-nav",
+  },
   "room-learn": {
     label: "Alur belajar", title: "Satu materi, banyak cara memahami",
     description: "Ikuti bab sesuai urutanmu. Semua alat belajar untuk materi ini tersedia di menu ruang belajar.",

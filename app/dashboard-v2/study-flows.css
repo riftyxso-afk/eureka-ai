@@ -317,3 +317,13 @@
   .mission-map-path li:nth-child(3n + 1) { transform: translateX(-4%); }
   .mission-map-path li:nth-child(3n + 2) { transform: translateX(4%); }
 }
+
+.mission-source-list { display: grid; gap: 9px; }
+.mission-source-list li { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.mission-source-list a, .mission-feedback a { color: var(--flow-accent); text-decoration: underline; text-underline-offset: 3px; }
+.mission-flow .studio-details { margin: 16px 0; padding: 12px; background: var(--flow-soft); border-radius: 12px; }
+.mission-flow .studio-details summary { cursor: pointer; font-weight: 700; }
+.mission-flow .studio-details > :is(ul,p) { margin-top: 10px; }
+.mission-flow .mission-adaptive-toggle { display: flex; gap: 12px; align-items: start; padding: 12px; border-radius: 12px; background: var(--flow-soft); }
+.mission-adaptive-toggle input[type=checkbox] { width: 18px; height: 18px; min-height: 0; accent-color: var(--flow-accent); flex: 0 0 auto; margin-top: 3px; }
+.mission-adaptive-toggle small { display: block; margin-top: 3px; }

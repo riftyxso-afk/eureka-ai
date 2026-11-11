@@ -113,6 +113,14 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   count++;
   count++;
 
+  const studySources = await import("@/app/api/study-sources/route");
+  const researchProjects = await import("@/app/api/research-projects/route");
+  const studyAgent = await import("@/app/api/study-agent/route");
+  mount(app, "/api/study-agent", studyAgent);
+  mount(app, "/api/study-sources", studySources);
+  mount(app, "/api/research-projects", researchProjects);
+  count += 3;
+
   // ─── Notifications ─────────────────────────────────────
   const notifications = await import("@/app/api/notifications/route");
   const notificationsPushSubscribe = await import("@/app/api/notifications/push-subscribe/route");

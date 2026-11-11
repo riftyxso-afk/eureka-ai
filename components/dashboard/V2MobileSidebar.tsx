@@ -38,6 +38,7 @@ const navigation = [
   { group: "Utama", label: "Tanya Momo", href: BASE + "/tanya-momo", icon: MessageCircle, color: "#f18d5c", premium: true },
   { group: "Belajar", label: "Mata Pelajaran", href: BASE + "/mata-pelajaran", icon: BookOpen, premium: true },
   { group: "Belajar", label: "Perpustakaan", href: BASE + "/perpustakaan", icon: BookOpen, color: "#e9b13b", premium: true },
+  { group: "Belajar", label: "Studio Belajar", href: BASE + "/studio-belajar", icon: Network, premium: true },
   { group: "Belajar", label: "Kursus", href: BASE + "/kursus", icon: GraduationCap, premium: true },
   { group: "Belajar", label: "Jadwal", href: BASE + "/jadwal", icon: CalendarDays, color: "#e9b13b", premium: true },
   { group: "Belajar", label: "Misi", href: BASE + "/misi", icon: Trophy, premium: true },

@@ -31,6 +31,7 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
     step("Periksa progres per pelajaran", "Lihat kemajuan setiap pelajaran untuk menentukan latihan selanjutnya.", "section[aria-labelledby=\"study-subjects-title\"]"),
   ],
   "dashboard": [
+    step("Pilih Chat atau Belajar", "Chat untuk bertanya dan membuat catatan. Pilih Belajar untuk menyusun misi dan membuka Studio.", ".dv2-workspace-toggle"),
     step("Mulai dari pertanyaanmu", "Tulis pertanyaan, topik belajar, atau tempel tautan di sini.", ".dv2 textarea"),
     step("Chat atau catatan?", "Gunakan Chat untuk berdiskusi. Pilih Note saat ingin menyusun materi menjadi catatan dan bab.", ".dv2-compose-modes"),
     step("Bawa materimu", "Lewat tombol +, lampirkan dokumen atau buka panggilan Momo dan Lala. Kamu yang memilih kapan memulainya.", "button[aria-label='Tambah file dan alat']"),
@@ -43,6 +44,19 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
     step("Kenali arah belajarmu", "Tinjau gambaran pelajaran dan tentukan bagian yang ingin kamu latih lagi.", ".v2-mobile-drawer a[href='/dashboard-v2/arah-belajar']", true),
     step("Temukan bacaan dan dongeng", "Jelajahi katalog buku dan Studio dongeng dari Perpustakaan.", ".v2-mobile-drawer a[href='/dashboard-v2/perpustakaan']", true),
     step("Lengkapi profilmu", "Perbarui identitas dan preferensi agar pengalaman belajar lebih sesuai denganmu. Checklist beranda mengingatkan bagian yang belum lengkap.", ".v2-mobile-drawer a[href='/dashboard-v2/profil']", true),
+  ],
+  "study-mode": [
+    step("Pindah ke mode Belajar", "Gunakan slider ini untuk kembali ke Chat atau membuka ruang Belajar.", ".dv2-workspace-toggle"),
+    step("Tentukan tujuan", "Tulis tujuan belajar atau permintaan seperti mencari video dan membuat dokumen. Pilih cara memprosesnya di bagian bawah.", ".dv2-study-input"),
+    step("Pilih alat belajar", "Tambahkan catatan sebagai materi, buka Studio, atau mulai penghitung fokus 25 menit.", ".dv2-study-tools"),
+    step("Ikuti hasil secara langsung", "Status berubah sesuai sumber yang dicari. Buka referensi atau unduh hasil sebagai dokumen Word setelah selesai.", ".dv2-study-result"),
+    step("Coba satu aktivitas", "Pilih contoh untuk mengisi tujuan atau langsung membuka alat yang sesuai.", ".dv2-study-examples"),
+  ],
+  "study-studio": [
+    step("Pilih aktivitas", "Gunakan menu untuk berpindah antara Tanya Video, Debat Bukti, Lab Data, dan Riset Kelompok.", ".studio-flow .flow-nav"),
+    step("Siapkan masukan", "Masukkan tautan video dan pertanyaan, topik, atau kode saham sesuai alat yang dipilih.", ".studio-activity > form"),
+    step("Periksa hasil", "Buka tautan timestamp atau sumber. Di Lab Data dan Debat Bukti, kirim jawabanmu untuk mendapat masukan.", ".studio-output, .studio-chart"),
+    step("Susun bacaan kelompok", "Tambahkan preprint, pilih siapa yang membacanya, dan bandingkan beberapa abstrak.", ".studio-paper-list"),
   ],
   "chat": [
     step("Ngobrol dengan Momo", "Tulis pertanyaan atau pertanyaan lanjutan. Momo memakai konteks percakapan ini.", "textarea:not([disabled]), [contenteditable=true]"),
@@ -127,6 +141,7 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
   "missions": [
     step("Rancang misi", "Tentukan tujuan, pilih materi, lalu tinjau sebelum Momo menyusun jalur belajarmu.", ".mission-steps"),
     step("Pilih tujuan", "Pilih contoh tujuan atau tulis targetmu sendiri.", ".mission-goals"),
+    step("Tambahkan sumber", "Aktifkan Misi adaptif dan pilih durasi untuk menyertakan bacaan dan video publik.", ".mission-adaptive-toggle"),
     step("Pantau progres", "Lihat jumlah bab yang sudah selesai dan buka bab yang tersedia.", ".mission-map"),
     step("Cek pemahaman", "Selesaikan latihan dari Momo untuk membuka bab berikutnya.", ".mission-lesson .flow-actions"),
   ],
