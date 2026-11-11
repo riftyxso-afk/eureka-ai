@@ -264,6 +264,7 @@ export interface AiChatOptions {
    * mendukungnya. Bila provider menolak gambar, dicoba ulang tanpa gambar.
    */
   visionImage?: { dataUrl: string; filename: string } | null;
+  requireVision?: boolean;
   /** Riwayat label lama: dulu membedakan rantai chat vs catatan. Kini tidak mengubah provider (semua teks → Juan Router), dipertahankan untuk kompatibilitas pemanggil. */
   forChat?: boolean;
   reasoning?: boolean;
@@ -439,6 +440,7 @@ export interface AiChatStreamOptions extends AiChatOptions {
    * ulang teks saja (dengan catatan kecil bahwa gambar tak terbaca).
    */
   visionImage?: { dataUrl: string; filename: string } | null;
+  requireVision?: boolean;
 }
 
 /**
@@ -599,7 +601,7 @@ export async function aiChatStream(
     catch (error) {
       options.signal?.throwIfAborted();
       // Do not spend another full chain on rate limits or a slow vision request.
-      if (!options.visionImage || exposed || visionRejected !== providers.length) throw error;
+      if (!options.visionImage || options.requireVision || exposed || visionRejected !== providers.length) throw error;
       return await run(false);
     }
   } catch (error) {

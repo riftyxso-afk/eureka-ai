@@ -2,6 +2,7 @@
 
 
 import Image from "next/image";
+import StudyArt, { type StudyArtName } from "@/components/dashboard/StudyArt";
 import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -45,6 +46,11 @@ const navigation = [
   { group: "Akun", label: "Profil", href: BASE + "/profil", icon: User },
   { group: "Akun", label: "Paket Pro", href: BASE + "/pricing", icon: Crown },
 ];
+const studyNavigationArt: Partial<Record<string, StudyArtName>> = {
+  [BASE + "/misi"]: "map",
+  [BASE + "/teman"]: "friends",
+  [BASE + "/pengaturan"]: "gear",
+};
 const navigationGroups = ["Utama", "Belajar", "Progres", "Akun"];
 
 export function V2MenuArt({ index }: { index: number }) {
@@ -169,10 +175,12 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
             {group.items.map(item => {
               const locked = item.premium && !planLoading && !isPremium;
               const Icon = item.icon;
+              const studyArt = studyNavigationArt[item.href];
               const active = item.href === BASE ? pathname === BASE
                 : !item.href.includes("#") && (pathname === item.href || pathname.startsWith(item.href + "/"));
               return <Link key={item.href} href={item.href} onClick={follow} aria-current={active ? "page" : undefined}>
-                <span className="v2-menu-art" aria-hidden="true"><Icon size="100%" trigger="parent" color={item.color ?? "#8253d4"} /></span><span>{item.label}</span>
+                <span className="v2-menu-art" aria-hidden="true">{studyArt ? <StudyArt name={studyArt} /> : <Icon size="100%" trigger="parent" color={item.color ?? "#8253d4"} />}</span><span>{item.label}</span>
+                {studyArt && <span className="v2-drawer-pro v2-drawer-beta">Beta</span>}
                 {locked && <span className="v2-drawer-pro">Pro</span>}
                 {active && <span className="v2-drawer-active-dot" aria-hidden="true" />}
               </Link>;

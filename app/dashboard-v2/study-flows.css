@@ -34,8 +34,6 @@
   line-height: 1.13;
   overflow-wrap: anywhere;
 }
-.settings-flow .flow-heading h1 { display: flex; align-items: center; gap: 12px; }
-.settings-flow .flow-heading h1 svg { color: var(--flow-accent); flex-shrink: 0; }
 .flow-heading p { margin-top: 8px; color: var(--flow-muted); }
 .flow-layout {
   display: grid;
@@ -55,7 +53,7 @@
 .flow-description { color: var(--flow-muted); font-size: .9rem; line-height: 1.6; }
 .flow-panel h2 + .flow-description { margin-top: 8px; }
 .flow-nav { display: grid; gap: 5px; }
-.flow-nav button, .mission-learning-path button {
+.flow-nav button {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -68,8 +66,8 @@
   font-size: .88rem;
 }
 .flow-nav button span { display: flex; flex: 0 0 auto; }
-.flow-nav button:hover, .mission-learning-path button:not(:disabled):hover { background: var(--flow-soft); }
-.flow-nav button[aria-current], .mission-learning-path button[aria-current] {
+.flow-nav button:hover { background: var(--flow-soft); }
+.flow-nav button[aria-current] {
   color: var(--flow-accent);
   background: var(--flow-selected);
 }
@@ -98,9 +96,9 @@
 .flow-text-action { display: inline-flex; align-items: center; min-height: 44px; color: var(--flow-accent); text-decoration: underline; text-underline-offset: 3px; font-size: .85rem; }
 .flow-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .flow-form { display: grid; gap: 17px; }
-.flow-form label, .mission-chapter-picker { display: grid; gap: 8px; font-size: .9rem; font-weight: 700; min-width: 0; }
+.flow-form label { display: grid; gap: 8px; font-size: .9rem; font-weight: 700; min-width: 0; }
 .flow-form label small { color: var(--flow-muted); font-weight: 500; }
-.flow-form :is(input, select, textarea), .mission-chapter-picker select {
+.flow-form :is(input, select, textarea) {
   display: block;
   width: 100%;
   min-width: 0;
@@ -189,12 +187,7 @@
 .mission-goals button svg { flex-shrink: 0; }
 .mission-goals button[aria-pressed=true] { background: var(--flow-selected); color: var(--flow-accent); }
 .mission-summary-material { max-height: 8rem; overflow: auto; white-space: pre-wrap; }
-.mission-chapters progress { width: 100%; height: 8px; accent-color: var(--flow-accent); margin-block: 6px 12px; }
 .mission-track-heading { font-size: .85rem; font-weight: 700; color: var(--flow-muted); }
-.mission-learning-path { display: grid; gap: 4px; }
-.mission-learning-path button { width: 100%; overflow-wrap: anywhere; }
-.mission-learning-path button > span:first-child { display: grid; place-items: center; flex: 0 0 25px; }
-.mission-chapter-picker { display: none; }
 .mission-lesson .flow-description:first-of-type { margin-bottom: 6px; }
 .mission-lesson > .flow-success { margin-bottom: 12px; }
 .mission-lesson form, .mission-material { margin-top: 20px; }
@@ -218,10 +211,7 @@
     gap: 4px;
   }
   .flow-nav button { flex: 0 0 auto; gap: 7px; padding-inline: 10px; font-size: .82rem; }
-  .mission-learning-path { display: none; }
-  .mission-chapter-picker { display: grid; }
   .mission-manage { min-height: 44px; }
-  .mission-chapters { padding-inline: 4px; }
 }
 @media (max-width: 440px) {
   .settings-themes { grid-template-columns: minmax(0, 1fr); }
@@ -230,8 +220,100 @@
   .theme-preview b { padding: 8px 5px; gap: 4px; }
   .theme-preview > i { height: 23px; }
   .flow-panel { padding: 16px; border-radius: 17px; }
-  .flow-form :is(input, select, textarea), .mission-chapter-picker select { font-size: 16px; }
+  .flow-form :is(input, select, textarea) { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mission-wait-track::after { animation: none; }
+}
+.study-art { flex: 0 0 auto; object-fit: contain; }
+.study-flow-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.study-flow-title small {
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: var(--flow-selected);
+  color: var(--flow-accent);
+  font-size: .72rem;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+.v2-drawer .v2-drawer-beta { color: var(--clay-primary); }
+.mission-map, .mission-lesson { max-width: 760px; margin-inline: auto; }
+.mission-map-heading { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 12px; }
+.mission-map-heading progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--flow-accent);
+}
+.mission-map-path {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: 30px;
+  max-width: 520px;
+  margin: 26px auto 0;
+  padding: 14px 0;
+}
+.mission-map-path::before {
+  position: absolute;
+  z-index: -1;
+  top: 28px;
+  bottom: 28px;
+  left: 50%;
+  content: "";
+  border-left: 3px dashed var(--flow-accent);
+  opacity: .44;
+}
+.mission-map-path li { display: flex; justify-content: center; }
+.mission-map-path li:nth-child(3n + 1) { transform: translateX(-7%); }
+.mission-map-path li:nth-child(3n + 2) { transform: translateX(7%); }
+.mission-map-path button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 350px);
+  padding: 13px 16px;
+  border: 1px solid var(--flow-border);
+  border-radius: 18px;
+  background: var(--flow-soft);
+  text-align: start;
+}
+.mission-map-path button span { flex: 1; min-width: 0; }
+.mission-map-path button small { display: block; color: var(--flow-muted); font-size: .78rem; margin-bottom: 3px; }
+.mission-map-path button strong { display: block; }
+.mission-map-path li[data-state=next] button { border-color: var(--flow-accent); background: var(--flow-selected); }
+.mission-map-path li[data-state=locked] button { opacity: 1; color: var(--flow-muted); }
+.mission-map-path li[data-state=locked] img { filter: grayscale(1); opacity: .65; }
+.mission-back { gap: 7px; margin-bottom: 8px; }
+
+.mission-assessment { display: grid; gap: 16px; margin-top: 24px; }
+.assessment-title { display: flex; align-items: center; gap: 12px; }
+.assessment-presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.assessment-presets button, .assessment-options label {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--flow-border);
+  border-radius: 12px;
+  background: var(--flow-soft);
+  text-align: start;
+}
+.assessment-presets button[aria-pressed=true], .assessment-options label:has(input:checked) {
+  border-color: var(--flow-accent);
+  color: var(--flow-accent);
+  background: var(--flow-selected);
+}
+.assessment-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.assessment-counts > div { display: grid; gap: 8px; }
+.assessment-options { min-width: 0; display: grid; gap: 8px; }
+.assessment-options legend { margin-bottom: 12px; font-weight: 700; }
+.assessment-options label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.assessment-options input { accent-color: var(--flow-accent); }
+.assessment-paper, .assessment-results { display: grid; gap: 8px; }
+.assessment-paper li, .assessment-results li { padding: 12px; border-radius: 12px; background: var(--flow-soft); }
+.assessment-results p { margin-top: 4px; color: var(--flow-muted); }
+.assessment-photo { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.assessment-photo img { width: 96px; height: 96px; object-fit: cover; border-radius: 9px; }
+@media (max-width: 550px) {
+  .mission-map-path button { width: 89%; }
+  .mission-map-path li:nth-child(3n + 1) { transform: translateX(-4%); }
+  .mission-map-path li:nth-child(3n + 2) { transform: translateX(4%); }
 }

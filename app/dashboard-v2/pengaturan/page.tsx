@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, Check, Monitor, Moon, Palette, Settings, Sun, UserRound, Users } from "lucide-react";
+import { ArrowUpRight, Check } from "lucide-react";
+import StudyArt from "@/components/dashboard/StudyArt";
 import Link from "next/link";
 import V2FeaturePage from "@/components/dashboard/V2FeaturePage";
 import StudyFlowNav from "@/components/dashboard/StudyFlowNav";
@@ -9,14 +10,14 @@ import { useTheme } from "@/context/ThemeContext";
 import "../study-flows.css";
 
 const sections = [
-  { id: "appearance", label: "Tampilan", icon: <Palette size={18} /> },
-  { id: "account", label: "Akun", icon: <UserRound size={18} /> },
+  { id: "appearance", label: "Tampilan", icon: <StudyArt name="palette" /> },
+  { id: "account", label: "Akun", icon: <StudyArt name="profile" /> },
 ] as const;
 
 const themes = [
-  { id: "light", label: "Terang", icon: <Sun size={17} /> },
-  { id: "dark", label: "Gelap", icon: <Moon size={17} /> },
-  { id: "system", label: "Ikuti perangkat", icon: <Monitor size={17} /> },
+  { id: "light", label: "Terang", icon: <StudyArt name="sun" size={24} /> },
+  { id: "dark", label: "Gelap", icon: <StudyArt name="moon" size={24} /> },
+  { id: "system", label: "Ikuti perangkat", icon: <StudyArt name="system" size={24} /> },
 ] as const;
 
 export default function SettingsPage() {
@@ -25,7 +26,7 @@ export default function SettingsPage() {
   return (
     <V2FeaturePage title="Pengaturan" art={10} guide="settings">
       <main className="study-flow settings-flow">
-        <header className="flow-heading"><h1><Settings size={28} aria-hidden="true" /> Pengaturan</h1></header>
+        <header className="flow-heading"><h1 className="study-flow-title"><StudyArt name="gear" size={46} /><span>Pengaturan</span><small>Beta</small></h1></header>
         <div className="flow-layout">
           <StudyFlowNav label="Kategori pengaturan" items={sections} current={section} onChange={setSection} />
           <section className="flow-panel" id="flow-panel" aria-labelledby="settings-title">
@@ -49,10 +50,10 @@ export default function SettingsPage() {
                 <h2 id="settings-title">Akun</h2>
                 <div className="settings-links">
                   <Link href="/dashboard-v2/profil">
-                    <UserRound size={20} aria-hidden="true" /><span><strong>Profil saya</strong><small>Nama, sekolah, dan informasi belajar</small></span><ArrowUpRight size={16} aria-hidden="true" />
+                    <StudyArt name="profile" /><span><strong>Profil saya</strong><small>Nama, sekolah, dan informasi belajar</small></span><ArrowUpRight size={16} aria-hidden="true" />
                   </Link>
                   <Link href="/dashboard-v2/teman">
-                    <Users size={20} aria-hidden="true" /><span><strong>Teman belajar</strong><small>Kelola teman dan bagikan materi</small></span><ArrowUpRight size={16} aria-hidden="true" />
+                    <StudyArt name="friends" /><span><strong>Teman belajar</strong><small>Kelola teman dan bagikan materi</small></span><ArrowUpRight size={16} aria-hidden="true" />
                   </Link>
                 </div>
               </>

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requirePro } from "@/lib/assistant/auth";
 import { aiChatJson } from "@/lib/ai";
 import { getNoteWithChunks } from "@/lib/rag/store";
+import { gradeMissionQuiz, makeMissionQuiz, missionQuizInput } from "@/lib/mission-assessment";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -39,6 +40,19 @@ export async function POST(req: NextRequest) {
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const body = await req.json();
+    if (body.action === "quiz") {
+      const input = missionQuizInput.parse(body);
+      const token = z.string().max(150000).parse(body.token);
+      const state = verify(token, auth.userId);
+      const chapter = state.course.chapters[input.chapterIndex];
+      if (!chapter || input.chapterIndex > state.index) {
+        return NextResponse.json({ error: "Bab ini masih terkunci." }, { status: 403 });
+      }
+      return await makeMissionQuiz(auth.userId, secret(), chapter, input, req.signal);
+    }
+    if (body.action === "gradeQuiz") {
+      return await gradeMissionQuiz(auth.userId, secret(), body, req.signal);
+    }
     if (body.action === "create") {
       const input = z.object({ title: z.string().trim().min(5).max(160), material: z.string().max(16000).default(""), noteId: z.string().max(100).optional() }).parse(body);
       let material = input.material;

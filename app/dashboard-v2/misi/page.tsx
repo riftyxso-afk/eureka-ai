@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, BookOpen, Check, GraduationCap, Lock, Pencil, Target, Trophy } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import V2FeaturePage from "@/components/dashboard/V2FeaturePage";
+import StudyArt, { type StudyArtName } from "@/components/dashboard/StudyArt";
+import MissionAssessmentPanel from "@/components/dashboard/MissionAssessmentPanel";
 import { useDashboardNotes } from "@/components/dashboard/useDashboardNotes";
 import MarkdownView from "@/components/asisten/MarkdownView";
 import { apiFetch } from "@/lib/apiClient";
@@ -22,11 +24,11 @@ type Course = {
 };
 
 const setupSteps = ["Tujuan", "Materi", "Tinjau"] as const;
-const goals = [
-  { title: "Persiapan ulangan", icon: Pencil },
-  { title: "Latihan UTBK", icon: Target },
-  { title: "Persiapan SNBP", icon: GraduationCap },
-  { title: "Kejar IPK", icon: Trophy },
+const goals: { title: string; art: StudyArtName }[] = [
+  { title: "Persiapan ulangan", art: "notebook" },
+  { title: "Latihan UTBK", art: "target" },
+  { title: "Persiapan SNBP", art: "graduation" },
+  { title: "Kejar IPK", art: "trophy" },
 ];
 
 export default function Page() {
@@ -34,8 +36,8 @@ export default function Page() {
   const [course, setCourse] = useState<Course | null>(null);
   const [editing, setEditing] = useState(false);
   const [step, setStep] = useState(0);
-  const [selected, setSelected] = useState(0);
-  const [practice, setPractice] = useState(false);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [view, setView] = useState<"lesson" | "practice" | "assessment">("lesson");
   const [title, setTitle] = useState("");
   const [material, setMaterial] = useState("");
   const [noteId, setNoteId] = useState("");
@@ -47,7 +49,7 @@ export default function Page() {
   useEffect(() => {
     if (shouldFocus.current) panel.current?.focus();
     shouldFocus.current = false;
-  }, [step, editing, selected, practice, busy, course]);
+  }, [step, editing, selected, view, busy, course]);
 
   const requestRef = useRef<AbortController | null>(null);
   const setup = !course || editing;
@@ -60,7 +62,6 @@ export default function Page() {
         const value: Course = JSON.parse(saved);
         if (value.token && value.chapters?.length) {
           setCourse(value);
-          setSelected(Math.min(value.index, value.chapters.length - 1));
         }
       }
     } catch {
@@ -91,8 +92,9 @@ export default function Page() {
       if (request.signal.aborted) return;
       shouldFocus.current = true;
       setCourse(data);
-      setSelected(Math.min(data.index, data.chapters.length - 1));
-      setPractice(action === "answer" && data.index === course?.index);
+      const sameChapter = action === "answer" && data.index === course?.index;
+      setSelected(sameChapter ? data.index : null);
+      setView(sameChapter ? "practice" : "lesson");
       setEditing(false);
       setAnswer("");
       try {
@@ -110,10 +112,10 @@ export default function Page() {
     }
   }
 
-  function changeChapter(index: number) {
-    if (index !== selected || practice) shouldFocus.current = true;
+  function changeChapter(index: number | null) {
+    shouldFocus.current = true;
     setSelected(index);
-    setPractice(false);
+    setView("lesson");
     setError("");
   }
 
@@ -127,13 +129,18 @@ export default function Page() {
     setError("");
   }
 
+  function showView(next: typeof view) {
+    shouldFocus.current = true;
+    setView(next);
+  }
+
   const noteTitle = notes.find(note => note.id === noteId)?.title;
 
   return (
     <V2FeaturePage title="Misi belajar" art={3} guide="missions">
       <main className="study-flow mission-flow">
         <header className="flow-heading">
-          <h1>{setup ? "Misi belajar" : course.title}</h1>
+          <h1 className="study-flow-title"><StudyArt name="map" size={46} /><span>{setup ? "Misi belajar" : course.title}</span><small>Beta</small></h1>
           {setup && <p>Susun jalur belajar bersama Momo, satu bab pada satu waktu.</p>}
         </header>
 
@@ -163,8 +170,8 @@ export default function Page() {
                   {step === 0 && <>
                     <h2>Apa target belajarmu?</h2>
                     <div className="mission-goals">
-                      {goals.map(({ title: goal, icon: Icon }) => (
-                        <button type="button" key={goal} aria-pressed={title === goal} onClick={() => setTitle(goal)}><Icon size={17} aria-hidden="true" />{goal}</button>
+                      {goals.map(({ title: goal, art }) => (
+                        <button type="button" key={goal} aria-pressed={title === goal} onClick={() => setTitle(goal)}><StudyArt name={art} />{goal}</button>
                       ))}
                     </div>
                     <label>Tujuan belajarmu
@@ -207,38 +214,45 @@ export default function Page() {
             )}
           </div>
         ) : (
-          <div className="flow-layout mission-layout">
-            <aside className="mission-chapters">
-              <p className="mission-track-heading">{course.index} dari {course.chapters.length} bab selesai</p>
-              <progress value={course.index} max={course.chapters.length} aria-label="Progres misi" />
-              <ol className="mission-learning-path">
-                {course.chapters.map((chapter, index) => (
-                  <li key={index}>
-                    <button type="button" aria-current={index === selected ? "step" : undefined} disabled={index > course.index || !!busy} onClick={() => changeChapter(index)}>
-                      <span aria-hidden="true">{index < course.index ? <Check size={16} /> : index > course.index ? <Lock size={15} /> : index + 1}</span>
-                      {chapter.title}
-                      {index > course.index && <span className="sr-only">Terkunci</span>}
-                    </button>
-                  </li>
-                ))}
+          selected === null ? (
+            <section className="flow-panel mission-map" ref={panel} tabIndex={-1} aria-labelledby="mission-map-title">
+              <header className="mission-map-heading">
+                <div>
+                  <h2 id="mission-map-title">Peta misi</h2>
+                  <p className="mission-track-heading">{course.index} dari {course.chapters.length} bab selesai</p>
+                  <progress value={course.index} max={course.chapters.length} aria-label="Progres misi" />
+                </div>
+                <button className="flow-text-action mission-manage" type="button" onClick={startNewMission}>Buat misi baru</button>
+              </header>
+              {course.index === course.chapters.length && <p className="flow-success" role="status">Semua bab misi selesai.</p>}
+              {course.feedback && <div className="mission-feedback"><strong>Masukan terakhir dari Momo</strong><p>{course.feedback}</p></div>}
+              {error && <p className="flow-error" role="alert">{error}</p>}
+              <ol className="mission-map-path">
+                {course.chapters.map((chapter, index) => {
+                  const state = index < course.index ? "done" : index === course.index ? "next" : "locked";
+                  return (
+                    <li key={index} data-state={state}>
+                      <button type="button" disabled={state === "locked"} onClick={() => changeChapter(index)}>
+                        <StudyArt name={state === "done" ? "trophy" : state === "next" ? "target" : "notebook"} size={45} />
+                        <span><small>Bab {index + 1} · {state === "done" ? "Selesai" : state === "next" ? "Siap dibuka" : "Terkunci"}</small><strong>{chapter.title}</strong></span>
+                        {state === "next" && <ArrowRight size={17} aria-hidden="true" />}
+                      </button>
+                    </li>
+                  );
+                })}
               </ol>
-              <label className="mission-chapter-picker">Buka bab
-                <select value={selected} disabled={!!busy} onChange={event => changeChapter(Number(event.target.value))}>
-                  {course.chapters.map((chapter, index) => (
-                    <option key={index} value={index} disabled={index > course.index}>{index + 1}. {chapter.title}{index > course.index ? " (terkunci)" : ""}</option>
-                  ))}
-                </select>
-              </label>
-              <button className="flow-text-action mission-manage" type="button" disabled={!!busy} onClick={startNewMission}>Buat misi baru</button>
-            </aside>
+            </section>
+          ) : (
             <section className="flow-panel mission-lesson" ref={panel} tabIndex={-1} aria-label="Bab misi" aria-busy={busy === "answer"}>
-              {course.index === course.chapters.length && <p className="flow-success" role="status"><Check size={17} /> Semua bab misi selesai.</p>}
+              <button className="flow-text-action mission-back" type="button" disabled={!!busy} onClick={() => changeChapter(null)}><ArrowLeft size={16} /> Peta misi</button>
               <p className="flow-description">Bab {selected + 1} dari {course.chapters.length}</p>
               <h2>{course.chapters[selected]?.title}</h2>
-              {selected === Math.min(course.index, course.chapters.length - 1) && course.feedback && (
+              {view === "practice" && course.feedback && (
                 <div className="mission-feedback"><strong>Masukan terakhir dari Momo</strong><p>{course.feedback}</p></div>
               )}
-              {practice && selected === course.index ? (
+              {view === "assessment" ? (
+                <MissionAssessmentPanel key={selected} token={course.token} chapterIndex={selected} onBack={() => showView("lesson")} />
+              ) : view === "practice" && selected === course.index ? (
                 <form className="flow-form" onSubmit={event => { event.preventDefault(); void submit("answer"); }}>
                   <h3>Latihan pemahaman</h3>
                   <p>{course.question}</p>
@@ -248,20 +262,22 @@ export default function Page() {
                   </label>
                   {busy === "answer" && <p className="mission-answer-wait" role="status">Momo sedang meninjau jawabanmu <span className="mission-wait-track" aria-hidden="true" /></p>}
                   <div className="flow-actions">
-                    <button className="flow-button secondary" disabled={!!busy} type="button" onClick={() => { shouldFocus.current = true; setPractice(false); }}><BookOpen size={16} /> Baca materi</button>
+                    <button className="flow-button secondary" disabled={!!busy} type="button" onClick={() => showView("lesson")}><StudyArt name="notebook" size={24} /> Baca materi</button>
                     <button className="flow-button" disabled={!!busy || answer.trim().length < 3} type="submit">Kirim jawaban</button>
                   </div>
                 </form>
               ) : (
                 <>
                   <div className="mission-material"><MarkdownView content={course.chapters[selected]?.material || ""} /></div>
-                  {selected === course.index && <div className="flow-actions"><button className="flow-button" type="button" onClick={() => { shouldFocus.current = true; setPractice(true); }}>Mulai latihan <ArrowRight size={16} /></button></div>}
-                  {selected < Math.min(course.index, course.chapters.length - 1) && <div className="flow-actions"><button className="flow-button" type="button" onClick={() => changeChapter(selected + 1)}>Bab berikutnya <ArrowRight size={16} /></button></div>}
+                  <div className="flow-actions">
+                    <button className="flow-button secondary" type="button" onClick={() => showView("assessment")}><StudyArt name="target" size={24} /> Uji Pemahaman</button>
+                    {selected === course.index && <button className="flow-button" type="button" onClick={() => showView("practice")}>Latihan dengan Momo <ArrowRight size={16} /></button>}
+                  </div>
                 </>
               )}
               {error && <p className="flow-error" role="alert">{error}</p>}
             </section>
-          </div>
+          )
         )}
       </main>
     </V2FeaturePage>

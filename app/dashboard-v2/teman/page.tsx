@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Inbox, Mail, Search, Send, Users } from "lucide-react";
+import StudyArt from "@/components/dashboard/StudyArt";
 import V2FeaturePage from "@/components/dashboard/V2FeaturePage";
 import FriendsDirectory from "@/components/dashboard/FriendsDirectory";
 import FriendSharing from "@/components/dashboard/FriendSharing";
@@ -9,11 +9,11 @@ import StudyFlowNav from "@/components/dashboard/StudyFlowNav";
 import "../study-flows.css";
 
 const sections = [
-  { id: "list", label: "Daftar teman", icon: <Users size={18} /> },
-  { id: "search", label: "Cari teman", icon: <Search size={18} /> },
-  { id: "requests", label: "Undangan", icon: <Mail size={18} /> },
-  { id: "share", label: "Kirim materi", icon: <Send size={18} /> },
-  { id: "inbox", label: "Kiriman masuk", icon: <Inbox size={18} /> },
+  { id: "list", label: "Daftar teman", icon: <StudyArt name="friends" /> },
+  { id: "search", label: "Cari teman", icon: <StudyArt name="search" /> },
+  { id: "requests", label: "Undangan", icon: <StudyArt name="invite" /> },
+  { id: "share", label: "Kirim materi", icon: <StudyArt name="send" /> },
+  { id: "inbox", label: "Kiriman masuk", icon: <StudyArt name="inbox" /> },
 ] as const;
 
 export default function Page() {
@@ -37,14 +37,14 @@ export default function Page() {
     <V2FeaturePage title="Teman belajar" art={10} guide="friends">
       <main className="study-flow friends-flow">
         <header className="flow-heading">
-          <h1>Teman belajar</h1>
+          <h1 className="study-flow-title"><StudyArt name="friends" size={46} /><span>Teman belajar</span><small>Beta</small></h1>
           <p>Temukan teman dan tukar materi belajar.</p>
         </header>
         <div className="flow-layout">
           <StudyFlowNav label="Menu teman belajar" items={sections} current={section} onChange={navigate} />
           <section className="flow-panel" id="flow-panel" aria-labelledby="friends-title">
             <h2 id="friends-title" ref={heading} tabIndex={-1}>{sections.find((item) => item.id === section)?.label}</h2>
-            {section === "list" && <button className="flow-button" type="button" onClick={() => navigate("search")}><Search size={17} /> Cari teman</button>}
+            {section === "list" && <button className="flow-button" type="button" onClick={() => navigate("search")}><StudyArt name="search" size={24} /> Cari teman</button>}
             <div hidden={sharing}>
               <FriendsDirectory section={sharing ? "list" : section} />
             </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Inbox, Send } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import StudyArt from "@/components/dashboard/StudyArt";
 import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
@@ -103,7 +104,7 @@ export default function FriendSharing({
       <ul className="flow-inbox">
         {directory.items.map(entry => (
           <li className="flow-list-row" key={entry.id}>
-            <Inbox size={20} aria-hidden="true" />
+            <StudyArt name="inbox" />
             <div><strong>{entry.title}</strong><p>{entry.message}</p></div>
             <Link href={entry.link} className="flow-button secondary">Buka materi <ArrowUpRight size={15} /></Link>
           </li>
@@ -131,7 +132,7 @@ export default function FriendSharing({
           {sendError && <p className="flow-error" role="alert">{sendError}</p>}
           <div className="flow-actions">
             <button className="flow-button secondary" type="button" disabled={busy} onClick={() => setReview(false)}>Kembali</button>
-            <button className="flow-button" disabled={busy} type="submit"><Send size={16} /> {busy ? "Mengirim..." : "Kirim materi"}</button>
+            <button className="flow-button" disabled={busy} type="submit"><StudyArt name="send" size={24} /> {busy ? "Mengirim..." : "Kirim materi"}</button>
           </div>
         </>
       ) : (

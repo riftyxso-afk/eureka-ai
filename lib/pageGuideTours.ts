@@ -127,7 +127,7 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
   "missions": [
     step("Rancang misi", "Tentukan tujuan, pilih materi, lalu tinjau sebelum Momo menyusun jalur belajarmu.", ".mission-steps"),
     step("Pilih tujuan", "Pilih contoh tujuan atau tulis targetmu sendiri.", ".mission-goals"),
-    step("Pantau progres", "Lihat jumlah bab yang sudah selesai dan buka bab yang tersedia.", ".mission-chapters"),
+    step("Pantau progres", "Lihat jumlah bab yang sudah selesai dan buka bab yang tersedia.", ".mission-map"),
     step("Cek pemahaman", "Selesaikan latihan dari Momo untuk membuka bab berikutnya.", ".mission-lesson .flow-actions"),
   ],
   "schedule": [
