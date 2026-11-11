@@ -21,7 +21,6 @@ import {
   LogOut,
   Menu,
   MessageCircle,
-  Moon,
   Music,
   Trophy,
   PanelLeftClose,
@@ -39,7 +38,6 @@ import SidebarIcon from "./SidebarIcon";
 import { logoutUser } from "@/lib/auth";
 import { usePremium } from "@/lib/usePremium";
 import { ReferralPopup } from "@/components/ReferralPopup";
-import { useTheme } from "@/context/ThemeContext";
 import "./sidebar.css";
 
 interface MenuItem {
@@ -111,7 +109,6 @@ export function activeMenuId(pathname: string): string | null {
 export const Sidebar = () => {
   const pathname = usePathname();
   const { isPremium } = usePremium();
-  const { resolved: themeResolved, toggle: toggleTheme } = useTheme();
   const mobileMenu = useRef<HTMLDialogElement>(null);
   const [referralOpen, setReferralOpen] = useState(false);
   const [showMore, setShowMore] = useState(false);
@@ -149,9 +146,7 @@ export const Sidebar = () => {
     return () => desktop.removeEventListener("change", closeOnDesktop);
   }, []);
 
-  const showToast = (msg: string) => {
-    toast.info(msg);
-  };
+
 
   const handleLogout = async () => {
     if (!window.confirm("Yakin ingin keluar dari Eureka.AI?")) return;
@@ -192,9 +187,7 @@ export const Sidebar = () => {
           <button type="button" onClick={() => { if (mobile) mobileMenu.current?.close(); setReferralOpen(true); }} title={compact ? "Bagikan link referral" : undefined} aria-label={compact ? "Bagikan link referral" : undefined} className={`eureka-sidebar-item ${compact ? "is-collapsed" : ""}`}>
             <Share2 size={19} aria-hidden="true" />{!compact && <span>Bagikan referral</span>}
           </button>
-          <button type="button" onClick={() => { toggleTheme(); showToast(themeResolved === "dark" ? "Mode terang diaktifkan" : "Mode gelap diaktifkan"); }} title={compact ? (themeResolved === "dark" ? "Mode terang" : "Mode gelap") : undefined} aria-label={compact ? (themeResolved === "dark" ? "Mode terang" : "Mode gelap") : undefined} className={`eureka-sidebar-item ${compact ? "is-collapsed" : ""}`}>
-            {themeResolved === "dark" ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}{!compact && <span>{themeResolved === "dark" ? "Mode terang" : "Mode gelap"}</span>}
-          </button>
+          <SidebarItem icon={Sun} label="Tampilan" href="/dashboard-v2/pengaturan" collapsed={compact} />
           <button type="button" onClick={handleLogout} title={compact ? "Keluar" : undefined} aria-label={compact ? "Keluar" : undefined} className={`eureka-sidebar-item is-danger ${compact ? "is-collapsed" : ""}`}><LogOut size={19} aria-hidden="true" />{!compact && <span>Keluar</span>}</button>
         </div>
         </div>}

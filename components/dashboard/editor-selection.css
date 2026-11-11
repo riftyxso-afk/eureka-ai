@@ -6,3 +6,7 @@
 @media(prefers-reduced-motion:reduce){.esa-flyout,.esa-result,.esa-momo.is-dreaming:before,.esa-dream-paper>i:after,.esa-flow b,.esa-cursor{animation:none}}.esa-flyout.is-keyboard,.esa-flyout.is-keyboard .esa-result{animation:none}
 @media(max-width:500px){.esa-flyout.is-expanded .esa-pill{flex-wrap:nowrap}.esa-flyout.is-expanded .esa-pill button{font-size:10px;padding-inline:5px;gap:4px}.esa-flyout.is-expanded .esa-pill button svg{width:12px;height:12px}.esa-flyout.is-expanded .esa-pill .esa-more{padding-inline:7px}}
 @media(max-width:360px){.esa-flyout.is-expanded .esa-pill button{font-size:9.5px;padding-inline:4px;gap:3px}}
+@media (pointer: coarse), (max-width: 700px) {
+  .esa-flyout .esa-pill { flex-wrap: wrap; }
+  .esa-flyout .esa-pill button { min-height: 44px; }
+}

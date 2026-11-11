@@ -44,7 +44,6 @@ import ArtifactCanvas from "@/components/asisten/ArtifactCanvas";
 import { VideoViewOverlay } from "@/components/video/VideoViewOverlay";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
-import ThemeSwitch from "@/components/ui/ThemeSwitch";
 import { useI18n } from "@/context/LocaleContext";
 import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
 import { isDashboardV2 } from "@/lib/v2Navigation";
@@ -310,7 +309,7 @@ export default function ChatPage() {
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
-                  <ThemeSwitch /><PageTutorial guideId="chat" />
+                  <PageTutorial guideId="chat" />
                   {chat.renderedMessages.length > 0 && (
                     <>
                       {/* Ikon Canvas — ghost minimal dengan badge count kecil

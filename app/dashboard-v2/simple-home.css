@@ -141,3 +141,7 @@
   min-height: auto;
   padding-block: clamp(44px, 10svh, 96px) 40px;
 }
+/* Document artwork has a real alpha channel; attachment surfaces stay clear. */
+.dv2.dv2-simple .dv2-compose-area { background: transparent; }
+.dv2.dv2-simple .dv2-attachments li { background: transparent; border: 0; }
+.dv2-attachment-logo { background: transparent; }

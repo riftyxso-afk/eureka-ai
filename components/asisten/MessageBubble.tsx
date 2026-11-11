@@ -1,4 +1,5 @@
 "use client";
+import DocumentLogo from "@/components/ui/DocumentLogo";
 
 import { useMemo, useState } from "react";
 import { parseArtifactMessage } from "@/lib/assistant/artifacts";
@@ -8,7 +9,6 @@ import BookMarked from "kubai-icons-react/icons/book-marked";
 import Copy from "kubai-icons-react/icons/copy";
 import FileText from "kubai-icons-react/icons/file-text";
 import Info from "kubai-icons-react/icons/info";
-import Paperclip from "kubai-icons-react/icons/paperclip";
 import Check from "kubai-icons-react/icons/circle-check";
 import RefreshCw from "kubai-icons-react/icons/sync";
 import MarkdownView from "./MarkdownView";
@@ -158,9 +158,9 @@ export default function MessageBubble({
                   </span>
                 )}
                 {message.attachmentName && (
-                  <span className="inline-flex items-center gap-1 rounded-clay-full bg-clay-cream/20 px-2 py-0.5 text-[10.5px] font-extrabold">
-                    <Paperclip trigger="parent" size={11} />
-                    {message.attachmentName.slice(0, 40)}
+                  <span className="document-attachment inline-flex max-w-full items-center gap-2 px-2 py-1 text-xs">
+                    <DocumentLogo name={message.attachmentName} />
+                    <span className="min-w-0 truncate" title={message.attachmentName}>{message.attachmentName}</span>
                   </span>
                 )}
               </div>

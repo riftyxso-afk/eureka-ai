@@ -13,6 +13,7 @@ import "./editor-selection.css";
 type Pick = { from: number; to: number; selected: string; doc: DocumentNode };
 type Result = { text: string; explain: boolean; state: "idle" | "streaming" | "ready" | "error"; error: string };
 const EMPTY: Result = { text: "", explain: false, state: "idle", error: "" };
+const TOUCH_LAYOUT = "(pointer: coarse), (max-width: 700px)";
 const ACTIONS = [
   { name: "Explain", icon: MessageCircleQuestion, prompt: "Jelaskan kutipan ini secara ringkas dan mudah dipahami.", explain: true },
   { name: "Improve", icon: Sparkles, prompt: "Perbaiki kejelasan dan alur teks tanpa mengubah makna." },
@@ -48,6 +49,7 @@ export default function EditorSelectionActions({ editor, noteId, disabled }: { e
   useEffect(() => {
     if (!editor) return;
     let frame = 0;
+    let settle = 0;
     const inspect = () => {
       if (active.current || disabled || closing.current || pointerSelecting.current || !editor.view.dom.contains(document.activeElement)) return;
       const { from, to, empty, $from, $to } = editor.state.selection;
@@ -58,13 +60,20 @@ export default function EditorSelectionActions({ editor, noteId, disabled }: { e
       setPick({ from, to, selected, doc: editor.state.doc }); setExpanded(false); setInstruction(""); setStale(false);
       setResult({ ...EMPTY, error: selected.length > 3000 ? "Pilih maksimal 3.000 karakter." : crossesCells ? "Pilih teks di dalam satu sel tabel." : "" });
     };
-    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(inspect); };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(settle);
+      const inspectNextFrame = () => { frame = requestAnimationFrame(inspect); };
+      // Touch handles can continue changing the selection after pointerup.
+      if (matchMedia(TOUCH_LAYOUT).matches) settle = window.setTimeout(inspectNextFrame, 240);
+      else inspectNextFrame();
+    };
     const pointerDown = (event: PointerEvent) => { if (editor.view.dom.contains(event.target as Node)) { pointerSelecting.current = true; keyboard.current = false; } };
     const pointerUp = () => { if (pointerSelecting.current) { pointerSelecting.current = false; schedule(); } };
     const keyUp = (event: KeyboardEvent) => { if (editor.view.dom.contains(event.target as Node) && (event.shiftKey || ["Shift", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key))) { keyboard.current = true; schedule(); } };
     const changed = () => { if (pick && !pick.doc.eq(editor.state.doc)) setStale(true); };
-    document.addEventListener("pointerdown", pointerDown); document.addEventListener("pointerup", pointerUp); document.addEventListener("keyup", keyUp); editor.on("selectionUpdate", schedule); editor.on("update", changed);
-    return () => { cancelAnimationFrame(frame); document.removeEventListener("pointerdown", pointerDown); document.removeEventListener("pointerup", pointerUp); document.removeEventListener("keyup", keyUp); editor.off("selectionUpdate", schedule); editor.off("update", changed); };
+    document.addEventListener("pointerdown", pointerDown); document.addEventListener("pointerup", pointerUp); document.addEventListener("pointercancel", pointerUp); document.addEventListener("keyup", keyUp); editor.on("selectionUpdate", schedule); editor.on("update", changed);
+    return () => { cancelAnimationFrame(frame); window.clearTimeout(settle); document.removeEventListener("pointerdown", pointerDown); document.removeEventListener("pointerup", pointerUp); document.removeEventListener("pointercancel", pointerUp); document.removeEventListener("keyup", keyUp); editor.off("selectionUpdate", schedule); editor.off("update", changed); };
   }, [editor, disabled, pick]);
 
   useEffect(() => () => { controller.current?.abort(); }, []);
@@ -87,13 +96,26 @@ export default function EditorSelectionActions({ editor, noteId, disabled }: { e
       let start; let end;
       try { start = editor.view.coordsAtPos(pick.from); end = editor.view.coordsAtPos(pick.to); } catch { return; }
       const bounds = flyout.current.getBoundingClientRect();
+      if (matchMedia(TOUCH_LAYOUT).matches) {
+        // Leave the space around both selection handles to the native menu.
+        const bottomDock = Math.max(topEdge + 16, topEdge + height - bounds.height - 20);
+        const topDock = topEdge + 16;
+        const spaceAbove = start.top - topDock;
+        const spaceBelow = bottomDock - end.bottom;
+        setPosition({
+          left: leftEdge + Math.max(12, (width - bounds.width) / 2),
+          top: spaceBelow < 88 && spaceAbove > spaceBelow + bounds.height ? topDock : bottomDock,
+        });
+        return;
+      }
       const below = end.bottom + 8;
       const top = below + bounds.height < topEdge + height - 12 ? below : start.top - bounds.height - 8;
       setPosition({ left: Math.max(leftEdge + 12, Math.min(start.left, leftEdge + width - bounds.width - 12)), top: Math.max(topEdge + 12, Math.min(top, topEdge + height - bounds.height - 12)) });
     };
     place(); const observer = new ResizeObserver(place); observer.observe(flyout.current);
-    window.addEventListener("scroll", place, true); window.addEventListener("resize", place); window.visualViewport?.addEventListener("resize", place);
-    return () => { observer.disconnect(); window.removeEventListener("scroll", place, true); window.removeEventListener("resize", place); window.visualViewport?.removeEventListener("resize", place); };
+    const viewport = window.visualViewport;
+    window.addEventListener("scroll", place, true); window.addEventListener("resize", place); viewport?.addEventListener("resize", place); viewport?.addEventListener("scroll", place);
+    return () => { observer.disconnect(); window.removeEventListener("scroll", place, true); window.removeEventListener("resize", place); viewport?.removeEventListener("resize", place); viewport?.removeEventListener("scroll", place); };
   }, [editor, pick, expanded]);
 
   useLayoutEffect(() => {

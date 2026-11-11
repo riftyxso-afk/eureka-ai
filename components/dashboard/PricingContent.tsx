@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, ChevronDown, CreditCard, History, Loader2, Printer } from "lucide-react";
 import { toast } from "@yusufceng1z/ding-react";
-import ThemeSwitch from "@/components/ui/ThemeSwitch";
 import SlideToConfirm from "@/components/ui/SlideToConfirm";
 import { TIER_PRICES } from "@/lib/paymentPricing";
 import { usePremium } from "@/lib/usePremium";
@@ -365,7 +364,7 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
       />}
       {!v2 && <header className="pro-topbar">
         <Link href="/dashboard-v2" className="pro-brand">eureka!</Link>
-        <ThemeSwitch />
+
       </header>}
       <main className="pro-main">
         {!v2 && <Link href="/dashboard-v2" className="pro-back"><ArrowLeft size={15} />{p.backHome}</Link>}

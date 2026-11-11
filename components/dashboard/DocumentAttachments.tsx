@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import Image from "next/image";
+import DocumentLogo from "@/components/ui/DocumentLogo";
 
 function fileKind(name: string) {
   const extension = name.split(".").pop()?.toLowerCase() ?? "";
@@ -19,7 +19,7 @@ export default function DocumentAttachments({ files, onRemove }: { files: readon
     <ul>{files.map((file, index) => {
       const kind = fileKind(file.name);
       return <li key={`${file.name}-${index}`}>
-        <span className="dv2-attachment-logo" aria-hidden="true"><Image src={`/brands/files/${kind.logo}.svg`} width={32} height={32} alt="" unoptimized /></span>
+        <span className="dv2-attachment-logo" aria-hidden="true"><DocumentLogo name={file.name} /></span>
         <span className="dv2-attachment-info"><strong title={file.name}>{file.name}</strong><small>{kind.label}<span aria-hidden="true"> · </span>{file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB`}</small></span>
         <button type="button" onClick={() => onRemove(index)} aria-label={`Hapus lampiran ${file.name}`} title="Hapus lampiran"><X size={14} /></button>
       </li>;

@@ -35,7 +35,6 @@ import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSideb
 import MomoCompanion, { type MomoMode } from "@/components/asisten/MomoCompanion";
 import Composer from "@/components/asisten/Composer";
 import AiCallModal from "@/components/assistant/AiCallModal";
-import ThemeSwitch from "@/components/ui/ThemeSwitch";
 import { useI18n } from "@/context/LocaleContext";
 
 export default function AssistantHub({ standalone = false }: { standalone?: boolean }) {
@@ -222,7 +221,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
           transition={reduceMotion ? { duration: 0 } : { type: "spring", duration: 0.7, bounce: 0.2 }}>
           <MomoCompanion mode={momoMode} question={launching?.prompt ?? ""} thinking={!!launching} />
         </motion.div>}
-        {standalone && <header className="momo-chat-header">{inV2 && <V2MobileSidebar sessions={chat.sessions} />}<div className="momo-mobile-history"><MobileSessionButton sessions={chat.sessions} onSelect={(id) => router.push(`${chatPath}/${id}`)} /></div><strong>{inV2 ? "Tanya Momo" : "Chat baru"}</strong><ThemeSwitch /><PageTutorial guideId="chat" /><Link href={homePath}>← Dashboard</Link></header>}
+        {standalone && <header className="momo-chat-header">{inV2 && <V2MobileSidebar sessions={chat.sessions} />}<div className="momo-mobile-history"><MobileSessionButton sessions={chat.sessions} onSelect={(id) => router.push(`${chatPath}/${id}`)} /></div><strong>{inV2 ? "Tanya Momo" : "Chat baru"}</strong><PageTutorial guideId="chat" /><Link href={homePath}>← Dashboard</Link></header>}
 
         {/* Minimal Perplexity-style landing */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">

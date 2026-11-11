@@ -29,6 +29,8 @@ import { usePremium } from "@/lib/usePremium";
 
 const BASE = "/dashboard-v2";
 const navigation = [
+  { group: "Akun", label: "Pengaturan", href: BASE + "/pengaturan", icon: User },
+  { group: "Belajar", label: "Teman belajar", href: BASE + "/teman", icon: User },
   { group: "Utama", label: "Beranda", href: BASE, icon: Grid, color: "#e9b13b" },
   { group: "Utama", label: "Catatan", href: BASE + "/catatan", icon: NotebookPen, premium: true },
   { group: "Utama", label: "Tanya Momo", href: BASE + "/tanya-momo", icon: MessageCircle, color: "#f18d5c", premium: true },

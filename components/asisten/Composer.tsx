@@ -1,4 +1,5 @@
 "use client";
+import DocumentLogo from "@/components/ui/DocumentLogo";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -632,7 +633,7 @@ export default function Composer({
         {noteWizardPrompt && <div className="eureka-prompt-wizard"><NoteCreateWizardPanel prompt={noteWizardPrompt} onClose={() => onNoteWizardClose?.()} onStart={(prefs) => onNoteWizardStart?.(prefs)} /></div>}
         {(mentionIds.length > 0 || attachment || attachError || micError || transcribing) && <div className="eureka-prompt-chips">
           {mentionIds.map((id) => <span key={id} className="eureka-prompt-chip">@{notes.find((note) => note.id === id)?.title ?? "Catatan"}<button type="button" aria-label="Hapus catatan" onClick={() => removeMention(id)}>×</button></span>)}
-          {attachment && <span className="eureka-prompt-chip">{attachment.filename}<button type="button" aria-label="Hapus lampiran" onClick={() => setAttachment(null)}>×</button></span>}
+          {attachment && <span className="eureka-prompt-chip document-attachment"><DocumentLogo name={attachment.filename} /><span className="truncate">{attachment.filename}</span><button type="button" aria-label="Hapus lampiran" onClick={() => setAttachment(null)}>×</button></span>}
           {transcribing && <span className="eureka-prompt-chip" role="status">Mentranskripsi suara…</span>}
           {(attachError || micError) && <span className="eureka-prompt-error" role="alert">{attachError || micError}<button type="button" aria-label="Tutup pesan" onClick={() => { setAttachError(null); setMicError(null); }}>×</button></span>}
         </div>}
@@ -686,8 +687,8 @@ export default function Composer({
               );
             })}
             {attachment && (
-              <span className="inline-flex max-w-full items-center gap-1.5 rounded-clay-full border-2 border-clay-primary/40 bg-clay-primary/10 px-3 py-1 text-[12px] font-extrabold text-clay-primary">
-                <Paperclip trigger="parent" size={12} className="shrink-0" />
+              <span className="document-attachment inline-flex max-w-full items-center gap-2 px-2 py-1 text-[12px] font-semibold">
+                <DocumentLogo name={attachment.filename} />
                 <span className="truncate">{attachment.filename}</span>
                 <span className="shrink-0 text-[10px] font-bold text-clay-muted">
                   {formatBytes(

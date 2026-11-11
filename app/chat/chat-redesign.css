@@ -320,3 +320,5 @@
   .dark body:has(.momo-chat-shell, .momo-session),
   .dark :is(.momo-chat-shell, .momo-session) { background: #191919; }
 }
+.eureka-prompt-chip.document-attachment,.dark .eureka-prompt-chip.document-attachment,.document-attachment { background:transparent; border:0; box-shadow:none; color:inherit; }
+.document-attachment { min-width:0; max-width:100%; }
