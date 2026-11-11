@@ -1,3 +1,4 @@
+import Settings from "kubai-icons-react/icons/settings";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -19,7 +20,7 @@ export default function V2FeaturePage({ title, art, guide, children }: {
       <div className="dv2-account">{guide && <PageTutorial guideId={guide} />}</div>
     </header>
     <div className="v2-feature-content">
-      <div className="v2-feature-marker"><V2MenuArt index={art} /><span>{title}</span></div>
+      <div className="v2-feature-marker">{guide === "settings" ? <Settings size={24} /> : <V2MenuArt index={art} />}<span>{title}</span></div>
       {children}
     </div>
   </div>;

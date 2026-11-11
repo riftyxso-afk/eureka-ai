@@ -187,7 +187,7 @@ export const Sidebar = () => {
           <button type="button" onClick={() => { if (mobile) mobileMenu.current?.close(); setReferralOpen(true); }} title={compact ? "Bagikan link referral" : undefined} aria-label={compact ? "Bagikan link referral" : undefined} className={`eureka-sidebar-item ${compact ? "is-collapsed" : ""}`}>
             <Share2 size={19} aria-hidden="true" />{!compact && <span>Bagikan referral</span>}
           </button>
-          <SidebarItem icon={Sun} label="Tampilan" href="/dashboard-v2/pengaturan" collapsed={compact} />
+          <SidebarItem icon={Settings} label="Pengaturan" href="/dashboard-v2/pengaturan" collapsed={compact} />
           <button type="button" onClick={handleLogout} title={compact ? "Keluar" : undefined} aria-label={compact ? "Keluar" : undefined} className={`eureka-sidebar-item is-danger ${compact ? "is-collapsed" : ""}`}><LogOut size={19} aria-hidden="true" />{!compact && <span>Keluar</span>}</button>
         </div>
         </div>}

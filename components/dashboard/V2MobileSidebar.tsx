@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Settings from "kubai-icons-react/icons/settings";
 import Menu from "kubai-icons-react/icons/menu";
 import Search from "kubai-icons-react/icons/search";
 import X from "kubai-icons-react/icons/circle-x";
@@ -29,7 +30,7 @@ import { usePremium } from "@/lib/usePremium";
 
 const BASE = "/dashboard-v2";
 const navigation = [
-  { group: "Akun", label: "Pengaturan", href: BASE + "/pengaturan", icon: User },
+  { group: "Akun", label: "Pengaturan", href: BASE + "/pengaturan", icon: Settings },
   { group: "Belajar", label: "Teman belajar", href: BASE + "/teman", icon: User },
   { group: "Utama", label: "Beranda", href: BASE, icon: Grid, color: "#e9b13b" },
   { group: "Utama", label: "Catatan", href: BASE + "/catatan", icon: NotebookPen, premium: true },
