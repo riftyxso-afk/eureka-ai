@@ -30,7 +30,9 @@
   background: var(--drawer-bg); color: var(--drawer-text);
   box-shadow: 8px 0 32px #00000012; overflow: hidden;
 }
-.v2-mobile-drawer[open] { display: flex; flex-direction: column; animation: v2-drawer-in 200ms cubic-bezier(.23,1,.32,1) both; }
+.v2-mobile-drawer[open] { display: flex; flex-direction: column; animation: v2-drawer-in 280ms cubic-bezier(.22,1,.36,1) both; }
+.v2-mobile-drawer[open].is-closing { animation: v2-drawer-out 180ms ease-in both; }
+@keyframes v2-drawer-out { to { transform: translateX(-100%); opacity: 0; } }
 .v2-mobile-drawer::backdrop { background: #0006; }
 html:has(.v2-mobile-drawer[open]) { overflow: hidden; }
 .v2-drawer-heading { display: flex; align-items: flex-start; justify-content: space-between; flex: none; padding: 0 2px 20px 8px; }

@@ -1,6 +1,6 @@
 /**
  * Katalog model AI — modul DATA MURNI (tanpa env/SDK) sehingga aman
- * diimpor komponen client (Model Store UI) maupun server (rantai provider
+ * diimpor komponen client maupun server (rantai provider
  * di lib/ai.ts). SUMBER TUNGGAL daftar tier + metadata tampilan.
  *
  * smartness: 1 = sedikit pintar … 5 = terpintar (badge UI Model Store).
@@ -27,14 +27,9 @@ export interface ModelCatalogEntry {
 }
 
 export const MODEL_CATALOG: ModelCatalogEntry[] = [
-  { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", brand: "DeepSeek", logo: "/images/ai-models/deepseek-official.svg", tier: "fast", smartness: 3, desc: "Model cepat untuk percakapan dan rangkuman.", available: true },
-  { id: "gpt-4o", name: "GPT-4o", brand: "OpenAI", logo: "/images/ai-models/openai-color.svg", tier: "fast", smartness: 4, desc: "Model serbaguna untuk belajar dan percakapan.", available: true },
-  { id: "qwen3.8-max-0902", name: "Qwen 3.8 Max", brand: "Qwen", logo: "/images/ai-models/qwen-official.jpg", tier: "normal", smartness: 4, desc: "Model untuk penjelasan dan analisis.", available: true },
-  { id: "gpt-6.1-terra", name: "GPT-6.1 Terra", brand: "OpenAI", logo: "/images/ai-models/openai-color.svg", tier: "deep", smartness: 5, desc: "Model untuk tugas yang lebih mendalam.", available: true },
-  { id: "claude-haiku-5-5", name: "Claude Haiku 5.5", brand: "Anthropic", logo: "/images/ai-models/claude-color.svg", tier: "normal", smartness: 4, desc: "Belum tersedia untuk key Juan Router saat ini.", available: false },
-  // ── Kilat — cepat & ringan ──────────────────────────────────────────
-  // ── Seimbang — cepat & akurat ───────────────────────────────────────
-  // ── Mendalam — terpintar untuk materi kompleks ──────────────────────
+  { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", brand: "DeepSeek", logo: "/images/ai-models/deepseek-official.svg", tier: "fast", smartness: 4, desc: "Respons cepat untuk belajar dan percakapan.", available: true },
+  { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash", brand: "Google", logo: "/images/ai-models/gemini-color.svg", tier: "normal", smartness: 4, desc: "Penjelasan dan pemahaman materi.", available: true },
+  { id: "glm-5.3-flash", name: "GLM 5.3 Flash", brand: "Z.ai", logo: "/images/ai-models/zhipu-color.svg", tier: "deep", smartness: 4, desc: "Analisis dan latihan terstruktur.", available: true },
 ];
 
 /** Nama tampilan rapi untuk id model apa pun (fallback: id mentah). */
@@ -46,23 +41,14 @@ export function modelDisplayName(id: string | null | undefined): string {
 /** Set id model untuk cek allowlist API. */
 export const MODEL_CATALOG_IDS = new Set(MODEL_CATALOG.map((m) => m.id));
 
-/**
- * Daftar model per mode untuk pengguna FREE — hanya model murah
- * (`premiumOnly` dikecualikan). Urutan katalog = prioritas coba.
- */
+/** Prioritas otomatis per effort. Semua entri tetap menjadi fallback. */
 export const SPEED_MODEL_LISTS: Record<AiSpeedMode, string[]> = {
-  // GPT-4o di depan untuk time-to-first-token tercepat; model lain tetap
-  // menjadi fallback bila provider menolak atau responsnya kosong.
-  fast: ["gpt-4o", "deepseek-v4.1-flash"],
-  normal: ["gpt-4o", "qwen3.8-max-0902", "deepseek-v4.1-flash"],
-  deep: ["gpt-6.1-terra", "qwen3.8-max-0902", "gpt-4o"],
+  fast: ["deepseek-v4.1-flash", "glm-5.3-flash", "gemini-3.8-flash-high"],
+  normal: ["gemini-3.8-flash-high", "deepseek-v4.1-flash", "glm-5.3-flash"],
+  deep: ["glm-5.3-flash", "gemini-3.8-flash-high", "deepseek-v4.1-flash"],
 };
 
-/**
- * Daftar model per mode untuk pengguna PRO — SEMUA model, model pintar
- * (`premiumOnly`) di depan tiap tier karena Pro membayar untuk kualitas
- * terbaik; model murah tetap ikut sebagai cadangan bila yang pintar gagal.
- */
+/** Kompatibilitas pemanggil lama; akses paket diperiksa di route. */
 export const SPEED_MODEL_LISTS_PRO: Record<AiSpeedMode, string[]> = {
   fast: [...SPEED_MODEL_LISTS.fast],
   normal: [...SPEED_MODEL_LISTS.normal],

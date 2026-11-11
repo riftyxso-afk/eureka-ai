@@ -3,7 +3,7 @@
  *
  * ATURAN ROUTING (juan-router-provider-split, 2026-09-04):
  * - SEMUA generate TEKS (chat, catatan, kuis, judul, prompt gambar,
- *   enrichment) → Juan Router utama, fallback darurat OpenRouter.
+ *   enrichment) → tiga model Flash melalui Juan Router.
  * - OpenAgentic → KHUSUS text-to-image (lihat lib/image-gen.ts), TIDAK
  *   pernah dipakai untuk teks.
  * - Embedding & transkripsi → belum tersedia di Juan Router; tetap jalur
@@ -16,8 +16,8 @@
  * Env:
  * - JUANROUTER_API_KEY      (WAJIB untuk semua teks; key router.juan.web.id, awalan sk-…)
  * - JUANROUTER_BASE_URL     (default https://router.juan.web.id/v1)
- * - JUANROUTER_MODEL        (default gemini-3.7-flash-low)
- * - OPENROUTER_API_KEY      (key openrouter.ai, awalan sk-or-…; fallback darurat teks)
+ * - JUANROUTER_MODEL        (dipertahankan untuk konfigurasi lama; teks memakai katalog)
+ * - OPENROUTER_API_KEY      (provider lama untuk embedding/transkripsi bila dipilih)
  * - OPENROUTER_BASE_URL     (default https://openrouter.ai/api/v1)
  * - OPENROUTER_MODEL        (default z-ai/glm-5.2:free)
  * - OPENAGENTIC_API_KEY     (KHUSUS text-to-image; key openagentic.id, awalan sk-…)
@@ -36,9 +36,8 @@ export type AiProvider = "aimurah" | "openai" | "openagentic" | "openrouter" | "
 
 /**
  * Kecepatan jawaban AI yang bisa dipilih user di composer (/home & /chat):
- * - "fast"   → Kilat: glm-5.3-flash, gemini-3.8-flash-high, gemini-3.7-flash-low, nemotron-3.5-lightning
- * - "normal" → Seimbang: gpt-5.6-luna, minimax-m3, hy-4-preview, grok-4.5-high
- * - "deep"   → Mendalam: gpt-5.6-sol, gpt-5.6-terra, claude-opus-5, qwen3.8-max, grok-4.6-xhigh
+ * - Kilat, Seimbang, Mendalam mengatur prioritas dan reasoning effort.
+ * - Model gagal atau lambat dialihkan tanpa mengulang model yang sama.
  *
  * Daftar definitif & metadata (logo, peringkat, deskripsi) ada di
  * lib/modelCatalog.ts (modul data murni, aman diimpor komponen client).
@@ -52,31 +51,8 @@ export {
   SPEED_MODEL_LISTS,
   SPEED_MODEL_LISTS_PRO,
 } from "./modelCatalog";
-import {
-  MODEL_CATALOG,
-  MODEL_CATALOG_IDS,
-  SPEED_MODEL_LISTS,
-  SPEED_MODEL_LISTS_PRO,
-  type AiSpeedMode,
-} from "./modelCatalog";
-import { getAiPremiumContext } from "./aiContext";
+import { SPEED_MODEL_LISTS, type AiSpeedMode } from "./modelCatalog";
 
-/**
- * Model yang mengembalikan reasoning/thinking — disaring saat user mematikan
- * toggle reasoning (dan saat menyusun rantai fallback model terpilih).
- */
-const THINKING_SET = new Set([
-  "deepseek-v4-pro",
-  "deepseek-v4-pro-0813",
-  "qwen3.8-max",
-  "claude-opus-5",
-  "muse-spark-1.2",
-  "gpt-5.6-luna",
-  "gpt-5.6-sol",
-  "gpt-5.6-terra",
-  "grok-4.5-high",
-  "grok-4.6-xhigh",
-]);
 
 /** Model free untuk OpenAgentic & AIMurah (terverifikasi live dari /models OpenAgentic). */
 export const OPENAGENTIC_FREE_MODELS = [
@@ -244,127 +220,28 @@ export function isOpenAICompatible(): boolean {
   return hasAiKey();
 }
 
-/** Peringatan sekali saat AI_FORCE_MODELS diisi tapi diabaikan untuk teks. */
-let forceModelsWarned = false;
-function warnOnceForceModelsIgnored() {
-  if (forceModelsWarned) return;
-  forceModelsWarned = true;
-  console.warn(
-    "[AI] AI_FORCE_MODELS diisi tapi DINONAKTIFKAN untuk teks (juan-router-provider-split): semua teks lewat Juan Router, OpenAgentic hanya text-to-image."
-  );
-}
 
 /**
  * Rantai model yang dicoba berurutan sesuai mode kecepatan.
  * Setiap model di daftar menjadi satu entri terpisah → saat satu model error,
  * loop provider otomatis mencoba model berikutnya (fallback antar model),
- * lalu ke provider fallback (mis. OpenRouter bila key tersedia).
+ * dengan batas tunggu token pertama dan batas jeda selama streaming.
  *
  * Diekspor untuk diagnostik/probe (scripts/) — jangan dipakai untuk request
  * langsung; gunakan aiChat/aiChatStream.
  */
-export function getProviderChain(speedMode: AiSpeedMode = "normal", _forChat: boolean = false, reasoning: boolean = true, preferredModel?: string, premiumOverride?: boolean): ProviderConfig[] {
-  const chain: ProviderConfig[] = [];
-
-  const pushProvider = (
-    baseURL: string,
-    apiKey: string,
-    name: string,
-    models: string[]
-  ) => {
-    for (const model of models) {
-      chain.push({ baseURL, apiKey, name, model, defaultModel: model });
-    }
-  };
-
-  // ── Override via env AI_FORCE_MODELS: DINONAKTIFKAN untuk teks ───────
-  // (juan-router-provider-split, 2026-09-04) Semua generate teks kini WAJIB
-  // lewat Juan Router; OpenAgentic dikhususkan text-to-image (lib/image-gen.ts).
-  // Env & variabel dipertahankan agar mudah dikembalikan — cukup aktifkan lagi
-  // pushProvider di bawah ini bila aturan split dicabut.
-  const forcedModels = (process.env.AI_FORCE_MODELS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (forcedModels.length > 0) {
-    warnOnceForceModelsIgnored();
-  }
-
-  // Mode unified 9Router: hanya 9Router yang aktif, semua provider lain dinonaktifkan (tidak dihapus)
-  // Kecepatan dipetakan ke model spesifik via 9Router untuk latensi optimal (bench: fast 5.7s < deep 8.1s < relay-combo 12s)
-  if (AI_PROVIDER === "9router") {
-    if (!NINE_ROUTER_API_KEY) return chain;
-    const speedModel: Record<AiSpeedMode, string> = {
-      fast: "jr/gemini-3.5-flash-lite",
-      normal: "jr/deepseek-v4-flash",
-      deep: "jr/gemini-3.7-flash-high",
-    };
-    const m = speedModel[speedMode] ?? NINE_ROUTER_MODEL;
-    pushProvider(NINE_ROUTER_BASE_URL, NINE_ROUTER_API_KEY, "9Router", [m]);
-    return chain;
-  }
-
-  const juanKey = JUANROUTER_API_KEY;
-  const openRouterKey = OPENROUTER_API_KEY;
-
-  // SEMUA generate teks (chat, catatan, kuis, judul, prompt gambar,
-  // enrichment) → Juan Router utama + OpenRouter fallback darurat
-  // (juan-router-provider-split). OpenAgentic TIDAK pernah masuk rantai
-  // teks — hanya untuk text-to-image di lib/image-gen.ts.
-  // Parameter _forChat dipertahankan demi kompatibilitas pemanggil, tapi
-  // tidak lagi membedakan provider.
-  if (!juanKey) {
-    console.warn(
-      "[AI] JUANROUTER_API_KEY tidak diisi — konfigurasi AI teks belum lengkap; rantai hanya berisi OpenRouter darurat."
-    );
-  }
-  // Rantai model mengikuti status premium (konteks AsyncLocalStorage dari
-  // titik masuk request): Pro → semua model (pintar di depan per tier);
-  // free → hanya model murah. Tier deep untuk free berisi model murah
-  // terbaik yang tersedia (semua model pintar deep = premiumOnly) →
-  // fallback ke daftar normal-tier free bila kosong.
-  const premium = premiumOverride ?? getAiPremiumContext() === true;
-  const lists = premium ? SPEED_MODEL_LISTS_PRO : SPEED_MODEL_LISTS;
-  let tierModels = lists[speedMode];
-  if (tierModels.length === 0) tierModels = lists.normal;
-  // Jika reasoning OFF, pakai model tanpa thinking di semua tier.
-  // (Probe live 2026-09-05: model baru di katalog TIDAK mengembalikan
-  // reasoning_content — hanya qwen3.8-max & claude-opus-5 yang thinking.)
-  if (reasoning === false) {
-    tierModels = tierModels.filter((m) => !THINKING_SET.has(m));
-    if (tierModels.length === 0) {
-      tierModels = ["gpt-4o", "deepseek-v4.1-flash"];
-    }
-  }
-  // Model spesifik pilihan user (Model Store) → percobaan PERTAMA, disusul
-  // sisa daftar TIER MILIK MODEL ITU (bukan tier mode kecepatan aktif —
-  // mis. pilih Claude Opus 5 lalu gagal → fallback ke model Mendalam lain,
-  // bukan ke model Kilat). Id di luar katalog diabaikan (aman untuk klien
-  // lama / request asing); model premiumOnly tak bisa dipakai free (route
-  // sudah menolak 402 — di sini disaring lagi sebagai pertahanan lapis dua).
-  const preferredEntry =
-    preferredModel && MODEL_CATALOG_IDS.has(preferredModel)
-      ? MODEL_CATALOG.find((m) => m.id === preferredModel)
-      : undefined;
-  const preferred = preferredEntry?.available && (!preferredEntry.premiumOnly || premium) ? preferredEntry.id : "";
-  if (preferred) {
-    const preferredTier = preferredEntry?.tier ?? speedMode;
-    const tierList = lists[preferredTier];
-    const filtered = reasoning === false ? tierList.filter((m) => !THINKING_SET.has(m)) : tierList;
-    tierModels = [preferred, ...filtered.filter((m) => m !== preferred)];
-    if (tierModels.length === 0) {
-      tierModels = [preferred];
-    }
-  }
-  if (juanKey) {
-    pushProvider(JUANROUTER_BASE_URL, juanKey, "JuanRouter", tierModels);
-  }
-  // Fallback darurat: OpenRouter free models — hanya dicapai bila SEMUA
-  // model Juan gagal (429/503/timeout). Bukan pengganti Juan saat key kosong.
-  if (openRouterKey) {
-    pushProvider(OPENROUTER_BASE_URL, openRouterKey, "OpenRouter", [...OPENROUTER_FREE_MODELS]);
-  }
-  return chain;
+export function getProviderChain(speedMode: AiSpeedMode = "normal", _forChat = false, _reasoning = true, _preferredModel?: string, _premiumOverride?: boolean): ProviderConfig[] {
+  void [_forChat, _reasoning, _preferredModel, _premiumOverride];
+  // Effort determines priority; stale clients cannot pin an obsolete model.
+  const models = SPEED_MODEL_LISTS[speedMode] ?? SPEED_MODEL_LISTS.normal;
+  const gateway = AI_PROVIDER === "9router"
+    ? { baseURL: NINE_ROUTER_BASE_URL, apiKey: NINE_ROUTER_API_KEY, name: "9Router" }
+    : { baseURL: JUANROUTER_BASE_URL, apiKey: JUANROUTER_API_KEY, name: "JuanRouter" };
+  if (!gateway.apiKey) return [];
+  return models.map(id => {
+    const model = AI_PROVIDER === "9router" ? "jr/" + id : id;
+    return { ...gateway, model, defaultModel: model };
+  });
 }
 
 /** Config {baseURL, apiKey} provider terpilih untuk SDK openai (embedding/transkripsi). */
@@ -375,6 +252,7 @@ export function getAiApiConfig(): { baseURL: string; apiKey: string } | null {
 
 export interface AiChatOptions {
   system?: string;
+  signal?: AbortSignal;
   user: string;
   json?: boolean;
   maxTokens?: number;
@@ -524,230 +402,15 @@ function noTextProviderError(): Error {
 
 /**
  * Panggil Chat Completions (OpenAI-compatible) → kembalikan teks jawaban.
- * - Retry otomatis untuk error transien (429, 5xx, timeout/putus jaringan);
- * - Fallback darurat ke OpenRouter bila seluruh Juan Router gagal;
+ * - Teks dikumpulkan dari streaming agar memiliki batas tunggu token pertama;
+ * - Model yang gagal dialihkan ke model Flash berikutnya;
  * - Mendukung mode JSON (response_format), dengan retry tanpa response_format
  *   bila provider tidak mendukungnya.
  */
 export async function aiChat(options: AiChatOptions): Promise<string> {
-  const providers = getProviderChain(options.speedMode ?? "normal", !!options.forChat, options.reasoning ?? true, options.model, options.premium);
-  
-  console.log('[AI] aiChat called with options:', {
-    hasSystem: !!options.system,
-    userLength: options.user?.length || 0,
-    maxTokens: options.maxTokens,
-    temperature: options.temperature,
-  });
-  console.log('[AI] Provider chain length:', providers.length);
-  
-  if (providers.length === 0) {
-    console.error('[AI Error] No providers available in chain');
-    throw noTextProviderError();
-  }
-
-  const body: Record<string, unknown> = {
-    stream: false,
-    temperature: options.temperature ?? 0.7,
-    max_tokens: options.maxTokens ?? 2048,
-    messages: [
-      ...(options.system ? [{ role: "system", content: options.system }] : []),
-      {
-        role: "user",
-        content: options.visionImage
-          ? [
-              { type: "text", text: options.user },
-              {
-                type: "image_url",
-                image_url: { url: options.visionImage.dataUrl },
-              },
-            ]
-          : options.user,
-      },
-    ],
-  };
-
-  const doRequest = async (provider: ProviderConfig): Promise<string> => {
-    body.model = provider.model;
-    console.log('[AI] Making request to:', provider.name, provider.baseURL);
-    console.log('[AI] Using model:', provider.model);
-
-    // Bila model mode (fast/deep) tidak dikenal provider (400/404), jatuh
-    // ke model default — sekali coba ulang, lalu lanjut seperti biasa.
-    let triedFallback = false;
-    for (let round = 0; round < 2; round++) {
-      const res = await fetch(`${provider.baseURL}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${provider.apiKey}`,
-          "Content-Type": "application/json",
-          ...(provider.name === "OpenRouter"
-            ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
-            : {}),
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(60_000),
-      });
-
-      console.log('[AI] Response status:', res.status, res.statusText);
-
-      if (
-        !res.ok &&
-        (res.status === 400 || res.status === 404) &&
-        provider.model !== provider.defaultModel &&
-        !triedFallback
-      ) {
-        triedFallback = true;
-        console.warn(
-          `[AI] Model ${provider.model} ditolak ${provider.name} → pakai default ${provider.defaultModel}`
-        );
-        body.model = provider.defaultModel;
-        continue;
-      }
-
-      if (!res.ok) {
-        codesSeen.add(res.status);
-        let detail = "";
-        try {
-          const errText = await res.text();
-          const err = extractJsonObject(errText) as {
-            error?: { message?: string };
-          };
-          detail = err?.error?.message ?? "";
-          console.error('[AI Error] API error details:', err);
-        } catch {
-          // abaikan
-        }
-        throw new Error(
-          `${provider.name} API error ${res.status}${detail ? `: ${detail}` : ""}`
-        );
-      }
-
-      // Sebagian gateway (mis. OpenAgentic) menambahkan sisa SSE seperti
-      // "data: [DONE]" setelah body JSON → parse manual agar tidak gagal.
-      // Beberapa gateway lain (mis. Juan Router) memaksa format SSE walau
-      // diminta stream:false → parse baris `data:` dan gabungkan tokennya.
-      const resText = await res.text();
-      let content = extractContentFromResponse(resText);
-
-      // Model tertentu (deepseek-v4-pro, kimi-k2.7, MiniMax, qwen3.8-max di
-      // Juan Router) TIDAK mengembalikan konten saat stream:false — hanya
-      // chunk usage + [DONE]. Bila respons berformat SSE tapi kosong, retry
-      // sekali dengan stream:true lalu gabungkan delta.content.
-      if ((!content || !content.trim()) && resText.includes("data:")) {
-        console.warn(
-          `[AI] ${provider.model} kosong saat stream:false → retry stream:true`
-        );
-        try {
-          const streamBody = { ...body, stream: true };
-          const sres = await fetch(`${provider.baseURL}/chat/completions`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${provider.apiKey}`,
-              "Content-Type": "application/json",
-              ...(provider.name === "OpenRouter"
-                ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
-                : {}),
-            },
-            body: JSON.stringify(streamBody),
-            signal: AbortSignal.timeout(60_000),
-          });
-          if (sres.ok) {
-            const streamText = await sres.text();
-            content = extractContentFromResponse(streamText);
-          }
-        } catch (e) {
-          console.warn(`[AI] Retry stream ${provider.model} gagal:`, e);
-        }
-      }
-
-      if (typeof content !== "string" || content.trim().length === 0) {
-        console.error('[AI Error] Empty response from API');
-        throw new Error("AI mengembalikan respons kosong.");
-      }
-      console.log('[AI] Response received, length:', content.length);
-      return content;
-    }
-    throw new Error(`${provider.name}: gagal memproses respons.`);
-  };
-
-  const isRetryable = (e: unknown): boolean => {
-    if (e instanceof Error) {
-      if (e.name === "TimeoutError" || e.name === "AbortError") return true;
-      if (/fetch failed|terminated|ECONNRESET|UndiciError/i.test(e.message))
-        return true;
-      const m = e.message.match(/API error (\d{3})/);
-      // 429 (kuota/rate limit) TIDAK di-retry: biasanya kuota harian habis
-      // dengan retry_after panjang — menunggu hanya membuang waktu user.
-      if (m) return ["500", "502", "503", "504"].includes(m[1]);
-    }
-    return false;
-  };
-
-  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-  // Coba tiap provider secara berurutan: utama dulu, lalu fallback (OpenRouter).
-  // Error transien (502/saturasi) ditangani retry di dalam loop attempt.
-  const attemptsPerProvider = 4;
-  const tried: string[] = [];
-  // Kode HTTP yang pernah gagal — dipakai untuk pesan error "server sibuk".
-  const codesSeen = new Set<number>();
-  // Provider pertama yang dicoba — penanda "fallback darurat" saat panggilan
-  // akhirnya dilayani provider lain (mis. Juan → OpenRouter).
-  const firstProviderName = providers[0]?.name ?? "";
-  for (const provider of providers) {
-    tried.push(`${provider.name}/${provider.model}`);
-    const darurat = provider.name !== firstProviderName;
-    let useJsonFormat = Boolean(options.json);
-    for (let attempt = 1; attempt <= attemptsPerProvider; attempt++) {
-      // Thinking models: skip response_format untuk menghindari
-      // model return reasoning_content tanpa JSON content.
-      const isThinkingModel = THINKING_SET.has(provider.model);
-      if (useJsonFormat && !isThinkingModel) body.response_format = { type: "json_object" };
-      else delete body.response_format;
-
-      try {
-        const content = await doRequest(provider);
-        console.log(
-          `[AI] Rute akhir: ${provider.name}/${provider.model}${darurat ? " (FALLBACK DARURAT dari " + firstProviderName + ")" : ""}`
-        );
-        return content;
-      } catch (e) {
-        const retryable = isRetryable(e);
-        if (retryable && attempt < attemptsPerProvider) {
-          // 5xx/timeout → upstream sibuk: tunggu sebentar lalu ulangi
-          await sleep(2_000);
-          continue;
-        }
-        // Gagal (error apa pun, termasuk 401/403 key invalid): coba sekali
-        // tanpa response_format (bila mode JSON), lalu pindah ke provider lain.
-        // Thinking models sudah skip response_format, tidak perlu retry tanpa.
-        if (Boolean(options.json) && useJsonFormat && !THINKING_SET.has(provider.model)) {
-          useJsonFormat = false;
-          try {
-            const content = await doRequest(provider);
-            console.log(
-              `[AI] Rute akhir: ${provider.name}/${provider.model}${darurat ? " (FALLBACK DARURAT dari " + firstProviderName + ")" : ""}`
-            );
-            return content;
-          } catch {
-            // jatuh ke provider berikutnya
-          }
-        }
-        break;
-      }
-    }
-  }
-  // Provider sibuk/kuota habis (429/5xx) → error khusus agar diproses
-  // sebagai "server sedang sibuk" di UI, bukan fallback subtitle mentah.
-  const busyCodes = [...new Set(codesSeen)].filter(
-    (c) => c === 429 || (c >= 500 && c <= 599)
-  );
-  if (busyCodes.length > 0) {
-    throw new AiBusyError(busyCodes);
-  }
-  throw new Error(
-    `Semua provider AI gagal (${tried.join(" → ")}). Coba lagi nanti.`
-  );
+  // Buffered callers can safely restart even after a partial upstream response.
+  const result = await aiChatStream({ ...options, onReset: () => {} });
+  return result.content;
 }
 
 export interface AiStreamMeta {
@@ -764,6 +427,8 @@ export type AiStreamEvent =
 export interface AiChatStreamOptions extends AiChatOptions {
   /** Abort an interactive generation when its caller stops or leaves. */
   signal?: AbortSignal;
+  /** Opt in only when the consumer can discard already emitted text. */
+  onReset?: () => void;
   /** Riwayat percakapan sebelum pesan user saat ini (role user/assistant). */
   history?: { role: "user" | "assistant"; content: string }[];
   /** Panggil callback per kejadian (meta/token/error). */
@@ -781,7 +446,7 @@ export interface AiChatStreamOptions extends AiChatOptions {
  * seperti ChatGPT/Claude.
  *
  * - Body `stream: true`, parse baris `data: {...}` → `choices[0].delta.content`.
- * - Memakai rantai provider yang sama dengan aiChat (Juan Router → OpenRouter darurat).
+ * - Memakai rantai tiga model Flash yang sama dengan aiChat.
  * - Bila stream terputus SEBELUM token pertama dikirim (fetch error / 5xx),
  *   coba ulang ke attempt/provider berikutnya. Bila gugur SETELAH token
  *   mulai mengalir, lemparkan error (token parsial dibuang) agar UI menampilkan
@@ -791,271 +456,155 @@ export async function aiChatStream(
   options: AiChatStreamOptions,
   onEvent?: (event: AiStreamEvent) => void
 ): Promise<{ provider: string; model: string; content: string }> {
-  const emit = (e: AiStreamEvent) => {
-    if (onEvent) onEvent(e);
-    else if (options.onEvent) options.onEvent(e);
-  };
+  const emit = onEvent ?? options.onEvent ?? (() => {});
+  const publishesTokens = Boolean(onEvent ?? options.onEvent);
+  const mode = options.speedMode ?? "normal";
+  const providers = getProviderChain(mode);
+  if (!providers.length) throw noTextProviderError();
+  const effort = options.reasoning === false || mode === "fast" ? "low" : mode === "deep" ? "high" : "medium";
+  const firstTokenMs = mode === "fast" ? 10_000 : mode === "deep" ? 22_000 : 14_000;
+  const codes = new Set<number>();
+  let exposed = false;
+  let visionRejected = 0;
 
-  const providers = getProviderChain(options.speedMode ?? "normal", !!options.forChat, options.reasoning ?? true, options.model, options.premium);
-  if (providers.length === 0) {
-    throw noTextProviderError();
-  }
-
-  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  // 2 percobaan per provider (bukan 3) + timeout 45 detik (bukan 120) agar
-  // user TIDAK menunggu lama saat model down — cepat pindah ke provider
-  // berikutnya / menyerah dengan pesan error yang jelas.
-  const attemptsPerProvider = 2;
-
-  const isRetryable = (e: unknown): boolean => {
-    if (e instanceof Error) {
-      if (e.name === "TimeoutError" || e.name === "AbortError") return true;
-      if (/fetch failed|terminated|ECONNRESET|UndiciError/i.test(e.message))
-        return true;
-      const m = e.message.match(/API error (\d{3})/);
-      // 429 = kuota/rate limit → jangan retry, langsung pindah provider
-      if (m) return ["500", "502", "503", "504"].includes(m[1]);
-    }
-    return false;
-  };
-
-  // Lacak apakah token sudah sempat mengalir — penting untuk fallback vision
-  // yang aman (jangan ulang bila jawaban parsial sudah tampil di UI).
-  let emittedAnyToken = false;
-  const chainEmit = (e: AiStreamEvent) => {
-    if (e.type === "token") emittedAnyToken = true;
-    emit(e);
-  };
-
-  /** Isi pesan user: teks polos, atau array teks+gambar (vision). */
-  const buildUserContent = (withVision: boolean): unknown => {
-    if (withVision && options.visionImage) {
-      return [
-        { type: "text", text: options.user },
-        { type: "image_url", image_url: { url: options.visionImage.dataUrl } },
-      ];
-    }
-    if (options.visionImage && !withVision) {
-      return `${options.user}\n\n[User melampirkan gambar: ${options.visionImage.filename}. Model ini tidak bisa membaca gambar — jawab tanpa gambar, atau minta user menjelaskan isinya.]`;
-    }
-    return options.user;
-  };
-
-  /** Coba seluruh rantai provider (Juan Router → OpenRouter darurat) dengan satu mode konten. */
-  const runChain = async (
-    withVision: boolean
-  ): Promise<{ provider: string; model: string; content: string }> => {
-    const body: Record<string, unknown> = {
-      stream: true,
-      temperature: options.temperature ?? 0.7,
-      max_tokens: options.maxTokens ?? 2048,
-      // Aktifkan thinking hanya jika reasoning true (default true, OFF pakai model non-thinking)
-      ...(options.reasoning === false ? {} : options.speedMode === "fast" ? { reasoning: { effort: "low" }, reasoning_effort: "low" } : {}),
-      messages: [
-        ...(options.system ? [{ role: "system", content: options.system }] : []),
-        ...(options.history ?? []),
-        { role: "user", content: buildUserContent(withVision) },
-      ],
-    };
-
-    const doStream = async (
-      provider: ProviderConfig
-    ): Promise<{ provider: string; model: string; content: string }> => {
-      body.model = provider.model;
-
-      // Bila model mode (fast/deep) tidak dikenal provider (400/404), jatuh
-      // ke model default — sekali coba ulang sebelum pindah provider.
-      for (let round = 0; round < 2; round++) {
-        let res: Response;
-        try {
-          res = await fetch(`${provider.baseURL}/chat/completions`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${provider.apiKey}`,
-              "Content-Type": "application/json",
-              ...(provider.name === "OpenRouter"
-                ? { "X-Title": "Eureka.AI", "HTTP-Referer": "https://eureka-ai.app" }
-                : {}),
-            },
-            body: JSON.stringify(body),
-            signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(45_000)]) : AbortSignal.timeout(45_000),
-          });
-        } catch (e) {
-          if (options.signal?.aborted) throw options.signal.reason;
-          const msg = e instanceof Error ? e.message : "fetch gagal";
-          throw new Error(`[aiChatStream] ${provider.name}: ${msg}`);
-        }
-
-        if (
-          !res.ok &&
-          (res.status === 400 || res.status === 404) &&
-          provider.model !== provider.defaultModel &&
-          round === 0
-        ) {
-          console.warn(
-            `[aiChatStream] Model ${provider.model} ditolak ${provider.name} → pakai default ${provider.defaultModel}`
-          );
-          body.model = provider.defaultModel;
-          continue;
-        }
-
-        if (!res.ok) {
-          let detail = "";
-          try {
-            const errText = await res.text();
-            const err = extractJsonObject(errText) as {
-              error?: { message?: string };
-            };
-            detail = err?.error?.message ?? "";
-          } catch {
-            // abaikan — body bukan JSON
-          }
-          throw new Error(
-            `${provider.name} API error ${res.status}${detail ? `: ${detail}` : ""}`
-          );
-        }
-
-        if (!res.body) {
-          throw new Error(`${provider.name}: respon tanpa body streaming.`);
-        }
-
-        chainEmit({ type: "meta", provider: provider.name, model: provider.model });
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      const tokens: string[] = [];
-      let buffer = "";
-      let emitted = false;
-
-      const handleLine = (line: string): boolean => {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data:")) return false;
-        const payload = trimmed.slice(5).trim();
-        if (!payload || payload === "[DONE]") return false;
-        let parsed: Record<string, unknown>;
-        try {
-          parsed = JSON.parse(payload) as Record<string, unknown>;
-        } catch {
-          return false;
-        }
-        const choice = Array.isArray(parsed.choices)
-          ? (parsed.choices[0] as Record<string, unknown> | undefined)
-          : undefined;
-        const delta = choice?.delta as Record<string, unknown> | undefined;
-        // Real thinking/reasoning dari model (DeepSeek, Claude, dll.) — kirim sebagai thinking event, bukan token jawaban
-        const thinking =
-          (delta?.reasoning_content as string | undefined) ??
-          (delta?.reasoning as string | undefined) ??
-          (choice?.message as Record<string, unknown> | undefined)?.reasoning_content;
-        if (typeof thinking === "string" && thinking.length > 0) {
-          chainEmit({ type: "thinking", text: thinking });
-          return true;
-        }
-        const text = delta?.content;
-        if (typeof text === "string" && text.length > 0) {
-          emitted = true;
-          tokens.push(text);
-          chainEmit({ type: "token", text });
-        }
-        return true;
-      };
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          try {
-            handleLine(line);
-          } catch {
-            // Line malformed — abaikan
-          }
-        }
-      }
-
-        if (emitted) {
-          return {
-            provider: provider.name,
-            model: provider.model,
-            content: tokens.join(""),
-          };
-        }
-        throw new Error(`${provider.name}: stream berakhir tanpa token.`);
-      }
-      // Tidak akan tercapai — setiap iterasi mengembalikan hasil atau melempar.
-      throw new Error(`${provider.name}: stream berakhir tanpa hasil.`);
-    };
-
-    const tried: string[] = [];
-    const firstProviderName = providers[0]?.name ?? "";
+  const run = async (withVision: boolean) => {
     for (const provider of providers) {
-      if (options.signal?.aborted) throw options.signal.reason;
-      tried.push(`${provider.name}/${provider.model}`);
-      for (let attempt = 1; attempt <= attemptsPerProvider; attempt++) {
-        try {
-          const result = await doStream(provider);
-          console.log(
-            "[aiChatStream] selesai:",
-            provider.name,
-            "tokens:",
-            result.content.length,
-            provider.name !== firstProviderName
-              ? `(FALLBACK DARURAT dari ${firstProviderName})`
-              : ""
-          );
-          return result;
-        } catch (e) {
-          if (options.signal?.aborted) throw options.signal.reason;
-          console.warn(
-            `[aiChatStream] ${provider.name} attempt ${attempt} gagal:`,
-            e instanceof Error ? e.message : e
-          );
-          if (attempt >= attemptsPerProvider) break;
-          if (isRetryable(e)) {
-            await sleep(1_500);
-            continue;
-          }
-          break;
-        }
-      }
-    }
-    throw new Error(
-      `Semua provider AI gagal streaming (${tried.join(" → ")}). Coba lagi nanti.`
-    );
-  };
-
-  const errMsg = (e: unknown): string =>
-    e instanceof Error ? e.message : "Terjadi kesalahan.";
-
-  // 1) Ada gambar → coba vision dulu. Bila SEMUA provider menolak gambar
-  //    (dan belum ada token yang mengalir), fallback otomatis ke teks saja.
-  if (options.visionImage) {
-    try {
-      return await runChain(true);
-    } catch (firstErr) {
-      if (emittedAnyToken) {
-        // Jawaban parsial sudah tampil — jangan ulang (hindari duplikat).
-        emit({ type: "error", message: errMsg(firstErr) });
-        throw firstErr;
-      }
+      options.signal?.throwIfAborted();
+      const abort = new AbortController();
+      const signal = options.signal ? AbortSignal.any([options.signal, abort.signal]) : abort.signal;
+      let deadline = setTimeout(() => abort.abort(new DOMException("Model belum mulai menjawab.", "TimeoutError")), firstTokenMs);
+      const overall = setTimeout(() => abort.abort(new DOMException("Generasi melewati batas waktu.", "TimeoutError")), mode === "deep" ? 180_000 : 120_000);
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+      const pieces: string[] = [];
+      let began = false;
+      let completed = false;
+      let finishReason: string | null = null;
+      const touch = () => {
+        clearTimeout(deadline);
+        deadline = setTimeout(() => abort.abort(new DOMException("Aliran jawaban terhenti.", "TimeoutError")), 15_000);
+      };
+      const token = (text: unknown) => {
+        if (typeof text !== "string" || !text) return;
+        // Whitespace and reasoning alone must not keep a stalled model alive.
+        if (!began && !text.trim()) { pieces.push(text); return; }
+        if (!began) { began = true; touch(); }
+        else touch();
+        pieces.push(text);
+        exposed = publishesTokens;
+        emit({ type: "token", text });
+      };
+      const body: Record<string, unknown> = {
+        model: provider.model, stream: true,
+        temperature: options.temperature ?? 0.4,
+        max_tokens: options.maxTokens ?? 2048,
+        reasoning_effort: effort,
+        messages: [
+          ...(options.system ? [{ role: "system", content: options.system }] : []),
+          ...(options.history ?? []),
+          { role: "user", content: withVision && options.visionImage
+            ? [{ type: "text", text: options.user }, { type: "image_url", image_url: { url: options.visionImage.dataUrl } }]
+            : options.visionImage ? `${options.user}\n[Gambar ${options.visionImage.filename} tidak dapat dibaca. Jangan menebak isinya; minta pengguna menjelaskan gambar.]` : options.user },
+        ],
+        ...(options.json ? { response_format: { type: "json_object" } } : {}),
+      };
       try {
-        return await runChain(false);
-      } catch (secondErr) {
-        const msg = `${errMsg(secondErr)} (termasuk mencoba membaca gambar).`;
-        emit({ type: "error", message: msg });
-        throw secondErr;
+        emit({ type: "meta", provider: provider.name, model: provider.model });
+        const request = () => fetch(`${provider.baseURL.replace(/\/$/, "")}/chat/completions`, {
+          method: "POST", headers: { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body), signal,
+        });
+        let response = await request();
+        // Retry only explicit parameter incompatibility, within the same deadline.
+        if (response.status === 400) {
+          const detail = await response.text();
+          if (/response_format|json_object|reasoning_effort/i.test(detail)) {
+            if (/response_format|json_object/i.test(detail)) delete body.response_format;
+            if (/reasoning_effort/i.test(detail)) delete body.reasoning_effort;
+            response = await request();
+          } else {
+            if (withVision && /image|vision|multimodal/i.test(detail)) visionRejected++;
+            throw new Error("AI API error 400");
+          }
+        }
+        if (!response.ok) {
+          codes.add(response.status);
+          await response.body?.cancel();
+          throw new Error(`AI API error ${response.status}`);
+        }
+        if (!response.body) throw new Error("AI mengembalikan respons kosong.");
+        reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        const isJson = response.headers.get("content-type")?.includes("application/json");
+        const line = (raw: string) => {
+          if (!raw.trim().startsWith("data:")) return;
+          const data = raw.trim().slice(5).trim();
+          if (data === "[DONE]") { completed = true; return; }
+          if (!data) return;
+          let chunk;
+          try { chunk = JSON.parse(data); } catch { return; }
+          if (chunk.error) throw new Error("Provider gagal menyelesaikan jawaban.");
+          const choice = chunk.choices?.[0];
+          const delta = choice?.delta ?? choice?.message;
+          const thinking = delta?.reasoning_content ?? delta?.reasoning;
+          if (typeof thinking === "string" && thinking) emit({ type: "thinking", text: thinking });
+          token(delta?.content);
+          if (choice?.finish_reason) { finishReason = choice.finish_reason; completed = true; }
+        };
+        while (!completed) {
+          const { done, value } = await reader.read();
+          if (done) { buffer += decoder.decode(); break; }
+          buffer += decoder.decode(value, { stream: true });
+          if (!isJson) {
+            const lines = buffer.split("\n"); buffer = lines.pop() ?? "";
+            for (const entry of lines) line(entry);
+          }
+        }
+        if (isJson) {
+          const result = JSON.parse(buffer);
+          if (result.error) throw new Error("Provider gagal menyelesaikan jawaban.");
+          token(result.choices?.[0]?.message?.content);
+          finishReason = result.choices?.[0]?.finish_reason ?? null;
+          completed = true;
+        } else if (buffer.trim()) line(buffer);
+        if (!began || !pieces.join("").trim()) throw new Error("AI mengembalikan respons kosong.");
+        if (!completed || finishReason === "content_filter" || finishReason === "tool_calls") throw new Error("Jawaban AI belum lengkap.");
+        const content = pieces.join("");
+        if (options.json) {
+          if (finishReason === "length") throw new Error("JSON AI terpotong.");
+          extractJsonObject(content);
+        }
+        return { provider: provider.name, model: provider.model, content };
+      } catch (error) {
+        options.signal?.throwIfAborted();
+        if (exposed) {
+          // Text/audio consumers cannot silently concatenate a second answer.
+          if (!options.onReset) throw error;
+          options.onReset(); exposed = false;
+        }
+        console.warn(`[AI] Beralih dari ${provider.model}:`, error instanceof Error ? error.message : "upstream gagal");
+      } finally {
+        clearTimeout(deadline); clearTimeout(overall);
+        abort.abort();
+        await reader?.cancel().catch(() => {});
+        reader?.releaseLock();
       }
     }
-  }
-
-  // 2) Tanpa gambar — alur biasa.
+    const busy = [...codes].filter(code => code === 429 || code >= 500);
+    if (busy.length) throw new AiBusyError(busy);
+    throw new Error("Model AI belum dapat menjawab. Silakan coba kembali.");
+  };
   try {
-    return await runChain(false);
-  } catch (e) {
-    emit({ type: "error", message: errMsg(e) });
-    throw e;
+    try { return await run(Boolean(options.visionImage)); }
+    catch (error) {
+      options.signal?.throwIfAborted();
+      // Do not spend another full chain on rate limits or a slow vision request.
+      if (!options.visionImage || exposed || visionRejected !== providers.length) throw error;
+      return await run(false);
+    }
+  } catch (error) {
+    emit({ type: "error", message: error instanceof Error ? error.message : "Generasi AI gagal." });
+    throw error;
   }
 }
 

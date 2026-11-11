@@ -461,6 +461,7 @@ export function useAssistantChat(options: {
       setStreaming({ ...newStreaming(), webStage: input.webSearch ? "preparing" : null });
       setClarification(null);
       parserRef.current = new ArtifactStreamParser();
+      const existingArtifacts = new Set(canvas.artifacts.map(artifact => artifact.id));
 
       // Optimis: tampilkan pesan user + placeholder asisten
       const nowIso = new Date().toISOString();
@@ -507,7 +508,12 @@ export function useAssistantChat(options: {
         },
         (ev) => {
           if (!scopeRef.current.current(targetSessionId, token)) return;
-          if (ev.type === "token") {
+          if (ev.type === "reset") {
+            clearStreamBuffer();
+            parserRef.current = new ArtifactStreamParser();
+            setStreaming(s => ({ ...s, content: "", thinking: "", activity: "thinking" }));
+            setCanvas(c => ({ ...c, streamingId: null, artifacts: c.artifacts.filter(artifact => existingArtifacts.has(artifact.id)) }));
+          } else if (ev.type === "token") {
             // Artifact parser: pisahkan tag <artifact> dari teks chat.
             applyParserEvents(parserRef.current?.push(ev.text) ?? []);
           } else if (ev.type === "activity") {
@@ -593,7 +599,7 @@ export function useAssistantChat(options: {
         setTimeout(() => void refreshSessions(), 4000);
       }
     },
-    [loadMessages, refreshSessions, queueStreamText, flushStreamBuffer, clearStreamBuffer, sessions, applyParserEvents]
+    [loadMessages, refreshSessions, queueStreamText, flushStreamBuffer, clearStreamBuffer, sessions, applyParserEvents, canvas.artifacts]
   );
 
   // ── Kirim via Mode "Eureka Multi Agent" (/api/agents/loop) ──────────────

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import PracticeLoading from "@/components/practice/PracticeLoading";
+import PracticeFeedback from "@/components/practice/PracticeFeedback";
 import { apiFetch } from "@/lib/apiClient";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
@@ -37,6 +39,12 @@ export default function ChatFlashcardModal({
   sessionId: string;
   onClose: () => void;
 }) {
+  const reducedMotion = useReducedMotion();
+  const request = useRef<AbortController | null>(null);
+  const completionPosted = useRef(false);
+  const [finished, setFinished] = useState(false);
+  const [ratings, setRatings] = useState<Record<number, "again" | "known">>({});
+  const [feedback, setFeedback] = useState<{ outcome: "correct" | "wrong"; sequence: number } | null>(null);
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -44,6 +52,13 @@ export default function ChatFlashcardModal({
   const [error, setError] = useState<string | null>(null);
 
   const generate = async () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    completionPosted.current = false;
+    setFinished(false);
+    setRatings({});
+    setFeedback(null);
     setGenerating(true);
     setError(null);
     setIndex(0);
@@ -53,13 +68,19 @@ export default function ChatFlashcardModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, userId: getUserId() }),
+        signal: controller.signal,
       });
       const data = await res.json();
+      if (controller.signal.aborted || request.current !== controller) return;
       if (!res.ok) {
         setError(data.error ?? "Gagal membuat flashcards.");
         return;
       }
-      setCards(data.cards ?? []);
+      if (!Array.isArray(data.cards) || !data.cards.length) {
+        setError("Kartu belum tersedia. Coba buat kartu lagi.");
+        return;
+      }
+      setCards(data.cards.map((item: Flashcard, index: number) => ({ ...item, id: index + 1 })));
       if (Array.isArray(data.cards) && data.cards.length > 0) {
         void postProgress({
           action: "cards_add",
@@ -70,9 +91,9 @@ export default function ChatFlashcardModal({
         });
       }
     } catch {
-      setError("Gagal terhubung ke server.");
+      if (!controller.signal.aborted) setError("Gagal terhubung ke server.");
     } finally {
-      setGenerating(false);
+      if (request.current === controller) setGenerating(false);
     }
   };
 
@@ -86,10 +107,28 @@ export default function ChatFlashcardModal({
       setError(null);
       void generate();
     }
+    return () => request.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, sessionId]);
 
   const card = cards?.[index];
+  const known = cards?.filter(item => ratings[item.id] === "known").length ?? 0;
+  const hard = cards?.filter(item => ratings[item.id] === "again").length ?? 0;
+
+  function finish() {
+    if (completionPosted.current) return;
+    completionPosted.current = true;
+    setFinished(true);
+    void postProgress({ action: "cards_review_all", userId: getUserId(), noteId: "", xp: 10 });
+  }
+
+  function rate(rating: "again" | "known") {
+    if (!card || !flipped || finished) return;
+    setRatings(current => ({ ...current, [card.id]: rating }));
+    setFeedback(current => ({ outcome: rating === "known" ? "correct" : "wrong", sequence: (current?.sequence ?? 0) + 1 }));
+    if (index === cards!.length - 1) finish();
+    else { setIndex(current => current + 1); setFlipped(false); }
+  }
 
   if (!open) return null;
 
@@ -147,38 +186,21 @@ export default function ChatFlashcardModal({
           </div>
         )}
 
-        {!cards && generating && (
-          <div className="space-y-3 sm:space-y-4" aria-live="polite">
-            <div className="[perspective:1400px] overflow-hidden">
-              <motion.div
-                animate={{
-                  x: [90, 0, -90],
-                  rotateY: [0, 180, 180],
-                  opacity: [0, 1, 1, 0],
-                }}
-                transition={{
-                  duration: 2.2,
-                  times: [0, 0.3, 0.7, 1],
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="card-clay flex min-h-[200px] sm:min-h-[220px] flex-col items-center justify-center !p-4 sm:!p-6 text-center"
-              >
-                <div className="h-3 w-20 animate-pulse rounded-full bg-clay-beige" />
-                <div className="mt-4 h-4 w-3/4 animate-pulse rounded-full bg-clay-beige" />
-                <div className="mt-2 h-4 w-1/2 animate-pulse rounded-full bg-clay-beige" />
-                <div className="mt-2 h-4 w-2/3 animate-pulse rounded-full bg-clay-beige" />
-                <div className="mt-5 h-3 w-28 animate-pulse rounded-full bg-clay-beige" />
-              </motion.div>
-            </div>
-            <p className="flex items-center justify-center gap-2 text-center text-xs font-bold text-clay-muted">
-              <Loader2 size={14} className="animate-spin" />
-              AI sedang menyusun kartu hafalan dari percakapanmu...
-            </p>
-          </div>
-        )}
+        {generating && <PracticeLoading kind="flashcards" />}
+        {feedback && !finished && !generating && <PracticeFeedback key={feedback.sequence} outcome={feedback.outcome} correct={known} wrong={hard} selfRated />}
+        {finished && cards && <div>
+          <PracticeFeedback outcome="complete" correct={known} wrong={hard} selfRated ungraded={cards.length - known - hard} />
+          <button type="button" className="btn-clay-primary w-full !min-h-[46px]" onClick={() => {
+            completionPosted.current = false;
+            setFinished(false);
+            setIndex(0);
+            setFlipped(false);
+            setRatings({});
+            setFeedback(null);
+          }}>Ulangi latihan</button>
+        </div>}
 
-        {card && (
+        {card && !generating && !finished && (
           <div className="space-y-3 sm:space-y-4">
             <div className="text-center text-xs font-bold text-clay-muted">
               Kartu {index + 1} dari {cards!.length}
@@ -187,9 +209,19 @@ export default function ChatFlashcardModal({
             {/* Kartu 3D — klik untuk balik */}
             <div className="[perspective:1400px]">
               <motion.div
+                role="button"
+                tabIndex={0}
+                aria-label={flipped ? "Balik kartu ke pertanyaan" : "Balik kartu untuk melihat jawaban"}
+                aria-pressed={flipped}
                 onClick={() => setFlipped((f) => !f)}
+                onKeyDown={event => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setFlipped(value => !value);
+                  }
+                }}
                 animate={{ rotateY: flipped ? 180 : 0 }}
-                transition={{ duration: 0.55, type: "tween", ease: "easeInOut" }}
+                transition={{ duration: reducedMotion ? 0 : 0.28, type: "tween", ease: "easeInOut" }}
                 className="relative flex min-h-[200px] sm:min-h-[220px] cursor-pointer [transform-style:preserve-3d]"
               >
                 {/* Sisi depan: Pertanyaan */}
@@ -221,6 +253,10 @@ export default function ChatFlashcardModal({
               </motion.div>
             </div>
 
+            <div className="practice-card-rating">
+              <button type="button" disabled={!flipped} onClick={() => rate("again")}>Masih belajar</button>
+              <button type="button" disabled={!flipped} onClick={() => rate("known")}>Sudah paham</button>
+            </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
               <button
                 onClick={() => {
@@ -239,14 +275,7 @@ export default function ChatFlashcardModal({
               <button
                 onClick={() => {
                   if (index === cards!.length - 1) {
-                    setIndex(0);
-                    setFlipped(false);
-                    void postProgress({
-                      action: "cards_review_all",
-                      userId: getUserId(),
-                      noteId: "",
-                      xp: 10,
-                    });
+                    finish();
                   } else {
                     setIndex((i) => i + 1);
                     setFlipped(false);
@@ -254,7 +283,7 @@ export default function ChatFlashcardModal({
                 }}
                 className="btn-clay-primary !min-h-[44px] !px-4"
               >
-                {index === cards!.length - 1 ? "Ulangi" : "Berikutnya"}
+                {index === cards!.length - 1 ? "Selesai" : "Berikutnya"}
                 <ChevronRight size={17} className="ml-1" />
               </button>
             </div>

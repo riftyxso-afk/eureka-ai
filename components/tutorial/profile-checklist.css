@@ -1,0 +1,23 @@
+.profile-setup{position:fixed;z-index:35;left:max(18px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));width:min(292px,calc(100vw - 36px));font-family:var(--font-nunito),sans-serif;color:rgb(var(--clay-dark));animation:profile-checklist-in 220ms ease-out both}
+.profile-setup-card{max-height:min(460px,65dvh);overflow-y:auto;padding:17px;border:1px solid rgb(var(--clay-dark)/.09);border-radius:15px;background:rgb(var(--clay-cream));box-shadow:0 8px 36px #0000000c}
+.profile-setup header{display:flex;align-items:center;gap:10px}
+.profile-setup h2{margin:0;font-size:13px;line-height:1.3;font-weight:800;letter-spacing:-.015em}
+.profile-setup header p{margin:4px 0 0;font-size:11px;color:rgb(var(--clay-muted))}
+.profile-setup-symbol{display:grid;place-items:center;width:32px;height:36px;flex:none;color:#5875d1}
+.profile-setup header button{display:grid;place-items:center;width:36px;min-height:40px;flex:none;margin-left:auto;padding:0;border:0;border-radius:8px;background:transparent;color:rgb(var(--clay-muted));cursor:pointer}
+.profile-setup progress{display:block;width:100%;height:4px;margin:15px 0 10px;border:0;border-radius:6px;overflow:hidden;appearance:none;accent-color:#6687df;background:rgb(var(--clay-dark)/.08)}
+.profile-setup progress::-webkit-progress-bar{background:rgb(var(--clay-dark)/.08)}.profile-setup progress::-webkit-progress-value{background:#6687df;border-radius:6px;transition:width 220ms ease}
+.profile-setup ul{display:grid;gap:2px;padding:0;margin:0;list-style:none}
+.profile-setup-item{display:flex;align-items:center;gap:10px;min-height:42px;padding:7px 4px;font-size:12px;line-height:1.4;color:inherit;text-decoration:none;border-radius:8px}
+.profile-setup-item>svg{margin-left:auto;color:rgb(var(--clay-muted))}
+.profile-setup-item:not(.is-done):hover{background:rgb(var(--clay-dark)/.045)}
+.profile-setup-check{display:grid;place-items:center;flex:none;width:17px;height:17px;border:1.5px solid rgb(var(--clay-muted)/.4);border-radius:50%}
+.is-done.profile-setup-item{color:rgb(var(--clay-muted))}.is-done .profile-setup-check{border-color:#549475;background:#549475;color:white}
+.profile-setup-footnote{margin:10px 0 0;font-size:10px;color:rgb(var(--clay-muted))}
+.profile-setup-reopen{display:flex;align-items:center;gap:9px;min-height:44px;padding:9px 13px;border:1px solid rgb(var(--clay-dark)/.1);border-radius:12px;background:rgb(var(--clay-cream));color:inherit;font-size:12px;font-weight:650;box-shadow:0 4px 18px #0000000a;cursor:pointer}
+.profile-setup-fraction{color:rgb(var(--clay-muted));font-size:11px;font-variant-numeric:tabular-nums}
+.profile-setup button:focus-visible,.profile-setup a:focus-visible{outline:2px solid #6e8fe1;outline-offset:2px}
+html:has([data-eureka-tour]) .profile-setup{visibility:hidden}
+@keyframes profile-checklist-in{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){.profile-setup{left:12px;bottom:max(12px,env(safe-area-inset-bottom));width:min(292px,calc(100vw - 24px))}.profile-setup-item{min-height:44px}.profile-setup header button{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.profile-setup{animation:none}.profile-setup progress::-webkit-progress-value{transition:none}}

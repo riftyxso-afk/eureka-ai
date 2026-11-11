@@ -30,7 +30,7 @@ import { usePremium } from "@/lib/usePremium";
 const BASE = "/dashboard-v2";
 const navigation = [
   { group: "Utama", label: "Beranda", href: BASE, icon: Grid, color: "#e9b13b" },
-  { group: "Utama", label: "Koleksi catatan", href: BASE + "#dv2-notes-title", icon: NotebookPen, premium: true },
+  { group: "Utama", label: "Catatan", href: BASE + "/catatan", icon: NotebookPen, premium: true },
   { group: "Utama", label: "Tanya Momo", href: BASE + "/tanya-momo", icon: MessageCircle, color: "#f18d5c", premium: true },
   { group: "Belajar", label: "Mata Pelajaran", href: BASE + "/mata-pelajaran", icon: BookOpen, premium: true },
   { group: "Belajar", label: "Perpustakaan", href: BASE + "/perpustakaan", icon: BookOpen, color: "#e9b13b", premium: true },
@@ -74,12 +74,59 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
     return () => mobile.removeEventListener("change", handleResize);
   }, [desktop]);
 
+  useEffect(() => {
+    // Listen without an invisible overlay that could block links or scrolling.
+    let gesture: { x: number; y: number; opening: boolean } | null = null;
+    const start = (event: TouchEvent) => {
+      if (!window.matchMedia("(max-width: 700px)").matches || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("input, textarea, select, [contenteditable=true], [role=slider]")) return;
+      if (window.getSelection()?.toString()) return;
+      const opening = !dialog.current?.open;
+      if (opening && (touch.clientX > 28 || document.querySelector("dialog[open], [aria-modal=true]"))) return;
+      if (!opening && !dialog.current?.contains(target)) return;
+      gesture = { x: touch.clientX, y: touch.clientY, opening };
+    };
+    const move = (event: TouchEvent) => {
+      if (!gesture || event.touches.length !== 1) { gesture = null; return; }
+      const dx = event.touches[0].clientX - gesture.x;
+      const dy = event.touches[0].clientY - gesture.y;
+      if (Math.abs(dy) > 16 && Math.abs(dy) > Math.abs(dx)) { gesture = null; return; }
+      if (Math.abs(dx) > 16 && Math.abs(dx) > Math.abs(dy) * 1.5 && event.cancelable) event.preventDefault();
+    };
+    const end = (event: TouchEvent) => {
+      if (!gesture) return;
+      const { x, y, opening } = gesture; gesture = null;
+      const touch = event.changedTouches[0];
+      if (!touch || Math.abs(touch.clientY - y) > 60) return;
+      const dx = touch.clientX - x;
+      if (opening && dx >= 64) {
+        dialog.current?.showModal(); setOpen(true);
+      } else if (!opening && dx <= -64) close();
+    };
+    const cancel = () => { gesture = null; };
+    document.addEventListener("touchstart", start, { passive: true });
+    document.addEventListener("touchmove", move, { passive: false });
+    document.addEventListener("touchend", end, { passive: true });
+    document.addEventListener("touchcancel", cancel, { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", start);
+      document.removeEventListener("touchmove", move);
+      document.removeEventListener("touchend", end);
+      document.removeEventListener("touchcancel", cancel);
+    };
+  }, []);
+
   function show() {
     dialog.current?.showModal();
     setOpen(true);
   }
   function close() {
-    dialog.current?.close();
+    const drawer = dialog.current;
+    if (!drawer?.open || drawer.classList.contains("is-closing")) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { drawer.close(); return; }
+    drawer.classList.add("is-closing");
   }
   function follow(event: MouseEvent<HTMLAnchorElement>) {
     if (!event.defaultPrevented && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) close();
@@ -89,7 +136,13 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
     <button type="button" className="v2-mobile-menu-toggle" aria-label="Buka sidebar"
       aria-haspopup="dialog" aria-controls={id} aria-expanded={open} onClick={show}><Menu size={21} /></button>
     <dialog ref={dialog} id={id} className="v2-mobile-drawer" aria-labelledby={id + "-title"}
-      onClose={() => { setOpen(false); setQuery(""); }}
+      onAnimationEnd={event => {
+        if (event.target === event.currentTarget && event.animationName === "v2-drawer-out") {
+          event.currentTarget.classList.remove("is-closing"); event.currentTarget.close();
+        }
+      }}
+      onCancel={event => { event.preventDefault(); close(); }}
+      onClose={() => { dialog.current?.classList.remove("is-closing"); setOpen(false); setQuery(""); }}
       onClick={event => {
         if (event.target !== event.currentTarget) return;
         const { right } = event.currentTarget.getBoundingClientRect();
@@ -104,7 +157,7 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
       </label>
       <nav aria-label="Navigasi Eureka">
         {tabs.length > 0 && <><p className="v2-drawer-label">DALAM CATATAN INI</p>
-          <div className="v2-drawer-branch">{tabs.map(item => <button type="button" key={item.id} aria-pressed={item.active} onClick={() => { close(); item.select(); }}>{item.label}</button>)}</div>
+          <div className="v2-drawer-branch">{tabs.map(item => <button type="button" key={item.id} data-study-tool={item.id} aria-pressed={item.active} onClick={() => { close(); item.select(); }}>{item.label}</button>)}</div>
         </>}
 
         {navigationGroups.map(label => ({ label, items: links.filter(item => item.group === label) })).map(group => group.items.length > 0 &&

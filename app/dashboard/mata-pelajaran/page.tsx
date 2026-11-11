@@ -37,7 +37,7 @@ const COLORS = ["#7041a6", "#30735c", "#a26425", "#376c96"];
 export default function MataPelajaranPage() {
   const inV2 = isDashboardV2(usePathname());
   const home = inV2 ? "/dashboard-v2" : "/dashboard";
-  const library = inV2 ? home + "#dv2-notes-title" : "/dashboard/catatan";
+  const library = inV2 ? "/dashboard-v2/catatan" : "/dashboard/catatan";
   const [subjects, setSubjects] = useState<JourneySubject[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -485,7 +485,7 @@ export default function MataPelajaranPage() {
                           : "Progres kartu belum tersedia"}
                       </span>
                       <Link
-                        href={inV2 ? `${home}?subject=${encodeURIComponent(selected.name)}#dv2-notes-title` : `${library}?subject=${encodeURIComponent(selected.name)}`}
+                        href={`${library}?subject=${encodeURIComponent(selected.name)}`}
                       >
                         Lihat catatan <ArrowRight size={15} />
                       </Link>

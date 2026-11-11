@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
-import { motion } from "framer-motion";
+import PracticeLoading from "@/components/practice/PracticeLoading";
+import PracticeFeedback from "@/components/practice/PracticeFeedback";
 import {
   Check,
   FileText,
@@ -36,34 +37,48 @@ export default function ChatQuizModal({
   sessionId: string;
   onClose: () => void;
 }) {
+  const request = useRef<AbortController | null>(null);
   const [count, setCount] = useState(5);
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [checked, setChecked] = useState<number[]>([]);
+  const [lastChecked, setLastChecked] = useState<number | null>(null);
   const [generating, setGenerating] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const generate = async (c: number = count) => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
     setGenerating(true);
     setError(null);
     setSubmitted(false);
     setAnswers({});
+    setChecked([]);
+    setLastChecked(null);
     try {
       const res = await apiFetch("/api/assistant/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, userId: getUserId(), count: c }),
+        signal: controller.signal,
       });
       const data = await res.json();
+      if (controller.signal.aborted || request.current !== controller) return;
       if (!res.ok) {
         setError(data.error ?? "Gagal membuat kuis.");
         return;
       }
-      setQuestions(data.questions ?? []);
+      if (!Array.isArray(data.questions) || !data.questions.length) {
+        setError("Soal belum tersedia. Coba buat kuis lagi.");
+        return;
+      }
+      setQuestions(data.questions);
     } catch {
-      setError("Gagal terhubung ke server.");
+      if (!controller.signal.aborted) setError("Gagal terhubung ke server.");
     } finally {
-      setGenerating(false);
+      if (request.current === controller) setGenerating(false);
     }
   };
 
@@ -75,16 +90,20 @@ export default function ChatQuizModal({
       setCount(5);
       setQuestions(null);
       setAnswers({});
+      setChecked([]);
+      setLastChecked(null);
       setSubmitted(false);
       setError(null);
-      void generate();
+      void generate(5);
     }
+    return () => request.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, sessionId]);
 
   const score = questions
     ? questions.filter((q) => answers[q.id] === q.answer).length
     : 0;
+  const checkedScore = questions?.filter(q => checked.includes(q.id) && answers[q.id] === q.answer).length ?? 0;
 
   if (!open) return null;
 
@@ -157,57 +176,11 @@ export default function ChatQuizModal({
           </div>
         )}
 
-        {!questions && generating && (
-          <div className="space-y-3 sm:space-y-4" aria-live="polite">
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="rounded-clay-md border-2 border-clay-shadow/40 bg-clay-cream/60 p-3 sm:p-4"
-            >
-              <div className="flex items-center gap-2">
-                <span className="h-4 w-4 animate-pulse rounded-full bg-clay-beige" />
-                <span className="h-3.5 w-2/3 animate-pulse rounded-full bg-clay-beige" />
-              </div>
-              <div className="mt-3 space-y-2">
-                {[0, 1, 2, 3].map((i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      delay: 0.15 + i * 0.12,
-                      duration: 0.3,
-                      ease: "easeOut",
-                    }}
-                    className="flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-clay-shadow/40 bg-clay-cream px-3"
-                  >
-                    <span className="h-6 w-6 animate-pulse rounded-full bg-clay-beige" />
-                    <span
-                      className={`h-3 animate-pulse rounded-full bg-clay-beige ${
-                        i % 2 === 0 ? "w-1/2" : "w-2/5"
-                      }`}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.3, ease: "easeOut" }}
-              className="flex min-h-[46px] sm:min-h-[48px] items-center justify-center gap-2 rounded-clay bg-clay-beige"
-            >
-              <Loader2 size={16} className="animate-spin text-clay-primary" />
-              <span className="text-sm font-extrabold text-clay-muted">
-                AI sedang menyusun {count} soal kuis dari percakapanmu...
-              </span>
-            </motion.div>
-          </div>
-        )}
+        {generating && <PracticeLoading kind="quiz" count={count} />}
 
-        {questions && (
+        {questions && !generating && (
           <div className="space-y-5">
+            {submitted && <PracticeFeedback outcome="complete" correct={score} wrong={questions.length - score} />}
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-clay-dark">
                 {submitted
@@ -219,6 +192,8 @@ export default function ChatQuizModal({
                   // "Ulangi" → kembali ke layar pilih jumlah soal.
                   setQuestions(null);
                   setAnswers({});
+                  setChecked([]);
+                  setLastChecked(null);
                   setSubmitted(false);
                 }}
                 className="btn-clay-ghost !min-h-[34px] !px-3 text-xs"
@@ -230,6 +205,7 @@ export default function ChatQuizModal({
 
             {questions.map((q, qi) => {
               const chosen = answers[q.id];
+              const reviewed = submitted || checked.includes(q.id);
               return (
                 <div
                   key={q.id}
@@ -241,7 +217,7 @@ export default function ChatQuizModal({
                   <div className="space-y-1.5">
                     {q.options.map((opt, oi) => {
                       let cls = "border-clay-shadow/40 hover:border-clay-primary/50";
-                      if (submitted) {
+                      if (reviewed) {
                         if (oi === q.answer) cls = "border-green-400 bg-green-50";
                         else if (chosen === oi) cls = "border-red-300 bg-red-50";
                         else cls = "border-clay-shadow/40 opacity-70";
@@ -251,11 +227,12 @@ export default function ChatQuizModal({
                       return (
                         <button
                           key={oi}
-                          disabled={submitted}
+                          data-result={reviewed ? oi === q.answer ? "correct" : chosen === oi ? "wrong" : undefined : undefined}
+                          disabled={reviewed}
                           onClick={() =>
                             setAnswers((prev) => ({ ...prev, [q.id]: oi }))
                           }
-                          className={`flex w-full items-center gap-2 rounded-xl border-2 bg-clay-cream px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
+                          className={`practice-answer flex w-full items-center gap-2 rounded-xl border-2 bg-clay-cream px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
                         >
                           <span
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${
@@ -268,7 +245,7 @@ export default function ChatQuizModal({
                                     : "bg-sky-200 text-sky-800"
                             }`}
                           >
-                            {submitted && oi === q.answer ? (
+                            {reviewed && oi === q.answer ? (
                               <Check size={13} />
                             ) : (
                               String.fromCharCode(65 + oi)
@@ -279,7 +256,19 @@ export default function ChatQuizModal({
                       );
                     })}
                   </div>
-                  {submitted && q.explanation && (
+                  {!reviewed && <button type="button"
+                    aria-label={`Periksa jawaban soal ${qi + 1}`}
+                    disabled={chosen === undefined}
+                    className="practice-check-answer"
+                    onClick={() => {
+                      if (chosen === undefined) return;
+                      setChecked(current => [...new Set([...current, q.id])]);
+                      setLastChecked(q.id);
+                    }}>Periksa jawaban</button>}
+                  {!submitted && lastChecked === q.id && <PracticeFeedback key={q.id}
+                    outcome={chosen === q.answer ? "correct" : "wrong"}
+                    correct={checkedScore} wrong={checked.length - checkedScore} />}
+                  {reviewed && q.explanation && (
                     <p className="mt-2 flex items-start gap-2 rounded-xl bg-clay-beige px-3 py-2 text-xs font-medium text-clay-dark leading-relaxed">
                       <Lightbulb size={14} className="mt-0.5 shrink-0 text-clay-secondary" />
                       <span>{q.explanation}</span>

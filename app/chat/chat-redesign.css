@@ -311,3 +311,12 @@
   .momo-session .chat-message-copy { width: 44px; height: 44px; }
   .momo-session .prompt-bar__textarea { font-size: 16px; }
 }
+
+@media (max-width: 1023px) {
+  html:has(.momo-chat-shell, .momo-session),
+  body:has(.momo-chat-shell, .momo-session),
+  .momo-chat-shell, .momo-session { background: #fff; }
+  html.dark:has(.momo-chat-shell, .momo-session),
+  .dark body:has(.momo-chat-shell, .momo-session),
+  .dark :is(.momo-chat-shell, .momo-session) { background: #191919; }
+}

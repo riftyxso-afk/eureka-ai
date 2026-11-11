@@ -1,9 +1,9 @@
-.momo-call.is-video-call[open] {
-  --call-bg: #0c172b;
-  --call-ink: #f4f7ff;
-  --call-muted: #bbcae4;
-  --call-control: #1b2c49;
-  --call-hover: #2c4166;
+.momo-call.is-video-call[open][data-provider="lala"] {
+  --call-bg: #fff;
+  --call-ink: #202632;
+  --call-muted: #5c6675;
+  --call-control: #edf0f5;
+  --call-hover: #e0e7f0;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   grid-template-columns: minmax(0, 1fr);
   width: min(1100px, calc(100% - 48px));
@@ -11,6 +11,13 @@
   margin: auto;
   border-radius: 24px;
   box-shadow: 0 24px 80px rgb(6 18 44 / .38);
+}
+.dark .momo-call.is-video-call[open][data-provider="lala"] {
+  --call-bg: #10131a;
+  --call-ink: #f0f3f9;
+  --call-muted: #bac4d2;
+  --call-control: #262c37;
+  --call-hover: #343d4c;
 }
 .momo-call.is-video-call[open]:has(.momo-call-text[data-workspace="true"]) {
   grid-template-rows: auto minmax(0, 1fr) auto auto;
@@ -33,15 +40,15 @@
   min-height: 0;
   margin-inline: clamp(10px, 2vw, 20px);
   overflow: hidden;
-  border-radius: 18px;
-  background: #101c30;
+  border-radius: clamp(28px, 4cqw, 44px);
+  background: transparent;
 }
 
 .momo-call.is-video-call[open] .lala-video-orb {
   position: absolute;
   z-index: 1;
-  top: clamp(16px, 2cqw, 24px);
-  right: clamp(16px, 2cqw, 24px);
+  top: clamp(24px, 3cqw, 36px);
+  right: clamp(24px, 3cqw, 36px);
   width: clamp(84px, 15cqw, 144px);
   pointer-events: none;
 }
@@ -49,25 +56,28 @@
 .lala-video-name {
   position: absolute;
   z-index: 1;
-  top: clamp(12px, 2vw, 20px);
-  left: clamp(12px, 2vw, 20px);
+  top: clamp(24px, 3cqw, 36px);
+  left: clamp(24px, 3cqw, 36px);
   display: grid;
   gap: 2px;
-  max-width: calc(100% - clamp(84px, 15cqw, 144px) - 48px);
+  max-width: calc(100% - clamp(84px, 15cqw, 144px) - 72px);
   padding: 8px 12px;
   border-radius: 12px;
-  background: rgb(8 20 46 / .82);
-  color: #fff;
+  background: var(--call-camera-overlay);
+  color: var(--call-ink);
 }
 .lala-video-name strong { font-size: 14px; }
-.lala-video-name span { color: #d4e2ff; font-size: 12px; }
+.lala-video-name span { color: var(--call-muted); font-size: 12px; }
 
 .lala-video-self {
   position: absolute;
-  inset: 0;
+  inset: clamp(12px, 2cqw, 20px);
   overflow: hidden;
-  background: #101c30;
-  color: #f4f7ff;
+  border: 1px solid var(--call-camera-border);
+  border-radius: clamp(24px, 3.5cqw, 36px);
+  background: var(--call-camera-surface);
+  color: var(--call-ink);
+  box-shadow: 0 6px 20px var(--call-camera-shadow);
 }
 .lala-video-self video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; }
 .lala-video-self video[data-mirrored="true"] { transform: scaleX(-1); }
@@ -78,7 +88,7 @@
   right: 14px;
   padding: 3px 7px;
   border-radius: 7px;
-  background: #0d1b32;
+  background: var(--call-camera-overlay);
   font-size: 11px;
   font-weight: 700;
 }
@@ -93,8 +103,8 @@
   height: 44px;
   border: 0;
   border-radius: 50%;
-  background: rgb(13 27 50 / .82);
-  color: #fff;
+  background: var(--call-camera-overlay);
+  color: var(--call-ink);
 }
 .lala-video-camera-error { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; padding: 24px; text-align: center; }
 .lala-video-camera-error p { max-width: 340px; margin: 0; font-size: 14px; line-height: 1.5; }
@@ -103,17 +113,17 @@
   padding-inline: 12px;
   border: 0;
   background: transparent;
-  color: #d2e2ff;
+  color: var(--call-ink);
   font-weight: 700;
 }
 
 .lala-video-caption {
   position: absolute;
   z-index: 1;
-  left: clamp(10px, 2vw, 20px);
-  bottom: clamp(10px, 2vw, 20px);
+  left: clamp(24px, 3cqw, 36px);
+  bottom: clamp(24px, 3cqw, 36px);
   width: fit-content;
-  max-width: min(520px, calc(100% - 100px));
+  max-width: min(520px, calc(100% - 124px));
   max-height: 29%;
   margin: 0;
   padding: 9px 12px;
@@ -138,6 +148,6 @@
 .momo-call.is-video-call[open] .momo-call-control:last-child { background: #aa253e; color: #fff; }
 
 @media (max-width: 600px) {
-  .momo-call.is-video-call[open] { width: 100%; height: 100dvh; border-radius: 0; }
+  .momo-call.is-video-call[open][data-provider="lala"] { width: 100%; height: 100dvh; border-radius: 0; }
   .momo-call.is-video-call.is-chat-call[open] .momo-call-controls { gap: 4px; }
 }

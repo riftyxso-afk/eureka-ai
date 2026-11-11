@@ -3,6 +3,7 @@
 import { Check, Lightbulb, Loader2 } from "lucide-react";
 
 import type { QuizQuestion } from "@/lib/quizLiveClient";
+import PracticeFeedback from "@/components/practice/PracticeFeedback";
 
 /**
  * UI ambil kuis (pilihan ganda) — dipakai bersama view share & play room.
@@ -31,6 +32,7 @@ export default function QuizTake({
 
   return (
     <div className="space-y-5">
+      {submitted && <PracticeFeedback outcome="complete" correct={score} wrong={questions.length - score} />}
       <div className="flex items-center justify-between">
         <div className="text-sm font-extrabold text-clay-dark">
           {submitted
@@ -65,9 +67,10 @@ export default function QuizTake({
                 return (
                   <button
                     key={oi}
+                    data-result={submitted ? oi === q.answer ? "correct" : chosen === oi ? "wrong" : undefined : undefined}
                     disabled={submitted || busy}
                     onClick={() => onAnswer(q.id, oi)}
-                    className={`flex w-full items-center gap-2 rounded-xl border-2 bg-clay-cream px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
+                    className={`practice-answer flex w-full items-center gap-2 rounded-xl border-2 bg-clay-cream px-3 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-semibold text-clay-dark transition-colors disabled:cursor-default min-h-[44px] ${cls}`}
                   >
                     <span
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${

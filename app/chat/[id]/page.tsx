@@ -46,7 +46,6 @@ import AiCallModal from "@/components/assistant/AiCallModal";
 import { useBeta } from "@/lib/useBeta";
 import ThemeSwitch from "@/components/ui/ThemeSwitch";
 import { useI18n } from "@/context/LocaleContext";
-import TutorialHost from "@/components/tutorial/TutorialHost";
 import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
 import { isDashboardV2 } from "@/lib/v2Navigation";
 import PageTutorial from "@/components/tutorial/PageTutorial";
@@ -256,7 +255,7 @@ export default function ChatPage() {
 
   return (
     <div className={`momo-session flex h-dvh overflow-hidden bg-clay-beige p-0 ${chat.sending ? "is-generating" : ""}`}>
-      <div className="flex h-full w-full overflow-hidden border-t border-clay-borderLight/60 sm:border-t-0">
+      <div className="flex h-full w-full overflow-hidden">
         <ChatSidebar
           sessions={chat.sessions}
           activeId={sessionId}
@@ -404,7 +403,7 @@ export default function ChatPage() {
           {initialSend && (initialPending || chat.loading || chat.sending) && chat.renderedMessages.length === 0 && !chat.hasError && !chat.clarification ? (
             <div className="mx-auto w-full max-w-3xl space-y-4">
               <MessageBubble message={{ id: "pending-user", sessionId, role: "user", content: initialSend.question, mentions: initialSend.mentions, sources: [], model: null, createdAt: new Date().toISOString() }} />
-              {initialSend.webSearch ? <WebSearchPipeline stage={chat.streaming.webStage ?? "preparing"} results={chat.streaming.webResults} query={chat.streaming.webQuery} notice={chat.streaming.webNotice} /> : <ResponseActivity stage={chat.streaming.activity} thinking={chat.streaming.thinking} />}
+              {chat.streaming.webStage ? <WebSearchPipeline stage={chat.streaming.webStage ?? "preparing"} results={chat.streaming.webResults} query={chat.streaming.webQuery} notice={chat.streaming.webNotice} /> : <ResponseActivity stage={chat.streaming.activity} thinking={chat.streaming.thinking} />}
             </div>
           ) : chat.loading && chat.messages.length === 0 && !chat.sending ? (
             <ChatSkeleton label={locale === "en" ? "Loading conversation…" : "Memuat percakapan…"} />
@@ -718,7 +717,6 @@ export default function ChatPage() {
 
 
       {/* Tutorial realtime (berlanjut dari /home bila sedang aktif) */}
-      <TutorialHost />
     </div>
   );
 }

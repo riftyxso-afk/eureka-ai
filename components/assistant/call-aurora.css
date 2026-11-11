@@ -1,0 +1,58 @@
+.momo-call[data-provider="lala"] {
+  isolation: isolate;
+  --call-aurora-mint: #9be9db;
+  --call-aurora-blue: #96ccfa;
+  --call-aurora-lilac: #c6b4f5;
+  --call-camera-surface: rgb(255 255 255 / .28);
+  --call-camera-border: rgb(255 255 255 / .88);
+  --call-camera-shadow: rgb(38 51 81 / .12);
+  --call-camera-overlay: rgb(255 255 255 / .9);
+}
+
+.dark .momo-call[data-provider="lala"] {
+  --call-aurora-mint: #26bda9;
+  --call-aurora-blue: #316dc7;
+  --call-aurora-lilac: #8a55d9;
+  --call-camera-surface: rgb(12 16 24 / .28);
+  --call-camera-border: rgb(225 234 255 / .2);
+  --call-camera-shadow: rgb(0 0 0 / .24);
+  --call-camera-overlay: rgb(18 23 33 / .88);
+}
+
+.call-aurora {
+  position: absolute;
+  z-index: -1;
+  inset: -10%;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: .34;
+  background:
+    radial-gradient(ellipse 26% 62% at 18% 58%, var(--call-aurora-mint), transparent 78%),
+    radial-gradient(ellipse 52% 30% at 76% 88%, var(--call-aurora-blue), transparent 82%),
+    radial-gradient(ellipse 44% 36% at 72% 18%, var(--call-aurora-lilac), transparent 80%);
+  transition: opacity 240ms cubic-bezier(.23, 1, .32, 1), transform 240ms cubic-bezier(.23, 1, .32, 1);
+}
+
+.call-aurora::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(ellipse 18% 52% at 36% 55%, var(--call-aurora-lilac), transparent 80%),
+    radial-gradient(ellipse 32% 20% at 64% 62%, var(--call-aurora-mint), transparent 80%);
+  transform: rotate(-12deg);
+  animation: call-aurora-sweep 9s cubic-bezier(.77, 0, .175, 1) infinite alternate paused;
+}
+
+.call-aurora[data-phase="speaking"] { transition: none; }
+.call-aurora[data-phase="speaking"]::before { animation-play-state: running; }
+
+@keyframes call-aurora-sweep {
+  from { transform: translate3d(-6%, 3%, 0) rotate(-12deg); }
+  to { transform: translate3d(8%, -7%, 0) rotate(14deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .call-aurora { transition: opacity 160ms ease; }
+  .call-aurora::before { animation: none; }
+}

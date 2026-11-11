@@ -31,7 +31,6 @@ import "./workspace.css";
 import { BackgroundJobPopup } from "@/components/dashboard/BackgroundJobPopup";
 import GuideBanner from "@/components/dashboard/GuideBanner";
 import AssistantHub from "@/components/dashboard/AssistantHub";
-import TutorialHost from "@/components/tutorial/TutorialHost";
 import FirstNoteGuide, { useFirstNoteGuide } from "@/components/tutorial/FirstNoteGuide";
 import { Reveal } from "@/components/ui/Reveal";
 import { useOnboarding } from "@/context/OnboardingContext";
@@ -281,7 +280,6 @@ export default function DashboardPage() {
       />
       <CreateNoteModal open={isModalOpen} onClose={() => setIsModalOpen(false)} onCreate={handleCreate} />
       <BackgroundJobPopup />
-      <TutorialHost />
     </>
   );
 }

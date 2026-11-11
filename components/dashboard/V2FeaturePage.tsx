@@ -14,7 +14,7 @@ export default function V2FeaturePage({ title, art, guide, children }: {
       <V2MobileSidebar desktop />
       <Link href="/dashboard-v2" className="dv2-brand"><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka! <span>V2 · Beta</span></Link>
       <nav className="dv2-topnav" aria-label="Ruang belajar">
-        <Link href="/dashboard-v2#dv2-notes-title">Catatan</Link>
+        <Link href="/dashboard-v2/catatan">Catatan</Link>
         <Link href="/dashboard-v2/tanya-momo">Tanya Momo</Link>
       </nav>
       <div className="dv2-account"><ThemeSwitch />{guide && <PageTutorial guideId={guide} />}</div>

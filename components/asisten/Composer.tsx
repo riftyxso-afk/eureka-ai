@@ -11,7 +11,6 @@ import Brain from "kubai-icons-react/icons/brain";
 import ChevronDown from "kubai-icons-react/icons/chevron-down";
 import ClipboardList from "kubai-icons-react/icons/clipboard";
 import Gem from "kubai-icons-react/icons/gem";
-import Globe from "kubai-icons-react/icons/globe";
 import Layers from "kubai-icons-react/icons/layers";
 import Leaf from "kubai-icons-react/icons/leaf";
 import Paperclip from "kubai-icons-react/icons/paperclip";
@@ -22,13 +21,9 @@ import Sparkles from "kubai-icons-react/icons/sparkles";
 import Terminal from "kubai-icons-react/icons/terminal";
 import Check from "kubai-icons-react/icons/circle-check";
 import Plus from "kubai-icons-react/icons/circle-plus";
-import X from "kubai-icons-react/icons/circle-x";
-import { Loader2, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import type { ChatAttachment } from "@/lib/assistant/types";
-import { ModelStore } from "@/components/asisten/ModelStore";
-import { MODEL_CATALOG, modelDisplayName } from "@/lib/modelCatalog";
-import { usePremium } from "@/lib/usePremium";
 import {
   NoteCreateWizardPanel,
   type NoteCreatePrefs,
@@ -305,18 +300,14 @@ export default function Composer({
   const [commandOpen, setCommandOpen] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [loadingNotes, setLoadingNotes] = useState(false);
-  const [webSearch, setWebSearch] = useState(false);
   const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [speedMode, setSpeedMode] = useState<SpeedMode>("normal");
   const [speedOpen, setSpeedOpen] = useState(false);
   // Model spesifik pilihan user (Model Store) — "" = mode otomatis tier.
-  const [selectedModel, setSelectedModel] = useState<string>("");
-  const [storeOpen, setStoreOpen] = useState(false);
   // Menu "+" — semua tool (catatan, web, file, rekam, call, reasoning) di satu tempat.
   const [plusOpen, setPlusOpen] = useState(false);
   // Status premium — model premiumOnly (mis. GPT-6 Astra) dikunci untuk free.
-  const { isPremium } = usePremium();
   const [reasoning, setReasoning] = useState(true);
   // Solve-then-Guide manual (task 4.5) — sekali kirim lalu reset.
   const [stgOnce, setStgOnce] = useState(false);
@@ -616,10 +607,8 @@ export default function Composer({
     onSend({
       question,
       mentions: mentionIds,
-      webSearch,
       attachment: attachment ?? null,
       speedMode,
-      model: selectedModel || undefined,
       reasoning,
       solveThenGuide: stgOnce || undefined,
     } as unknown as ComposerSendInput);
@@ -636,17 +625,14 @@ export default function Composer({
     const sources: PromptSource[] = [
       ...(onCall && !sending ? [{ key: "momo-call", name: "Panggilan Momo atau Lala", description: "Panggilan suara dan kamera untuk Lala", icon: <PhoneCall trigger="parent" size={16} />, action: onCall }] : []),
       { key: "file", name: "Foto & file", description: "Pilih dari perangkat", icon: <Paperclip trigger="parent" size={16} />, attach: true },
-      { key: "web", name: "Pencarian web", description: webSearch ? "Aktif — pilih untuk mematikan" : "Cari informasi di web", icon: <Globe trigger="parent" size={16} /> },
       ...notes.filter((note) => !mentionIds.includes(note.id)).map((note) => ({ key: `note:${note.id}`, name: note.title, description: note.subject || "Catatan", icon: <BookOpen trigger="parent" size={16} /> })),
     ];
-    const models = [{ key: "auto", name: "Otomatis", tag: "Eureka" }, ...MODEL_CATALOG.filter((model) => !model.premiumOnly || isPremium).map((model) => ({ key: model.id, name: model.name, tag: model.available ? model.brand : "Tidak tersedia", logo: model.logo, disabled: !model.available }))];
     return (
       <div className="eureka-prompt-wrap">
         {noteWizardPrompt && <div className="eureka-prompt-wizard"><NoteCreateWizardPanel prompt={noteWizardPrompt} onClose={() => onNoteWizardClose?.()} onStart={(prefs) => onNoteWizardStart?.(prefs)} /></div>}
-        {(mentionIds.length > 0 || attachment || attachError || webSearch || micError || transcribing) && <div className="eureka-prompt-chips">
+        {(mentionIds.length > 0 || attachment || attachError || micError || transcribing) && <div className="eureka-prompt-chips">
           {mentionIds.map((id) => <span key={id} className="eureka-prompt-chip">@{notes.find((note) => note.id === id)?.title ?? "Catatan"}<button type="button" aria-label="Hapus catatan" onClick={() => removeMention(id)}>×</button></span>)}
           {attachment && <span className="eureka-prompt-chip">{attachment.filename}<button type="button" aria-label="Hapus lampiran" onClick={() => setAttachment(null)}>×</button></span>}
-          {webSearch && <span className="eureka-prompt-chip">Pencarian web<button type="button" aria-label="Matikan pencarian web" onClick={() => setWebSearch(false)}>×</button></span>}
           {transcribing && <span className="eureka-prompt-chip" role="status">Mentranskripsi suara…</span>}
           {(attachError || micError) && <span className="eureka-prompt-error" role="alert">{attachError || micError}<button type="button" aria-label="Tutup pesan" onClick={() => { setAttachError(null); setMicError(null); }}>×</button></span>}
         </div>}
@@ -655,13 +641,13 @@ export default function Composer({
           onModelMenuHeightChange={onModelMenuHeightChange}
           value={text} onDraftChange={setText} disabled={disabled} busy={sending} placeholder={placeholder ?? "Tanya Eureka apa saja…"}
           sources={sources} commands={[{ key: "quiz", name: "/kuis", description: "Buat kuis dari percakapan" }, { key: "cards", name: "/card", description: "Buat kartu hafalan" }]}
-          models={models} defaultModel="auto" efforts={["Kilat", "Seimbang", "Mendalam"]} defaultEffort={initialMomoMode === "fast" ? "Kilat" : initialMomoMode === "deep" ? "Mendalam" : "Seimbang"}
+          models={[]} efforts={["Kilat", "Seimbang", "Mendalam"]} defaultEffort={initialMomoMode === "fast" ? "Kilat" : initialMomoMode === "deep" ? "Mendalam" : "Seimbang"}
           onEffortChange={(effort) => onMomoModeChange?.(effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal")}
           onSourcesOpen={() => setMentionOpen(true)} onAttach={() => fileInputRef.current?.click()}
-          onSourceSelect={(source) => { if (source.key === "web") setWebSearch((active) => !active); else if (source.key.startsWith("note:")) setMentionIds((ids) => [...new Set([...ids, source.key.slice(5)])]); setMentionOpen(false); }}
+          onSourceSelect={(source) => { if (source.key.startsWith("note:")) setMentionIds((ids) => [...new Set([...ids, source.key.slice(5)])]); setMentionOpen(false); }}
           onSend={(question, options) => {
             if (!question.trim() || disabled || sending) return;
-            onSend({ question, mentions: mentionIds, webSearch, attachment: attachment ?? null, speedMode: options.effort === "Kilat" ? "fast" : options.effort === "Mendalam" ? "deep" : "normal", model: options.model?.key === "auto" ? undefined : options.model?.key, reasoning, solveThenGuide: stgOnce || undefined } as ComposerSendInput);
+            onSend({ question, mentions: mentionIds, attachment: attachment ?? null, speedMode: options.effort === "Kilat" ? "fast" : options.effort === "Mendalam" ? "deep" : "normal", reasoning, solveThenGuide: stgOnce || undefined } as ComposerSendInput);
             setMentionIds([]); setAttachment(null); setAttachError(null); setStgOnce(false);
           }}
           onStop={onStop} background="rgb(var(--clay-cream))" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="#a983e8" width={760} radius={18} maxRows={5}
@@ -747,7 +733,7 @@ export default function Composer({
             className="rounded-2xl"
             style={{
               overflow:
-                speedOpen || mentionOpen || commandOpen || plusOpen || storeOpen
+                speedOpen || mentionOpen || commandOpen || plusOpen
                   ? "visible"
                   : undefined,
             }}
@@ -846,14 +832,6 @@ export default function Composer({
                               }
                             }}
                           />
-                          {/* Pencarian web — toggle */}
-                          <PlusRow
-                            icon={<Globe trigger="parent" size={15} />}
-                            label="Pencarian web"
-                            desc="Cari info terbaru sebelum menjawab"
-                            active={webSearch}
-                            onClick={() => setWebSearch((v) => !v)}
-                          />
                           {/* Upload file */}
                           <PlusRow
                             icon={<Paperclip trigger="parent" size={15} />}
@@ -944,36 +922,19 @@ export default function Composer({
                 <div ref={speedRef}>
                   {(() => {
                     const cur = SPEED_OPTIONS.find((o) => o.value === speedMode) ?? SPEED_OPTIONS[1];
-                    const manual = selectedModel
-                      ? MODEL_CATALOG.find((m) => m.id === selectedModel)
-                      : undefined;
                     return (
                       <button
                         onClick={() => setSpeedOpen((o) => !o)}
-                        aria-label={manual ? `Model manual: ${manual.name}` : `Kecepatan AI: ${cur.label}`}
+                        aria-label={`Effort: ${cur.label}`}
                         aria-pressed={speedOpen}
-                        title={
-                          manual
-                            ? `Mode manual — ${manual.brand} ${manual.name} (klik untuk ubah)`
-                            : `Kecepatan AI: ${cur.label} — ${cur.desc}`
-                        }
+                        title={`Effort: ${cur.label} — ${cur.desc}`}
                         className={`flex items-center justify-center gap-1 rounded-clay-full font-extrabold transition-all duration-75 hover:-translate-y-0.5 ${
-                          manual
-                            ? "bg-clay-beige text-clay-dark"
-                            : "border-2 border-clay-borderLight bg-clay-cream text-clay-muted hover:text-clay-dark"
+                          "border-2 border-clay-borderLight bg-clay-cream text-clay-muted hover:text-clay-dark"
                         } ${
                           compact ? "!min-h-[40px] !px-2.5 text-[11px]" : "!min-h-[38px] !px-2.5 text-[11px]"
                         }`}
                       >
-                        {manual ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={manual.logo} alt="" className="h-3.5 w-3.5 rounded" />
-                            <span className="hidden max-w-[92px] truncate whitespace-nowrap leading-none sm:inline">
-                              {manual.name}
-                            </span>
-                          </>
-                        ) : (
+                        {(
                           <>
                             {/* Dot status tier kecil — warna tetap jadi penanda
                                 ringan, tombol utama tetap netral (task 5.1). */}
@@ -986,7 +947,7 @@ export default function Composer({
                     );
                   })()}
 
-                  {/* Popover: 3 mode kecepatan + Model Store */}
+                  {/* Popover: 3 pilihan effort */}
                   <AnimatePresence>
                     {speedOpen && (
                       <motion.div
@@ -997,14 +958,13 @@ export default function Composer({
                         className="absolute bottom-full right-2 z-40 mb-2 max-h-[60dvh] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-clay-md border-2 border-clay-borderLight bg-clay-cream p-1 shadow-clay-lg"
                       >
                         {SPEED_OPTIONS.map((o) => {
-                          const active = speedMode === o.value && !selectedModel;
+                          const active = speedMode === o.value;
                           return (
                             <button
                               key={o.value}
                               onClick={() => {
                                 setSpeedMode(o.value);
-                                // Pilih mode tier = lepas model manual (kembali otomatis).
-                                setSelectedModel("");
+                                // Simpan effort untuk percakapan berikutnya.
                                 setSpeedOpen(false);
                                 try {
                                   localStorage.setItem(SPEED_STORAGE_KEY, o.value);
@@ -1035,37 +995,6 @@ export default function Composer({
                           );
                         })}
 
-                        {/* More models → buka popup Model Store */}
-                        <div className="mt-1 border-t-2 border-clay-borderLight/60 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSpeedOpen(false);
-                              setStoreOpen(true);
-                            }}
-                            className="flex w-full items-center justify-between rounded-clay-md px-2.5 py-2 text-left transition-colors hover:bg-clay-beige"
-                          >
-                            <span className="flex items-center gap-2">
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-primary/10 text-clay-primary">
-                                <Sparkles trigger="parent" size={12} />
-                              </span>
-                              <span className="text-[12.5px] font-extrabold text-clay-dark">
-                                More models
-                              </span>
-                            </span>
-                            {selectedModel ? (
-                              <span className="flex items-center gap-1 rounded-full bg-clay-primary/10 px-1.5 py-px text-[9.5px] font-extrabold text-clay-primary">
-                              {(() => {
-                                const nm = modelDisplayName(selectedModel);
-                                return nm.length > 16 ? nm.slice(0, 16) + "…" : nm;
-                              })()}
-                                <X trigger="parent" size={9} />
-                              </span>
-                            ) : (
-                              <ChevronDown trigger="parent" size={12} className="-rotate-90 text-clay-muted" />
-                            )}
-                          </button>
-                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1207,72 +1136,6 @@ export default function Composer({
         </div>
       </div>
 
-      {/* Popup Model Store — dibuka dari "More models" di selector kecepatan */}
-      <AnimatePresence>
-        {storeOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-clay-dark/40 p-3 sm:items-center"
-            onClick={() => setStoreOpen(false)}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Model Store"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 24, scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 260, damping: 26 }}
-              className="w-full max-w-md overflow-hidden rounded-clay-md border-2 border-clay-borderLight bg-clay-cream shadow-clay-lg"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between border-b-2 border-clay-borderLight/60 px-4 py-3">
-                <div>
-                  <h2 className="text-sm font-extrabold text-clay-dark">
-                    <Sparkles trigger="parent" size={14} className="mr-1.5 inline text-clay-primary" />
-                    Model Store
-                  </h2>
-                  <p className="mt-0.5 text-[11px] font-semibold text-clay-muted">
-                    Pilih model spesifik, atau kembali ke mode otomatis
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setStoreOpen(false)}
-                  aria-label="Tutup"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-clay-beige text-clay-muted transition-colors hover:text-clay-dark"
-                >
-                  <X trigger="parent" size={15} />
-                </button>
-              </div>
-              <div className="px-1 py-1">
-                <ModelStore
-                  selectedModel={selectedModel}
-                  isPremium={isPremium}
-                  onPick={(id) => {
-                    // Klik model terpilih lagi = lepas (kembali otomatis).
-                    setSelectedModel((cur) => (cur === id ? "" : id));
-                    setStoreOpen(false);
-                  }}
-                  onUpgrade={() => {
-                    setStoreOpen(false);
-                    window.location.href = "/pricing";
-                  }}
-                />
-              </div>
-              <div className="border-t-2 border-clay-borderLight/60 px-4 py-2.5">
-                <p className="text-[10.5px] font-semibold text-clay-muted">
-                  🧠 = peringkat kecerdasan (sedikit pintar → terpintar). Mode
-                  otomatis tetap memakai tier Kilat/Seimbang/Mendalam.
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

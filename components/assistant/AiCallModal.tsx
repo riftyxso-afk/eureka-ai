@@ -7,6 +7,7 @@ import { playCallSound } from "@/lib/sound/cuelume";
 import { useMomoCall, type CallProvider } from "./useMomoCall";
 import "./momo-call.css";
 import LalaCallVideo from "./LalaCallVideo";
+import CallAurora from "./CallAurora";
 
 const labels = {
   permission: "Menunggu izin mikrofon…",
@@ -138,6 +139,7 @@ function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
 
   return <dialog className={`momo-call${chat ? " is-chat-call" : ""}${videoCall ? " is-video-call" : ""}`} data-provider={provider} ref={dialog} aria-labelledby="momo-call-title"
     onCancel={event => { event.preventDefault(); end(); }}>
+    {provider === "lala" && <CallAurora phase={phase} level={level} />}
     <header className="momo-call-header">
       <h2 id="momo-call-title">{videoCall ? "Panggilan video" : "Panggilan"} {name}</h2>
       <button type="button" className="momo-call-settings" aria-label="Pengaturan panggilan"

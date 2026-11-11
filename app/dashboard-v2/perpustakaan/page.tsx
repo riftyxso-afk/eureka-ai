@@ -4,5 +4,5 @@ import LibraryWorkspace from "@/components/library/LibraryWorkspace";
 
 export const metadata = { title: "Perpustakaan · Eureka" };
 export default function Page() {
-  return <V2FeaturePage title="Perpustakaan" art={0}><ProGate><LibraryWorkspace /></ProGate></V2FeaturePage>;
+  return <V2FeaturePage guide="books" title="Perpustakaan" art={0}><ProGate><LibraryWorkspace /></ProGate></V2FeaturePage>;
 }

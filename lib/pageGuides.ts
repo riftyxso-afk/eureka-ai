@@ -10,6 +10,9 @@ export type PageGuide = {
 };
 
 export const PAGE_GUIDES = {
+  pricing: { label: "Paket Eureka", title: "Pilih manfaat yang kamu butuhkan", description: "Tinjau manfaat dan status paket sebelum berlangganan.", steps: ["Lihat manfaat", "Tinjau harga dan status paket", "Lanjutkan pembayaran saat siap"], action: "Lihat paket" },
+  books: { label: "Perpustakaan", title: "Temukan bacaan dan cerita", description: "Jelajahi katalog buku atau buat dongeng orisinal bersama Momo.", steps: ["Cari judul atau penulis", "Pilih sumber katalog", "Buka studio dongeng"], action: "Lihat buku" },
+  direction: { label: "Arah belajar", title: "Kenali pola belajarmu", description: "Lihat gambaran pelajaran berdasarkan aktivitas yang tercatat.", steps: ["Lihat gambaran belajar", "Tinjau mata pelajaran", "Tentukan langkah berikutnya"], action: "Lihat arah belajar" },
   dashboard: {
     label: "Beranda", title: "Belajar kini dimulai dari obrolan",
     description: "Bawa ide, tautan, atau materi belajarmu. Momo membantu menyusunnya menjadi catatan yang bisa kamu pelajari dengan berbagai cara.",
@@ -72,8 +75,8 @@ export const PAGE_GUIDES = {
   },
   chat: {
     label: "Chat Eureka", title: "Teman berpikir untuk setiap pertanyaan",
-    description: "Mulai percakapan dengan Momo. Pilih model dan tingkat kedalaman jawaban, atau lampirkan catatan sebagai konteks.",
-    steps: ["Tulis pertanyaan atau tambahkan materi", "Pilih model dan tingkat kedalaman", "Kirim dan lanjutkan percakapan"],
+    description: "Mulai percakapan dengan Momo. Atur tingkat kedalaman jawaban, atau lampirkan catatan sebagai konteks.",
+    steps: ["Tulis pertanyaan atau tambahkan materi", "Atur effort sesuai kebutuhan", "Kirim dan lanjutkan percakapan"],
     action: "Mulai mengobrol", target: "textarea",
   },
   library: {
@@ -131,7 +134,7 @@ export const PAGE_GUIDES = {
   },
   guide: {
     label: "Bantuan", title: "Kenali semua cara belajar di Eureka",
-    description: "Buka panduan fitur sesuai kebutuhanmu. Pop-up ini juga bisa dibuka ulang melalui tombol Panduan di setiap halaman.",
+    description: "Buka panduan fitur sesuai kebutuhanmu. Panduan menu ini juga bisa dibuka ulang melalui tombol Panduan di setiap halaman.",
     steps: ["Pilih topik bantuan", "Ikuti langkah yang dijelaskan", "Kembali ke fitur untuk mencoba"], action: "Baca panduan",
   },
   tasks: {

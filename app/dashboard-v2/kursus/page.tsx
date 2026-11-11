@@ -12,7 +12,7 @@ export default function Page() {
         <h1>Kursus personal</h1>
         <p>Jalur belajar dengan bab dan latihan sedang disiapkan. Sambil menunggu, kamu bisa memulai jalur belajarmu dari catatan yang sudah ada.</p>
         <ol><li>Pilih materi</li><li>Pelajari bab</li><li>Uji pemahaman</li></ol>
-        <Link className="dv2-button" href="/dashboard-v2#dv2-notes-title">Buka koleksi catatan <ArrowRight size={17} /></Link>
+        <Link className="dv2-button" href="/dashboard-v2/catatan">Buka koleksi catatan <ArrowRight size={17} /></Link>
       </div>
     </main>
   </V2FeaturePage>;

@@ -13,7 +13,6 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Brain, PenLine } from "lucide-react";
 import EurekaOrb from "@/components/ui/EurekaOrb";
-import TutorialHost from "@/components/tutorial/TutorialHost";
 import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
 import { isDashboardV2 } from "@/lib/v2Navigation";
 import PageTutorial from "@/components/tutorial/PageTutorial";
@@ -353,7 +352,6 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
       <AiCallModal chat={standalone} open={callOpen} onClose={() => setCallOpen(false)} />
 
       {/* Tutorial realtime untuk pengguna baru (spotlight) */}
-      <TutorialHost />
 
     </div>
   );

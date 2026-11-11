@@ -272,6 +272,7 @@ export default function ProfileContent({ v2 = false }: { v2?: boolean }) {
       showToast(l.errSave);
       return;
     }
+    window.dispatchEvent(new Event("eureka:profile-updated"));
     showToast(l.saved);
   };
 
@@ -579,7 +580,7 @@ export default function ProfileContent({ v2 = false }: { v2?: boolean }) {
               {l.fullName}
             </label>
             <InputClay
-              value={form.name}
+              id="profile-name" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder={l.namePlaceholder}
             />
@@ -591,7 +592,7 @@ export default function ProfileContent({ v2 = false }: { v2?: boolean }) {
               {l.username}
             </label>
             <InputClay
-              value={form.username}
+              id="profile-username" value={form.username}
               onChange={(e) =>
                 setForm({
                   ...form,
@@ -624,7 +625,7 @@ export default function ProfileContent({ v2 = false }: { v2?: boolean }) {
               {l.school}
             </label>
             <InputClay
-              value={form.school}
+              id="profile-school" value={form.school}
               onChange={(e) => setForm({ ...form, school: e.target.value })}
               placeholder={l.schoolPlaceholder}
             />
@@ -637,7 +638,7 @@ export default function ProfileContent({ v2 = false }: { v2?: boolean }) {
             </label>
             <div className="relative">
               <select
-                value={form.education}
+                id="profile-education" value={form.education}
                 onChange={(e) =>
                   setForm({ ...form, education: e.target.value, grade: "" })
                 }
