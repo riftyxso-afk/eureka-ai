@@ -94,6 +94,9 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const friendsId = await import("@/app/api/friends/[friendId]/route");
   mount(app, "/api/friends", friends);
   mount(app, "/api/friends/requests", friendsRequests);
+  const friendsSend = await import("@/app/api/friends/send/route");
+  mount(app, "/api/friends/send", friendsSend);
+  count++;
   mount(app, "/api/friends/:friendId", friendsId);
   count += 3;
 
@@ -105,6 +108,9 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   // ─── Missions (bimbingan AI) ───────────────────────────
   const missionsGuide = await import("@/app/api/missions/guide/route");
   mount(app, "/api/missions/guide", missionsGuide);
+  const missionsLearn = await import("@/app/api/missions/learn/route");
+  mount(app, "/api/missions/learn", missionsLearn);
+  count++;
   count++;
 
   // ─── Notifications ─────────────────────────────────────
