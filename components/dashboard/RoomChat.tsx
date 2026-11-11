@@ -5,12 +5,15 @@ import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
 import MarkdownView from "@/components/asisten/MarkdownView";
+import LoadingStatus from "@/components/ui/LoadingStatus";
+import { isLoadingStage, type LoadingStage } from "@/lib/loading-stage";
 type Message = { id: string; role: "user" | "assistant"; content: string };
 
 export default function RoomChat({ noteId, title }: { noteId: string; title: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activity, setActivity] = useState<LoadingStage>("reading");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
   const bottom = useRef<HTMLDivElement>(null);
@@ -23,7 +26,7 @@ export default function RoomChat({ noteId, title }: { noteId: string; title: str
   useEffect(() => { if (follow.current) bottom.current?.scrollIntoView({ block: "nearest" }); }, [messages, busy]);
   async function send(question = draft) {
     question = question.trim(); if (!question || lock.current) return;
-    lock.current = true; setBusy(true); setError(""); setDraft(""); follow.current = true;
+    lock.current = true; setActivity("reading"); setBusy(true); setError(""); setDraft(""); follow.current = true;
     const id = crypto.randomUUID(); const history = messages.slice(-8);
     const next: Message[] = [...messages, { id: crypto.randomUUID(), role: "user", content: question }, { id, role: "assistant", content: "" }];
     setMessages(next);
@@ -41,7 +44,8 @@ export default function RoomChat({ noteId, title }: { noteId: string; title: str
           if (!line.startsWith("data: ")) continue;
           const event = JSON.parse(line.slice(6));
           if (event.type === "error") throw new Error(event.message);
-          if (event.type === "token") { answer += event.text; const content = answer; setMessages(current => current.map(m => m.id === id ? { ...m, content } : m)); }
+          if (event.type === "activity" && isLoadingStage(event.stage)) setActivity(event.stage);
+          if (event.type === "token") { setActivity("combining"); answer += event.text; const content = answer; setMessages(current => current.map(m => m.id === id ? { ...m, content } : m)); }
         }
         if (done) break;
       }
@@ -58,7 +62,7 @@ export default function RoomChat({ noteId, title }: { noteId: string; title: str
   return <section className="rm-chat"><div className="rm-feature-heading"><div><h1>Tanya Momo</h1><p>Pendamping belajar untuk catatan ini.</p></div><span className="rm-context-label">Berdasarkan materi</span></div>
     <div className="rm-chat-thread" ref={scroll} onScroll={() => { const el = scroll.current; if (el) follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
       {!messages.length && <div className="rm-chat-welcome"><div className="sr-momo"><MomoCompanion mode="normal" /></div><h2>Ayo, kita pahami bersama.</h2><p>Aku sudah punya konteks “{title}”. Bagian mana yang ingin kamu bahas?</p><div>{suggestions.map(text => <button key={text} onClick={() => void send(text)}>{text}<ArrowUp size={14} /></button>)}</div></div>}
-      {messages.map(m => <article key={m.id} className={`rm-chat-message is-${m.role}`}>{m.role === "assistant" && <div className="rm-message-momo"><MomoCompanion response={m.content} question={messages[messages.indexOf(m) - 1]?.content} thinking={busy && !m.content} /></div>}<div>{m.role === "user" ? <p>{m.content}</p> : m.content ? <><MarkdownView content={m.content} /><button className="rm-copy" aria-label="Salin jawaban" onClick={() => { void navigator.clipboard.writeText(m.content).then(() => setCopied(m.id)).catch(() => setError("Jawaban belum bisa disalin.")); }}><Copy size={13} />{copied === m.id ? "Tersalin" : "Salin"}</button></> : <p className="rm-thinking" role="status"><span />Momo sedang membaca materi…</p>}</div></article>)}<div ref={bottom} />
+      {messages.map(m => <article key={m.id} className={`rm-chat-message is-${m.role}`}>{m.role === "assistant" && <div className="rm-message-momo"><MomoCompanion response={m.content} question={messages[messages.indexOf(m) - 1]?.content} thinking={busy && !m.content} /></div>}<div>{busy && m.role === "assistant" && m.id === messages[messages.length - 1]?.id && <LoadingStatus stage={activity} compact />}{m.role === "user" ? <p>{m.content}</p> : m.content ? <><MarkdownView content={m.content} /><button className="rm-copy" aria-label="Salin jawaban" onClick={() => { void navigator.clipboard.writeText(m.content).then(() => setCopied(m.id)).catch(() => setError("Jawaban belum bisa disalin.")); }}><Copy size={13} />{copied === m.id ? "Tersalin" : "Salin"}</button></> : null}</div></article>)}<div ref={bottom} />
     </div>{error && <p className="rm-error" role="alert">{error}</p>}
     <form className="rm-chat-composer" onSubmit={e => { e.preventDefault(); void send(); }}><label className="sr-only" htmlFor="room-question">Pertanyaan untuk Momo</label><textarea id="room-question" maxLength={500} value={draft} rows={2} placeholder="Tanyakan tentang materi ini…" onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }} /><div><span className="rm-composer-context"><span aria-hidden="true" />Berdasarkan catatan ini</span><small className="rm-composer-keyhint">Enter untuk kirim</small>{busy ? <button type="button" aria-label="Hentikan jawaban" onClick={() => request.current?.abort()}><Square size={17} /></button> : <button type="submit" disabled={!draft.trim()} aria-label="Kirim pertanyaan"><ArrowUp size={19} /></button>}</div></form>
   </section>;

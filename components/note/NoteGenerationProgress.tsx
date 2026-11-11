@@ -4,6 +4,8 @@ import { ArrowRight, Square, X } from "lucide-react";
 import { LoadingMomo } from "./LoadingMomo";
 import { NoteLoadingSteps } from "@/components/note/NoteLoadingSteps";
 import type { NoteStep } from "@/components/note/useNoteSteps";
+import LoadingStatus from "@/components/ui/LoadingStatus";
+import { noteLoadingStage } from "@/lib/loading-stage";
 import "./note-generation-progress.css";
 
 type Props = {
@@ -36,7 +38,7 @@ export function NoteGenerationProgress({ message, percent, steps, onBackground, 
       <div className="note-generation-track" role="progressbar" aria-label="Progres pembuatan catatan" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
         <div className="note-generation-fill" style={{ width: `${progress}%` }} />
       </div>
-      <p className="note-generation-current" aria-live="polite"><span className="note-generation-pulse" aria-hidden="true" />{message || "Menyiapkan materi…"}</p>
+      <div className="note-generation-current"><LoadingStatus stage={noteLoadingStage(steps.find(step => step.status === "active" && !step.isSubStep)?.id, message)} detail={message || "Menyiapkan materi…"} /></div>
     </div>
     {steps.length > 0 && <div className="note-generation-steps rounded-xl border border-violet-100 px-2 pb-2 dark:border-violet-900">
       <NoteLoadingSteps steps={steps} />

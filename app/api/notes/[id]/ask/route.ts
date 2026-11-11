@@ -143,6 +143,7 @@ export async function POST(
         async start(controller) {
           const emit = (event: unknown) => { if (!closed) controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`)); };
           try {
+            emit({ type: "activity", stage: "thinking" });
             await aiChatStream({ ...options, reasoning: false, signal: AbortSignal.any([work.signal, req.signal]) }, event => { if (event.type === "token") emit(event); });
             emit({ type: "done" });
           } catch { emit({ type: "error", message: "Jawaban terputus. Silakan coba lagi." }); }

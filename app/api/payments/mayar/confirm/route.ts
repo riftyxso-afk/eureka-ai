@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/assistant/auth";
 import { confirmMayarCheckout, isPaymentId } from "@/lib/mayar";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { db } from "@/lib/supabase/admin";
-import { getPremiumStatus } from "@/lib/premium";
+import { getSubscriptionStatus } from "@/lib/premium";
 
 export const runtime = "nodejs";
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const status = await confirmMayarCheckout(data);
     return Response.json({
       status,
-      isPremium: status === "paid" && (await getPremiumStatus(auth.userId)).isPremium,
+      isPremium: status === "paid" && (await getSubscriptionStatus(auth.userId)).isPremium,
     });
   } catch {
     return Response.json({ error: "Status pembayaran belum bisa dikonfirmasi." }, { status: 502 });

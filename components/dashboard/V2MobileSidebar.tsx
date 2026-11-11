@@ -28,7 +28,7 @@ import User from "kubai-icons-react/icons/user";
 import { usePremium } from "@/lib/usePremium";
 
 const BASE = "/dashboard-v2";
-const navigationIcons = [Grid, NotebookPen, MessageCircle, BookOpen, Trophy, CalendarDays, GraduationCap, Flame, User, Crown];
+const navigationIcons = [Grid, NotebookPen, MessageCircle, BookOpen, Trophy, CalendarDays, GraduationCap, BookOpen, Flame, User, Crown];
 const navigation = [
   { label: "Beranda", href: BASE, image: 0 },
   { label: "Koleksi catatan", href: BASE + "#dv2-notes-title", image: 1 },
@@ -37,6 +37,7 @@ const navigation = [
   { label: "Misi", href: BASE + "/misi", image: 3 },
   { label: "Jadwal", href: BASE + "/jadwal", image: 8 },
   { label: "Kursus", href: BASE + "/kursus", image: 4 },
+  { label: "Perpustakaan", href: BASE + "/perpustakaan", image: 0 },
   { label: "Streak", href: BASE + "/streaks", image: 9 },
   { label: "Profil", href: BASE + "/profil", image: 10 },
   { label: "Paket Pro", href: BASE + "/pricing", image: 11 },
@@ -106,12 +107,12 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
         </>}
 
         {[{ label: "Utama", items: links.filter(item => navigation.indexOf(item) < 3) },
-          { label: "Belajar", items: links.filter(item => navigation.indexOf(item) >= 3 && navigation.indexOf(item) < 7) },
-          { label: "Akun", items: links.filter(item => navigation.indexOf(item) >= 7) }].map(group => group.items.length > 0 &&
+          { label: "Belajar", items: links.filter(item => navigation.indexOf(item) >= 3 && navigation.indexOf(item) < 8) },
+          { label: "Akun", items: links.filter(item => navigation.indexOf(item) >= 8) }].map(group => group.items.length > 0 &&
           <section className="v2-drawer-group" key={group.label} aria-label={group.label}>
             <p className="v2-drawer-label">{group.label}</p>
             {group.items.map(item => {
-              const locked = !planLoading && !isPremium && navigation.indexOf(item) >= 1 && navigation.indexOf(item) <= 6;
+              const locked = !planLoading && !isPremium && navigation.indexOf(item) >= 1 && navigation.indexOf(item) <= 7;
               const Icon = navigationIcons[navigation.indexOf(item)];
               const active = item.href === BASE ? pathname === BASE
                 : !item.href.includes("#") && (pathname === item.href || pathname.startsWith(item.href + "/"));

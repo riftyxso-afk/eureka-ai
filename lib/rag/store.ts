@@ -130,6 +130,7 @@ export async function listNotes(userId?: string): Promise<Note[]> {
       title: n.title,
       summary: n.summary,
       subject: n.subject,
+      sourceUrl: n.source_url ?? undefined,
       noteType: n.note_type ?? 'rangkuman',
       createdAt: n.created_at,
       updatedAt: n.updated_at,

@@ -1,0 +1,37 @@
+.eureka-loading {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  color: inherit;
+  vertical-align: middle;
+}
+.eureka-loading > loading-indicator { flex-shrink: 0; }
+.eureka-loading-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.eureka-loading-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+.eureka-loading-detail {
+  display: block;
+  color: inherit;
+  opacity: .72;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .eureka-loading-label { animation: eureka-loading-label-in .18s ease-out; }
+}
+@keyframes eureka-loading-label-in {
+  from { opacity: .4; }
+  to { opacity: 1; }
+}

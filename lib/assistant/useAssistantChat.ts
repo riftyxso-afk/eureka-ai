@@ -59,6 +59,7 @@ export interface CanvasState {
 }
 
 export interface StreamingState {
+  activity: import("@/lib/loading-stage").LoadingStage;
   content: string;
   thinking: string;
   sources: AssistantChatMessage["sources"];
@@ -91,6 +92,7 @@ function buildStoredQuestion(input: ChatSendInput): string {
 
 function newStreaming(): StreamingState {
   return {
+    activity: "synchronizing",
     content: "",
     thinking: "",
     sources: [],
@@ -272,6 +274,7 @@ export function useAssistantChat(options: {
       ...s,
       content: s.content + content,
       thinking: s.thinking + thinking,
+      activity: content ? "combining" : thinking ? "thinking" : s.activity,
       // Token mulai mengalir → tahap terakhir pipeline: menyusun jawaban.
       webStage: content && s.webStage ? "writing" : s.webStage,
     }));
@@ -507,6 +510,8 @@ export function useAssistantChat(options: {
           if (ev.type === "token") {
             // Artifact parser: pisahkan tag <artifact> dari teks chat.
             applyParserEvents(parserRef.current?.push(ev.text) ?? []);
+          } else if (ev.type === "activity") {
+            setStreaming(s => ({ ...s, activity: ev.stage }));
           } else if (ev.type === "thinking") {
             queueStreamText("thinking", ev.text);
           } else if (ev.type === "sources") {

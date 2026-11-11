@@ -1,5 +1,6 @@
 /** Server-side Eureka Pro entitlement. */
 import { db } from "./supabase/admin";
+import { getFreeProUntil } from "./free-pro-period";
 
 export type PremiumTier = "promo" | "normal" | "trial" | null;
 
@@ -7,6 +8,7 @@ export interface PremiumStatus {
   isPremium: boolean;
   tier: PremiumTier;
   premiumUntil: string | null;
+  freeAccessUntil?: string;
 }
 
 export type PremiumFeature =
@@ -116,21 +118,10 @@ export function isDevAllAccessEnabled(): boolean {
   );
 }
 
-/**
- * Baca status premium user dari DB. Bila Supabase belum dikonfigurasi
- * (mode dev), semua user dianggap non-premium. Status murni dari
- * `premium_until` (pembayaran satu kali = 30 hari) — tanpa lisensi.
- */
-export async function getPremiumStatus(
+/** Read the stored entitlement used by billing and payment confirmation. */
+export async function getSubscriptionStatus(
   userId: string
 ): Promise<PremiumStatus> {
-  if (isDevAllAccessEnabled()) {
-    return {
-      isPremium: true,
-      tier: "normal",
-      premiumUntil: null,
-    };
-  }
   let client;
   try {
     client = db();
@@ -165,6 +156,20 @@ export async function getPremiumStatus(
     tier: (data.premium_tier as PremiumTier) ?? null,
     premiumUntil: data.premium_until ?? null,
   };
+}
+
+/** Feature access for a verified account, including the shared free period. */
+export async function getPremiumStatus(userId: string): Promise<PremiumStatus> {
+  if (!userId) return NOT_CONFIGURED;
+  if (isDevAllAccessEnabled()) return { isPremium: true, tier: "normal", premiumUntil: null };
+
+  const subscription = await getSubscriptionStatus(userId);
+  const freeAccessUntil = getFreeProUntil();
+  if (!freeAccessUntil) return subscription;
+
+  return subscription.isPremium
+    ? { ...subscription, freeAccessUntil }
+    : { isPremium: true, tier: "trial", premiumUntil: freeAccessUntil, freeAccessUntil };
 }
 
 /** Catat satu pemakaian fitur (dipanggil setelah berhasil). */

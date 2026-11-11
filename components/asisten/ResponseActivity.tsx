@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import LoadingStatus from "@/components/ui/LoadingStatus";
+import type { LoadingStage } from "@/lib/loading-stage";
 
-export default function ResponseActivity({ thinking = "" }: { thinking?: string | null }) {
+export default function ResponseActivity({ thinking = "", stage = "thinking", showIndicator = true }: {
+  thinking?: string | null;
+  stage?: LoadingStage;
+  showIndicator?: boolean;
+}) {
   const thinkingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -10,11 +16,9 @@ export default function ResponseActivity({ thinking = "" }: { thinking?: string 
     if (viewport) viewport.scrollTop = viewport.scrollHeight;
   }, [thinking]);
 
+  if (!showIndicator && !thinking) return null;
   return <div className="response-activity">
-    <div className="response-activity-label" role="status">
-      <span className="response-activity-orbit" aria-hidden="true"><i /><i /></span>
-      <span className="response-activity-shimmer">{thinking ? "Momo sedang berpikir" : "Momo sedang menyusun jawaban"}</span>
-    </div>
+    {showIndicator && <LoadingStatus stage={stage} compact />}
     {thinking && <div ref={thinkingRef} className="response-activity-thinking">{thinking}</div>}
   </div>;
 }

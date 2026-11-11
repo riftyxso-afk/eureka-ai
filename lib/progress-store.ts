@@ -60,6 +60,7 @@ export interface UserProgress {
 }
 
 export interface ProgressStats {
+  activeDays: string[];
   xp: number;
   level: number;
   xpInLevel: number;
@@ -72,6 +73,28 @@ export interface ProgressStats {
   dueCards: number;
   rank: number | null;
   recentActivity: ActivityEntry[];
+}
+
+/** Attendance never changes XP; compare-and-swap protects concurrent activity writes. */
+export async function checkInToday(userId: string): Promise<void> {
+  const client = db();
+  const today = studyDay();
+  const { error: insertError } = await client.from("progress").upsert(
+    { user_id: userId, active_days: [today] }, { onConflict: "user_id", ignoreDuplicates: true },
+  );
+  if (insertError) throw insertError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await client.from("progress").select("active_days").eq("user_id", userId).single();
+    if (error) throw error;
+    const days: string[] = data.active_days ?? [];
+    if (days.includes(today)) return;
+    if (days.some(day => !/^\d{4}-\d{2}-\d{2}$/.test(day))) throw new Error("Invalid attendance history");
+    const result = await client.from("progress").update({ active_days: [...days, today].sort(), updated_at: new Date().toISOString() })
+      .eq("user_id", userId).eq("active_days", `{${days.join(",")}}`).select("user_id");
+    if (result.error) throw result.error;
+    if (result.data?.length) return;
+  }
+  throw new Error("Attendance changed concurrently; retry");
 }
 
 async function loadUserProgress(userId: string): Promise<UserProgress> {
@@ -243,6 +266,7 @@ export async function getStats(userId: string): Promise<ProgressStats> {
   const info = levelInfoForXp(p.xp);
   const streakDetails = summarizeStreak(p.activeDays, now);
   return {
+    activeDays: p.activeDays,
     xp: p.xp,
     level: info.level,
     xpInLevel: info.xpInLevel,

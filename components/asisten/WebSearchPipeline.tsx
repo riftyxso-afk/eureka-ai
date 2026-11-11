@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Globe, Search } from "lucide-react";
+import { Check, Globe } from "lucide-react";
+import LoadingStatus from "@/components/ui/LoadingStatus";
 import { SiteLogo } from "./WebSources";
 import { normalizeWebResults } from "@/lib/assistant/webSources";
 import type { WebSearchItem, WebSearchStage } from "@/lib/assistant/types";
@@ -23,8 +24,8 @@ export default function WebSearchPipeline({ stage, results, query = "", notice }
   const sources = normalizeWebResults(results);
   const sites = [...new Map(sources.map(source => [source.domain, source])).values()];
   return <section className="web-search-live" aria-label="Progres pencarian web" aria-busy="true">
-    <header><span className="web-search-orbit" aria-hidden="true"><Search size={17} /></span>
-      <div><span className="web-search-title" role="status">{STEPS[active].title}</span>
+    <header>
+      <div><LoadingStatus stage={stage === "preparing" ? "synchronizing" : stage === "searching" ? "retrieving" : stage === "writing" ? "combining" : "reading"} detail={STEPS[active].title} compact />
         {query && <p className="web-search-query">{query}</p>}
       </div>
     </header>

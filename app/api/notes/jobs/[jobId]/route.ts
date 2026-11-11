@@ -44,6 +44,7 @@ export async function GET(
         status: job.status,
         percent: job.percent,
         message: job.message,
+        phase: job.phase,
         noteId: job.noteId,
         noteTitle: job.noteTitle,
         error: job.error,

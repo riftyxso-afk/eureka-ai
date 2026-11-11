@@ -3,7 +3,7 @@
 import Image from "next/image";
 import "./mobile.css";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ThemeSwitch from "@/components/ui/ThemeSwitch";
@@ -36,31 +36,26 @@ import CallIntroBanner from "@/components/dashboard/CallIntroBanner";
 import { apiFetch } from "@/lib/apiClient";
 import { usePremium } from "@/lib/usePremium";
 import { ProLockedCard } from "@/components/ProGate";
+import LoadingStatus from "@/components/ui/LoadingStatus";
 import { getUserId } from "@/lib/identity";
 import { useV2Progress } from "@/components/dashboard/V2Progress";
 import { supabase } from "@/lib/supabase/client";
 import { PENDING_PROMPT_KEY, type PendingPrompt } from "@/lib/assistant/pendingPrompt";
-import type { Note } from "@/lib/types";
+import { useDashboardNotes } from "@/components/dashboard/useDashboardNotes";
+import { noteSource as sourceOf } from "@/lib/dashboard-notes";
+import LearningOverview from "@/components/dashboard/LearningOverview";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import "./v2.css";
 import "./simple-home.css";
 
-const FILTERS = ["Semua", "Dokumen", "Web", "YouTube", "Audio"];
-function sourceOf(note: Note) {
-  if (/youtu\.be|youtube\.com/i.test(note.sourceUrl ?? "")) return "YouTube";
-  if (note.sourceUrl) return "Web";
-  return ["Dokumen", "Audio", "YouTube", "Web"].includes(note.subject) ? note.subject : "Catatan";
-}
-
+const FILTERS = ["Semua", "Dokumen", "Web", "YouTube", "Audio", "Video"];
 export default function DashboardV2() {
-  const { isPremium, loading: planLoading } = usePremium();
+  const { isPremium, loading: planLoading, error: planError, refresh: refreshPlan } = usePremium();
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [draft, setDraft] = useState("");
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const { notes, loading, error: loadError, refresh: load } = useDashboardNotes(!planLoading && isPremium);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("Semua");
   const [subject, setSubject] = useState("");
@@ -126,25 +121,7 @@ export default function DashboardV2() {
     setFiles(previous => previous.filter((_, item) => item !== index));
     if (files.length === 1 && draft === "Buat catatan lengkap dari materi terlampir.") setDraft("");
   }
-  const load = useCallback(async (signal?: AbortSignal) => {
-    setLoadError("");
-    try {
-      const response = await apiFetch(`/api/notes?userId=${encodeURIComponent(getUserId())}`, { signal });
-      const data = await response.json();
-      if (!response.ok || !Array.isArray(data.notes)) throw new Error(data.error || "Catatan belum bisa dimuat.");
-      setNotes(data.notes);
-    } catch (error) { if (!signal?.aborted) setLoadError(error instanceof Error ? error.message : "Catatan belum bisa dimuat."); }
-    finally { if (!signal?.aborted) setLoading(false); }
-  }, []);
-  useEffect(() => {
-    const controller = new AbortController();
-    setSubject(new URLSearchParams(window.location.search).get("subject") ?? "");
-    if (!planLoading && isPremium) void load(controller.signal);
-    else if (!planLoading) setLoading(false);
-    const refresh = () => void load(controller.signal);
-    window.addEventListener("note-ready", refresh);
-    return () => { controller.abort(); window.removeEventListener("note-ready", refresh); };
-  }, [load, planLoading, isPremium]);
+  useEffect(() => { setSubject(new URLSearchParams(window.location.search).get("subject") ?? ""); }, []);
   const shown = useMemo(() => notes.filter(note => (filter === "Semua" || sourceOf(note) === filter) && (!subject || note.subject === subject) && `${note.title} ${note.summary ?? ""}`.toLocaleLowerCase("id").includes(query.toLocaleLowerCase("id"))).sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.createdAt.localeCompare(a.createdAt)), [notes, query, subject, filter]);
   const prefs: NoteCreatePrefs = { generationMode: effort === "Mendalam" ? "lengkap" : "cepat", chapterCount: effort === "Kilat" ? 2 : effort === "Mendalam" ? 5 : 3, studyMode: effort === "Kilat" ? "ringkas" : effort === "Mendalam" ? "lengkap" : "standar", noteType: "rangkuman" };
   function submit(text: string) {
@@ -169,7 +146,7 @@ export default function DashboardV2() {
       <section className="dv2-workspace" aria-labelledby="dv2-title">
         <div className="dv2-greeting"><div className="dv2-momo" data-momo-splash-target><MomoCompanion mode={effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal"} thinking={openingChat} question={draft} /></div><h1 id="dv2-title">Mau belajar apa hari ini?</h1></div>
         <div className={`dv2-compose-area${!planLoading && !isPremium ? " is-pro-locked" : ""}`}>
-          {planLoading ? <p role="status">Memeriksa paket…</p> : !isPremium ? <ProLockedCard /> : <>
+          {planLoading ? <LoadingStatus stage="synchronizing" detail="Memeriksa paketmu" /> : planError ? <div className="eureka-pro-lock"><p role="alert">{planError}</p><button type="button" className="eureka-pro-cta" onClick={() => void refreshPlan()}>Coba lagi</button></div> : !isPremium ? <ProLockedCard /> : <>
           {generation.job ? <PromptNoteProgress generation={generation} /> : <>
           {mode === "note" && files.length > 0 && <DocumentAttachments files={files} onRemove={removeAttachment} />}
           <div className="dv2-prompt">
@@ -206,10 +183,11 @@ export default function DashboardV2() {
         </div>
 
       </section>
+      <LearningOverview premium={isPremium} />
       {isPremium && <section className="dv2-library" aria-labelledby="dv2-notes-title"><div className="dv2-library-heading"><div><h2 id="dv2-notes-title">Catatanmu <span>{notes.length}</span></h2><p>Simpan rasa ingin tahu. Lanjutkan kapan saja.</p></div><button className="dv2-button" onClick={() => isPremium ? fileInput.current?.click() : router.push("/dashboard-v2/pricing")}><Plus trigger="parent" size={16} />Tambah materi</button></div>
         <div className="dv2-library-tools"><div className="dv2-toolbar"><label className="dv2-search"><Search trigger="parent" size={16} /><input aria-label="Cari catatan" placeholder="Cari judul atau isi catatan…" value={query} onChange={event => setQuery(event.target.value)} /></label><select aria-label="Filter mata pelajaran" value={subject} onChange={event => setSubject(event.target.value)}><option value="">Semua mata pelajaran</option>{[...new Set(notes.map(note => note.subject))].sort().map(value => <option key={value}>{value}</option>)}</select><div className="dv2-view" role="group" aria-label="Tampilan catatan"><button aria-label="Galeri" aria-pressed={view === "grid"} onClick={() => setView("grid")}><Grid2X2 trigger="parent" size={17} /></button><button aria-label="Daftar" aria-pressed={view === "list"} onClick={() => setView("list")}><List trigger="parent" size={18} /></button></div></div>
-        <div className="dv2-filters" role="group" aria-label="Jenis sumber">{FILTERS.map(value => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value}</button>)}<button onClick={() => void load()} aria-label="Muat ulang catatan"><RefreshCw trigger="parent" size={15} /></button></div>
-        </div>{!planLoading && !isPremium ? <p className="dv2-empty">Tes pemahaman, catatan, dan bab tersedia di <Link href="/dashboard-v2/pricing">Eureka Pro</Link>.</p> : loading ? <div className="dv2-note-grid" role="status" aria-label="Memuat catatan">{[1, 2, 3].map(id => <div className="dv2-skeleton" key={id} />)}</div> : loadError ? <div className="dv2-empty" role="alert"><History trigger="parent" size={28} /><h3>Catatan belum bisa dimuat</h3><p>{loadError}</p><button className="dv2-button" onClick={() => void load()}>Coba lagi</button></div> : shown.length === 0 ? <div className="dv2-empty"><BookOpen trigger="parent" size={32} /><h3>{notes.length ? "Belum ada catatan yang cocok" : "Catatan pertamamu dimulai dari sebuah ide"}</h3><p>{notes.length ? "Coba kata kunci atau filter lain." : "Tulis topik di atas, tempel tautan, atau unggah materi untuk mulai belajar."}</p>{notes.length > 0 && <button className="dv2-button" onClick={() => { setQuery(""); setFilter("Semua"); setSubject(""); }}>Reset filter</button>}</div> : <div className={`dv2-note-grid ${view === "list" ? "is-list" : ""}`}>{shown.map(note => <Link className="dv2-note" key={note.id} href={`/dashboard-v2/note/${encodeURIComponent(note.id)}`}><div className="dv2-note-preview"><span className="dv2-note-type"><FileText trigger="parent" size={13} />{sourceOf(note)}</span><h3>{note.title}</h3><p>{note.summary || "Buka catatan untuk membaca materi dan bab selengkapnya."}</p></div><div className="dv2-note-info"><strong>{note.title}</strong><span>{new Date(note.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}{note.pinned ? " · Disematkan" : ""}<ArrowRight trigger="parent" size={16} /></span></div></Link>)}</div>}
+        <div className="dv2-filters" role="group" aria-label="Jenis sumber">{FILTERS.map(value => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value}</button>)}<button onClick={() => void load()} disabled={loading} aria-label="Muat ulang catatan"><RefreshCw trigger="parent" size={15} /></button></div>
+        </div>{!planLoading && !isPremium ? <p className="dv2-empty">Tes pemahaman, catatan, dan bab tersedia di <Link href="/dashboard-v2/pricing">Eureka Pro</Link>.</p> : loading && !notes.length ? <div className="dv2-note-grid" role="status" aria-label="Memuat catatan">{[1, 2, 3].map(id => <div className="dv2-skeleton" key={id} />)}</div> : loadError ? <div className="dv2-empty" role="alert"><History trigger="parent" size={28} /><h3>Catatan belum bisa dimuat</h3><p>{loadError}</p><button className="dv2-button" onClick={() => void load()}>Coba lagi</button></div> : shown.length === 0 ? <div className="dv2-empty"><BookOpen trigger="parent" size={32} /><h3>{notes.length ? "Belum ada catatan yang cocok" : "Catatan pertamamu dimulai dari sebuah ide"}</h3><p>{notes.length ? "Coba kata kunci atau filter lain." : "Tulis topik di atas, tempel tautan, atau unggah materi untuk mulai belajar."}</p>{notes.length > 0 && <button className="dv2-button" onClick={() => { setQuery(""); setFilter("Semua"); setSubject(""); }}>Reset filter</button>}</div> : <div className={`dv2-note-grid ${view === "list" ? "is-list" : ""}`}>{shown.map(note => <Link className="dv2-note" key={note.id} href={`/dashboard-v2/note/${encodeURIComponent(note.id)}`}><div className="dv2-note-preview"><span className="dv2-note-type"><FileText trigger="parent" size={13} />{sourceOf(note)}</span><h3>{note.title}</h3><p>{note.summary || "Buka catatan untuk membaca materi dan bab selengkapnya."}</p></div><div className="dv2-note-info"><strong>{note.title}</strong><span>{note.createdAt ? new Date(note.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "Tanggal belum tersedia"}{note.pinned ? " · Disematkan" : ""}<ArrowRight trigger="parent" size={16} /></span></div></Link>)}</div>}
       </section>}
     </main>
     {isPremium && <CallIntroBanner paused={Boolean(callOpen || openingChat || generation.busy)} onTry={() => setCallOpen("chat")} />}

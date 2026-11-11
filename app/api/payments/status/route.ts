@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     }
 
     const status = await getPremiumStatus(auth.userId);
-    return NextResponse.json(status);
+    return NextResponse.json(status, { headers: { "Cache-Control": "private, no-store" } });
   } catch (e) {
     const msg = "Gagal memuat status premium.";
     console.error("[api/payments/status] GET", e);

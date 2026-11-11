@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   addCards,
+  checkInToday,
   getStats,
   recordActivity,
   reviewAllCards,
   type ProgressStats,
 } from "@/lib/progress-store";
 import { requireAuth } from "@/lib/assistant/auth";
+import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -60,6 +62,13 @@ export async function POST(req: NextRequest) {
     const xp = Math.max(0, Number(body?.xp ?? 0) || 0);
     const noteId = String(body?.noteId ?? "");
     const label = String(body?.label ?? "");
+
+    if (action === "check_in") {
+      ensureRateLimitPrune();
+      if (!checkRateLimit(`check-in:${auth.userId}`, 12, 60_000).ok) return NextResponse.json({ error: "Tunggu sebentar sebelum absen lagi." }, { status: 429 });
+      await checkInToday(auth.userId);
+      return NextResponse.json({ ok: true, stats: await getStats(auth.userId) });
+    }
 
     if (action === "activity") {
       const { levelUp } = await recordActivity(userId, xp, label || undefined);

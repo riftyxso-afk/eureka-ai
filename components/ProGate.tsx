@@ -6,6 +6,7 @@ import { ArrowRight, Crown, LockKeyhole } from "lucide-react";
 import { usePremium } from "@/lib/usePremium";
 import { useI18n } from "@/context/LocaleContext";
 import "./pro-access.css";
+import LoadingStatus from "@/components/ui/LoadingStatus";
 
 export function ProLockedCard() {
   const { locale } = useI18n();
@@ -22,8 +23,9 @@ export function ProLockedCard() {
 }
 
 export default function ProGate({ children }: { children: ReactNode }) {
-  const { loading, isPremium } = usePremium();
-  if (loading) return <p className="eureka-pro-pending" role="status">Memeriksa paket…</p>;
+  const { loading, isPremium, error, refresh } = usePremium();
+  if (loading) return <div className="eureka-pro-pending"><LoadingStatus stage="synchronizing" detail="Memeriksa paketmu" /></div>;
+  if (error) return <div className="eureka-pro-page"><p role="alert">{error}</p><button type="button" className="eureka-pro-cta" onClick={() => void refresh()}>Coba lagi</button></div>;
   if (!isPremium) return <div className="eureka-pro-page"><ProLockedCard /><Link href="/dashboard-v2">Kembali ke dashboard</Link></div>;
   return children;
 }

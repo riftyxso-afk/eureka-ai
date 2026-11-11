@@ -16,6 +16,7 @@ import { isLoggedIn, syncAuthSession } from "@/lib/auth";
 import { useI18n } from "@/context/LocaleContext";
 import { captureProductEvent } from "@/lib/productAnalytics";
 import { isPaymentId } from "@/lib/paymentIds";
+import LoadingStatus from "@/components/ui/LoadingStatus";
 import "@/app/pricing/pricing.css";
 
 const TIER_LABEL: Record<string, string> = {
@@ -47,7 +48,7 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
     : ["Chat AI dan pencarian web", "Catatan AI lengkap dengan bab dan mindmap", "Kuis, flashcard, dan latihan pemahaman", "Panggilan suara dengan Momo dan Lala", "Jadwal belajar dan pengelolaan mata pelajaran"];
   const en = locale === "en";
   const router = useRouter();
-  const { isPremium, tier, premiumUntil, loading, refresh } = usePremium();
+  const { isPremium, tier, premiumUntil, freeAccessUntil, loading, refresh } = usePremium();
   const [signedIn, setSignedIn] = useState(false);
   const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -377,14 +378,24 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
               {PERKS.map(perk => <li key={perk}><Check size={17} aria-hidden="true" />{perk}</li>)}
             </ul>
           </div>
-          <section className="pro-checkout" aria-label={p.proMonthly}>
+          <section className="pro-checkout" aria-label={freeAccessUntil ? (en ? "Free Pro access" : "Akses Pro gratis") : p.proMonthly}>
+            {freeAccessUntil ? <>
+              <h2>{en ? "Eureka Pro is free" : "Eureka Pro gratis"}</h2>
+              <p className="pro-payment-note">{en ? "All accounts have free access until" : "Semua akun dapat akses gratis sampai"} {new Intl.DateTimeFormat(en ? "en-GB" : "id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(freeAccessUntil))} WIB.</p>
+              <Link className="eureka-pro-cta" href="/dashboard-v2">{en ? "Start learning" : "Mulai belajar"}</Link>
+              {tier !== "trial" && <div className="pro-active">
+                <strong>{p.statusActive} · {TIER_LABEL[tier ?? ""] ?? "Pro"}</strong>
+                {premiumUntil && <span>{p.until} {formatDate(premiumUntil)}</span>}
+                <button type="button" onClick={() => { setError(null); cancelDialog.current?.showModal(); }}>{p.cancelSubscription}</button>
+              </div>}
+            </> : <>
             <h2>{p.proMonthly}</h2>
             <div className="pro-price">
               {appliedCode && appliedCode.finalAmount < TIER_PRICES.normal && <del>{basePrice}</del>}
               <strong>{displayPrice}</strong><span>{en ? "/ month" : "/ bulan"}</span>
             </div>
             <p className="pro-payment-note"><CreditCard size={16} aria-hidden="true" />{en ? "One payment for 30 days. No automatic renewal." : "Bayar sekali, aktif 30 hari. Tanpa perpanjangan otomatis."}</p>
-            {loading ? <p className="pro-payment-note" role="status"><Loader2 className="animate-spin" size={16} />{en ? "Checking plan…" : "Memeriksa paket…"}</p> : <>
+            {loading ? <div className="pro-payment-note"><LoadingStatus stage="synchronizing" detail={en ? "Checking your plan" : "Memeriksa paketmu"} compact /></div> : <>
               {isPremium && <div className="pro-active">
                 <strong>{p.statusActive} · {TIER_LABEL[tier ?? ""] ?? "Pro"}</strong>
                 {premiumUntil && <span>{p.until} {formatDate(premiumUntil)}</span>}
@@ -403,6 +414,7 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
               {error && <p className="pro-error" role="alert">{error}</p>}
               <SlideToConfirm label={paymentLabel} busy={busy} disabled={checkoutDisabled} onConfirm={() => void choosePlan()} />
               <button className="pro-alternative" type="button" disabled={checkoutDisabled} onClick={() => void choosePlan()}>{en ? "Continue without sliding" : "Lanjut tanpa menggeser"}</button>
+            </>}
             </>}
           </section>
         </section>

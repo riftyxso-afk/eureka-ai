@@ -99,7 +99,7 @@ test("payment confirmation requires ownership before contacting Mayar", async ()
       confirmMayarCheckout: async () => { upstream++; return "paid"; },
     },
     "@/lib/rateLimit": { ensureRateLimitPrune() {}, checkRateLimit: () => ({ ok: true }) },
-    "@/lib/premium": { getPremiumStatus: async () => ({ isPremium: false }) },
+    "@/lib/premium": { getSubscriptionStatus: async () => ({ isPremium: false }) },
     "@/lib/supabase/admin": { db: () => ({ from: () => ({
       select: () => ({
         eq(key, value) { filters.push([key, value]); return this; },

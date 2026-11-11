@@ -182,6 +182,12 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   mount(app, "/api/progress", progress);
   count++;
 
+  const library = await import("@/app/api/library/route");
+  const libraryStory = await import("@/app/api/library/story/route");
+  mount(app, "/api/library", library);
+  mount(app, "/api/library/story", libraryStory);
+  count += 2;
+
   // ─── Reviews (ulasan produk → JSON-LD aggregateRating) ──
   const reviews = await import("@/app/api/reviews/route");
   mount(app, "/api/reviews", reviews);

@@ -404,7 +404,7 @@ export default function ChatPage() {
           {initialSend && (initialPending || chat.loading || chat.sending) && chat.renderedMessages.length === 0 && !chat.hasError && !chat.clarification ? (
             <div className="mx-auto w-full max-w-3xl space-y-4">
               <MessageBubble message={{ id: "pending-user", sessionId, role: "user", content: initialSend.question, mentions: initialSend.mentions, sources: [], model: null, createdAt: new Date().toISOString() }} />
-              {initialSend.webSearch ? <WebSearchPipeline stage={chat.streaming.webStage ?? "preparing"} results={chat.streaming.webResults} query={chat.streaming.webQuery} notice={chat.streaming.webNotice} /> : <ResponseActivity thinking={chat.streaming.thinking} />}
+              {initialSend.webSearch ? <WebSearchPipeline stage={chat.streaming.webStage ?? "preparing"} results={chat.streaming.webResults} query={chat.streaming.webQuery} notice={chat.streaming.webNotice} /> : <ResponseActivity stage={chat.streaming.activity} thinking={chat.streaming.thinking} />}
             </div>
           ) : chat.loading && chat.messages.length === 0 && !chat.sending ? (
             <ChatSkeleton label={locale === "en" ? "Loading conversation…" : "Memuat percakapan…"} />
@@ -436,6 +436,7 @@ export default function ChatPage() {
                         Tampil hanya di bubble streaming terakhir saat aktif. */}
                     <MessageBubble
                       message={m}
+                      activity={chat.streaming.activity}
                       webStage={idx === chat.renderedMessages.length - 1 ? chat.streaming.webStage : null}
                       webQuery={chat.streaming.webQuery}
                       webNotice={chat.streaming.webNotice}

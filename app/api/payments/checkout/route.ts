@@ -6,6 +6,7 @@ import { applyDiscount, consumeDiscount } from "@/lib/discount";
 import { requireAuth } from "@/lib/assistant/auth";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { db } from "@/lib/supabase/admin";
+import { getFreeProUntil } from "@/lib/free-pro-period";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const auth = await requireAuth(req.headers.get("authorization"), typeof body?.userId === "string" ? body.userId.trim() : undefined);
   if (!auth.userId) return NextResponse.json({ error: auth.error }, { status: auth.status ?? 401 });
+
+  const freeAccessUntil = getFreeProUntil();
+  if (freeAccessUntil) {
+    return NextResponse.json({ error: "Eureka Pro sedang gratis untuk semua akun.", freeAccessUntil }, { status: 409 });
+  }
 
   if (!isMayarConfigured()) {
     return NextResponse.json({ error: "Pembayaran Mayar belum tersedia. Silakan coba lagi nanti." }, { status: 503 });

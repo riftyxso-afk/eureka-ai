@@ -270,12 +270,13 @@ export async function POST(req: NextRequest) {
     const jobProgress: NotesProcessorProgress = {
       report: (phase, percent, message) => {
         tracker.emit(phase, percent, message);
-        updateJob(jobIdRef.current, { percent, message });
+        updateJob(jobIdRef.current, { phase, percent, message });
       },
       advance: (phase, fraction, message) => {
         tracker.advance(phase, fraction, message);
         updateJob(jobIdRef.current, {
           percent: phaseToPercent(phase, fraction),
+          phase,
           message,
         });
       },
@@ -283,6 +284,7 @@ export async function POST(req: NextRequest) {
         tracker.done(phase, message);
         updateJob(jobIdRef.current, {
           percent: phaseToPercent(phase, 1),
+          phase,
           message,
         });
       },

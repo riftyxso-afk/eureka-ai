@@ -19,6 +19,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/supabase/admin";
+import type { ProcessPhase } from "@/lib/progressTracker";
 
 export type JobStatus = "running" | "done" | "error";
 
@@ -29,6 +30,7 @@ export interface NoteJob {
   status: JobStatus;
   percent: number;
   message: string;
+  phase?: ProcessPhase;
   noteId?: string;
   noteTitle?: string;
   error?: string;
@@ -101,6 +103,7 @@ async function persist(job: NoteJob): Promise<void> {
           message: job.message,
           note_id: job.noteId ?? null,
           result: {
+            phase: job.phase,
             noteTitle: job.noteTitle ?? null,
             error: job.error ?? null,
             cancelled: job.cancelled ?? false,
@@ -142,6 +145,8 @@ async function loadFromDb(jobId: string): Promise<NoteJob | null> {
       .maybeSingle();
     if (!data) return null;
     const result = (data.result ?? {}) as {
+      phase?: ProcessPhase;
+      userId?: string;
       noteTitle?: string | null;
       error?: string | null;
       cancelled?: boolean;
@@ -156,7 +161,7 @@ async function loadFromDb(jobId: string): Promise<NoteJob | null> {
       return {
         id: data.id,
         sessionId: "",
-        userId: "",
+        userId: typeof result.userId === "string" ? result.userId : "",
         status: "error",
         percent: 100,
         message: "Proses gagal.",
@@ -168,10 +173,11 @@ async function loadFromDb(jobId: string): Promise<NoteJob | null> {
     return {
       id: data.id,
       sessionId: "",
-      userId: "",
+      userId: typeof result.userId === "string" ? result.userId : "",
       status,
       percent: data.progress ?? 0,
       message: data.message ?? "",
+      phase: result.phase,
       noteId: data.note_id ?? undefined,
       noteTitle: result.noteTitle ?? undefined,
       error: result.error ?? undefined,
@@ -230,7 +236,7 @@ export function executeJob(jobId: string): Promise<void> {
 
 export async function updateJob(
   jobId: string,
-  patch: Partial<Pick<NoteJob, "status" | "percent" | "message" | "noteId" | "noteTitle" | "error">>
+  patch: Partial<Pick<NoteJob, "status" | "percent" | "message" | "phase" | "noteId" | "noteTitle" | "error">>
 ): Promise<void> {
   const job = jobs.get(jobId) ?? (await loadFromDb(jobId));
   if (!job) return;

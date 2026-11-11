@@ -26,6 +26,7 @@ import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type { AssistantChatMessage, WebSearchStage } from "@/lib/assistant/types";
 
 interface MessageBubbleProps {
+  activity?: import("@/lib/loading-stage").LoadingStage;
   message: AssistantChatMessage;
   isStreaming?: boolean;
   thinking?: string | null;
@@ -106,6 +107,7 @@ export default function MessageBubble({
   message,
   isStreaming = false,
   thinking,
+  activity = "thinking",
   webStage,
   webQuery,
   webNotice,
@@ -189,7 +191,7 @@ export default function MessageBubble({
       <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} thinking={isStreaming} />
       <div className="chat-message-assistant-content flex min-w-0 flex-col gap-1.5">
         {isStreaming && webStage && <WebSearchPipeline stage={webStage} results={message.webResults ?? []} query={webQuery} notice={webNotice} />}
-        {isStreaming && ((!webStage && !displayContent) || thinking) && <ResponseActivity thinking={thinking} />}
+        {isStreaming && <ResponseActivity thinking={thinking} stage={displayContent ? "combining" : activity} showIndicator={!webStage} />}
         {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}
         <div className="break-words text-clay-dark">
           {empty || !displayContent ? (

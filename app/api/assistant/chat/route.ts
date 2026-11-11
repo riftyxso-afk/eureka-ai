@@ -473,6 +473,7 @@ export async function POST(req: NextRequest) {
       let modelUsed = "";
       let firstTokenLogged = false;
       let sources: AssistantSource[] = [];
+      emit({ type: "activity", stage: "synchronizing" });
       if (webSearch) emit({ type: "pipeline", stage: "preparing" });
 
       try {
@@ -508,6 +509,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 1) Konteks user (profil, progres, subjek, catatan)
+        emit({ type: "activity", stage: "reading" });
         const context = await buildUserContext(userId);
         traceTiming("sesi, riwayat, dan konteks user");
 
@@ -524,6 +526,7 @@ export async function POST(req: NextRequest) {
         let ragHits: RagHit[] = [];
         let ragError = "";
         if (context.notes.length > 0 || mentions.length > 0) {
+          emit({ type: "activity", stage: "retrieving" });
           let ragTimeout: ReturnType<typeof setTimeout> | undefined;
           try {
             ragHits = await Promise.race([
@@ -575,6 +578,7 @@ export async function POST(req: NextRequest) {
         let attachedDocument: AttachedDocument | null = null;
         let visionImage: { dataUrl: string; filename: string } | null = null;
         if (attachment) {
+          emit({ type: "activity", stage: "reading" });
           const parsed = parseDataUrl(attachment.dataUrl);
           if (parsed && IMAGE_MIME_RE.test(parsed.mime)) {
             // Gambar → kirim langsung sebagai image_url (model vision).
@@ -617,6 +621,7 @@ export async function POST(req: NextRequest) {
           !!activeVideoUrl && isPremiumUser;
         let videoContextMd = "";
         if (videoAllowed) {
+          emit({ type: "activity", stage: "reading" });
           try {
             const extracted = await scrapeYoutubeTranscript(activeVideoUrl);
             videoContextMd = `JUDUL: ${extracted.title}\n\nTRANSCRIPT:\n${extracted.text.slice(
@@ -633,6 +638,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 5) System prompt + riwayat + pertanyaan
+        emit({ type: "activity", stage: "combining" });
         let system = buildSystemPrompt({
           context,
           ragHits,
@@ -661,6 +667,7 @@ export async function POST(req: NextRequest) {
 
         // 6) Stream dari AI — maxTokens dinaikkan biar jawaban web search tidak kepotong (deepseek terpotong di 1400)
         emit({ type: "meta", mode: "assistant", model: "" });
+        emit({ type: "activity", stage: "thinking" });
         if (webSearch) emit({ type: "pipeline", stage: "writing" });
         try {
           const maxTokensBySpeed: Record<AiSpeedMode, number> = {
@@ -685,6 +692,7 @@ export async function POST(req: NextRequest) {
             (ev) => {
               if (ev.type === "token") {
                 if (!firstTokenLogged) {
+                  emit({ type: "activity", stage: "combining" });
                   firstTokenLogged = true;
                   traceTiming("token pertama dari AI");
                 }

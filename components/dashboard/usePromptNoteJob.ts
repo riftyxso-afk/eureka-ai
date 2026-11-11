@@ -7,7 +7,14 @@ import { addActiveJobId, removeActiveJobId } from "@/context/JobWatcherContext";
 import { useNoteSteps, type NoteProgressEvent } from "@/components/note/useNoteSteps";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 
-type JobState = { status: "running" | "done" | "error"; prompt: string; percent: number; message: string; jobId?: string; noteId?: string; error?: string };
+type JobState = { status: "running" | "done" | "error"; prompt: string; percent: number; message: string; phase?: string; jobId?: string; noteId?: string; error?: string };
+function mergeProgress(current: JobState | null, next: NoteProgressEvent): JobState | null {
+  if (!current || current.status !== "running") return current;
+  const percent = Number(next.percent);
+  // Poll responses and SSE replays can arrive after a newer event.
+  if (Number.isFinite(percent) && percent < current.percent) return current;
+  return { ...current, percent: Number.isFinite(percent) ? Math.max(current.percent, Math.min(99, percent)) : current.percent, message: next.message || current.message, phase: next.phase || current.phase };
+}
 export function usePromptNoteJob() {
   const [job, setJob] = useState<JobState | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -73,7 +80,7 @@ export function usePromptNoteJob() {
               try { localStorage.setItem(`eureka:v2:sources:${getUserId()}:${next.noteId}`, JSON.stringify(files.map(file => ({ name: file.name, size: file.size, type: file.type })))); } catch { /* Source labels are optional on this device. */ }
             }
             window.dispatchEvent(new CustomEvent("note-ready"));
-          } else setJob(current => current && ({ ...current, percent: Math.max(current.percent, Math.min(99, Number(next.percent) || 0)), message: next.message || current.message }));
+          } else setJob(current => mergeProgress(current, next));
         } catch { if (mounted.current && !controller.signal.aborted) setConnection("Menghubungkan ulang. Proses tetap berjalan di server."); }
         finally { polling = false; }
       }
@@ -83,7 +90,7 @@ export function usePromptNoteJob() {
         try {
           const data = JSON.parse(event.data) as NoteProgressEvent;
           handleEvent(data); setConnection("");
-          setJob(current => current && ({ ...current, percent: Math.max(current.percent, Math.min(99, data.percent ?? 0)), message: data.message || current.message }));
+          setJob(current => mergeProgress(current, data));
           if ((data.percent ?? 0) >= 100) void poll();
         } catch { /* Ignore incomplete events; polling keeps the status current. */ }
       };

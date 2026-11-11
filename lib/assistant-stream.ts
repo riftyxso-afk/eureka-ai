@@ -15,6 +15,7 @@
  */
 import { apiUrl } from "@/lib/apiClient";
 import { getAccessToken } from "@/lib/supabase/client";
+import type { LoadingStage } from "@/lib/loading-stage";
 import type {
   AssistantSource,
   ChatAttachment,
@@ -31,6 +32,7 @@ export interface ClarificationQuestion {
 }
 
 export type AssistantStreamEvent =
+  | { type: "activity"; stage: LoadingStage }
   | { type: "meta"; mode?: string; model?: string; skill?: string }
   | { type: "token"; text: string }
   | { type: "thinking"; text: string }
