@@ -148,7 +148,7 @@ function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
         <label><input type="checkbox" checked={captions} onChange={event => setCaptions(event.target.checked)} /> Tampilkan transkrip</label>
       </div>}
     </header>
-    {videoCall ? <LalaCallVideo status={status} caption={captions ? reply : ""} speaking={phase === "speaking"}
+    {videoCall ? <LalaCallVideo status={status} caption={captions ? reply : ""} phase={phase}
       level={level} sendFrame={sendVideoFrame} /> : <div className="momo-call-stage">
       <div ref={orb} className="momo-call-orb" data-phase={phase} aria-hidden="true">
         <span ref={cloud} className="momo-call-cloud" />

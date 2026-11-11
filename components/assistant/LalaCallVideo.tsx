@@ -10,13 +10,14 @@ const FRAME_MAX_SIDE = 768;
 type Props = {
   status: string;
   caption: string;
-  speaking: boolean;
+  phase: string;
   level: () => number;
   sendFrame: (data: string) => void;
 };
 
-export default function LalaCallVideo({ status, caption, speaking, level, sendFrame }: Props) {
-  const portrait = useRef<HTMLDivElement>(null);
+export default function LalaCallVideo({ status, caption, phase, level, sendFrame }: Props) {
+  const orb = useRef<HTMLDivElement>(null);
+  const cloud = useRef<HTMLSpanElement>(null);
   const preview = useRef<HTMLVideoElement>(null);
   const [camera, setCamera] = useState<{ facing: "user" | "environment"; attempt: number }>({
     facing: "environment", attempt: 0,
@@ -28,23 +29,26 @@ export default function LalaCallVideo({ status, caption, speaking, level, sendFr
   const lastFrame = useRef(0);
 
   useEffect(() => {
-    if (!speaking) return;
-    const element = portrait.current;
+    if (phase !== "listening" && phase !== "speaking") return;
+    const element = orb.current;
+    const cloudElement = cloud.current;
     if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let frame = 0;
     let amount = 0;
     function animate() {
-      const target = Math.min(1, level() * 2.8);
-      amount += (target - amount) * (target > amount ? 0.48 : 0.26);
-      element?.style.setProperty("--speech", amount.toFixed(3));
+      const target = level();
+      amount += (target - amount) * (target > amount ? 0.36 : 0.12);
+      if (element) element.style.transform = `scale(${1 + amount * 0.08})`;
+      if (cloudElement) cloudElement.style.transform = `translateY(${amount * -12}%) rotate(${amount * 12}deg)`;
       frame = requestAnimationFrame(animate);
     }
     frame = requestAnimationFrame(animate);
     return () => {
       cancelAnimationFrame(frame);
-      element.style.removeProperty("--speech");
+      element.style.removeProperty("transform");
+      cloudElement?.style.removeProperty("transform");
     };
-  }, [level, speaking]);
+  }, [level, phase]);
 
   useEffect(() => {
     const video = preview.current;
@@ -159,8 +163,8 @@ export default function LalaCallVideo({ status, caption, speaking, level, sendFr
   }
 
   return <section className="lala-video" aria-label="Video Lala">
-    <div className="lala-video-portrait" ref={portrait} aria-hidden="true">
-      <div className="lala-video-mouth" />
+    <div className="momo-call-orb lala-video-orb" data-phase={phase} ref={orb} aria-hidden="true">
+      <span className="momo-call-cloud" ref={cloud} />
     </div>
     <div className="lala-video-name">
       <strong>Lala</strong>
