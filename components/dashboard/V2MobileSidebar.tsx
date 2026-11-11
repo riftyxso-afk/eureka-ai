@@ -28,20 +28,21 @@ import User from "kubai-icons-react/icons/user";
 import { usePremium } from "@/lib/usePremium";
 
 const BASE = "/dashboard-v2";
-const navigationIcons = [Grid, NotebookPen, MessageCircle, BookOpen, Trophy, CalendarDays, GraduationCap, BookOpen, Flame, User, Crown];
 const navigation = [
-  { label: "Beranda", href: BASE, image: 0 },
-  { label: "Koleksi catatan", href: BASE + "#dv2-notes-title", image: 1 },
-  { label: "Tanya Momo", href: BASE + "/tanya-momo", image: 6 },
-  { label: "Mata Pelajaran", href: BASE + "/mata-pelajaran", image: 2 },
-  { label: "Misi", href: BASE + "/misi", image: 3 },
-  { label: "Jadwal", href: BASE + "/jadwal", image: 8 },
-  { label: "Kursus", href: BASE + "/kursus", image: 4 },
-  { label: "Perpustakaan", href: BASE + "/perpustakaan", image: 0 },
-  { label: "Streak", href: BASE + "/streaks", image: 9 },
-  { label: "Profil", href: BASE + "/profil", image: 10 },
-  { label: "Paket Pro", href: BASE + "/pricing", image: 11 },
+  { group: "Utama", label: "Beranda", href: BASE, icon: Grid, color: "#e9b13b" },
+  { group: "Utama", label: "Koleksi catatan", href: BASE + "#dv2-notes-title", icon: NotebookPen, premium: true },
+  { group: "Utama", label: "Tanya Momo", href: BASE + "/tanya-momo", icon: MessageCircle, color: "#f18d5c", premium: true },
+  { group: "Belajar", label: "Mata Pelajaran", href: BASE + "/mata-pelajaran", icon: BookOpen, premium: true },
+  { group: "Belajar", label: "Perpustakaan", href: BASE + "/perpustakaan", icon: BookOpen, color: "#e9b13b", premium: true },
+  { group: "Belajar", label: "Kursus", href: BASE + "/kursus", icon: GraduationCap, premium: true },
+  { group: "Belajar", label: "Jadwal", href: BASE + "/jadwal", icon: CalendarDays, color: "#e9b13b", premium: true },
+  { group: "Belajar", label: "Misi", href: BASE + "/misi", icon: Trophy, premium: true },
+  { group: "Progres", label: "Aktivitas", href: BASE + "/aktivitas", icon: ListChecks },
+  { group: "Progres", label: "Arah Belajar", href: BASE + "/arah-belajar", icon: Network, premium: true },
+  { group: "Akun", label: "Profil", href: BASE + "/profil", icon: User },
+  { group: "Akun", label: "Paket Pro", href: BASE + "/pricing", icon: Crown },
 ];
+const navigationGroups = ["Utama", "Belajar", "Progres", "Akun"];
 
 export function V2MenuArt({ index }: { index: number }) {
   const Icon = [BookOpen, NotebookPen, Network, ListChecks, Layers, FolderOpen, MessageCircle, Headphones, StickyNote, Flame, User, Crown][index] ?? BookOpen;
@@ -106,18 +107,16 @@ export default function V2MobileSidebar({ sections = [], sessions, desktop = fal
           <div className="v2-drawer-branch">{tabs.map(item => <button type="button" key={item.id} aria-pressed={item.active} onClick={() => { close(); item.select(); }}>{item.label}</button>)}</div>
         </>}
 
-        {[{ label: "Utama", items: links.filter(item => navigation.indexOf(item) < 3) },
-          { label: "Belajar", items: links.filter(item => navigation.indexOf(item) >= 3 && navigation.indexOf(item) < 8) },
-          { label: "Akun", items: links.filter(item => navigation.indexOf(item) >= 8) }].map(group => group.items.length > 0 &&
+        {navigationGroups.map(label => ({ label, items: links.filter(item => item.group === label) })).map(group => group.items.length > 0 &&
           <section className="v2-drawer-group" key={group.label} aria-label={group.label}>
             <p className="v2-drawer-label">{group.label}</p>
             {group.items.map(item => {
-              const locked = !planLoading && !isPremium && navigation.indexOf(item) >= 1 && navigation.indexOf(item) <= 7;
-              const Icon = navigationIcons[navigation.indexOf(item)];
+              const locked = item.premium && !planLoading && !isPremium;
+              const Icon = item.icon;
               const active = item.href === BASE ? pathname === BASE
                 : !item.href.includes("#") && (pathname === item.href || pathname.startsWith(item.href + "/"));
               return <Link key={item.href} href={item.href} onClick={follow} aria-current={active ? "page" : undefined}>
-                <span className="v2-menu-art" aria-hidden="true"><Icon size="100%" trigger="parent" color={item.image === 0 || item.image === 8 ? "#e9b13b" : item.image === 6 ? "#f18d5c" : "#8253d4"} /></span><span>{item.label}</span>
+                <span className="v2-menu-art" aria-hidden="true"><Icon size="100%" trigger="parent" color={item.color ?? "#8253d4"} /></span><span>{item.label}</span>
                 {locked && <span className="v2-drawer-pro">Pro</span>}
                 {active && <span className="v2-drawer-active-dot" aria-hidden="true" />}
               </Link>;

@@ -43,7 +43,6 @@ import { supabase } from "@/lib/supabase/client";
 import { PENDING_PROMPT_KEY, type PendingPrompt } from "@/lib/assistant/pendingPrompt";
 import { useDashboardNotes } from "@/components/dashboard/useDashboardNotes";
 import { noteSource as sourceOf } from "@/lib/dashboard-notes";
-import LearningOverview from "@/components/dashboard/LearningOverview";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import "./v2.css";
 import "./simple-home.css";
@@ -140,7 +139,7 @@ export default function DashboardV2() {
       <V2MobileSidebar desktop />
       <Link className="dv2-brand" href="/dashboard-v2"><Image src="/icons/momo-192.png" alt="" width={32} height={32} className="eureka-brand-mark" />eureka! <span>V2 · Beta</span></Link>
       <nav aria-label="Navigasi Dashboard V2" className="dv2-topnav"><Link href={isPremium ? "/dashboard-v2#dv2-notes-title" : "/dashboard-v2/pricing"}><FolderOpen trigger="parent" size={16} />Catatan</Link><Link href="/dashboard-v2/tanya-momo"><MessageCircle trigger="parent" size={16} />Tanya Momo</Link></nav>
-      <div className="dv2-account"><ThemeSwitch /><PageTutorial guideId="dashboard" /><Link href="/dashboard-v2/streaks" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard-v2/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/dashboard-v2/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
+      <div className="dv2-account"><ThemeSwitch /><PageTutorial guideId="dashboard" /><Link href="/dashboard-v2/aktivitas" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard-v2/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/dashboard-v2/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
     </header>
     <main className="dv2-main">
       <section className="dv2-workspace" aria-labelledby="dv2-title">
@@ -183,7 +182,6 @@ export default function DashboardV2() {
         </div>
 
       </section>
-      <LearningOverview premium={isPremium} />
       {isPremium && <section className="dv2-library" aria-labelledby="dv2-notes-title"><div className="dv2-library-heading"><div><h2 id="dv2-notes-title">Catatanmu <span>{notes.length}</span></h2><p>Simpan rasa ingin tahu. Lanjutkan kapan saja.</p></div><button className="dv2-button" onClick={() => isPremium ? fileInput.current?.click() : router.push("/dashboard-v2/pricing")}><Plus trigger="parent" size={16} />Tambah materi</button></div>
         <div className="dv2-library-tools"><div className="dv2-toolbar"><label className="dv2-search"><Search trigger="parent" size={16} /><input aria-label="Cari catatan" placeholder="Cari judul atau isi catatan…" value={query} onChange={event => setQuery(event.target.value)} /></label><select aria-label="Filter mata pelajaran" value={subject} onChange={event => setSubject(event.target.value)}><option value="">Semua mata pelajaran</option>{[...new Set(notes.map(note => note.subject))].sort().map(value => <option key={value}>{value}</option>)}</select><div className="dv2-view" role="group" aria-label="Tampilan catatan"><button aria-label="Galeri" aria-pressed={view === "grid"} onClick={() => setView("grid")}><Grid2X2 trigger="parent" size={17} /></button><button aria-label="Daftar" aria-pressed={view === "list"} onClick={() => setView("list")}><List trigger="parent" size={18} /></button></div></div>
         <div className="dv2-filters" role="group" aria-label="Jenis sumber">{FILTERS.map(value => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value}</button>)}<button onClick={() => void load()} disabled={loading} aria-label="Muat ulang catatan"><RefreshCw trigger="parent" size={15} /></button></div>

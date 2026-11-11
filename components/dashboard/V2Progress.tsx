@@ -74,7 +74,8 @@ export default function V2Progress({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (viewedPath.current === pathname) return;
     viewedPath.current = pathname;
-    const section = pathname.split("/").filter(Boolean).at(-1);
+    const slug = pathname.split("/").filter(Boolean).at(-1);
+    const section = slug === "aktivitas" ? "streaks" : slug;
     if (section === "streaks" || section === "profil" || section === "pricing") {
       captureProductEvent({ name: "v2_account_page_viewed", properties: { surface: section } });
     }
@@ -98,7 +99,7 @@ export default function V2Progress({ children }: { children: ReactNode }) {
       <span className="streak-celebration-icon" aria-hidden="true"><Flame size={30} /></span>
       <div>
         <p role="status"><strong>{celebration} hari berturut-turut!</strong> Kamu menjaga ritme belajarmu.</p>
-        <Link href="/dashboard-v2/streaks" onClick={() => setCelebration(null)}>Lihat streak</Link>
+        <Link href="/dashboard-v2/aktivitas" onClick={() => setCelebration(null)}>Lihat aktivitas</Link>
       </div>
       <button type="button" aria-label="Tutup perayaan streak" onClick={() => setCelebration(null)}><X size={19} /></button>
     </aside>}
