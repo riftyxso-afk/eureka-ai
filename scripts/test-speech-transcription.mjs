@@ -256,11 +256,26 @@ test("Realtime calls recover a granted microphone, greet once, and allow correct
     assert.equal(answers, 1);
 
     await call.start("lala");
+    const frame = btoa("camera jpeg");
+    call.sendVideoFrame(frame);
+    assert.equal(socket.sent.length, 0);
+    socket.onmessage({ data: JSON.stringify({ setupComplete: {} }) });
+    call.sendVideoFrame(frame);
+    assert.deepEqual(socket.sent.at(-1), { realtimeInput: { video: { data: frame, mimeType: "image/jpeg" } } });
+    const messageCount = socket.sent.length;
+    socket.bufferedAmount = 50_000;
+    call.sendVideoFrame(frame);
+    assert.equal(socket.sent.length, messageCount);
+    socket.bufferedAmount = 0;
+    call.sendVideoFrame("A".repeat(96_001));
+    assert.equal(socket.sent.length, messageCount);
     const live = serverContent => socket.onmessage({ data: JSON.stringify({ serverContent }) });
     live({ inputTranscription: { text: "Lala, sudah " } });
     live({ inputTranscription: { text: "tutup saja." } });
     assert.equal(voiceEnds, 1);
     live({ turnComplete: true });
+    assert.match(socket.sent.at(-1).realtimeInput.text, /aku tutup panggilannya sekarang/);
+    call.sendVideoFrame(frame);
     assert.match(socket.sent.at(-1).realtimeInput.text, /aku tutup panggilannya sekarang/);
     live({
       modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: btoa("\0".repeat(4800)) } }] },
@@ -307,6 +322,7 @@ test("Lala only issues a model-bound single-use token to authenticated callers",
       assert.equal(body.uses, 1);
       assert.equal(body.bidiGenerateContentSetup.model, "models/gemini-3.8-live");
       assert.deepEqual(body.bidiGenerateContentSetup.generationConfig.responseModalities, ["AUDIO"]);
+      assert.deepEqual(body.bidiGenerateContentSetup.contextWindowCompression, { slidingWindow: {} });
       assert.equal(body.bidiGenerateContentSetup.tools[0].functionDeclarations[0].name, "search_call_web");
       assert.match(body.bidiGenerateContentSetup.systemInstruction.parts[0].text, /Lala.*bahasa Indonesia/);
       return Response.json({ name: "auth_tokens/test" });

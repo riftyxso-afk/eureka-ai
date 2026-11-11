@@ -634,7 +634,7 @@ export default function Composer({
 
   if (reactBits) {
     const sources: PromptSource[] = [
-      ...(onCall && !sending ? [{ key: "momo-call", name: "Panggilan Momo", description: "Ngobrol langsung dengan suara", icon: <PhoneCall trigger="parent" size={16} />, action: onCall }] : []),
+      ...(onCall && !sending ? [{ key: "momo-call", name: "Panggilan Momo atau Lala", description: "Panggilan suara dan kamera untuk Lala", icon: <PhoneCall trigger="parent" size={16} />, action: onCall }] : []),
       { key: "file", name: "Foto & file", description: "Pilih dari perangkat", icon: <Paperclip trigger="parent" size={16} />, attach: true },
       { key: "web", name: "Pencarian web", description: webSearch ? "Aktif — pilih untuk mematikan" : "Cari informasi di web", icon: <Globe trigger="parent" size={16} /> },
       ...notes.filter((note) => !mentionIds.includes(note.id)).map((note) => ({ key: `note:${note.id}`, name: note.title, description: note.subject || "Catatan", icon: <BookOpen trigger="parent" size={16} /> })),
@@ -893,7 +893,7 @@ export default function Composer({
                           {onCall && (
                             <PlusRow
                               icon={<PhoneCall trigger="parent" size={15} />}
-                              label="Panggilan Momo"
+                              label="Panggilan Momo atau Lala"
                               desc="Tanya jawab suara langsung"
                               silent
                               onClick={() => {

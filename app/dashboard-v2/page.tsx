@@ -166,7 +166,7 @@ export default function DashboardV2() {
                   onText={text => { setInputError(""); setDraft(previous => previous + (previous && !/\s$/.test(previous) ? " " : "") + text); }}
                   onError={setInputError} />}
               sources={[
-                ...(mode === "ask" && !openingChat ? [{ key: "momo-call", name: "Panggilan Momo", description: "Ngobrol langsung dengan suara", icon: <PhoneCall size={16} />, action: () => setCallOpen("default") }] : []),
+                ...(mode === "ask" && !openingChat ? [{ key: "momo-call", name: "Panggilan Momo atau Lala", description: "Panggilan suara dan kamera untuk Lala", icon: <PhoneCall size={16} />, action: () => setCallOpen("default") }] : []),
                 { key: "upload", name: "Unggah materi", description: "Dokumen, slide, atau audio", icon: <Upload size={16} /> },
                 { key: "web", name: "Tautan web", description: "Ringkas artikel menjadi catatan", icon: <Globe trigger="parent" size={16} /> },
                 { key: "youtube", name: "YouTube", description: "Pelajari isi video", icon: <span className="dv2-youtube-logo" aria-hidden="true" /> },

@@ -1,0 +1,161 @@
+.momo-call.is-video-call[open] {
+  --call-bg: #0c172b;
+  --call-ink: #f4f7ff;
+  --call-muted: #bbcae4;
+  --call-control: #1b2c49;
+  --call-hover: #2c4166;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr);
+  width: min(1100px, calc(100% - 48px));
+  height: min(810px, calc(100dvh - 48px));
+  margin: auto;
+  border-radius: 24px;
+  box-shadow: 0 24px 80px rgb(6 18 44 / .38);
+}
+.momo-call.is-video-call[open]:has(.momo-call-text[data-workspace="true"]) {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+.momo-call.is-video-call[open] .momo-call-header { padding-bottom: 8px; }
+.momo-call.is-video-call[open] .momo-call-text {
+  grid-row: 3;
+  width: 100%;
+  max-height: min(150px, 24dvh);
+  padding: 8px clamp(14px, 3vw, 28px) 0;
+}
+.momo-call.is-video-call[open] .momo-call-text[hidden] { display: none; }
+
+.lala-video {
+  position: relative;
+  grid-row: 2;
+  isolation: isolate;
+  container-type: size;
+  min-height: 0;
+  margin-inline: clamp(10px, 2vw, 20px);
+  overflow: hidden;
+  border-radius: 18px;
+  background: #1d365f;
+}
+
+.lala-video-portrait {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: max(100cqw, 150cqh);
+  aspect-ratio: 3 / 2;
+  translate: -50% -45%;
+  background: url("/images/lala-call-avatar.webp") center / 100% 100%;
+}
+
+.lala-video-mouth {
+  position: absolute;
+  inset: 0;
+  background: url("/images/lala-call-speaking.webp") center / 100% 100%;
+  mask-image: radial-gradient(ellipse 7.5% 7% at 50.4% 52%, #000 58%, transparent 100%);
+  opacity: min(1, calc(var(--speech, 0) * 1.5));
+}
+
+.lala-video-name {
+  position: absolute;
+  top: clamp(12px, 2vw, 20px);
+  left: clamp(12px, 2vw, 20px);
+  display: grid;
+  gap: 2px;
+  max-width: calc(100% - 24px);
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgb(8 20 46 / .82);
+  color: #fff;
+}
+.lala-video-name strong { font-size: 14px; }
+.lala-video-name span { color: #d4e2ff; font-size: 12px; }
+
+.lala-video-self {
+  position: absolute;
+  right: clamp(10px, 2vw, 20px);
+  bottom: clamp(10px, 2vw, 20px);
+  width: clamp(106px, 24cqw, 204px);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #162644;
+  box-shadow: 0 6px 24px rgb(0 10 30 / .4);
+  color: #f4f7ff;
+}
+.lala-video-self video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+.lala-video-self video[data-mirrored="true"] { transform: scaleX(-1); }
+.lala-video-self[data-ready="false"] video { visibility: hidden; }
+.lala-video-self-label {
+  position: absolute;
+  bottom: 7px;
+  left: 7px;
+  padding: 3px 7px;
+  border-radius: 7px;
+  background: #0d1b32;
+  font-size: 11px;
+  font-weight: 700;
+}
+.lala-video-self[data-ready="false"] .lala-video-self-label { inset: 0; display: grid; place-items: center; text-align: center; }
+.lala-video-flip {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(13 27 50 / .82);
+  color: #fff;
+}
+.lala-video-self:has(.lala-video-camera-error) { width: min(240px, calc(100% - 24px)); aspect-ratio: auto; }
+.lala-video-camera-error { display: grid; justify-items: center; gap: 5px; padding: 10px 12px 6px; text-align: center; }
+.lala-video-camera-error p { margin: 0; font-size: 12px; line-height: 1.4; }
+.lala-video-camera-error button {
+  min-height: 44px;
+  padding-inline: 12px;
+  border: 0;
+  background: transparent;
+  color: #d2e2ff;
+  font-weight: 700;
+}
+
+.lala-video-caption {
+  position: absolute;
+  left: clamp(10px, 2vw, 20px);
+  bottom: clamp(10px, 2vw, 20px);
+  width: fit-content;
+  max-width: min(440px, calc(100% - clamp(106px, 24cqw, 204px) - 36px));
+  max-height: 29%;
+  margin: 0;
+  padding: 9px 12px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+  border-radius: 12px;
+  background: #234fae;
+  color: #fff;
+  font-size: clamp(13px, 1.55vw, 15px);
+  line-height: 1.48;
+  scrollbar-width: thin;
+}
+.lala-video:has(.lala-video-camera-error) .lala-video-caption {
+  bottom: min(144px, 46%);
+  max-width: min(440px, calc(100% - 24px));
+}
+
+.momo-call.is-video-call[open] .momo-call-controls {
+  grid-row: 4;
+  justify-self: center;
+  justify-content: center;
+  gap: 8px;
+}
+.momo-call.is-video-call:not(.is-chat-call) .momo-call-controls { gap: 12px; }
+.momo-call.is-video-call[open] .momo-call-camera[aria-pressed="true"] { background: #2454b8; color: #fff; }
+.momo-call.is-video-call[open] .momo-call-control:last-child { background: #aa253e; color: #fff; }
+
+@media (max-width: 600px) {
+  .momo-call.is-video-call[open] { width: 100%; height: 100dvh; border-radius: 0; }
+  .momo-call.is-video-call.is-chat-call[open] .momo-call-controls { gap: 4px; }
+}

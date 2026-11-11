@@ -23,6 +23,7 @@ type Session = {
   transcription?: AbortController;
   endMicStream?: () => void;
   sendText?: (text: string) => void;
+  sendVideoFrame?: (data: string) => void;
   mic?: AnalyserNode;
   speaker: AnalyserNode;
   playback?: Playback;
@@ -566,6 +567,10 @@ export function useMomoCall(onVoiceEnd?: () => void) {
           ready = true;
           window.clearTimeout(setupTimer);
           setPhase("thinking");
+          session.sendVideoFrame = data => {
+            if (session.ending || socket.bufferedAmount > 16_000 || data.length > 96_000) return;
+            send({ realtimeInput: { video: { data, mimeType: "image/jpeg" } } });
+          };
           session.sendText = text => {
             inputText = text;
             setTranscript(text);
@@ -923,10 +928,14 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     return true;
   }
 
+  const sendVideoFrame = useCallback((data: string) => {
+    active.current?.sendVideoFrame?.(data);
+  }, []);
+
   return {
     phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
     workspaceLinks, workspaceLoading, deleteTitle,
-    turns, showCurrent, sendText,
+    turns, showCurrent, sendText, sendVideoFrame,
     confirmWorkspaceDelete: (allowed: boolean) => deleteDecision.current?.(allowed),
   };
 }

@@ -281,6 +281,7 @@
   margin: 0;
   border-radius: 0;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr);
   box-shadow: none;
   animation: none;
 }
@@ -320,6 +321,7 @@
 .momo-call.is-chat-call .momo-call-orb { width: clamp(44px, 11dvh, 92px); }
 .momo-call.is-chat-call .momo-call-status { position: static; font-size: 12px; }
 .is-chat-call .momo-call-controls {
+  min-width: 0;
   width: min(calc(100% - 24px), 768px);
   justify-self: center;
   align-items: center;
