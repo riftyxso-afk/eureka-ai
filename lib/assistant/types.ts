@@ -1,3 +1,4 @@
+import type { SavedStudyResponse } from "@/lib/study-interaction";
 /**
  * Tipe bersama chat asisten (dipakai server & client — bebas dependency).
  */
@@ -71,6 +72,7 @@ export interface AssistantSource {
 }
 
 export interface AssistantChatMessage {
+  study?: SavedStudyResponse;
   id: string;
   sessionId: string;
   role: "user" | "assistant";

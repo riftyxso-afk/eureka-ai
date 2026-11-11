@@ -17,7 +17,7 @@ export function useStudyAgent() {
   const active = useRef<AbortController | null>(null);
   useEffect(() => () => active.current?.abort(), []);
 
-  async function run(prompt: string) {
+  async function run(prompt: string, context: { sessionId?: string; noteId?: string } = {}) {
     if (active.current) return;
     const request = new AbortController();
     active.current = request;
@@ -31,7 +31,7 @@ export function useStudyAgent() {
       const response = await apiFetch("/api/study-agent", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, ...context }),
         signal: request.signal,
       });
       if (!response.ok || !response.body || !response.headers.get("content-type")?.includes("text/event-stream")) {
@@ -43,6 +43,9 @@ export function useStudyAgent() {
       const reader = response.body.getReader();
       let buffer = "";
       let done = false;
+      let answer = "";
+      let references: StudySource[] = [];
+      let completed: Extract<StudyAgentEvent, { type: "done" }> | undefined;
       try {
         while (!done) {
           const frame = await reader.read();
@@ -55,17 +58,18 @@ export function useStudyAgent() {
             if (!message.startsWith("data: ")) continue;
             const event = JSON.parse(message.slice(6)) as StudyAgentEvent;
             if (event.type === "status") setStatus(event);
-            if (event.type === "sources") setSources(event.sources);
-            if (event.type === "token") setText(previous => previous + event.text);
-            if (event.type === "reset") setText("");
+            if (event.type === "sources") { references = event.sources; setSources(event.sources); }
+            if (event.type === "token") { answer += event.text; setText(answer); }
+            if (event.type === "reset") { answer = ""; setText(""); }
             if (event.type === "error") throw new Error(event.message);
-            if (event.type === "done") { setResult(event); done = true; break; }
+            if (event.type === "done") { completed = event; setResult(event); done = true; break; }
           }
         }
       } finally {
         await reader.cancel().catch(() => {});
       }
       if (!done && !request.signal.aborted) throw new Error("Aliran respons terputus. Coba lagi untuk hasil lengkap.");
+      return completed ? { ...completed, text: answer, sources: references } : undefined;
     } catch (cause) {
       if (!request.signal.aborted) setError(cause instanceof Error ? cause.message : "Coba lagi.");
     } finally {

@@ -1,3 +1,4 @@
+import { studyInteractionSchema, type SavedStudyResponse } from "@/lib/study-interaction";
 /**
  * Store riwayat chat asisten AI (halaman /home & /chat) — Supabase.
  * Tabel: ai_chat_sessions, ai_chat_messages (lihat supabase_patch_003_ai_chat.sql)
@@ -123,13 +124,20 @@ function mapSession(row: Record<string, unknown>): AssistantChatSession {
 }
 
 function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
+  const saved = asArray<Record<string, unknown>>(m.sources).find(source => source.type === "study");
+  const parsed = studyInteractionSchema.safeParse(saved?.interaction);
   return {
+    study: saved && parsed.success ? {
+      title: typeof saved.title === "string" ? saved.title.slice(0, 120) : "Belajar bersama Momo",
+      document: saved.document === true,
+      interaction: parsed.data,
+    } : undefined,
     id: String(m.id ?? ""),
     sessionId: String(m.session_id ?? ""),
     role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
     content: String(m.content ?? ""),
     mentions: asArray<string>(m.mentions),
-    sources: asArray<Record<string, unknown>>(m.sources).filter(s => s.type !== "web").map((s) => ({
+    sources: asArray<Record<string, unknown>>(m.sources).filter(s => s.type !== "web" && s.type !== "study").map((s) => ({
       noteId: String(s.noteId ?? s.note_id ?? ""),
       noteTitle: String(s.noteTitle ?? s.note_title ?? "Catatan"),
       chapterId:
@@ -147,6 +155,7 @@ function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
 }
 
 export async function appendMessage(data: {
+  study?: SavedStudyResponse;
   sessionId: string;
   role: "user" | "assistant";
   content: string;
@@ -160,7 +169,7 @@ export async function appendMessage(data: {
     role: data.role,
     content: data.content,
     mentions: data.mentions ?? [],
-    sources: [...(data.sources ?? []), ...normalizeWebResults(data.webResults).map(source => ({ type: "web", ...source }))],
+    sources: [...(data.study ? [{ type: "study", ...data.study }] : []), ...(data.sources ?? []), ...normalizeWebResults(data.webResults).map(source => ({ type: "web", ...source }))],
     model: data.model ?? null,
   });
   if (error) throw error;
@@ -178,6 +187,7 @@ export async function appendMessage(data: {
     content: data.content,
     mentions: data.mentions ?? [],
     sources: data.sources ?? [],
+    study: data.study,
     webResults: normalizeWebResults(data.webResults),
     model: data.model ?? null,
     createdAt: new Date().toISOString(),

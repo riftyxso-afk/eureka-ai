@@ -1,3 +1,4 @@
+import type { StudyInteraction } from "./study-interaction";
 import type { StudySource } from "./study-sources-types";
 
 export type StudyAgentEvent =
@@ -5,5 +6,5 @@ export type StudyAgentEvent =
   | { type: "sources"; sources: StudySource[] }
   | { type: "token"; text: string }
   | { type: "reset" }
-  | { type: "done"; title: string; document: boolean }
+  | { type: "done"; title: string; document: boolean; interaction?: StudyInteraction }
   | { type: "error"; message: string };

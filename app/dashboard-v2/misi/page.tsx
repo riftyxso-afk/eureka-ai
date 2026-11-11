@@ -263,7 +263,7 @@ export default function Page() {
                 {course.adaptive.sources.length ? <ul className="mission-source-list">
                   {course.adaptive.sources.map(source => <li key={source.url}>
                     <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>
-                    {source.kind === "video" && <Link href={"/dashboard-v2/studio-belajar?video=" + encodeURIComponent(source.url)}>Tanya video</Link>}
+                    {source.kind === "video" && <Link href={"/dashboard-v2?workspace=study&prompt=" + encodeURIComponent("Bantu aku memahami video ini: " + source.url)}>Tanya video</Link>}
                   </li>)}
                 </ul> : <p className="flow-description">Sumber publik belum tersedia. Materi misi tetap bisa dibuka.</p>}
               </details>}

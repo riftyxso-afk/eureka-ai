@@ -21,15 +21,15 @@ export const PAGE_GUIDES = {
   },
   "study-mode": {
     label: "Mode Belajar", title: "Mulai dari tujuan belajarmu",
-    description: "Tulis target, pilih waktu atau catatan, lalu tinjau misi sebelum Momo membuat jalur belajar.",
-    steps: ["Pilih Belajar", "Tulis tujuan dan waktu", "Tinjau misi atau coba Studio"],
+    description: "Tanya, cari video, buat dokumen, dan latihan lewat percakapan interaktif bersama Momo.",
+    steps: ["Pilih Belajar", "Tulis pertanyaan atau tujuan", "Lanjutkan lewat chat interaktif"],
     action: "Coba Mode Belajar", target: ".dv2-study-input textarea",
   },
-  "study-studio": {
-    label: "Studio Belajar", title: "Uji ide dengan sumber yang bisa dibuka",
-    description: "Tanya video, latih argumen, baca data IDX, atau susun proyek riset bersama teman.",
-    steps: ["Pilih aktivitas", "Isi topik, video, atau kode saham", "Periksa sumber dan hasil"],
-    action: "Jelajahi Studio", target: ".studio-flow .flow-nav",
+  "study-conversation": {
+    label: "Percakapan Belajar", title: "Belajar sambil berinteraksi",
+    description: "Tanya apa saja, jawab latihan, putar video, atau buat dokumen di percakapan ini.",
+    steps: ["Tulis pertanyaan", "Coba aktivitas dan video", "Lanjutkan percakapan"],
+    action: "Mulai belajar", target: ".study-chat-composer",
   },
   "room-learn": {
     label: "Alur belajar", title: "Satu materi, banyak cara memahami",

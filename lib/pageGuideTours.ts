@@ -47,16 +47,17 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
   ],
   "study-mode": [
     step("Pindah ke mode Belajar", "Gunakan slider ini untuk kembali ke Chat atau membuka ruang Belajar.", ".dv2-workspace-toggle"),
-    step("Tentukan tujuan", "Tulis tujuan belajar atau permintaan seperti mencari video dan membuat dokumen. Pilih cara memprosesnya di bagian bawah.", ".dv2-study-input"),
-    step("Pilih alat belajar", "Tambahkan catatan sebagai materi, buka Studio, atau mulai penghitung fokus 25 menit.", ".dv2-study-tools"),
+    step("Tentukan tujuan", "Tulis tujuan atau pertanyaan apa saja. Kirim untuk membuka percakapan belajar interaktif.", ".dv2-study-input"),
+    step("Pilih alat belajar", "Tambahkan catatan, siapkan permintaan dokumen, atau mulai fokus 25 menit.", ".dv2-study-tools"),
     step("Ikuti hasil secara langsung", "Status berubah sesuai sumber yang dicari. Buka referensi atau unduh hasil sebagai dokumen Word setelah selesai.", ".dv2-study-result"),
-    step("Coba satu aktivitas", "Pilih contoh untuk mengisi tujuan atau langsung membuka alat yang sesuai.", ".dv2-study-examples"),
+    step("Coba satu aktivitas", "Pilih contoh untuk mengisi permintaan, lalu kirim ke percakapan Belajar.", ".dv2-study-examples"),
   ],
-  "study-studio": [
-    step("Pilih aktivitas", "Gunakan menu untuk berpindah antara Tanya Video, Debat Bukti, Lab Data, dan Riset Kelompok.", ".studio-flow .flow-nav"),
-    step("Siapkan masukan", "Masukkan tautan video dan pertanyaan, topik, atau kode saham sesuai alat yang dipilih.", ".studio-activity > form"),
-    step("Periksa hasil", "Buka tautan timestamp atau sumber. Di Lab Data dan Debat Bukti, kirim jawabanmu untuk mendapat masukan.", ".studio-output, .studio-chart"),
-    step("Susun bacaan kelompok", "Tambahkan preprint, pilih siapa yang membacanya, dan bandingkan beberapa abstrak.", ".studio-paper-list"),
+  "study-conversation": [
+    step("Lanjutkan belajar", "Tanyakan konsep, kirim tautan YouTube, atau minta dokumen. Momo memakai konteks percakapan sebelumnya.", ".study-chat-composer"),
+    step("Coba latihan", "Pilih jawaban untuk melihat alasannya, tandai langkah belajar, dan minta bantuan lanjutan.", ".study-chat-activities"),
+    step("Putar video", "Tekan Putar video untuk menonton langsung di percakapan. Tautan YouTube tetap tersedia.", ".study-chat-videos"),
+    step("Simpan dan periksa sumber", "Unduh DOCX atau buka referensi yang digunakan Momo.", ".study-chat-response-actions"),
+    step("Riset bersama", "Buka daftar bacaan kelompok untuk mengumpulkan paper, membagi bacaan, dan membandingkan abstrak.", ".study-chat-research"),
   ],
   "chat": [
     step("Ngobrol dengan Momo", "Tulis pertanyaan atau pertanyaan lanjutan. Momo memakai konteks percakapan ini.", "textarea:not([disabled]), [contenteditable=true]"),
