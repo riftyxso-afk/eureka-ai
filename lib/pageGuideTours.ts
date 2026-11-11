@@ -125,13 +125,10 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
     step("Tambahkan materi", "Hubungkan materi belajar agar pelajaran memiliki isi untuk dipelajari.", ".sj-add-material"),
   ],
   "missions": [
-    step("Buat target belajar", "Mulai dari misi yang ingin kamu capai. Isi target yang realistis untukmu.", ".mission-goals"),
-    step("Pilih misi", "Buka misi untuk melihat checkpoint dan langkah berikutnya.", ".mission-learning-path"),
-    step("Pantau kemajuan", "Progres di sini mengikuti aktivitas dan checkpoint yang sudah kamu selesaikan.", ".mission-learning-path"),
-    step("Rancang misi", "Isi tujuan dan pilihan misi. Simpan setelah targetmu siap.", ".mission-learning-form"),
-    step("Ikuti checkpoint", "Kerjakan langkah yang tersedia untuk melanjutkan perjalanan misi.", ".mission-lesson form"),
-    step("Lihat hadiah dan progres", "Periksa kemajuan serta hadiah yang ditampilkan untuk misi ini.", ".mission-track-heading, .mission-reward"),
-    step("Kelola misi", "Gunakan tindakan pengelolaan sesuai kebutuhan. Panduan tidak mengubah atau menghapus misimu.", ".mission-manage"),
+    step("Rancang misi", "Tentukan tujuan, pilih materi, lalu tinjau sebelum Momo menyusun jalur belajarmu.", ".mission-steps"),
+    step("Pilih tujuan", "Pilih contoh tujuan atau tulis targetmu sendiri.", ".mission-goals"),
+    step("Pantau progres", "Lihat jumlah bab yang sudah selesai dan buka bab yang tersedia.", ".mission-chapters"),
+    step("Cek pemahaman", "Selesaikan latihan dari Momo untuk membuka bab berikutnya.", ".mission-lesson .flow-actions"),
   ],
   "schedule": [
     step("Pilih tampilan jadwal", "Gunakan tab untuk melihat agenda dan rencana belajarmu.", ".schedule-tabs"),
@@ -172,14 +169,13 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
     step("Temukan peringkat", "Lihat posisi dan perkembanganmu pada daftar peringkat.", "main table, main ol"),
   ],
   "settings": [
-    step("Atur preferensimu", "Pilih bagian pengaturan yang ingin diubah.", "main h1, .v2-feature-content h1"),
-    step("Tinjau pilihan", "Sesuaikan kontrol yang tersedia dengan kebutuhanmu.", "main form, main select, main [role=switch]"),
-    step("Simpan dengan teliti", "Pastikan perubahan sudah sesuai sebelum menyimpannya.", "main button[type=submit]"),
+    step("Pilih kategori", "Buka Tampilan untuk memilih tema, atau Akun untuk mengelola profil.", ".settings-flow .flow-nav"),
+    step("Pilih tema", "Gunakan tampilan terang, gelap, atau ikuti pengaturan perangkat. Pilihan langsung tersimpan.", ".settings-themes"),
   ],
   "friends": [
-    step("Teman belajar", "Kelola koneksi belajarmu dari halaman ini.", "main h1"),
-    step("Cari teman", "Masukkan nama atau username yang ingin dicari.", "main input[type=search], main input[placeholder*='Cari']"),
-    step("Periksa koneksi", "Tinjau permintaan dan teman yang sudah terhubung.", "main [role=tablist], main ul"),
+    step("Pilih menu teman", "Gunakan menu ini untuk mencari teman, melihat undangan, atau bertukar materi.", ".friends-flow .flow-nav"),
+    step("Cari teman", "Masukkan nama yang ingin dicari, lalu kirim undangan dari hasil pencarian.", ".friends-directory input[type=search]"),
+    step("Kirim materi", "Pilih teman dan materi, lalu tinjau kiriman sebelum mengirimnya.", ".share-form"),
   ],
   "guide": [
     step("Pilih bantuan", "Buka topik bantuan yang sesuai kebutuhanmu.", "main h1"),
