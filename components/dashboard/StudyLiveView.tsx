@@ -53,7 +53,7 @@ export default function StudyLiveView() {
             remote.viewOnly = true;
             remote.scaleViewport = true;
             remote.background = "#191919";
-            remote.addEventListener("connect", () => { clearTimeout(timeout); if (!disposed) setStatus("Live · layar Momo"); });
+            remote.addEventListener("connect", () => { clearTimeout(timeout); if (!disposed) setStatus("Live · Computer Use"); });
             remote.addEventListener("disconnect", () => fail("Tampilan live terputus. Coba hubungkan kembali."));
             remote.addEventListener("securityfailure", () => fail("Akses tampilan live kedaluwarsa. Hubungkan kembali."));
           } catch { fail("Tampilan live belum bisa dibuka. Coba lagi."); }
@@ -72,6 +72,6 @@ export default function StudyLiveView() {
 
   return <div className="study-live-view">
     <div className="study-live-status" role="status">{status}{error && <button type="button" onClick={() => setAttempt(value => value + 1)}>Hubungkan kembali</button>}</div>
-    <div className="study-live-screen" ref={screen} aria-label="Layar browser Momo secara langsung" />
+    <div className="study-live-screen" ref={screen} aria-label="Layar Computer Use secara langsung" />
   </div>;
 }

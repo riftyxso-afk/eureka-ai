@@ -25,6 +25,12 @@ export const PAGE_GUIDES = {
     steps: ["Pilih Belajar", "Tulis pertanyaan atau tujuan", "Lanjutkan lewat chat interaktif"],
     action: "Coba Mode Belajar", target: ".dv2-study-input textarea",
   },
+  "computer-use": {
+    label: "Computer Use", title: "Lihat AI bekerja secara langsung",
+    description: "Aktifkan Computer Use dari menu +, kirim tugas, lalu ikuti preview live di kartu percakapan.",
+    steps: ["Buka menu +", "Aktifkan Computer Use dan kirim tugas", "Klik View live untuk memperbesar"],
+    action: "Coba Computer Use", target: ".study-chat-composer",
+  },
   "study-conversation": {
     label: "Percakapan Belajar", title: "Belajar sambil berinteraksi",
     description: "Tanya apa saja, jawab latihan, putar video, atau buat dokumen di percakapan ini.",

@@ -8,6 +8,7 @@ import BookOpen from "kubai-icons-react/icons/book-open";
 import ChevronDown from "kubai-icons-react/icons/chevron-down";
 import Download from "kubai-icons-react/icons/download";
 import FolderOpen from "kubai-icons-react/icons/folder-open";
+import Monitor from "kubai-icons-react/icons/monitor";
 import Plus from "kubai-icons-react/icons/circle-plus";
 import Globe from "kubai-icons-react/icons/globe";
 import Link2 from "kubai-icons-react/icons/link";
@@ -177,6 +178,17 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     return () => { if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current); };
   }, [turns, agent.text, agent.status, agent.browserActivity]);
 
+  useEffect(() => {
+    const element = transcript.current;
+    const content = element?.firstElementChild;
+    if (!element || !content) return;
+    const observer = new ResizeObserver(() => {
+      if (followBottom.current) element.scrollTop = element.scrollHeight;
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+
   async function download(turn: Turn) {
     setExportError("");
     try {
@@ -216,11 +228,11 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
             <StudyVideoCards sources={turn.sources} />
             {turn.study && <StudyActivities storageKey={"eureka:study-checklist:" + getUserId() + ":" + sessionId + ":" + turn.content.slice(0, 70)} data={turn.study.interaction} disabled={agent.busy} onSend={prompt => void send(prompt)} />}
             <div className="study-chat-response-actions"><button type="button" onClick={() => void download(turn)}><Download size={16} aria-hidden="true" />Unduh DOCX</button>
-              {turn.sources.length > 0 && <details><summary><Link2 size={16} aria-hidden="true" />Sumber · {turn.sources.length}</summary><ol>{turn.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a></li>)}</ol></details>}
+              {turn.sources.length > 0 && <details><summary><Link2 size={16} aria-hidden="true" />Sumber · {turn.sources.length}<ChevronDown size={15} aria-hidden="true" /></summary><ol>{turn.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a></li>)}</ol></details>}
             </div>
           </div>}
         </article>)}
-        <StudyBrowserPanel activities={agent.browserActivity} busy={agent.busy} />
+        {agent.browserActivity.length > 0 && <StudyBrowserPanel activities={agent.browserActivity} busy={agent.busy} />}
         {agent.busy && <article className="study-chat-live" aria-busy="true">
           {agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
           {agent.text && <MessageBubble message={message({ id: "study-stream", role: "assistant", content: agent.text, sources: [] })} isStreaming videoEnabled={false} />}
@@ -233,14 +245,16 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       </div>
     </div>
     <footer className="study-chat-footer momo-session-composer">
-      <div className="study-browser-control"><label title={browserEnabled ? "Momo menelusuri halaman publik dengan browser" : "Koneksi browser sedang disiapkan"}>
-        <input type="checkbox" checked={browserSelected} disabled={!browserEnabled || agent.busy} onChange={event => setBrowserSelected(event.target.checked)} />
-        <Globe size={16} aria-hidden="true" /> Lihat Momo bekerja <span>{browserEnabled ? "Browser" : "Segera tersedia"}</span>
-      </label></div>
+      {browserSelected && <div className="study-computer-controls"><div className="study-computer-chip"><Monitor color="#8253d4" size={17} aria-hidden="true" /><span>Computer Use</span><button type="button" disabled={agent.busy} aria-label="Nonaktifkan Computer Use" onClick={() => setBrowserSelected(false)}>×</button></div><PageTutorial guideId="computer-use" /></div>}
       {micError && <p className="study-chat-error" role="alert">{micError}</p>}
       <div className="eureka-prompt-wrap study-chat-composer">
         <PromptBar value={draft} onDraftChange={setDraft} busy={agent.busy} disabled={!loaded} placeholder="Tanya Momo atau minta bahan belajar…"
           sources={[
+            { key: "computer-use", name: "Computer Use", description: browserEnabled ? browserSelected ? "Aktif · klik untuk menonaktifkan" : "Lihat AI bekerja secara langsung" : "Belum tersedia untuk akun ini", icon: <Monitor color="#8253d4" size={20} />, action: () => {
+              if (agent.busy) return;
+              if (!browserEnabled) { setError("Computer Use belum diaktifkan untuk akun ini."); return; }
+              setBrowserSelected(previous => !previous);
+            } },
             { key: "research", name: "Proyek riset", icon: <FolderOpen size={16} />, action: () => setResearchOpen(true) },
             { key: "video", name: "Cari video", icon: <Globe size={16} />, action: () => setDraft("Carikan video pembelajaran tentang ") },
             { key: "document", name: "Buat dokumen", icon: <Download size={16} />, action: () => setDraft("Buatkan dokumen yang rapi tentang ") },

@@ -52,8 +52,14 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
     step("Ikuti hasil secara langsung", "Status berubah sesuai sumber yang dicari. Buka referensi atau unduh hasil sebagai dokumen Word setelah selesai.", ".dv2-study-result"),
     step("Coba satu aktivitas", "Pilih contoh untuk mengisi permintaan, lalu kirim ke percakapan Belajar.", ".dv2-study-examples"),
   ],
+  "computer-use": [
+    step("Aktifkan dari menu +", "Tekan + di prompt bar, lalu pilih Computer Use. Pilih lagi atau tekan × pada label aktif untuk menonaktifkannya.", '.study-chat-composer [aria-label="Tambah file dan alat"]'),
+    step("Kirim tugas", "Tulis tugas seperti cari sumber tentang energi terbarukan, lalu kirim. Label Computer Use menandakan fitur sedang dipilih.", ".study-computer-chip"),
+    step("Ikuti preview langsung", "Layar pada kartu diperbarui langsung selama AI bekerja. Kamu bisa mengikuti penelusurannya dari percakapan.", ".study-live-inline"),
+    step("Perbesar layar", "Tekan View live untuk membuka tampilan yang lebih besar. Tutup atau tekan Escape untuk kembali ke preview tanpa memutus koneksi.", ".study-browser-heading button"),
+  ],
   "study-conversation": [
-    step("Lihat Momo bekerja", "Aktifkan Browser untuk mengikuti penelusuran halaman publik. Tekan View live untuk melihat browser Momo bergerak secara langsung saat koneksi tersedia.", ".study-browser-control"),
+    step("Computer Use", "Tekan + lalu pilih Computer Use untuk melihat AI bekerja. Preview live muncul di kartu percakapan, dan View live memperbesar layarnya.", '.study-chat-composer [aria-label="Tambah file dan alat"]'),
     step("Lanjutkan belajar", "Tanyakan konsep, kirim tautan YouTube, atau minta dokumen. Momo memakai konteks percakapan sebelumnya.", ".study-chat-composer"),
     step("Coba latihan", "Pilih jawaban untuk melihat alasannya, tandai langkah belajar, dan minta bantuan lanjutan.", ".study-chat-activities"),
     step("Putar video", "Tekan Putar video untuk menonton langsung di percakapan. Tautan YouTube tetap tersedia.", ".study-chat-videos"),

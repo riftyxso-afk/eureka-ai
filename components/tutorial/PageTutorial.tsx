@@ -71,7 +71,7 @@ function Tour({ id, phase }: { id: PageGuideId; phase: string }) {
     requestAnimationFrame(() => launcher.current?.focus({ preventScroll: true }));
   }, []);
   const start = useCallback(() => {
-    if (document.querySelector("[data-eureka-tour], dialog[open], [aria-modal=true]")) return;
+    if (document.querySelector("[data-eureka-tour], dialog[open]:not(.study-live-inline), [aria-modal=true]")) return;
     const available = PAGE_TOURS[id].filter(step => visibleTarget(step.target) || (step.sidebar && visibleTarget(".v2-mobile-menu-toggle")));
     if (!available.length) return false;
     key.current = PREFIX + getUserId() + ":" + id + ":" + phase;
@@ -91,7 +91,7 @@ function Tour({ id, phase }: { id: PageGuideId; phase: string }) {
     let timer: ReturnType<typeof setInterval> | undefined;
     if (!seen) timer = setInterval(() => {
       if (seenInTab.has(storageKey)) { clearInterval(timer); return; }
-      if (document.hidden || visibleTarget(".momo-splash") || document.querySelector("[data-eureka-tour], dialog[open], [aria-modal=true]") || document.activeElement?.matches("input,textarea,[contenteditable=true]")) return;
+      if (document.hidden || visibleTarget(".momo-splash") || document.querySelector("[data-eureka-tour], dialog[open]:not(.study-live-inline), [aria-modal=true]") || document.activeElement?.matches("input,textarea,[contenteditable=true]")) return;
       if (document.querySelector("[aria-busy=true]")) return;
       if (start()) clearInterval(timer);
     }, 900);

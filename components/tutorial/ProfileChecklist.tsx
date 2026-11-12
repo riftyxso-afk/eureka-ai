@@ -22,7 +22,11 @@ export default function ProfileChecklist() {
   useEffect(() => {
     const key = "eureka:profile-checklist:hidden:" + getUserId();
     setStorageKey(key);
-    try { setHidden(localStorage.getItem(key) === "yes"); } catch { /* Current tab still works. */ }
+    const compact = window.matchMedia("(max-width:600px)").matches;
+    try {
+      const saved = localStorage.getItem(key);
+      setHidden(saved === null ? compact : saved === "yes");
+    } catch { setHidden(compact); }
     const controller = new AbortController();
     void refresh(controller.signal);
     const update = () => { void refresh(controller.signal); };
