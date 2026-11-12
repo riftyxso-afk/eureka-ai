@@ -56,6 +56,7 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
     step("Minta file dari komputer", "Saat Computer Use aktif, minta PDF, Word, Excel, CSV, gambar, atau screenshot. Maksimal 3 file per permintaan, 8 MB per file. Hasil muncul sebagai lampiran yang bisa diunduh di chat.", ".study-file-results:not(:empty), .study-computer-chip"),
     step("Aktifkan dari menu +", "Tekan + di prompt bar, lalu pilih Computer Use. Pilih lagi atau tekan × pada label aktif untuk menonaktifkannya.", '.study-chat-composer [aria-label="Tambah file dan alat"]'),
     step("Kirim tugas", "Tulis tugas seperti cari sumber tentang energi terbarukan, lalu kirim. Label Computer Use menandakan fitur sedang dipilih.", ".study-computer-chip"),
+    step("Arahkan seperti komputer", "Minta AI membuka menu, mengeklik tautan, mengetik pencarian atau filter, dan scroll ke atas atau ke bawah. Misalnya: filter model DeepSeek, lalu baca bagian bawah halaman. Konteks situs tetap mengikuti percakapan.", ".study-chat-composer"),
     step("Ikuti preview langsung", "Layar pada kartu diperbarui langsung selama AI bekerja. Kamu bisa mengikuti penelusurannya dari percakapan.", ".study-live-inline"),
     step("Perbesar layar", "Tekan View live untuk membuka tampilan yang lebih besar. Tutup atau tekan Escape untuk kembali ke preview tanpa memutus koneksi.", ".study-browser-heading button"),
   ],
