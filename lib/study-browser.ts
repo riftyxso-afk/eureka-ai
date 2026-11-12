@@ -112,8 +112,9 @@ export async function browseStudy(userId: string, prompt: string, signal: AbortS
     await client.rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "eureka-study", version: "1.0" } });
     await client.rpc("notifications/initialized", undefined, true);
     const listing = await client.rpc("tools/list", {}) as { tools: Tool[] };
-    const tools = listing.tools.filter(tool => ["browser_navigate", "browser_read"].includes(tool.name));
+    const tools = listing.tools.filter(tool => ["browser_navigate", "browser_read", "browser_tabs"].includes(tool.name));
     if (!tools.some(tool => tool.name === "browser_navigate") || !tools.some(tool => tool.name === "browser_read")) throw new Error("Alat browser Box belum tersedia.");
+    let browserTab: string | undefined;
     async function call(name: string, url: string): Promise<Result> {
       const tool = tools.find(item => item.name === name)!;
       const properties = (tool.inputSchema.properties || {}) as Record<string, { type?: string; default?: unknown }>;
@@ -129,10 +130,21 @@ export async function browseStudy(userId: string, prompt: string, signal: AbortS
         args.url = url;
         if (properties.front) args.front = true;
       }
+      if (properties.tab && browserTab) args.tab = browserTab;
       const result = await client.rpc("tools/call", { name, arguments: args }) as Result;
       if (result.isError) throw new Error("Halaman browser belum bisa dibaca. Coba tautan publik lain.");
       return result;
     }
+    // Address a stable tab explicitly: desktop focus can move while another Box connection opens the live view.
+    if (tools.some(tool => tool.name === "browser_tabs")) {
+      const result = await call("browser_tabs", "");
+      const text = (result.content || []).filter(item => item.type === "text").map(item => item.text || "").join("\n");
+      const tabs = [...text.matchAll(/- tab ([A-Za-z0-9_-]{1,128})[^\n]*?\((https?:\/\/[^)\s]+)\)/g)];
+      browserTab = tabs.find(tab => activeUrl && tab[2] === activeUrl)?.[1]
+        || tabs.find(tab => siteHost && sameSite(tab[2], siteHost))?.[1]
+        || tabs[0]?.[1];
+    }
+
     async function visit(url: string) {
       emit({ label: "Membuka " + new URL(url).hostname, url });
       const navigation = await call("browser_navigate", url);
