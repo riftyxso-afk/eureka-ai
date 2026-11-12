@@ -125,3 +125,18 @@
 .study-chat-quiz button[aria-pressed=true] .study-choice-letter { background: var(--learn-accent); color: var(--learn-bg); }
 .study-chat-suggestions button > :last-child { flex: none; margin-inline-start: auto; }
 .study-chat-plan label:has(input:checked) span { text-decoration: line-through; color: var(--learn-muted); }
+
+/* Browser research stays within the conversation, including narrow screens. */
+.study-browser-control { max-width: 736px; margin: 0 auto 8px; }
+.study-browser-control label { display: flex; align-items: center; gap: 7px; min-height: 36px; font-size: .8rem; color: var(--learn-muted); }
+.study-browser-control input { accent-color: var(--learn-accent); }
+.study-browser-control span { margin-inline-start: auto; font-size: .7rem; }
+.study-browser-panel { margin-block: 20px; border: 1px solid var(--learn-line); border-radius: 16px; overflow: hidden; background: var(--learn-surface); }
+.study-browser-panel summary { display: flex; align-items: center; gap: 8px; padding: 14px; cursor: pointer; font-size: .85rem; }
+.study-browser-panel summary::-webkit-details-marker { display: none; }
+.study-browser-panel summary > span { margin-inline-start: auto; font-size: .72rem; color: var(--learn-muted); }
+.study-browser-address { padding: 8px 14px; font-size: .75rem; overflow-wrap: anywhere; color: var(--learn-muted); }
+.study-browser-panel figure { margin: 0; }
+.study-browser-panel img { display: block; width: 100%; height: auto; max-height: 430px; object-fit: contain; background: var(--learn-bg); }
+.study-browser-panel figcaption { padding: 8px 14px; color: var(--learn-muted); font-size: .7rem; }
+.study-browser-panel ol { padding: 10px 14px 14px 30px; list-style: decimal; font-size: .78rem; line-height: 1.8; max-height: 170px; overflow-y: auto; }

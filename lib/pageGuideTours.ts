@@ -53,6 +53,7 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
     step("Coba satu aktivitas", "Pilih contoh untuk mengisi permintaan, lalu kirim ke percakapan Belajar.", ".dv2-study-examples"),
   ],
   "study-conversation": [
+    step("Lihat Momo bekerja", "Aktifkan Browser untuk mengikuti penelusuran halaman publik. Aktivitas dan gambar layar asli muncul di percakapan saat koneksi tersedia.", ".study-browser-control"),
     step("Lanjutkan belajar", "Tanyakan konsep, kirim tautan YouTube, atau minta dokumen. Momo memakai konteks percakapan sebelumnya.", ".study-chat-composer"),
     step("Coba latihan", "Pilih jawaban untuk melihat alasannya, tandai langkah belajar, dan minta bantuan lanjutan.", ".study-chat-activities"),
     step("Putar video", "Tekan Putar video untuk menonton langsung di percakapan. Tautan YouTube tetap tersedia.", ".study-chat-videos"),

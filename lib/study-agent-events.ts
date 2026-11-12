@@ -1,7 +1,10 @@
 import type { StudyInteraction } from "./study-interaction";
 import type { StudySource } from "./study-sources-types";
 
+import type { BrowserActivity } from "./study-browser";
+
 export type StudyAgentEvent =
+  | { type: "browser"; activity: BrowserActivity }
   | { type: "status"; stage: "thinking" | "retrieving" | "reading" | "combining" | "synchronizing"; label: string }
   | { type: "sources"; sources: StudySource[] }
   | { type: "token"; text: string }

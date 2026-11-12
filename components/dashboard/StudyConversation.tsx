@@ -29,6 +29,7 @@ import type { AssistantChatMessage } from "@/lib/assistant/types";
 import type { StudySource } from "@/lib/study-sources-types";
 import type { SavedStudyResponse } from "@/lib/study-interaction";
 import "./study-conversation.css";
+import StudyBrowserPanel from "./StudyBrowserPanel";
 
 type Turn = { id: string; role: "user" | "assistant"; content: string; sources: StudySource[]; study?: SavedStudyResponse };
 
@@ -43,6 +44,15 @@ function fromMessage(message: AssistantChatMessage): Turn {
 
 export default function StudyConversation({ sessionId, initialMessages, initialTitle }: { sessionId: string; initialTitle?: string; initialMessages?: AssistantChatMessage[] }) {
   const agent = useStudyAgent();
+  const [browserEnabled, setBrowserEnabled] = useState(false);
+  const [browserSelected, setBrowserSelected] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    apiFetch("/api/study-agent", { signal: controller.signal }).then(response => response.ok ? response.json() : null).then(data => {
+      if (!controller.signal.aborted) setBrowserEnabled(data?.browserEnabled === true);
+    }).catch(() => {});
+    return () => controller.abort();
+  }, []);
   const [turns, setTurns] = useState<Turn[]>(initialMessages?.map(fromMessage) ?? []);
   const [title, setTitle] = useState(initialTitle || "Belajar bersama Momo");
   const [draft, setDraft] = useState("");
@@ -110,7 +120,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       ...previous, { id: crypto.randomUUID(), role: "user", content: text, sources: [] },
     ]);
     try {
-      const response = await agent.run(text, { sessionId, noteId: selectedNote });
+      const response = await agent.run(text, { sessionId, noteId: selectedNote, browser: browserSelected });
       if (response) {
         setTitle(response.title);
         setTurns(previous => [...previous, {
@@ -138,7 +148,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       if (el) el.scrollTop = el.scrollHeight;
     });
     return () => { if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current); };
-  }, [turns, agent.text, agent.status]);
+  }, [turns, agent.text, agent.status, agent.browserActivity]);
 
   async function download(turn: Turn) {
     setExportError("");
@@ -178,6 +188,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
             </div>
           </>}
         </article>)}
+        <StudyBrowserPanel activities={agent.browserActivity} busy={agent.busy} />
         {agent.busy && <article className="study-chat-live" aria-busy="true">
           {agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
           {agent.text && <p className="study-chat-stream">{agent.text}</p>}
@@ -189,7 +200,11 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         {exportError && <p className="study-chat-error" role="alert">{exportError}</p>}
       </div>
     </div>
-    <footer className="study-chat-footer"><form className="study-chat-composer" onSubmit={event => { event.preventDefault(); if (loaded && draft.trim() && !sending.current) { void send(draft); setDraft(""); } }}>
+    <footer className="study-chat-footer">
+      <div className="study-browser-control"><label title={browserEnabled ? "Momo menelusuri halaman publik dengan browser" : "Koneksi browser sedang disiapkan"}>
+        <input type="checkbox" checked={browserSelected} disabled={!browserEnabled || agent.busy} onChange={event => setBrowserSelected(event.target.checked)} />
+        <Globe size={16} aria-hidden="true" /> Lihat Momo bekerja <span>{browserEnabled ? "Browser" : "Segera tersedia"}</span>
+      </label></div><form className="study-chat-composer" onSubmit={event => { event.preventDefault(); if (loaded && draft.trim() && !sending.current) { void send(draft); setDraft(""); } }}>
       <label className="sr-only" htmlFor="study-chat-prompt">Pesan belajar</label>
       <textarea id="study-chat-prompt" rows={1} maxLength={6000} value={draft} disabled={!loaded} onChange={event => setDraft(event.target.value)} onKeyDown={event => {
         if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && window.matchMedia("(pointer: fine)").matches) {

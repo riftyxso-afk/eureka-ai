@@ -13,6 +13,8 @@ import { findStudySources, getStudySeries, getZapiCaptions, hasZapi } from "@/li
 import type { StudySource } from "@/lib/study-sources-types";
 import type { StudyAgentEvent } from "@/lib/study-agent-events";
 
+import { browseStudy, hasStudyBrowser } from "@/lib/study-browser";
+
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
@@ -21,6 +23,7 @@ const schema = z.object({
   prompt: z.string().trim().min(1).max(6000),
   sessionId: z.string().uuid().optional(),
   noteId: z.string().uuid().optional(),
+  browser: z.boolean().optional(),
 });
 const planSchema = z.object({
   title: z.string().trim().min(3).max(120),
@@ -90,11 +93,18 @@ async function retrieve(item: Tool, signal: AbortSignal, question: string): Prom
   return findStudySources(item.tool === "news" ? "web" : item.tool, item.tool === "news" ? query + " berita Indonesia" : query, signal);
 }
 
+export async function GET(req: NextRequest) {
+  const auth = await requirePro(req.headers.get("authorization"));
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  return NextResponse.json({ browserEnabled: hasStudyBrowser(auth.userId) }, { headers: { "Cache-Control": "no-store" } });
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requirePro(req.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const input = schema.safeParse(await req.json().catch(() => null));
   if (!input.success) return NextResponse.json({ error: "Tulis permintaan antara 1 dan 6.000 karakter." }, { status: 400 });
+  if (input.data.browser && !hasStudyBrowser(auth.userId)) return NextResponse.json({ error: "Browser Momo belum diaktifkan untuk akun ini." }, { status: 503 });
   ensureRateLimitPrune();
   if (!checkRateLimit("study-agent:" + auth.userId, 12, 60 * 60_000).ok) {
     return NextResponse.json({ error: "Batas permintaan Mode Belajar tercapai. Coba lagi nanti." }, { status: 429 });
@@ -152,7 +162,20 @@ export async function POST(req: NextRequest) {
           const sources: StudySource[] = [];
           const urls = new Set<string>();
           const failures: string[] = [];
-          if (plan.tools.length && !hasZapi()) {
+          if (input.data.browser) {
+            try {
+              const pages = await browseStudy(auth.userId, prompt, signal, activity => emit({ type: "browser", activity }));
+              sources.push(...pages);
+              pages.forEach(page => urls.add(page.url));
+            } catch (cause) {
+              const message = cause instanceof Error ? cause.message : "Browser belum bisa menyelesaikan penelusuran.";
+              failures.push(message);
+              emit({ type: "browser", activity: { label: message } });
+            }
+          }
+          if (input.data.browser) {
+            // Browser evidence is used directly for this turn.
+          } else if (plan.tools.length && !hasZapi()) {
             failures.push("Sumber publik Zapi belum diaktifkan.");
             emit({ type: "status", stage: "reading", label: failures[0] });
           } else {

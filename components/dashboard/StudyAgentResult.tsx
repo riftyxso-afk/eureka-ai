@@ -8,6 +8,7 @@ import type { StudyAgentEvent } from "@/lib/study-agent-events";
 import type { StudySource } from "@/lib/study-sources-types";
 
 export function useStudyAgent() {
+  const [browserActivity, setBrowserActivity] = useState<import("@/lib/study-browser").BrowserActivity[]>([]);
   const [text, setText] = useState("");
   const [sources, setSources] = useState<StudySource[]>([]);
   const [status, setStatus] = useState<Extract<StudyAgentEvent, { type: "status" }> | null>(null);
@@ -17,7 +18,7 @@ export function useStudyAgent() {
   const active = useRef<AbortController | null>(null);
   useEffect(() => () => active.current?.abort(), []);
 
-  async function run(prompt: string, context: { sessionId?: string; noteId?: string } = {}) {
+  async function run(prompt: string, context: { sessionId?: string; noteId?: string; browser?: boolean } = {}) {
     if (active.current) return;
     const request = new AbortController();
     active.current = request;
@@ -26,6 +27,7 @@ export function useStudyAgent() {
     setText("");
     setResult(null);
     setSources([]);
+    setBrowserActivity([]);
     setStatus({ type: "status", stage: "thinking", label: "Menyiapkan ruang belajar…" });
     try {
       const response = await apiFetch("/api/study-agent", {
@@ -57,6 +59,7 @@ export function useStudyAgent() {
             buffer = buffer.slice(boundary + 2);
             if (!message.startsWith("data: ")) continue;
             const event = JSON.parse(message.slice(6)) as StudyAgentEvent;
+            if (event.type === "browser") setBrowserActivity(previous => [...previous.slice(-19), event.activity]);
             if (event.type === "status") setStatus(event);
             if (event.type === "sources") { references = event.sources; setSources(event.sources); }
             if (event.type === "token") { answer += event.text; setText(answer); }
@@ -85,7 +88,7 @@ export function useStudyAgent() {
     active.current?.abort();
     setError("Penyusunan dihentikan.");
   }
-  return { run, stop, text, sources, status, result, error, busy };
+  return { run, stop, browserActivity, text, sources, status, result, error, busy };
 }
 
 export default function StudyAgentResult({ agent }: { agent: ReturnType<typeof useStudyAgent> }) {
