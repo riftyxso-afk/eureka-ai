@@ -1,3 +1,4 @@
+import { studyFileSchema } from "@/lib/study-file-types";
 import { studyBrowserContextSchema, studyInteractionSchema, type SavedStudyResponse } from "@/lib/study-interaction";
 /**
  * Store riwayat chat asisten AI (halaman /home & /chat) — Supabase.
@@ -132,6 +133,8 @@ function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
       title: typeof saved.title === "string" ? saved.title.slice(0, 120) : "Belajar bersama Momo",
       document: saved.document === true,
       interaction: parsed.data,
+      files: asArray<unknown>(saved.files).flatMap(file => { const parsed = studyFileSchema.safeParse(file); return parsed.success ? [parsed.data] : []; }),
+      fileErrors: asArray<unknown>(saved.fileErrors).filter((message): message is string => typeof message === "string").slice(0, 3),
       browser: browser.success ? browser.data : undefined,
       computerUse: typeof saved.computerUse === "boolean" ? saved.computerUse : undefined,
     } : undefined,

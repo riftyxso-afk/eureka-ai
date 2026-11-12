@@ -38,6 +38,7 @@
     "motion": "^14.9.0",
     "next": "^16.4.6",
     "officeparser": "^7.5.1",
+    "open-bot-avatar": "^0.2.1",
     "openai": "^7.4.0",
     "page-flip": "^2.0.7",
     "pdfkit": "^0.19.1",

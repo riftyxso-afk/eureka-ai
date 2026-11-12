@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { computerFileRenderer } from "./computer-file-renderer";
 import { aiChatJson } from "./ai";
 import type { StudyBrowserContext } from "./study-interaction";
 import type { StudySource } from "./study-sources-types";
@@ -34,9 +35,10 @@ class BoxClient {
   constructor(private token: string, private signal: AbortSignal) {}
   async rpc(method: string, params?: unknown, notification = false): Promise<unknown> {
     const id = ++this.id;
+    const shell = method === "tools/call" && (params as { name?: string } | undefined)?.name === "shell";
     const navigation = method === "tools/call" && (params as { name?: string } | undefined)?.name === "browser_navigate";
     const response = await fetch("https://mcp.box.simular.ai/mcp", {
-      method: "POST", signal: AbortSignal.any([this.signal, AbortSignal.timeout(navigation ? 45000 : 20000)]),
+      method: "POST", signal: AbortSignal.any([this.signal, AbortSignal.timeout(shell ? 90000 : navigation ? 45000 : 20000)]),
       headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", Authorization: "Bearer " + this.token,
         ...(this.session ? { "mcp-session-id": this.session } : {}), ...(method !== "initialize" ? { "mcp-protocol-version": "2025-06-18" } : {}) },
       body: JSON.stringify({ jsonrpc: "2.0", method, params, ...(notification ? {} : { id }) }),
@@ -51,7 +53,7 @@ class BoxClient {
       while (true) {
         const chunk = await reader.read();
         text += decoder.decode(chunk.value, { stream: !chunk.done });
-        if (text.length > 12_000_000) throw new Error("Respons browser terlalu besar.");
+        if (text.length > 16_000_000) throw new Error("Respons browser terlalu besar.");
         if (!chunk.done) continue;
         const candidates = response.headers.get("content-type")?.includes("text/event-stream")
           ? text.split(/\r?\n/).filter(line => line.startsWith("data:")).map(line => line.slice(5)) : [text];
@@ -220,4 +222,58 @@ export async function getStudyBrowserView(userId: string, signal: AbortSignal) {
     if (socket.protocol !== "wss:" || socket.hostname !== "mcp.box.simular.ai") throw new Error("Alamat tampilan live tidak valid.");
     return { token: data.token, wsUrl: data.ws_url, expiresAt: data.expires_at_ms };
   } finally { await client.close(); }
+}
+
+export async function runStudyComputerExport(userId: string, payload: {
+  job: string; title: string; text: string; formats: string[]; sources: { title: string; url: string }[];
+  imageExtension?: string; imageData?: string;
+}, signal: AbortSignal) {
+  z.string().uuid().parse(payload.job);
+  const token = tokenFor(userId);
+  if (!token) throw new Error("Computer Use belum diaktifkan.");
+  const lock = createHash("sha256").update(token).digest("hex");
+  if (locks.has(lock)) throw new Error("Komputer sedang dipakai. Coba lagi.");
+  locks.add(lock);
+  const client = new BoxClient(token, signal);
+  try {
+    await client.rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "eureka-file-export", version: "1.0" } });
+    await client.rpc("notifications/initialized", undefined, true);
+    if (payload.formats.includes("screenshot")) {
+      const frame = await client.rpc("tools/call", { name: "screenshot", arguments: { max_edge: 1600 } }) as Result;
+      const image = frame.content?.find(item => item.type === "image" && /^image\/(png|jpeg|webp)$/.test(item.mimeType || ""));
+      if (frame.isError || !image?.data) throw new Error("Layar belum bisa diambil.");
+      payload.imageData = image.data;
+      payload.imageExtension = image.mimeType === "image/jpeg" ? "jpg" : image.mimeType!.split("/")[1];
+    }
+    const script = Buffer.from(computerFileRenderer).toString("base64");
+    const data = Buffer.from(JSON.stringify(payload)).toString("base64");
+    const command = `python3 -c "import base64;exec(base64.b64decode('${script}'))" '${data}'`;
+    const result = await client.rpc("tools/call", { name: "shell", arguments: { command, timeout_s: 85 } }) as Result;
+    const text = (result.content || []).filter(item => item.type === "text").map(item => item.text || "").join("\n");
+    const match = text.match(/EUREKA_FILES=(\[[^\n]+\])/);
+    if (result.isError || !match) throw new Error("Ekspor file di komputer belum berhasil.");
+    const manifest = z.array(z.object({ name: z.string().regex(/^hasil\.(pdf|docx|odt|xlsx|csv|txt|md|png|jpg|webp)$/), size: z.number().int().min(1).max(8 * 1024 * 1024) })).min(1).max(3).parse(JSON.parse(match[1]));
+    const outputs = [];
+    for (const file of manifest) {
+      const chunks: Buffer[] = [];
+      const count = Math.ceil(file.size / 16000);
+      for (let start = 0; start < count; start += 6) {
+        const batch = await Promise.all(Array.from({ length: Math.min(6, count - start) }, async (_, index) => {
+          const offset = (start + index) * 16000;
+          const code = `import pathlib,base64; p=pathlib.Path('/tmp/eureka-exports/${payload.job}/${file.name}'); print('EUREKA_CHUNK='+base64.b64encode(p.read_bytes()[${offset}:${offset + 16000}]).decode())`;
+          const script = Buffer.from(code).toString("base64");
+          const chunk = await client.rpc("tools/call", { name: "shell", arguments: { command: `python3 -c "import base64;exec(base64.b64decode('${script}'))"`, timeout_s: 15 } }) as Result;
+          const text = (chunk.content || []).filter(item => item.type === "text").map(item => item.text || "").join("\n");
+          const encoded = text.match(/EUREKA_CHUNK=([A-Za-z0-9+/=]+)/)?.[1];
+          if (chunk.isError || !encoded) throw new Error("Transfer file belum lengkap.");
+          return Buffer.from(encoded, "base64");
+        }));
+        chunks.push(...batch);
+      }
+      const bytes = Buffer.concat(chunks);
+      if (bytes.length !== file.size) throw new Error("Ukuran file hasil tidak cocok.");
+      outputs.push({ ...file, data: bytes.toString("base64") });
+    }
+    return outputs;
+  } finally { await client.close(); locks.delete(lock); }
 }

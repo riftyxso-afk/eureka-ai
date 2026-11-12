@@ -26,6 +26,7 @@ import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type { AssistantChatMessage, WebSearchStage } from "@/lib/assistant/types";
 
 interface MessageBubbleProps {
+  avatar?: import("react").ReactNode;
   activity?: import("@/lib/loading-stage").LoadingStage;
   message: AssistantChatMessage;
   isStreaming?: boolean;
@@ -105,6 +106,7 @@ function answerDurationMs(
  */
 export default function MessageBubble({
   message,
+  avatar,
   isStreaming = false,
   thinking,
   activity = "thinking",
@@ -188,7 +190,7 @@ export default function MessageBubble({
       animate={{ opacity: 1, y: 0 }}
       className="group chat-message chat-message--assistant"
     >
-      <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} thinking={isStreaming} />
+      {avatar ?? <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} thinking={isStreaming} />}
       <div className="chat-message-assistant-content flex min-w-0 flex-col gap-1.5">
         {isStreaming && webStage && <WebSearchPipeline stage={webStage} results={message.webResults ?? []} query={webQuery} notice={webNotice} />}
         {isStreaming && <ResponseActivity thinking={thinking} stage={displayContent ? "combining" : activity} showIndicator={!webStage} />}

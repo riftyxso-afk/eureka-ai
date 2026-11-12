@@ -115,3 +115,28 @@
 .study-chat-plan label { min-height: 44px; font-size: .88rem; line-height: 1.6; }
 .study-chat-quiz > button { align-items: flex-start; line-height: 1.6; font-size: .88rem; overflow-wrap: anywhere; }
 .study-choice-letter { margin-top: 1px; }
+.study-file-results { display: grid; gap: 10px; margin-top: 16px; }
+.study-file-results:empty { display: none; }
+.study-file-card { border: 1px solid var(--learn-line); border-radius: 14px; overflow: hidden; min-width: 0; background: var(--learn-bg); }
+.study-file-description { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.study-file-description > div { flex: 1; min-width: 0; }
+.study-file-description strong { display: block; font-size: .85rem; overflow-wrap: anywhere; }
+.study-file-description small { display: block; font-size: .72rem; margin-top: 4px; color: var(--learn-muted); }
+.study-file-description button { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--learn-surface); flex: none; }
+.study-file-preview { width: 100%; padding: 20px; min-height: 90px; color: var(--learn-accent); background: var(--learn-surface); }
+.study-file-image { display: block; width: 100%; background: var(--learn-surface); }
+.study-file-image img { width: 100%; max-height: 380px; object-fit: contain; }
+.study-file-card > p { padding: 10px 12px; font-size: .8rem; color: #c04455; }
+.study-image-dialog { width: min(1000px,94vw); max-height: 92dvh; padding: 12px; border: 0; border-radius: 14px; color: var(--learn-ink); background: var(--learn-bg); }
+.study-image-dialog::backdrop { background: #000a; }
+.study-image-dialog > button { display: block; margin-left: auto; min-height: 44px; padding: 8px 12px; }
+.study-image-dialog img { width: 100%; max-height: 78dvh; object-fit: contain; }
+
+.study-bot-avatar { position: relative; flex: none; }
+.study-bot-avatar-render { width: 100%; height: 100%; }
+.study-bot-avatar > button { position: absolute; inset: 0; background: transparent; border: 0; border-radius: 50%; cursor: pointer; }
+.study-bot-fallback { position: absolute; inset: 0; display: grid; place-items: center; color: #9565dc; font-size: 30px; pointer-events: none; }
+.study-avatar-companion { max-width: 720px; margin: 0 auto; height: 64px; display: flex; align-items: center; pointer-events: none; }
+.study-avatar-companion > div { pointer-events: auto; }
+.study-chat-turn .study-bot-avatar { margin-top: 3px; }
+@media(max-width:640px) { .study-avatar-companion { height: 48px; } .study-avatar-companion > div { width: 60px !important; height: 60px !important; } }

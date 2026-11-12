@@ -33,6 +33,8 @@ import type { StudySource } from "@/lib/study-sources-types";
 import type { SavedStudyResponse } from "@/lib/study-interaction";
 import "./study-conversation.css";
 import StudyBrowserPanel from "./StudyBrowserPanel";
+import StudyFileCards from "./StudyFileCards";
+import StudyBotAvatar from "./StudyBotAvatar";
 
 type Turn = { id: string; role: "user" | "assistant"; content: string; sources: StudySource[]; study?: SavedStudyResponse };
 
@@ -155,7 +157,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         setTitle(response.title);
         setTurns(previous => [...previous, {
           id: crypto.randomUUID(), role: "assistant", content: response.text, sources: response.sources,
-          study: { title: response.title, document: response.document, browser: response.browser, computerUse: response.computerUse, interaction: response.interaction ?? { steps: [], suggestions: [] } },
+          study: { title: response.title, document: response.document, browser: response.browser, computerUse: response.computerUse, files: response.files, fileErrors: response.fileErrors, interaction: response.interaction ?? { steps: [], suggestions: [] } },
         }]);
       }
     } finally {
@@ -225,9 +227,10 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         {!loaded && !error && <LoadingStatus stage="synchronizing" detail="Memuat percakapan belajar" />}
         {loaded && !turns.length && !agent.busy && <div className="study-chat-empty"><Image src="/icons/momo-192.png" alt="" width={56} height={56} /><h1>Mau belajar atau membuat apa?</h1><p>Tanya konsep, kirim tautan YouTube, cari sumber, atau buat dokumen bersama Momo.</p></div>}
         {turns.map(turn => <article className="study-chat-turn" key={turn.id}>
-          <MessageBubble message={message(turn)} videoEnabled={false} />
+          <MessageBubble message={message(turn)} videoEnabled={false} avatar={<StudyBotAvatar size={32} response={turn.content} still />} />
           {turn.role === "assistant" && <div className="study-chat-extras">
             <StudyVideoCards sources={turn.sources} />
+            <StudyFileCards sessionId={sessionId} files={turn.study?.files || []} errors={turn.study?.fileErrors || []} />
             {turn.study && <StudyActivities storageKey={"eureka:study-checklist:" + getUserId() + ":" + sessionId + ":" + turn.content.slice(0, 70)} data={turn.study.interaction} disabled={agent.busy} onSend={prompt => void send(prompt)} />}
             <div className="study-chat-response-actions"><button type="button" onClick={() => void download(turn)}><Download size={16} aria-hidden="true" />Unduh DOCX</button>
               {turn.sources.length > 0 && <details><summary><Link2 size={16} aria-hidden="true" />Sumber · {turn.sources.length}<ChevronDown size={15} aria-hidden="true" /></summary><ol>{turn.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a></li>)}</ol></details>}
@@ -237,7 +240,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         {agent.browserActivity.length > 0 && <StudyBrowserPanel activities={agent.browserActivity} busy={agent.busy} />}
         {agent.busy && <article className="study-chat-live" aria-busy="true">
           {agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
-          {agent.text && <MessageBubble message={message({ id: "study-stream", role: "assistant", content: agent.text, sources: [] })} isStreaming videoEnabled={false} />}
+          {agent.text && <MessageBubble message={message({ id: "study-stream", role: "assistant", content: agent.text, sources: [] })} isStreaming videoEnabled={false} avatar={<StudyBotAvatar size={32} prompt={lastPrompt} response={agent.text} stage={agent.status?.stage} busy error={!!agent.error} />} />}
         </article>}
         {(agent.error || error) && <div className="study-chat-error" role="alert"><p>{error || agent.error}</p>
           {error && !loaded && <button type="button" onClick={() => { setError(""); setLoadAttempt(n => n + 1); }}>Muat ulang percakapan</button>}
@@ -247,6 +250,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       </div>
     </div>
     <footer className="study-chat-footer momo-session-composer">
+      <div className="study-avatar-companion"><StudyBotAvatar prompt={lastPrompt || draft} response={agent.busy ? agent.text : turns.filter(turn => turn.role === "assistant").at(-1)?.content} stage={agent.status?.stage} busy={agent.busy} error={!!(agent.error || error || (!agent.busy && turns.at(-1)?.study?.fileErrors?.length))} /></div>
       {browserSelected && <div className="study-computer-controls"><div className="study-computer-chip"><Monitor color="#8253d4" size={17} aria-hidden="true" /><span>Computer Use</span><button type="button" disabled={agent.busy} aria-label="Nonaktifkan Computer Use" onClick={() => setBrowserSelected(false)}>×</button></div><PageTutorial guideId="computer-use" /></div>}
       {micError && <p className="study-chat-error" role="alert">{micError}</p>}
       <div className="eureka-prompt-wrap study-chat-composer">
@@ -259,7 +263,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
             } },
             { key: "research", name: "Proyek riset", icon: <FolderOpen size={16} />, action: () => setResearchOpen(true) },
             { key: "video", name: "Cari video", icon: <Globe size={16} />, action: () => setDraft("Carikan video pembelajaran tentang ") },
-            { key: "document", name: "Buat dokumen", icon: <Download size={16} />, action: () => setDraft("Buatkan dokumen yang rapi tentang ") },
+            { key: "document", name: browserSelected ? "Buat file di komputer" : "Buat dokumen", icon: <Download size={16} />, action: () => setDraft(browserSelected ? "Buatkan PDF dan Word tentang " : "Buatkan dokumen yang rapi tentang ") },
           ]}
           background="rgb(var(--clay-cream))" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="#a983e8" width={760} radius={18} maxRows={5} commands={[]} defaultEffort="Seimbang"
           models={[]} efforts={["Kilat", "Seimbang", "Mendalam"]} onEffortChange={effort => setSpeedMode(effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal")}

@@ -1,3 +1,4 @@
+import type { StudyFile } from "./study-file-types";
 import { z } from "zod";
 
 export const studyInteractionSchema = z.object({
@@ -16,6 +17,8 @@ export const studyBrowserContextSchema = z.object({ url: z.string().url().max(20
 export type StudyBrowserContext = z.infer<typeof studyBrowserContextSchema>;
 
 export type SavedStudyResponse = {
+  files?: StudyFile[];
+  fileErrors?: string[];
   browser?: StudyBrowserContext;
   computerUse?: boolean;
   title: string;
