@@ -45,7 +45,14 @@ test("uses exactly three requested models, preserves effort, ignores obsolete se
   const bodies = [];
   const ai = load(async (_, request) => { bodies.push(JSON.parse(request.body)); return stream(["Lima."]); })("lib/ai");
   const ids = ai.getProviderChain("normal", true, true, "gpt-4o").map(p => p.model);
-  assert.deepEqual([...ids], ["gemini-3.8-flash-high", "deepseek-v4.1-flash", "glm-5.3-flash"]);
+  assert.deepEqual([...ids], ["deepseek-v4-flash", "deepseek-v4.1-flash", "glm-5.3-flash"]);
+  for (const speedMode of ["fast", "normal", "deep"]) {
+    for (const pro of [false, true]) {
+      const chain = ai.getProviderChain(speedMode, pro, true, "gemini-3.8-flash-high");
+      assert.equal(chain.some(p => /gemini/i.test(p.model)), false);
+      assert.equal(chain.some(p => p.model === "deepseek-v4-flash"), true);
+    }
+  }
   for (const speedMode of ["fast", "normal", "deep"]) await ai.aiChat({ user: "2+3", speedMode });
   assert.deepEqual(bodies.map(b => b.reasoning_effort), ["low", "medium", "high"]);
 });

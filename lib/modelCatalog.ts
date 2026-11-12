@@ -28,7 +28,7 @@ export interface ModelCatalogEntry {
 
 export const MODEL_CATALOG: ModelCatalogEntry[] = [
   { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", brand: "DeepSeek", logo: "/images/ai-models/deepseek-official.svg", tier: "fast", smartness: 4, desc: "Respons cepat untuk belajar dan percakapan.", available: true },
-  { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash", brand: "Google", logo: "/images/ai-models/gemini-color.svg", tier: "normal", smartness: 4, desc: "Penjelasan dan pemahaman materi.", available: true },
+  { id: "deepseek-v4-flash", name: "DeepSeek V4 Flash", brand: "DeepSeek", logo: "/images/ai-models/deepseek-official.svg", tier: "normal", smartness: 4, desc: "Penjelasan dan pemahaman materi.", available: true },
   { id: "glm-5.3-flash", name: "GLM 5.3 Flash", brand: "Z.ai", logo: "/images/ai-models/zhipu-color.svg", tier: "deep", smartness: 4, desc: "Analisis dan latihan terstruktur.", available: true },
 ];
 
@@ -43,9 +43,9 @@ export const MODEL_CATALOG_IDS = new Set(MODEL_CATALOG.map((m) => m.id));
 
 /** Prioritas otomatis per effort. Semua entri tetap menjadi fallback. */
 export const SPEED_MODEL_LISTS: Record<AiSpeedMode, string[]> = {
-  fast: ["deepseek-v4.1-flash", "glm-5.3-flash", "gemini-3.8-flash-high"],
-  normal: ["gemini-3.8-flash-high", "deepseek-v4.1-flash", "glm-5.3-flash"],
-  deep: ["glm-5.3-flash", "gemini-3.8-flash-high", "deepseek-v4.1-flash"],
+  fast: ["deepseek-v4.1-flash", "glm-5.3-flash", "deepseek-v4-flash"],
+  normal: ["deepseek-v4-flash", "deepseek-v4.1-flash", "glm-5.3-flash"],
+  deep: ["glm-5.3-flash", "deepseek-v4-flash", "deepseek-v4.1-flash"],
 };
 
 /** Kompatibilitas pemanggil lama; akses paket diperiksa di route. */
