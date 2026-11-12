@@ -12,7 +12,12 @@ export const studyInteractionSchema = z.object({
 });
 
 export type StudyInteraction = z.infer<typeof studyInteractionSchema>;
+export const studyBrowserContextSchema = z.object({ url: z.string().url().max(2000) });
+export type StudyBrowserContext = z.infer<typeof studyBrowserContextSchema>;
+
 export type SavedStudyResponse = {
+  browser?: StudyBrowserContext;
+  computerUse?: boolean;
   title: string;
   document: boolean;
   interaction: StudyInteraction;

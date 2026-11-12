@@ -1,4 +1,4 @@
-import { studyInteractionSchema, type SavedStudyResponse } from "@/lib/study-interaction";
+import { studyBrowserContextSchema, studyInteractionSchema, type SavedStudyResponse } from "@/lib/study-interaction";
 /**
  * Store riwayat chat asisten AI (halaman /home & /chat) — Supabase.
  * Tabel: ai_chat_sessions, ai_chat_messages (lihat supabase_patch_003_ai_chat.sql)
@@ -126,11 +126,14 @@ function mapSession(row: Record<string, unknown>): AssistantChatSession {
 function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
   const saved = asArray<Record<string, unknown>>(m.sources).find(source => source.type === "study");
   const parsed = studyInteractionSchema.safeParse(saved?.interaction);
+  const browser = studyBrowserContextSchema.safeParse(saved?.browser);
   return {
     study: saved && parsed.success ? {
       title: typeof saved.title === "string" ? saved.title.slice(0, 120) : "Belajar bersama Momo",
       document: saved.document === true,
       interaction: parsed.data,
+      browser: browser.success ? browser.data : undefined,
+      computerUse: typeof saved.computerUse === "boolean" ? saved.computerUse : undefined,
     } : undefined,
     id: String(m.id ?? ""),
     sessionId: String(m.session_id ?? ""),

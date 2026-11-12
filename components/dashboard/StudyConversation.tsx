@@ -112,6 +112,8 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
           setTurns((messages ?? []).map(fromMessage));
           setTitle(data.session.title);
         }
+        const previous = [...(messages ?? [])].reverse().find(message => message.role === "assistant" && message.study);
+        if (previous?.study?.computerUse !== undefined) setBrowserSelected(previous.study.computerUse);
         const contextKey = "eureka:study-chat-note:" + sessionId + ":" + getUserId();
         const context = localStorage.getItem(contextKey);
         if (context) setNoteId(context);
@@ -153,7 +155,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         setTitle(response.title);
         setTurns(previous => [...previous, {
           id: crypto.randomUUID(), role: "assistant", content: response.text, sources: response.sources,
-          study: { title: response.title, document: response.document, interaction: response.interaction ?? { steps: [], suggestions: [] } },
+          study: { title: response.title, document: response.document, browser: response.browser, computerUse: response.computerUse, interaction: response.interaction ?? { steps: [], suggestions: [] } },
         }]);
       }
     } finally {

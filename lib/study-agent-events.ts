@@ -1,4 +1,4 @@
-import type { StudyInteraction } from "./study-interaction";
+import type { StudyBrowserContext, StudyInteraction } from "./study-interaction";
 import type { StudySource } from "./study-sources-types";
 
 import type { BrowserActivity } from "./study-browser";
@@ -9,5 +9,5 @@ export type StudyAgentEvent =
   | { type: "sources"; sources: StudySource[] }
   | { type: "token"; text: string }
   | { type: "reset" }
-  | { type: "done"; title: string; document: boolean; interaction?: StudyInteraction }
+  | { type: "done"; title: string; document: boolean; interaction?: StudyInteraction; browser?: StudyBrowserContext; computerUse?: boolean }
   | { type: "error"; message: string };
