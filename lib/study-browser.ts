@@ -34,8 +34,9 @@ class BoxClient {
   constructor(private token: string, private signal: AbortSignal) {}
   async rpc(method: string, params?: unknown, notification = false): Promise<unknown> {
     const id = ++this.id;
+    const navigation = method === "tools/call" && (params as { name?: string } | undefined)?.name === "browser_navigate";
     const response = await fetch("https://mcp.box.simular.ai/mcp", {
-      method: "POST", signal: AbortSignal.any([this.signal, AbortSignal.timeout(20000)]),
+      method: "POST", signal: AbortSignal.any([this.signal, AbortSignal.timeout(navigation ? 45000 : 20000)]),
       headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", Authorization: "Bearer " + this.token,
         ...(this.session ? { "mcp-session-id": this.session } : {}), ...(method !== "initialize" ? { "mcp-protocol-version": "2025-06-18" } : {}) },
       body: JSON.stringify({ jsonrpc: "2.0", method, params, ...(notification ? {} : { id }) }),
