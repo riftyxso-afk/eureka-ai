@@ -101,7 +101,7 @@ export default function StudyMode({ active }: { active: boolean }) {
         <h1 id="dv2-study-title">Apa yang ingin kamu kuasai?</h1>
         <form className="dv2-study-composer" onSubmit={event => { event.preventDefault(); void submitGoal(); }}>
           <div className="dv2-study-input">
-            <textarea ref={input} value={goal} onChange={event => { setGoal(event.target.value); setError(""); }} rows={2} maxLength={2000} minLength={1} required aria-label="Tujuan belajar" placeholder="Tanya, cari video, atau buat bahan belajar…" />
+            <textarea ref={input} value={goal} onChange={event => { setGoal(event.target.value); setError(""); }} rows={3} maxLength={2000} minLength={1} required aria-label="Tujuan belajar" placeholder="Tulis tujuan, cari video, atau minta dokumen belajar…" />
             <div className="dv2-study-composer-actions">
               <label>Target <span className="dv2-study-select"><select aria-label="Target waktu belajar" value={days} onChange={event => setDays(Number(event.target.value))}>
                 {[1, 3, 7, 14, 30].map(value => <option key={value} value={value}>{value} hari</option>)}
@@ -110,8 +110,8 @@ export default function StudyMode({ active }: { active: boolean }) {
             </div>
           </div>
           <div className="dv2-study-tools">
-            <button type="button" aria-expanded={notesOpen} aria-label={noteId ? "Ganti catatan" : "Pakai catatan"} aria-controls="dv2-study-notes" onClick={() => setNotesOpen(open => !open)}><BookOpen size={16} aria-hidden="true" />{noteId ? "Catatan dipilih" : "Catatan"}</button>
-            <button type="button" onClick={() => { setGoal("Buatkan dokumen belajar yang rapi. Tanyakan dulu topik yang ingin kubahas."); input.current?.focus(); }}><StudyArt name="notebook" size={18} />Dokumen</button>
+            <button type="button" aria-expanded={notesOpen} aria-label={noteId ? "Ganti catatan" : "Pakai catatan"} aria-controls="dv2-study-notes" onClick={() => setNotesOpen(open => !open)}><BookOpen size={16} aria-hidden="true" />{noteId ? "Catatan dipilih" : "Pakai catatan"}</button>
+            <button type="button" onClick={() => { setGoal("Buatkan dokumen belajar yang rapi. Tanyakan dulu topik yang ingin kubahas."); input.current?.focus(); }}><StudyArt name="notebook" size={19} />Buat dokumen</button>
             <button type="button" onClick={toggleFocus} aria-label={end === null ? "Mulai fokus 25 menit" : "Hentikan sesi fokus"}><Timer size={16} aria-hidden="true" />{end === null ? "Fokus 25 mnt" : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`}</button>
           </div>
           <div className="dv2-study-notes" id="dv2-study-notes" hidden={!notesOpen}>

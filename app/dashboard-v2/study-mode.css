@@ -50,7 +50,7 @@
 .dv2-study-composer { position: relative; }
 .dv2-study-input { position: relative; z-index: 1; border: 1px solid var(--v2-line); border-radius: 24px; background: var(--study-field); }
 .dv2-study-input:focus-within { border-color: var(--study-accent); }
-.dv2-study-input textarea { display: block; width: 100%; min-height: 60px; max-height: 150px; resize: none; field-sizing: content; padding: 12px 14px 2px; line-height: 1.5; background: transparent; border: 0; outline: 0; color: var(--v2-ink); font: inherit; }
+.dv2-study-input textarea { display: block; width: 100%; min-height: 84px; max-height: 180px; resize: none; padding: 14px 16px 4px; line-height: 1.5; background: transparent; border: 0; outline: 0; color: var(--v2-ink); font: inherit; }
 .dv2-study-input textarea::placeholder { color: var(--v2-muted); }
 .dv2-study-composer-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 6px 10px 9px; }
 .dv2-study-composer-actions label { display: flex; align-items: center; gap: 6px; color: var(--v2-muted); font-size: .8rem; }
@@ -59,7 +59,7 @@
 .dv2-study-send { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--study-accent); color: #fff; }
 .dark .dv2-study-send { color: #1d132f; }
 .dv2-study-send:disabled { opacity: .45; cursor: not-allowed; }
-.dv2-study-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 5px 0 0; padding: 0; background: transparent; border-radius: 0; justify-content: space-between; }
+.dv2-study-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: -10px 10px 0; padding: 14px 8px 6px; background: var(--study-tray); border-radius: 0 0 16px 16px; }
 .dv2-study-tools :is(button, a) { display: flex; align-items: center; gap: 6px; min-height: 44px; border-radius: 9px; padding: 0 8px; text-align: start; font-size: .8rem; }
 .dv2-study-tools :is(button, a):hover { background: var(--study-field); }
 .dv2-study-notes { margin: 6px 12px 0; padding: 12px; border-radius: 12px; background: var(--study-field); }
@@ -142,10 +142,11 @@
 @media(max-width:480px) {
   .dv2-study-mode { padding-top: 22px; padding-bottom: 100px; }
   .dv2-study-composer-actions { padding-top: 2px; }
-  .dv2-study-tools { margin-inline: 0; flex-wrap: nowrap; }
-  .dv2-study-tools button { padding-inline: 6px; font-size: .76rem; white-space: nowrap; }
+  .dv2-study-tools { margin-inline: 6px; flex-wrap: wrap; }
+  .dv2-study-tools button { padding-inline: 8px; font-size: .78rem; white-space: nowrap; }
   .dv2-study-tools svg, .dv2-study-tools img { flex: none; }
-  .dv2-study-example-grid > button { flex-direction: row; gap: 10px; }
-  .dv2-study-example-grid { grid-template-columns: minmax(0,1fr); }
-  .dv2-study-example-grid small { font-size: .76rem; }
+  .dv2-study-example-grid > button { flex-direction: column; gap: 8px; padding: 12px; }
+  .dv2-study-example-grid { grid-template-columns: repeat(2,minmax(0,1fr)); align-items: stretch; }
+  .dv2-study-example-grid strong { font-size: .85rem; line-height: 1.45; }
+  .dv2-study-example-grid small { font-size: .75rem; line-height: 1.5; }
 }
