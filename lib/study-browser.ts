@@ -3,9 +3,9 @@ import { z } from "zod";
 import { aiChatJson } from "./ai";
 import type { StudySource } from "./study-sources-types";
 
-export type BrowserActivity = { label: string; url?: string; image?: string };
+export type BrowserActivity = { label: string; url?: string };
 type Tool = { name: string; description?: string; inputSchema: Record<string, unknown> };
-type Result = { isError?: boolean; content?: { type: string; text?: string; data?: string; mimeType?: string }[] };
+type Result = { structuredContent?: Record<string, unknown>; isError?: boolean; content?: { type: string; text?: string; data?: string; mimeType?: string }[] };
 const locks = new Set<string>();
 
 // Each key must belong to a separate Box account, with a separate browser desktop.
@@ -82,7 +82,7 @@ export async function browseStudy(userId: string, prompt: string, signal: AbortS
     await client.rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "eureka-study", version: "1.0" } });
     await client.rpc("notifications/initialized", undefined, true);
     const listing = await client.rpc("tools/list", {}) as { tools: Tool[] };
-    const tools = listing.tools.filter(tool => ["browser_navigate", "browser_read", "screenshot"].includes(tool.name));
+    const tools = listing.tools.filter(tool => ["browser_navigate", "browser_read"].includes(tool.name));
     if (!tools.some(tool => tool.name === "browser_navigate") || !tools.some(tool => tool.name === "browser_read")) throw new Error("Alat browser Box belum tersedia.");
     async function call(name: string, url: string): Promise<Result> {
       const tool = tools.find(item => item.name === name)!;
@@ -113,11 +113,6 @@ export async function browseStudy(userId: string, prompt: string, signal: AbortS
       if (sources.some(source => source.url === url)) break;
       emit({ label: "Membuka " + new URL(url).hostname, url });
       await call("browser_navigate", url);
-      if (tools.some(tool => tool.name === "screenshot")) {
-        const frame = await call("screenshot", url).catch(() => null);
-        const image = frame?.content?.find(item => item.type === "image" && /^image\/(png|jpeg|webp)$/.test(item.mimeType || "") && (item.data?.length || 0) <= 4_000_000);
-        if (image?.data) emit({ label: "Membaca " + new URL(url).hostname, url, image: "data:" + image.mimeType + ";base64," + image.data });
-      }
       const page = await call("browser_read", url);
       const excerpt = (page.content || []).filter(item => item.type === "text").map(item => item.text || "").join("\n").slice(0, 14000);
       if (excerpt) sources.push({ kind: "web", title: new URL(url).hostname, url, excerpt, byline: "Browser Momo" });
@@ -126,4 +121,23 @@ export async function browseStudy(userId: string, prompt: string, signal: AbortS
     emit({ label: "Penelusuran selesai" });
     return sources;
   } finally { await client.close(); locks.delete(lock); }
+}
+
+
+/** View-only credentials are scoped by Box and expire after one hour. The personal key stays on the server. */
+export async function getStudyBrowserView(userId: string, signal: AbortSignal) {
+  const token = tokenFor(userId);
+  if (!token) throw new Error("Browser Momo belum diaktifkan untuk akun ini.");
+  const client = new BoxClient(token, signal);
+  try {
+    await client.rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "eureka-live-view", version: "1.0" } });
+    await client.rpc("notifications/initialized", undefined, true);
+    const view = await client.rpc("tools/call", { name: "box_view", arguments: {} }) as Result;
+    const access = await client.rpc("tools/call", { name: "box_view_token", arguments: {} }) as Result;
+    if (view.isError || access.isError) throw new Error("Tampilan live Box belum tersedia.");
+    const data = z.object({ token: z.string().min(1), ws_url: z.string().url(), expires_at_ms: z.number() }).parse(access.structuredContent);
+    const socket = new URL(data.ws_url);
+    if (socket.protocol !== "wss:" || socket.hostname !== "mcp.box.simular.ai") throw new Error("Alamat tampilan live tidak valid.");
+    return { token: data.token, wsUrl: data.ws_url, expiresAt: data.expires_at_ms };
+  } finally { await client.close(); }
 }

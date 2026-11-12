@@ -1,20 +1,26 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Globe from "kubai-icons-react/icons/globe";
+import X from "kubai-icons-react/icons/circle-x";
 import type { BrowserActivity } from "@/lib/study-browser";
+import StudyLiveView from "./StudyLiveView";
 
 export default function StudyBrowserPanel({ activities, busy }: { activities: BrowserActivity[]; busy: boolean }) {
+  const [viewing, setViewing] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (viewing && !dialog.current?.open) dialog.current?.showModal();
+  }, [viewing]);
   if (!activities.length) return null;
-  const frame = activities.findLast(activity => activity.image);
   const current = activities.at(-1)!;
-  return <details className="study-browser-panel" open>
-    <summary><Globe size={18} aria-hidden="true" /><strong>Momo bekerja di browser</strong><span>{busy ? "Berlangsung" : current.label === "Penelusuran selesai" ? "Selesai" : "Berakhir"}</span></summary>
-    <div className="study-browser-address">{current.url ? <a href={current.url} target="_blank" rel="noopener noreferrer">{current.url}</a> : current.label}</div>
-    {frame?.image && <figure>
-      {/* eslint-disable-next-line @next/next/no-img-element -- Authenticated ephemeral frame, never persisted or fetched through an image proxy. */}
-      <img src={frame.image} alt={"Tangkapan browser Momo saat membaca " + (frame.url || "halaman")} />
-      <figcaption>Gambar layar diperbarui setiap kali Momo membuka halaman.</figcaption>
-    </figure>}
-    <ol aria-label="Aktivitas browser">{activities.filter(activity => !activity.image).map((activity, index) => <li key={index}>{activity.label}</li>)}</ol>
-  </details>;
+  return <section className="study-browser-panel" aria-label="Aktivitas browser Momo">
+    <div className="study-browser-heading"><Globe size={18} aria-hidden="true" /><strong>Momo bekerja di browser</strong><button type="button" onClick={() => setViewing(true)}>View live ↗</button></div>
+    <p className="study-browser-address" role="status">{busy ? current.label : current.label === "Penelusuran selesai" ? "Penelusuran selesai" : "Penelusuran berakhir"}</p>
+    <details><summary>Lihat langkah penelusuran</summary><ol>{activities.map((activity, index) => <li key={index}>{activity.label}</li>)}</ol></details>
+    <dialog ref={dialog} className="study-live-dialog" aria-labelledby="study-live-title" onClose={() => setViewing(false)} onClick={event => { if (event.target === event.currentTarget) dialog.current?.close(); }}>
+      <header><h2 id="study-live-title">Browser Momo · Live</h2><button type="button" aria-label="Tutup tampilan live" onClick={() => dialog.current?.close()}><X size={22} /></button></header>
+      {viewing && <StudyLiveView />}
+    </dialog>
+  </section>;
 }

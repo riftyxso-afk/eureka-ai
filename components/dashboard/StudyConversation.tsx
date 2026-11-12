@@ -2,19 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import ArrowUp from "kubai-icons-react/icons/arrow-up";
 import BookOpen from "kubai-icons-react/icons/book-open";
 import ChevronDown from "kubai-icons-react/icons/chevron-down";
 import Download from "kubai-icons-react/icons/download";
 import FolderOpen from "kubai-icons-react/icons/folder-open";
+import Plus from "kubai-icons-react/icons/circle-plus";
 import Globe from "kubai-icons-react/icons/globe";
 import Link2 from "kubai-icons-react/icons/link";
-import NotebookPen from "kubai-icons-react/icons/notebook-pen";
-import Square from "kubai-icons-react/icons/square";
 import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
 import PageTutorial from "@/components/tutorial/PageTutorial";
-import MarkdownView from "@/components/asisten/MarkdownView";
+import MessageBubble from "@/components/asisten/MessageBubble";
+import ChatSidebar from "@/components/asisten/ChatSidebar";
+import PromptBar from "@/components/asisten/reactbits/PromptBar";
+import SpeechInput from "@/components/asisten/SpeechInput";
 import LoadingStatus from "@/components/ui/LoadingStatus";
 import ResearchStudio from "@/components/dashboard/ResearchStudio";
 import "@/app/dashboard-v2/study-flows.css";
@@ -25,7 +27,7 @@ import { useStudyAgent } from "@/components/dashboard/StudyAgentResult";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { STUDY_CHAT_PENDING, type StudyChatPending } from "@/lib/study-chat-pending";
-import type { AssistantChatMessage } from "@/lib/assistant/types";
+import type { AssistantChatSession, AssistantChatMessage } from "@/lib/assistant/types";
 import type { StudySource } from "@/lib/study-sources-types";
 import type { SavedStudyResponse } from "@/lib/study-interaction";
 import "./study-conversation.css";
@@ -44,6 +46,30 @@ function fromMessage(message: AssistantChatMessage): Turn {
 
 export default function StudyConversation({ sessionId, initialMessages, initialTitle }: { sessionId: string; initialTitle?: string; initialMessages?: AssistantChatMessage[] }) {
   const agent = useStudyAgent();
+  const router = useRouter();
+  const [sessions, setSessions] = useState<AssistantChatSession[]>([]);
+  const [speedMode, setSpeedMode] = useState<"fast" | "normal" | "deep">("normal");
+  const [micError, setMicError] = useState("");
+  useEffect(() => {
+    if (agent.busy) return;
+    const controller = new AbortController();
+    apiFetch("/api/assistant/sessions?userId=" + encodeURIComponent(getUserId()), { signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (!controller.signal.aborted && data?.sessions) setSessions(data.sessions); }).catch(() => {});
+    return () => controller.abort();
+  }, [sessionId, agent.busy]);
+  async function changeSession(id: string, newTitle?: string) {
+    const response = await apiFetch("/api/assistant/sessions/" + encodeURIComponent(id) + (newTitle === undefined ? "?userId=" + encodeURIComponent(getUserId()) : ""), {
+      method: newTitle === undefined ? "DELETE" : "PATCH",
+      ...(newTitle === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: getUserId(), title: newTitle }) }),
+    });
+    if (!response.ok) { setError("Percakapan belum bisa diubah. Coba lagi."); return; }
+    setSessions(previous => newTitle === undefined ? previous.filter(session => session.id !== id) : previous.map(session => session.id === id ? { ...session, title: newTitle } : session));
+    if (id === sessionId) {
+      if (newTitle === undefined) router.replace("/dashboard-v2?workspace=study");
+      else setTitle(newTitle);
+    }
+  }
   const [browserEnabled, setBrowserEnabled] = useState(false);
   const [browserSelected, setBrowserSelected] = useState(false);
   useEffect(() => {
@@ -109,6 +135,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
   async function send(prompt: string, selectedNote = noteId) {
     const text = prompt.trim();
     if (!text || !loaded || sending.current) return;
+    if (text.length > 6000) { setError("Tulis pesan maksimal 6.000 karakter."); return; }
     sending.current = true;
     setError("");
     setLastPrompt(text);
@@ -120,7 +147,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       ...previous, { id: crypto.randomUUID(), role: "user", content: text, sources: [] },
     ]);
     try {
-      const response = await agent.run(text, { sessionId, noteId: selectedNote, browser: browserSelected });
+      const response = await agent.run(text, { sessionId, noteId: selectedNote, browser: browserSelected, speedMode });
       if (response) {
         setTitle(response.title);
         setTurns(previous => [...previous, {
@@ -158,15 +185,21 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     } catch { setExportError("Dokumen belum bisa diunduh. Coba lagi."); }
   }
 
-  return <main className="study-conversation">
-    <header className="study-chat-header">
-      <V2MobileSidebar desktop />
+  function message(turn: Turn): AssistantChatMessage {
+    return { ...turn, sessionId, mentions: [], sources: [], model: "eureka-study", createdAt: "", study: turn.study };
+  }
+
+  return <div className="momo-session study-session flex h-dvh overflow-hidden bg-clay-beige p-0">
+    <ChatSidebar sessions={sessions} activeId={sessionId} onNew={() => router.push("/dashboard-v2?workspace=study")} onSelect={() => {}} onRename={async (id, newTitle) => { await changeSession(id, newTitle); }} onDelete={async id => { await changeSession(id); }} />
+    <main className="study-conversation">
+    <header className="study-chat-header chat-session-header">
+      <V2MobileSidebar sessions={sessions} />
       <Link href="/dashboard-v2?workspace=study" className="study-chat-brand"><BookOpen size={19} aria-hidden="true" /><span>Belajar</span></Link>
       <span className="study-chat-title">{title}</span>
       <PageTutorial guideId="study-conversation" />
-      <Link className="study-chat-new" href="/dashboard-v2?workspace=study" aria-label="Percakapan belajar baru"><NotebookPen size={17} aria-hidden="true" /><span>Chat baru</span></Link>
+      <Link className="study-chat-new" href="/dashboard-v2?workspace=study" aria-label="Percakapan belajar baru"><Plus size={16} /></Link>
     </header>
-    <div className="study-chat-transcript" ref={transcript} onScroll={event => {
+    <div className="study-chat-transcript chat-session-messages" ref={transcript} onScroll={event => {
       const el = event.currentTarget;
       followBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 180;
     }}>
@@ -177,21 +210,20 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         </details>
         {!loaded && !error && <LoadingStatus stage="synchronizing" detail="Memuat percakapan belajar" />}
         {loaded && !turns.length && !agent.busy && <div className="study-chat-empty"><Image src="/icons/momo-192.png" alt="" width={56} height={56} /><h1>Mau belajar atau membuat apa?</h1><p>Tanya konsep, kirim tautan YouTube, cari sumber, atau buat dokumen bersama Momo.</p></div>}
-        {turns.map(turn => <article className={"study-chat-turn " + turn.role} key={turn.id}>
-          {turn.role === "user" ? <p>{turn.content}</p> : <>
-            <div className="study-chat-assistant-label"><Image src="/icons/momo-192.png" alt="" width={28} height={28} /><strong>Momo</strong></div>
-            <MarkdownView content={turn.content} />
+        {turns.map(turn => <article className="study-chat-turn" key={turn.id}>
+          <MessageBubble message={message(turn)} videoEnabled={false} />
+          {turn.role === "assistant" && <div className="study-chat-extras">
             <StudyVideoCards sources={turn.sources} />
             {turn.study && <StudyActivities storageKey={"eureka:study-checklist:" + getUserId() + ":" + sessionId + ":" + turn.content.slice(0, 70)} data={turn.study.interaction} disabled={agent.busy} onSend={prompt => void send(prompt)} />}
             <div className="study-chat-response-actions"><button type="button" onClick={() => void download(turn)}><Download size={16} aria-hidden="true" />Unduh DOCX</button>
               {turn.sources.length > 0 && <details><summary><Link2 size={16} aria-hidden="true" />Sumber · {turn.sources.length}</summary><ol>{turn.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a></li>)}</ol></details>}
             </div>
-          </>}
+          </div>}
         </article>)}
         <StudyBrowserPanel activities={agent.browserActivity} busy={agent.busy} />
         {agent.busy && <article className="study-chat-live" aria-busy="true">
           {agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
-          {agent.text && <p className="study-chat-stream">{agent.text}</p>}
+          {agent.text && <MessageBubble message={message({ id: "study-stream", role: "assistant", content: agent.text, sources: [] })} isStreaming videoEnabled={false} />}
         </article>}
         {(agent.error || error) && <div className="study-chat-error" role="alert"><p>{error || agent.error}</p>
           {error && !loaded && <button type="button" onClick={() => { setError(""); setLoadAttempt(n => n + 1); }}>Muat ulang percakapan</button>}
@@ -200,22 +232,25 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         {exportError && <p className="study-chat-error" role="alert">{exportError}</p>}
       </div>
     </div>
-    <footer className="study-chat-footer">
+    <footer className="study-chat-footer momo-session-composer">
       <div className="study-browser-control"><label title={browserEnabled ? "Momo menelusuri halaman publik dengan browser" : "Koneksi browser sedang disiapkan"}>
         <input type="checkbox" checked={browserSelected} disabled={!browserEnabled || agent.busy} onChange={event => setBrowserSelected(event.target.checked)} />
         <Globe size={16} aria-hidden="true" /> Lihat Momo bekerja <span>{browserEnabled ? "Browser" : "Segera tersedia"}</span>
-      </label></div><form className="study-chat-composer" onSubmit={event => { event.preventDefault(); if (loaded && draft.trim() && !sending.current) { void send(draft); setDraft(""); } }}>
-      <label className="sr-only" htmlFor="study-chat-prompt">Pesan belajar</label>
-      <textarea id="study-chat-prompt" rows={1} maxLength={6000} value={draft} disabled={!loaded} onChange={event => setDraft(event.target.value)} onKeyDown={event => {
-        if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && window.matchMedia("(pointer: fine)").matches) {
-          event.preventDefault();
-          if (!agent.busy) event.currentTarget.form?.requestSubmit();
-        }
-      }} placeholder="Tanya Momo atau minta bahan belajar…" />
-      <div><span>{noteId ? <BookOpen size={15} aria-hidden="true" /> : <Globe size={15} aria-hidden="true" />}{noteId ? "Menggunakan catatanmu" : "Pencarian sumber otomatis"}</span>
-        {agent.busy ? <button type="button" aria-label="Hentikan respons" onClick={agent.stop}><Square size={17} /></button>
-          : <button type="submit" aria-label="Kirim pesan belajar" disabled={!loaded || !draft.trim()}><ArrowUp size={20} /></button>}
+      </label></div>
+      {micError && <p className="study-chat-error" role="alert">{micError}</p>}
+      <div className="eureka-prompt-wrap study-chat-composer">
+        <PromptBar value={draft} onDraftChange={setDraft} busy={agent.busy} disabled={!loaded} placeholder="Tanya Momo atau minta bahan belajar…"
+          sources={[
+            { key: "research", name: "Proyek riset", icon: <FolderOpen size={16} />, action: () => setResearchOpen(true) },
+            { key: "video", name: "Cari video", icon: <Globe size={16} />, action: () => setDraft("Carikan video pembelajaran tentang ") },
+            { key: "document", name: "Buat dokumen", icon: <Download size={16} />, action: () => setDraft("Buatkan dokumen yang rapi tentang ") },
+          ]}
+          background="rgb(var(--clay-cream))" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="#a983e8" width={760} radius={18} maxRows={5} commands={[]} defaultEffort="Seimbang"
+          models={[]} efforts={["Kilat", "Seimbang", "Mendalam"]} onEffortChange={effort => setSpeedMode(effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal")}
+          onSend={prompt => { void send(prompt); }} onStop={agent.stop}
+          voiceSlot={<SpeechInput userId={getUserId()} disabled={!loaded || agent.busy} onText={text => setDraft(previous => (previous + " " + text).trim())} onError={setMicError} />}
+        />
       </div>
-    </form></footer>
-  </main>;
+    </footer>
+  </main></div>;
 }

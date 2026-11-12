@@ -18,7 +18,7 @@ export function useStudyAgent() {
   const active = useRef<AbortController | null>(null);
   useEffect(() => () => active.current?.abort(), []);
 
-  async function run(prompt: string, context: { sessionId?: string; noteId?: string; browser?: boolean } = {}) {
+  async function run(prompt: string, context: { sessionId?: string; noteId?: string; browser?: boolean; speedMode?: "fast" | "normal" | "deep" } = {}) {
     if (active.current) return;
     const request = new AbortController();
     active.current = request;
