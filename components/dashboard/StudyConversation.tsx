@@ -109,7 +109,10 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
   const [researchOpen, setResearchOpen] = useState(false);
 
   const [call, setCall] = useState<{ context: StudyCallContext; video: boolean } | null>(null);
-  const [artifact,setArtifact]=useState<null|{create?:{title:string;content:string}}>(null);
+  const [artifact, setArtifact] = useState<{
+    id?: string;
+    create?: { title: string; content: string };
+  } | null>(null);
   const notifiedLearning=useRef(false);
   const autoStarted = useRef(false);
   const sending = useRef(false);
@@ -176,8 +179,9 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         setTitle(response.title);
         setTurns(previous => [...previous, {
           id: crypto.randomUUID(), role: "assistant", content: response.text, sources: response.sources,
-          study: { title: response.title, document: response.document, browser: response.browser, computerUse: response.computerUse, files: response.files, fileErrors: response.fileErrors, interaction: response.interaction ?? { steps: [], suggestions: [] } },
+          study: { title: response.title, document: response.document, artifactId: response.artifactId, browser: response.browser, computerUse: response.computerUse, files: response.files, fileErrors: response.fileErrors, interaction: response.interaction ?? { steps: [], suggestions: [] } },
         }]);
+        if (response.artifactId) setArtifact({ id: response.artifactId });
       }
     } finally {
       sending.current = false;
@@ -218,13 +222,13 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
 
   return <div className="momo-session study-session flex h-dvh overflow-hidden bg-clay-beige p-0">
     <ChatSidebar sessions={sessions} activeId={sessionId} onNew={() => router.push("/dashboard-v2?workspace=study")} onSelect={() => {}} onRename={async (id, newTitle) => { await changeSession(id, newTitle); }} onDelete={async id => { await changeSession(id); }} />
-    {artifact&&<StudyArtifactDialog sessionId={sessionId} create={artifact.create} onClose={()=>setArtifact(null)}/>}
+    {artifact && <StudyArtifactDialog sessionId={sessionId} artifactId={artifact.id} create={artifact.create} onClose={() => setArtifact(null)} />}
     <main className="study-conversation">
     <header className="study-chat-header chat-session-header">
       <V2MobileSidebar sessions={sessions} />
       <Link href="/dashboard-v2?workspace=study" className="study-chat-brand"><BookOpen size={19} aria-hidden="true" /><span>Belajar</span></Link>
       <span className="study-chat-title">{title}</span>
-      <button className="study-chat-new" type="button" aria-label="Buka artefak belajar" onClick={()=>setArtifact({})}><FolderOpen size={19}/></button>
+      <button className="study-chat-new" type="button" disabled={agent.busy} aria-label="Buka artefak belajar" onClick={() => setArtifact({})}><FolderOpen size={19}/></button>
       <PageTutorial guideId="study-conversation" />
       <Link className="study-chat-new" href="/dashboard-v2?workspace=study" aria-label="Percakapan belajar baru"><Plus size={16} /></Link>
     </header>
@@ -245,11 +249,14 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
           {turn.role === "assistant" && <div className="study-chat-extras">
             <StudyVideoCards sources={turn.sources} />
             <StudyFileCards sessionId={sessionId} files={turn.study?.files || []} errors={turn.study?.fileErrors || []} />
+            {turn.study?.artifactId && <button type="button" className="study-artifact-link" disabled={agent.busy} onClick={() => setArtifact({ id: turn.study?.artifactId })}>
+              <FolderOpen size={16} aria-hidden="true" /> Buka artefak
+            </button>}
             {!!turn.study?.interaction.mindmap?.length && <StudyMindmap nodes={turn.study.interaction.mindmap} disabled={agent.busy} onExplore={prompt => void send(prompt)} />}
             {turn.study && <StudyActivities storageKey={"eureka:study-checklist:" + getUserId() + ":" + sessionId + ":" + turn.content.slice(0, 70)} data={turn.study.interaction} disabled={agent.busy} onSend={prompt => void send(prompt)} />}
             {!!turn.sources.length&&<WebSources results={turn.sources.map(source=>({url:source.url,title:source.title,description:source.excerpt,domain:new URL(source.url).hostname}))}/>}
             <TrainingContribution sessionId={sessionId} answer={turn.content}/>
-            <StudyResponseTools title={turn.study?.title||title} content={turn.content} disabled={agent.busy} onSend={(prompt,activity)=>void send(prompt,noteId,turn.content,activity)} onArtifact={()=>setArtifact({create:{title:turn.study?.title||title,content:turn.content}})} onVoice={()=>{const context=buildStudyCallContext(turn.study?.title||title,turns,index);if(context)setCall({context,video:false});}} onVideo={()=>{const context=buildStudyCallContext(turn.study?.title||title,turns,index);if(context)setCall({context,video:true});}}/>
+            <StudyResponseTools title={turn.study?.title||title} content={turn.content} disabled={agent.busy} onSend={(prompt,activity)=>void send(prompt,noteId,turn.content,activity)} onArtifact={turn.study?.artifactId ? undefined : () => setArtifact({ create: { title: turn.study?.title || title, content: turn.content } })} onVoice={()=>{const context=buildStudyCallContext(turn.study?.title||title,turns,index);if(context)setCall({context,video:false});}} onVideo={()=>{const context=buildStudyCallContext(turn.study?.title||title,turns,index);if(context)setCall({context,video:true});}}/>
 
           </div>}
         </article>)}

@@ -234,6 +234,11 @@ test("classification failure still runs Computer Use and streams and saves its a
   const saved = [];
   let browsed = 0;
   const mocks = {
+    "@/lib/study-intent": {
+      requestedStudyArtifact: () => false,
+      requestedStudyActivities: () => ({ mindmap: false, quiz: 0, essay: 0, plan: false }),
+    },
+    "@/lib/learningPreferences": { learningContext: async () => "", observeLearning: async () => false },
     "@/lib/ai": {
       aiChatJson: async options => {
         if (options.maxTokens === 650) throw Error("Classifier unavailable");

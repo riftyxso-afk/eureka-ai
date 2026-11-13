@@ -2,3 +2,11 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 test('ordinary questions do not create optional activities',()=>{for(const prompt of ['Jelaskan fotosintesis','Apa itu mindmap?','Jelaskan mindmap','Saya belum mau kuis, jelaskan konsepnya saja','Jangan buat peta konsep atau soal ABC'])assert.deepEqual(intent(prompt),{mindmap:false,quiz:0,essay:0,plan:false,image:false});});
 test('explicit requests honor quiz and essay quantities and caps',()=>{const result=intent('Buat 10 soal pilihan ganda dan 5 esai tentang atom');assert.equal(result.quiz,10);assert.equal(result.essay,5);assert.equal(result.mindmap,false);assert.equal(intent('Buat 99 soal ABC').quiz,10);});
 test('selected actions are explicit opt-ins without producing other extras',()=>{assert.equal(intent('Energi', 'mindmap').mindmap,true);assert.equal(intent('Energi','essay').essay,1);assert.equal(intent('Energi','essay').quiz,0);assert.equal(intent('Buat peta konsep tentang atom').mindmap,true);});
+test('only explicit artifact commands request the editor', () => {
+  for (const prompt of ['Buatkan artefak tentang energi', 'Tolong bikin artifact untuk bab ini', 'Simpan rangkuman ini sebagai artefak', 'Jelaskan dulu. Lalu jadikan jawaban ini artefak']) {
+    assert.equal(e.requestedStudyArtifact(prompt), true, prompt);
+  }
+  for (const prompt of ['Apa itu artefak?', 'Cara membuat artefak?', 'Tolong jangan buat artefak', 'Buat mindmap tentang artefak sejarah', 'Buat PDF tentang energi tanpa artefak']) {
+    assert.equal(e.requestedStudyArtifact(prompt), false, prompt);
+  }
+});

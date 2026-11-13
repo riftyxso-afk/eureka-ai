@@ -16,6 +16,20 @@
 .study-chat-width { width: min(100%, 720px); margin-inline: auto; }
 .study-chat-turn { margin-block: 24px; overflow-wrap: anywhere; }
 .study-chat-extras { margin-inline-start: 44px; }
+.study-artifact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-block: 8px;
+  padding-inline: 14px;
+  border-radius: 10px;
+  background: rgb(var(--clay-primary) / .1);
+  color: rgb(var(--clay-primary));
+  font-size: 14px;
+  font-weight: 650;
+}
+.study-artifact-link:hover:not(:disabled) { background: rgb(var(--clay-primary) / .17); }
 .study-chat-response-actions { display: flex; flex-wrap: wrap; align-items: start; gap: 8px; margin-top: 14px; color: var(--learn-muted); font-size: .8rem; }
 .study-chat-response-actions > button, .study-chat-response-actions summary { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 8px 10px; cursor: pointer; border-radius: 9px; }
 .study-chat-response-actions > button:hover, .study-chat-response-actions summary:hover { background: var(--learn-surface); }

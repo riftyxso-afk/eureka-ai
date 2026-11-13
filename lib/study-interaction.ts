@@ -29,5 +29,6 @@ export type SavedStudyResponse = {
   computerUse?: boolean;
   title: string;
   document: boolean;
+  artifactId?: string;
   interaction: StudyInteraction;
 };

@@ -13,5 +13,5 @@ export type StudyAgentEvent =
   | { type: "sources"; sources: StudySource[] }
   | { type: "token"; text: string }
   | { type: "reset" }
-  | { type: "done"; learningUpdated?:boolean; messageId?:string; title: string; document: boolean; interaction?: StudyInteraction; browser?: StudyBrowserContext; computerUse?: boolean; files?: StudyFile[]; fileErrors?: string[] }
+  | { type: "done"; learningUpdated?:boolean; messageId?:string; title: string; document: boolean; artifactId?: string; interaction?: StudyInteraction; browser?: StudyBrowserContext; computerUse?: boolean; files?: StudyFile[]; fileErrors?: string[] }
   | { type: "error"; message: string };

@@ -132,6 +132,7 @@ function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
     study: saved && parsed.success ? {
       title: typeof saved.title === "string" ? saved.title.slice(0, 120) : "Belajar bersama Momo",
       document: saved.document === true,
+      artifactId: typeof saved.artifactId === "string" ? saved.artifactId : undefined,
       interaction: parsed.data,
       files: asArray<unknown>(saved.files).flatMap(file => { const parsed = studyFileSchema.safeParse(file); return parsed.success ? [parsed.data] : []; }),
       fileErrors: asArray<unknown>(saved.fileErrors).filter((message): message is string => typeof message === "string").slice(0, 3),

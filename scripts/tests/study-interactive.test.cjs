@@ -48,10 +48,15 @@ test('PDF renders headings, a multipage table, and sources into a real PDF', asy
   assert.ok((bytes.toString('latin1').match(/\/Type \/Page\b/g) || []).length > 1);
 });
 
-async function runAgent({ document = false, mindmap = false, authError = false, exportFailure = false, explicitMindmap = true } = {}) {
-  const saved = [], exports = [];
+async function runAgent({ document = false, mindmap = false, authError = false, exportFailure = false, explicitMindmap = true, prompt, artifactFailure = false } = {}) {
+  const saved = [], exports = [], artifacts = [];
   const mocks = {
     '@/lib/study-intent':load('study-intent'),
+    '@/lib/study-artifacts':{saveStudyArtifact:async(userId,input)=>{
+      if (artifactFailure) throw new Error('Storage unavailable');
+      artifacts.push({userId,...input});
+      return {id:'artifact-1'};
+    }},
     '@/lib/learningPreferences':{learningContext:async()=>'',observeLearning:async()=>false},
     '@/lib/ai': {
       aiChatJson: async () => ({ title: 'Energi', document, mindmap, tools: [] }),
@@ -79,11 +84,29 @@ async function runAgent({ document = false, mindmap = false, authError = false, 
   const source = ts.transpileModule(fs.readFileSync(path.resolve(__dirname,'../../app/api/study-agent/route.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   new Function('require','module','exports',source)(id=>mocks[id] || (id.startsWith('@/')?{}:require(id)),module,module.exports);
   const {NextRequest}=require('next/server');
-  const response=await module.exports.POST(new NextRequest('http://localhost/api/study-agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:'11111111-1111-4111-8111-111111111111',prompt:mindmap&&explicitMindmap?'Buat mindmap tentang energi':'Buat materi tentang energi',browser:false})}));
+  const response=await module.exports.POST(new NextRequest('http://localhost/api/study-agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:'11111111-1111-4111-8111-111111111111',prompt:prompt ?? (mindmap&&explicitMindmap?'Buat mindmap tentang energi':'Buat materi tentang energi'),browser:false})}));
   const body=await response.text();
   const events=body.split('\n\n').filter(line=>line.startsWith('data: ')).map(line=>JSON.parse(line.slice(6)));
-  return {response,events,saved,exports};
+  return {response,events,saved,exports,artifacts};
 }
+test('explicit artifact generation saves the answer and returns its ID to open the editor', async () => {
+  const result = await runAgent({document:true,prompt:'Buat artefak tentang energi'});
+  assert.equal(result.exports.length,0);
+  assert.equal(result.artifacts.length,1);
+  assert.equal(result.artifacts[0].userId,'owner');
+  assert.equal(result.artifacts[0].content,result.saved.at(-1).content);
+  assert.equal(result.saved.at(-1).study.artifactId,'artifact-1');
+  assert.equal(result.events.at(-1).artifactId,'artifact-1');
+});
+test('plain replies never create artifacts and a failed artifact save preserves the reply', async () => {
+  const plain = await runAgent();
+  assert.equal(plain.artifacts.length,0);
+  const failed = await runAgent({prompt:'Buat artefak tentang energi',artifactFailure:true});
+  assert.equal(failed.events.at(-1).type,'done');
+  assert.equal(failed.events.at(-1).artifactId,undefined);
+  assert.match(failed.events.at(-1).fileErrors[0],/Artefak belum tersimpan/);
+  assert.match(failed.saved.at(-1).content,/Penjelasan energi/);
+});
 test('ordinary chat creates and persists downloadable documents without Computer Use',async()=>{
   const f=await runAgent({document:true});
   assert.equal(f.exports.length,1);
