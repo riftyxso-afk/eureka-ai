@@ -3,7 +3,7 @@
 import WebSources from "@/components/asisten/WebSources";
 import StudyResponseTools from "./StudyResponseTools";
 import StudyArtifactDialog from "./StudyArtifactDialog";
-import LearningConsent from "./LearningConsent";
+import TrainingContribution from "./TrainingContribution";
 import { toast } from "@yusufceng1z/ding-react";
 import type {StudyActivity} from "@/lib/study-intent";
 import "./study-production.css";
@@ -237,7 +237,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
           <summary><FolderOpen size={18} aria-hidden="true" />Proyek riset bersama teman<ChevronDown size={16} aria-hidden="true" /></summary>
           {researchOpen && <div className="study-flow"><ResearchStudio sourcesEnabled /></div>}
         </details>
-        {loaded&&<LearningConsent compact/>}
+
         {!loaded && !error && <LoadingStatus stage="synchronizing" detail="Memuat percakapan belajar" />}
         {loaded && !turns.length && !agent.busy && <div className="study-chat-empty"><Image src="/icons/momo-192.png" alt="" width={56} height={56} /><h1>Mau belajar atau membuat apa?</h1><p>Tanya konsep, kirim tautan YouTube, cari sumber, atau buat dokumen bersama Momo.</p></div>}
         {turns.map((turn, index) => <article className="study-chat-turn" key={turn.id}>
@@ -248,6 +248,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
             {!!turn.study?.interaction.mindmap?.length && <StudyMindmap nodes={turn.study.interaction.mindmap} disabled={agent.busy} onExplore={prompt => void send(prompt)} />}
             {turn.study && <StudyActivities storageKey={"eureka:study-checklist:" + getUserId() + ":" + sessionId + ":" + turn.content.slice(0, 70)} data={turn.study.interaction} disabled={agent.busy} onSend={prompt => void send(prompt)} />}
             {!!turn.sources.length&&<WebSources results={turn.sources.map(source=>({url:source.url,title:source.title,description:source.excerpt,domain:new URL(source.url).hostname}))}/>}
+            <TrainingContribution sessionId={sessionId} answer={turn.content}/>
             <StudyResponseTools title={turn.study?.title||title} content={turn.content} disabled={agent.busy} onSend={(prompt,activity)=>void send(prompt,noteId,turn.content,activity)} onArtifact={()=>setArtifact({create:{title:turn.study?.title||title,content:turn.content}})} onVoice={()=>{const context=buildStudyCallContext(turn.study?.title||title,turns,index);if(context)setCall({context,video:false});}} onVideo={()=>{const context=buildStudyCallContext(turn.study?.title||title,turns,index);if(context)setCall({context,video:true});}}/>
 
           </div>}

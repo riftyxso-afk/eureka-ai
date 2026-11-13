@@ -1,5 +1,6 @@
 "use client";
 
+import {TrainingSettings} from "@/components/dashboard/TrainingContribution";
 import LearningConsent from "@/components/dashboard/LearningConsent";
 import "@/components/dashboard/study-production.css";
 import { useState } from "react";
@@ -48,7 +49,7 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </>
-            ) : section === "privacy" ? (<><h2 id="settings-title">Data & AI</h2><LearningConsent/></>) : (
+            ) : section === "privacy" ? (<><h2 id="settings-title">Data & AI</h2><TrainingSettings/><details className="settings-personalization"><summary>Personalisasi akun (terpisah dari fine-tuning)</summary><LearningConsent/></details></>) : (
               <>
                 <h2 id="settings-title">Akun</h2>
                 <div className="settings-links">

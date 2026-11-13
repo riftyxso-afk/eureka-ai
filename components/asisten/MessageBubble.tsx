@@ -1,4 +1,5 @@
 "use client";
+import TrainingContribution from "@/components/dashboard/TrainingContribution";
 import dynamic from "next/dynamic";
 import {boardMap} from "@/lib/meetBoard";
 import Network from "kubai-icons-react/icons/network";
@@ -244,6 +245,7 @@ export default function MessageBubble({
           </div>
         )}
 
+        {!isStreaming&&message.model!=="eureka-study"&&message.sessionId&&<TrainingContribution sessionId={message.sessionId} answer={message.content}/>}
         {mapOpen&&<div className="chat-concept-map"><ConceptMap nodes={boardMap(displayContent,"Peta jawaban")} disabled onExplore={()=>{}}/></div>}
         {!isStreaming && message.sources.length > 0 && (
           <SourceChips sources={citedNoteSources(message.content, message.sources)} />
