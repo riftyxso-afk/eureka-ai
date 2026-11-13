@@ -12,8 +12,8 @@ import { getUserId } from "@/lib/identity";
 import EditorSelectionActions from "./EditorSelectionActions";
 import "katex/dist/katex.min.css";
 
-type Props = { noteId: string; title: string; content: string; chapterId?: number; label: string; onDirtyChange: (dirty: boolean) => void; onSaved: (title: string, content: string, warning?: string) => void };
-export default function DocumentEditor({ noteId, title, content, chapterId, label, onDirtyChange, onSaved }: Props) {
+type Props = { noteId: string; title: string; content: string; chapterId?: number; label: string; onDirtyChange: (dirty: boolean) => void; onSaved: (title: string, content: string, warning?: string) => void; saveOverride?: (content:string,original:string)=>Promise<{title:string;content:string;warning?:string}> };
+export default function DocumentEditor({ noteId, title, content, chapterId, label, onDirtyChange, onSaved, saveOverride }: Props) {
   const [draftTitle, setDraftTitle] = useState(title);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -40,6 +40,7 @@ export default function DocumentEditor({ noteId, title, content, chapterId, labe
     if (!draftTitle.trim()) { setError("Judul catatan tidak boleh kosong."); return; }
     const markdown = editor.getMarkdown(); setSaving(true); setError("");
     try {
+      if(saveOverride){const data=await saveOverride(markdown,base.current.content);base.current={title:data.title,content:data.content};setDirty(false);onDirtyChange(false);onSaved(data.title,data.content);return;}
       const response = await apiFetch(`/api/notes/${encodeURIComponent(noteId)}/document`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chapterId, title: draftTitle.trim(), content: markdown, original: base.current.content, originalTitle: base.current.title }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Perubahan belum tersimpan.");
@@ -79,12 +80,12 @@ export default function DocumentEditor({ noteId, title, content, chapterId, labe
     { label: "Rumus matematika", icon: Sigma, action: () => { setTool("math"); setToolValue(""); } },
   ] : [];
   return <section className="sr-editor" aria-label="Editor catatan">
-    <EditorSelectionActions editor={editor} noteId={noteId} disabled={saving} />
-    <p className="sr-editor-mobile-hint">Geser alat format untuk melihat semua opsi. Blok teks untuk bantuan AI.</p>
+    {!saveOverride && <EditorSelectionActions editor={editor} noteId={noteId} disabled={saving} />}
+    <p className="sr-editor-mobile-hint">Geser alat format untuk melihat semua opsi.{!saveOverride && " Blok teks untuk bantuan AI."}</p>
     <div className="sr-editor-toolbar" role="toolbar" aria-label="Format catatan">
       <select aria-label="Gaya paragraf" value={state?.heading ?? "0"} disabled={!editor || saving} onChange={event => { const level = Number(event.target.value); if (level) editor?.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 }).run(); else editor?.chain().focus().setParagraph().run(); }}><option value="0">Paragraf</option><option value="1">Judul 1</option><option value="2">Judul 2</option><option value="3">Judul 3</option></select>
       {tools.map(item => <button key={item.label} title={item.label} aria-label={item.label} aria-pressed={item.active ?? undefined} disabled={saving || item.disabled} onMouseDown={event => event.preventDefault()} onClick={item.action}><item.icon size={16} /></button>)}
-      <button className="sr-editor-export" aria-label="Ekspor PDF lengkap" title={dirty ? "Simpan perubahan sebelum ekspor" : "Unduh ringkasan dan semua bab"} disabled={dirty || saving || exporting} onClick={() => void exportPdf()}><Download size={16} /><span>{exporting ? "Menyiapkan PDF…" : "Ekspor PDF"}</span></button>
+      {!saveOverride && <button className="sr-editor-export" aria-label="Ekspor PDF lengkap" title={dirty ? "Simpan perubahan sebelum ekspor" : "Unduh ringkasan dan semua bab"} disabled={dirty || saving || exporting} onClick={() => void exportPdf()}><Download size={16} /><span>{exporting ? "Menyiapkan PDF…" : "Ekspor PDF"}</span></button>}
     </div>
     {state?.table && <div className="sr-table-tools"><button onClick={() => editor?.chain().focus().addRowAfter().run()}>+ Baris</button><button onClick={() => editor?.chain().focus().addColumnAfter().run()}>+ Kolom</button><button onClick={() => editor?.chain().focus().deleteRow().run()}>Hapus baris</button><button onClick={() => editor?.chain().focus().deleteColumn().run()}>Hapus kolom</button><button onClick={() => editor?.chain().focus().deleteTable().run()}>Hapus tabel</button></div>}
     {tool && <form className="sr-editor-insert" onSubmit={event => {

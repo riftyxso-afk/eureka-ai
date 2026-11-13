@@ -18,8 +18,10 @@ export function useMeet(id:string,invite:string){
  const alive=useRef(true),lock=useRef(false),ice=useRef<RTCIceServer[]>([]),cursor=useRef(0);
  const audio=useRef<ReturnType<typeof createMeetAudio>|null>(null);
  const [tutorInput,setTutorInput]=useState<MediaStream|null>(null);
+ const [screen,setScreen]=useState<MediaStream|null>(null),[screenBusy,setScreenBusy]=useState(false);
+ const display=useRef<MediaStream|null>(null),screenLock=useRef(false);
  const act=(body:Record<string,unknown>)=>meetRequest({...body,roomId:id,clientId:client.current});
- function close(){peers.current.forEach(p=>p.pc.close());peers.current.clear();media.current?.getTracks().forEach(t=>t.stop());media.current=null;void audio.current?.context.close();audio.current=null;}
+ function close(){display.current?.getTracks().forEach(t=>{t.onended=null;t.stop();});display.current=null;peers.current.forEach(p=>p.pc.close());peers.current.clear();media.current?.getTracks().forEach(t=>t.stop());media.current=null;void audio.current?.context.close();audio.current=null;}
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;close();if(client.current)void meetRequest({action:'leave',roomId:id,clientId:client.current}).catch(()=>{});};},[id]);
  async function join(){
  if(lock.current)return;lock.current=true;setJoining(true);setError('');
@@ -42,7 +44,7 @@ export function useMeet(id:string,invite:string){
  function peer(memberId:string){
  const existing=peers.current.get(memberId);if(existing)return existing;
  const pc=new RTCPeerConnection({iceServers:ice.current});const p={pc,pending:[] as RTCIceCandidateInit[]};peers.current.set(memberId,p);
- media.current?.getVideoTracks().forEach(track=>pc.addTrack(track,media.current!));
+ (display.current||media.current)?.getVideoTracks().forEach(track=>pc.addTrack(track,media.current!));
  audio.current?.uplink.stream.getTracks().forEach(track=>pc.addTrack(track,media.current!));
  pc.onicecandidate=e=>{if(e.candidate&&!stopped)void act({action:'signal',recipient:memberId,signal:{candidate:e.candidate.toJSON()}}).catch(report);};
  pc.ontrack=e=>{if(!stopped){setStreams(old=>({...old,[memberId]:e.streams[0]}));if(e.track.kind==='audio'&&audio.current&&!audio.current.inputs.has(e.track.id)){const source=audio.current.context.createMediaStreamSource(new MediaStream([e.track]));source.connect(audio.current.input);audio.current.inputs.set(e.track.id,source);e.track.onended=()=>{source.disconnect();audio.current?.inputs.delete(e.track.id);};}}};
@@ -77,8 +79,26 @@ export function useMeet(id:string,invite:string){
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[joined,id]);
  function toggle(kind:'audio'|'video'){const enabled=kind==='audio'?!mic:!camera;media.current?.getTracks().filter(t=>t.kind===kind).forEach(t=>{t.enabled=enabled;});if(kind==='audio')setMic(enabled);else setCamera(enabled);}
- async function leave(){close();setJoined(false);setLocal(null);setStreams({});await act({action:'leave'}).catch(()=>{});}
+ async function leave(){close();setScreen(null);setJoined(false);setLocal(null);setStreams({});await act({action:'leave'}).catch(()=>{});}
+ async function replaceVideo(track:MediaStreamTrack|null){await Promise.all([...peers.current.values()].map(({pc})=>{const sender=pc.getSenders().find(s=>s.track?.kind==='video');return sender?.replaceTrack(track);}));}
+ async function stopScreen(){const previous=display.current;if(!previous)return;screenLock.current=true;setScreenBusy(true);try{display.current=null;previous.getTracks().forEach(t=>{t.onended=null;t.stop();});setScreen(null);await replaceVideo(media.current?.getVideoTracks()[0]||null).catch(()=>setError('Kamera belum pulih. Coba bergabung kembali.'));await act({action:'screen',open:false}).catch(()=>{});}finally{screenLock.current=false;setScreenBusy(false);}}
+ async function shareScreen(){
+ if(screenLock.current)return;
+ if(display.current){await stopScreen();return;}
+ if(!navigator.mediaDevices?.getDisplayMedia){setError('Berbagi layar belum didukung browser ini. Gunakan browser desktop; kamu tetap bisa melihat layar teman.');return;}
+ screenLock.current=true;setScreenBusy(true);
+ try{const captured=await navigator.mediaDevices.getDisplayMedia({video:{width:{ideal:1280},frameRate:{ideal:10,max:15}},audio:false});
+ if(!alive.current||!media.current){captured.getTracks().forEach(t=>t.stop());return;}
+ display.current=captured;const track=captured.getVideoTracks()[0];if(!track)throw new Error('Layar belum dapat dibagikan.');
+ track.onended=()=>void stopScreen();await replaceVideo(track);await act({action:'screen',open:true});setScreen(captured);
+ }catch(cause){await stopScreen();if(!(cause instanceof DOMException&&cause.name==='NotAllowedError'))setError('Layar belum dapat dibagikan. Coba pilih tab atau jendela lain.');}
+ finally{screenLock.current=false;setScreenBusy(false);}
+ }
  function broadcastTutor(stream:MediaStream){const a=audio.current;if(!a)return;a.source?.disconnect();a.source=a.context.createMediaStreamSource(stream);a.source.connect(a.output);}
  function stopTutorAudio(){audio.current?.source?.disconnect();}
- return {joined,joining,error,setError,room,members,events,streams,local,mic,camera,relay,join,leave,toggle,act,clientId,tutorInput,broadcastTutor,stopTutorAudio};
+ const screenStates=new Map<string,MeetEvent>();for(const event of events)if(event.kind==='screen')screenStates.set(event.sender,event);
+ const presenter=[...screenStates.values()].filter(e=>e.payload.active===true&&members.some(m=>m.id===e.sender)).sort((a,b)=>b.id-a.id)[0];
+ const sharedScreen=screen|| (presenter&&presenter.sender!==clientId?streams[presenter.sender]:null);
+ const screenName=screen?'Kamu':members.find(m=>m.id===presenter?.sender)?.name||'Peserta';
+ return {joined,joining,error,setError,room,members,events,streams,local,mic,camera,relay,join,leave,toggle,act,clientId,tutorInput,broadcastTutor,stopTutorAudio,screen,sharedScreen,screenName,screenBusy,shareScreen};
 }

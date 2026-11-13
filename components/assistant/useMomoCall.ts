@@ -27,6 +27,7 @@ type Session = {
   endMicStream?: () => void;
   sendText?: (text: string) => void;
   sendVideoFrame?: (data: string) => void;
+  updateContext?: (text: string) => void;
   mic?: AnalyserNode;
   speaker: AnalyserNode;
   playback?: Playback;
@@ -246,7 +247,7 @@ async function playPcm(response: Response, session: Session, playback: Playback,
   }
 }
 
-export type CallBridge = { input?: MediaStream; onOutput?: (stream:MediaStream)=>void; onTutorRequest?: (prompt:string,action?:string)=>Promise<string> };
+export type CallBridge = { input?: MediaStream; greeting?: string; onOutput?: (stream:MediaStream)=>void; onTutorRequest?: (prompt:string,action?:string)=>Promise<string> };
 export function useMomoCall(onVoiceEnd?: () => void) {
   const bridge=useRef<CallBridge>({});
   const [studyVideo, setStudyVideo] = useState<StudyVideo | null>(null);
@@ -612,9 +613,10 @@ export function useMomoCall(onVoiceEnd?: () => void) {
             setPhase("thinking");
             send({ realtimeInput: { text } });
           };
-          send({ realtimeInput: { text: session.studyContext ? "Mulai jelaskan materi chat Belajar yang diberikan dalam konteks sesi. Sapa singkat lalu langsung bahas inti topik, jangan meminta topik baru." : language === "en"
+          session.updateContext = text => send({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete: false } });
+          send({ realtimeInput: { text: (bridge.current.greeting ? `Buka panggilan dengan sapaan ini: ${bridge.current.greeting}` : undefined) || (session.studyContext ? "Mulai jelaskan materi chat Belajar yang diberikan dalam konteks sesi. Sapa singkat lalu langsung bahas inti topik, jangan meminta topik baru." : language === "en"
             ? "Open the call by saying: Hi, I'm Lala. How can I help?"
-            : "Buka panggilan dengan hangat: Hai, aku Lala! Mau ngobrol atau mau aku bantu bikin sesuatu?" } });
+            : "Buka panggilan dengan hangat: Hai, aku Lala! Mau ngobrol atau mau aku bantu bikin sesuatu?") } });
         }
         const content = message.serverContent;
         if (!content) return;
@@ -718,6 +720,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     const greet = () => {
       if (greeted) return;
       greeted = true;
+      if (callBridge.greeting) { void answer(session, "", callBridge.greeting); return; }
       if (session.studyContext) { void answer(session, "Jelaskan materi dari chat Belajar yang sedang kita bahas. Mulai dari inti konsep dan satu contoh sederhana."); return; }
       void answer(session, "", language === "en"
         ? "Hi, I'm Momo. How can I help?"
@@ -969,11 +972,17 @@ export function useMomoCall(onVoiceEnd?: () => void) {
   const sendVideoFrame = useCallback((data: string) => {
     active.current?.sendVideoFrame?.(data);
   }, []);
+  const updateContext = useCallback((context: StudyCallContext) => {
+    const session = active.current;
+    if (!session || session.ending) return;
+    session.studyContext = readStudyCallContext(context);
+    session.updateContext?.(`Pembaruan data ruang, bukan giliran pertanyaan. Jangan menyela atau menjawab pembaruan ini. ${JSON.stringify(session.studyContext)}`);
+  }, []);
 
   return {
     phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
     workspaceLinks, workspaceLoading, deleteTitle,
-    turns, showCurrent, sendText, sendVideoFrame, studyVideo,
+    turns, showCurrent, sendText, sendVideoFrame, updateContext, studyVideo,
     confirmWorkspaceDelete: (allowed: boolean) => deleteDecision.current?.(allowed),
   };
 }

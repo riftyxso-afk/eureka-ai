@@ -31,3 +31,31 @@ Ask Momo for explanations, summaries, quizzes, essays, and text concept maps. AI
 - Data retention: purge `study_meet_events` signaling rows older than 24 hours and inactive rooms per product retention policy. Schedule cleanup before public rollout.
 
 Short invitations use `/m/<12-character-code>`, QR and code entry. Codes expire after 7 days; lookup requires login and is rate limited. Only the room owner can start group voice; a compare-and-set prevents simultaneous presenters. Test voice on two devices with headsets before a public launch.
+
+## Voice sidebar and shared notebook
+
+Apply `supabase_patch_026_meet_board.sql` before deploying the editable board.
+The room sidebar is voice-only: provider orb, current spoken caption, member
+names, and call controls. Captions/status come from the active voice client,
+validated server-side; participants cannot forge tutor captions. The initial
+greeting uses room profile names. Roster and board changes refresh call context
+between spoken turns. Mixed audio does not identify the speaker; participants
+can introduce themselves by name.
+
+Screen share uses the browser display picker, replacing the participant's video
+track. Stop-sharing restores the camera; leaving/unmounting stops display tracks.
+New peers receive the current display track. Shared screens appear on the main
+stage and the host sends scaled frames to Lala while its voice session is active.
+Screen audio is excluded. Browsers without getDisplayMedia can view a shared
+screen but must use a supported desktop browser to start sharing. Explain this
+data flow before users join; camera-to-Lala has a separate explicit button.
+
+Board generation streams real model output into shared snapshots at most once
+per 1.4 seconds; room polling delivers these to participants. Progress stages
+reflect generation and persistence, with no invented percentage. Provider resets
+clear the partial snapshot; failures preserve the received text with a warning.
+The document and its generated concept tree use the same headings and bullets.
+The existing note editor saves through a private room RPC with an atomic original
+content check and refuses writes while AI is generating. This is conflict-aware
+saving, not character-by-character collaborative editing. Section explanation
+requests from members queue to the host voice session and use the selected text.
