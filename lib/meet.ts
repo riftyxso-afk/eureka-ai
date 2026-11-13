@@ -1,6 +1,7 @@
 import { z } from "zod";
 export const meetInput = z.object({
- action: z.enum(["create","join","signal","chat","board","stroke","ai","leave"]),
+ action: z.enum(["create","resolve","join","signal","chat","board","stroke","ai","leave","voice"]),
+ code:z.string().regex(/^[A-Fa-f0-9]{12}$/).optional(), provider:z.enum(['momo','lala']).nullable().optional(),
  roomId: z.string().uuid().optional(), clientId: z.string().uuid().optional(),
  title: z.string().trim().min(3).max(100).optional(), invite: z.string().regex(/^[a-f0-9]{48}$/).optional(),
  recipient: z.string().uuid().optional(), text: z.string().trim().max(6000).optional(), open: z.boolean().optional(),

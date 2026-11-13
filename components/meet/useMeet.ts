@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/apiClient';
 import type { MeetMember, MeetEvent } from '@/lib/meet';
-export type MeetRoom = {title:string;board:string;board_open:boolean;ai_busy_until:string;owner_id:string};
+import {createMeetAudio} from '@/lib/audio/meetAudio';
+export type MeetRoom = {title:string;board:string;board_open:boolean;ai_busy_until:string;owner_id:string;code:string;voice_client:string|null;voice_provider:'momo'|'lala'|null};
 export async function meetRequest(body:Record<string,unknown>,signal?:AbortSignal){
  const response=await apiFetch('/api/meet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});
  const data=await response.json();if(!response.ok)throw new Error(data.error||'Ruang belum bisa dihubungkan');return data;
@@ -15,8 +16,10 @@ export function useMeet(id:string,invite:string){
  const [clientId,setClientId]=useState('');
  const client=useRef(''),peers=useRef(new Map<string,{pc:RTCPeerConnection;pending:RTCIceCandidateInit[]}>()),media=useRef<MediaStream|null>(null);
  const alive=useRef(true),lock=useRef(false),ice=useRef<RTCIceServer[]>([]),cursor=useRef(0);
+ const audio=useRef<ReturnType<typeof createMeetAudio>|null>(null);
+ const [tutorInput,setTutorInput]=useState<MediaStream|null>(null);
  const act=(body:Record<string,unknown>)=>meetRequest({...body,roomId:id,clientId:client.current});
- function close(){peers.current.forEach(p=>p.pc.close());peers.current.clear();media.current?.getTracks().forEach(t=>t.stop());media.current=null;}
+ function close(){peers.current.forEach(p=>p.pc.close());peers.current.clear();media.current?.getTracks().forEach(t=>t.stop());media.current=null;void audio.current?.context.close();audio.current=null;}
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;close();if(client.current)void meetRequest({action:'leave',roomId:id,clientId:client.current}).catch(()=>{});};},[id]);
  async function join(){
  if(lock.current)return;lock.current=true;setJoining(true);setError('');
@@ -25,6 +28,7 @@ export function useMeet(id:string,invite:string){
  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:{width:{ideal:640},height:{ideal:360},facingMode:'user'}});
  if(!alive.current){stream.getTracks().forEach(t=>t.stop());return;}
  media.current=stream;client.current=crypto.randomUUID();cursor.current=0;
+ const context=new AudioContext();await context.resume();audio.current=createMeetAudio(context,stream);setTutorInput(audio.current.input.stream);
  setClientId(client.current);setMic(true);setCamera(true);setEvents([]);setRoom(null);
  const data=await act({action:'join',invite});
  if(!alive.current){close();return;}
@@ -38,9 +42,10 @@ export function useMeet(id:string,invite:string){
  function peer(memberId:string){
  const existing=peers.current.get(memberId);if(existing)return existing;
  const pc=new RTCPeerConnection({iceServers:ice.current});const p={pc,pending:[] as RTCIceCandidateInit[]};peers.current.set(memberId,p);
- media.current?.getTracks().forEach(track=>pc.addTrack(track,media.current!));
+ media.current?.getVideoTracks().forEach(track=>pc.addTrack(track,media.current!));
+ audio.current?.uplink.stream.getTracks().forEach(track=>pc.addTrack(track,media.current!));
  pc.onicecandidate=e=>{if(e.candidate&&!stopped)void act({action:'signal',recipient:memberId,signal:{candidate:e.candidate.toJSON()}}).catch(report);};
- pc.ontrack=e=>{if(!stopped)setStreams(old=>({...old,[memberId]:e.streams[0]}));};
+ pc.ontrack=e=>{if(!stopped){setStreams(old=>({...old,[memberId]:e.streams[0]}));if(e.track.kind==='audio'&&audio.current&&!audio.current.inputs.has(e.track.id)){const source=audio.current.context.createMediaStreamSource(new MediaStream([e.track]));source.connect(audio.current.input);audio.current.inputs.set(e.track.id,source);e.track.onended=()=>{source.disconnect();audio.current?.inputs.delete(e.track.id);};}}};
  pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed')report(new Error('Koneksi video gagal. Coba bergabung kembali. Jaringan ini mungkin memerlukan TURN.'));};
  return p;
  }
@@ -73,5 +78,7 @@ export function useMeet(id:string,invite:string){
  },[joined,id]);
  function toggle(kind:'audio'|'video'){const enabled=kind==='audio'?!mic:!camera;media.current?.getTracks().filter(t=>t.kind===kind).forEach(t=>{t.enabled=enabled;});if(kind==='audio')setMic(enabled);else setCamera(enabled);}
  async function leave(){close();setJoined(false);setLocal(null);setStreams({});await act({action:'leave'}).catch(()=>{});}
- return {joined,joining,error,setError,room,members,events,streams,local,mic,camera,relay,join,leave,toggle,act,clientId};
+ function broadcastTutor(stream:MediaStream){const a=audio.current;if(!a)return;a.source?.disconnect();a.source=a.context.createMediaStreamSource(stream);a.source.connect(a.output);}
+ function stopTutorAudio(){audio.current?.source?.disconnect();}
+ return {joined,joining,error,setError,room,members,events,streams,local,mic,camera,relay,join,leave,toggle,act,clientId,tutorInput,broadcastTutor,stopTutorAudio};
 }

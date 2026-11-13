@@ -246,7 +246,9 @@ async function playPcm(response: Response, session: Session, playback: Playback,
   }
 }
 
+export type CallBridge = { input?: MediaStream; onOutput?: (stream:MediaStream)=>void; onTutorRequest?: (prompt:string,action?:string)=>Promise<string> };
 export function useMomoCall(onVoiceEnd?: () => void) {
+  const bridge=useRef<CallBridge>({});
   const [studyVideo, setStudyVideo] = useState<StudyVideo | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [muted, setMuted] = useState(false);
@@ -349,7 +351,8 @@ export function useMomoCall(onVoiceEnd?: () => void) {
       }).catch((cause: unknown) => { audioError = cause; });
     };
     try {
-      const immediate = farewell ? "Oke, aku tutup panggilannya sekarang, ya. Sampai jumpa!" : greeting ?? correctionReply(question);
+      const groupAnswer=!farewell&&!greeting&&bridge.current.onTutorRequest&&/\b(buat|buatkan|bikin|tulis|gambarkan|buka papan|jelaskan di papan)\b/i.test(question) ? await bridge.current.onTutorRequest(question) : undefined;
+      const immediate = farewell ? "Oke, aku tutup panggilannya sekarang, ya. Sampai jumpa!" : groupAnswer ?? greeting ?? correctionReply(question);
       if (immediate) {
         replyText = immediate;
         showReply(immediate);
@@ -540,6 +543,12 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     async function actForLala(id: string, args: Record<string, unknown>) {
       if (handledWorkspaceCalls.has(id)) return;
       handledWorkspaceCalls.add(id);
+      if(bridge.current.onTutorRequest){
+        let result={message:'Papan belum berhasil diperbarui.'};
+        try{result={message:await bridge.current.onTutorRequest(String(args.prompt||args.content||args.title||'Jelaskan topik di papan bersama'),String(args.action||''))};}catch{ /* Report tool failure without inventing a result. */ }
+        if(active.current===session)send({toolResponse:{functionResponses:[{id,name:'lala_workspace',response:result}]}});
+        return;
+      }
       const controller = new AbortController();
       workspaceCalls.set(id, controller);
       const signal = AbortSignal.any([session.controller.signal, controller.signal]);
@@ -660,8 +669,9 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     };
   }
 
-  async function start(provider: CallProvider = "momo", studyContext?: StudyCallContext) {
+  async function start(provider: CallProvider = "momo", studyContext?: StudyCallContext, callBridge:CallBridge={}) {
     if (active.current) return;
+    bridge.current=callBridge;
     setMuted(false);
     setBackup(false);
     setError("");
@@ -695,6 +705,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     const speaker = context.createAnalyser();
     speaker.fftSize = 512;
     speaker.connect(context.destination);
+    if(callBridge.onOutput){const output=context.createMediaStreamDestination();speaker.connect(output);callBridge.onOutput(output.stream);}
     const session: Session = {
       studyContext: readStudyCallContext(studyContext),
       controller: new AbortController(), context, speaker, history: [],
@@ -723,7 +734,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     void context.resume().catch(() => {});
     let stream: MediaStream;
     try {
-      stream = await openCallMicrophone(session.controller.signal);
+      stream = callBridge.input ? new MediaStream(callBridge.input.getAudioTracks().map(track=>track.clone())) : await openCallMicrophone(session.controller.signal);
     } catch (cause) {
       if (!isCurrent()) return;
       const message = await microphoneError(cause);

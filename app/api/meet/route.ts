@@ -21,7 +21,7 @@ export async function GET(req:NextRequest){
  await db().from('study_meet_members').update({seen_at:new Date().toISOString()}).eq('id',client!);
  const since=Math.max(0,Number(req.nextUrl.searchParams.get('after'))||0);
  const [room,members,events]=await Promise.all([
- db().from('study_meet_rooms').select('id,title,owner_id,board,board_open,ai_busy_until').eq('id',id!).single(),
+ db().from('study_meet_rooms').select('id,title,owner_id,board,board_open,ai_busy_until,code,voice_client,voice_provider').eq('id',id!).single(),
  db().from('study_meet_members').select('id,user_id,name').eq('room_id',id!).gt('seen_at',new Date(Date.now()-45000).toISOString()),
  db().from('study_meet_events').select('id,sender,kind,payload').eq('room_id',id!).gt('id',since).or(`recipient.is.null,recipient.eq.${client}`).order('id').limit(300)]);
  if(room.error||members.error||events.error)throw new Error('Read failed');
@@ -34,6 +34,11 @@ export async function POST(req:NextRequest){
  const b=parsed.data;ensureRateLimitPrune();
  if(!checkRateLimit(`meet:${auth.userId}`,400,60000).ok)return Response.json({error:'Terlalu banyak aktivitas. Tunggu sebentar.'},{status:429});
  try{
+ if(b.action==='resolve'){
+ if(!b.code||!checkRateLimit(`meet-code:${auth.userId}`,10,60000).ok)return Response.json({error:'Periksa kode dan coba lagi sebentar.'},{status:429});
+ const {data,error}=await db().from('study_meet_rooms').select('id,invite').eq('code',b.code.toUpperCase()).gt('created_at',new Date(Date.now()-7*86400000).toISOString()).maybeSingle();
+ if(error||!data)return Response.json({error:'Kode tidak ditemukan atau sudah kedaluwarsa.'},{status:404});return Response.json(data);
+ }
  if(b.action==='create'){
  if(!checkRateLimit(`meet-create:${auth.userId}`,10,3600000).ok)return Response.json({error:'Batas pembuatan ruang tercapai'},{status:429});
  const {data,error}=await db().from('study_meet_rooms').insert({owner_id:auth.userId,title:b.title||'Belajar bersama Momo'}).select('id,invite').single();if(error)throw error;return Response.json(data);
@@ -48,8 +53,17 @@ export async function POST(req:NextRequest){
  return Response.json({iceServers:[{urls:'stun:stun.l.google.com:19302'},...(urls?.length?[{urls,username:process.env.MEET_TURN_USERNAME,credential:process.env.MEET_TURN_CREDENTIAL}]:[])],relayReady:!!urls?.length});
  }
  const who=await member(b.roomId,b.clientId,auth.userId);
+ if(b.action==='voice'){
+ const {data:r}=await db().from('study_meet_rooms').select('owner_id,voice_client').eq('id',b.roomId).single();
+ if(r?.owner_id!==auth.userId)return Response.json({error:'Hanya pembuat ruang yang dapat memulai tutor suara.'},{status:403});
+ if(b.provider&&r.voice_client&&r.voice_client!==b.clientId){const {data:active}=await db().from('study_meet_members').select('id').eq('id',r.voice_client).gt('seen_at',new Date(Date.now()-45000).toISOString()).maybeSingle();if(active)return Response.json({error:'Tutor suara aktif di perangkat lain.'},{status:409});}
+ let update=db().from('study_meet_rooms').update({voice_client:b.provider?b.clientId:null,voice_provider:b.provider||null}).eq('id',b.roomId);
+ if(b.provider)update=r.voice_client?update.eq('voice_client',r.voice_client):update.is('voice_client',null);
+ else update=update.eq('voice_client',b.clientId);
+ const {data:changed,error}=await update.select('id').maybeSingle();if(error)throw error;if(b.provider&&!changed)return Response.json({error:'Tutor sudah dimulai di perangkat lain.'},{status:409});return Response.json({ok:true});
+ }
  const event=async(kind:string,payload:unknown,recipient?:string)=>{const {error}=await db().from('study_meet_events').insert({room_id:b.roomId,sender:b.clientId,recipient:recipient||null,kind,payload});if(error)throw error;};
- if(b.action==='leave'){await db().from('study_meet_members').delete().eq('id',b.clientId);return Response.json({ok:true});}
+ if(b.action==='leave'){await db().from('study_meet_rooms').update({voice_client:null,voice_provider:null}).eq('id',b.roomId).eq('voice_client',b.clientId);await db().from('study_meet_members').delete().eq('id',b.clientId);return Response.json({ok:true});}
  if(b.action==='signal'){
  if(!b.recipient||!b.signal)return Response.json({error:'Sinyal tidak valid'},{status:400});
  const {data}=await db().from('study_meet_members').select('id').eq('room_id',b.roomId).eq('id',b.recipient).maybeSingle();if(!data)throw new Error('Invalid recipient');

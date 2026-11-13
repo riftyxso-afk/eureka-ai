@@ -2,7 +2,7 @@
 
 ## Activate
 
-1. Run `supabase_patch_024_meet.sql` in the Supabase SQL editor. Tables are server-only, RLS enabled, and no anonymous/authenticated table privileges are granted. Join is atomic with a six-participant cap. API verifies room membership on every request.
+1. Run `supabase_patch_024_meet.sql` and `supabase_patch_025_meet_voice_codes.sql` in the Supabase SQL editor. Tables are server-only, RLS enabled, and no anonymous/authenticated table privileges are granted. Join is atomic with a six-participant cap. API verifies room membership on every request.
 2. Configure these server variables on the backend VPS (and Vercel if serving its API):
 
 ```
@@ -19,7 +19,7 @@ Use a managed TURN provider or a dedicated coturn host with public IP and approp
 
 Six peers max, browser WebRTC mesh, 640×360 requested video. Signaling/chat/board synchronization uses authenticated server polling every 1.5 seconds. Rooms persist in Supabase; audio/video is transmitted peer-to-peer or via TURN and is not recorded. Invitation links are bearer invitations: anyone signed in with the link can join until the room is full. Avoid posting private room links publicly.
 
-Ask Momo for explanations, summaries, quizzes, essays, and text concept maps. AI output is shared as Markdown on the board. Opening the board changes all participants to a compact strip. Participants can draw in a shared sketch area and download the generated text as Word. AI does not listen to meeting audio; a participant sends a typed request. Existing individual Momo/Lala calls remain separate. This version does not claim image/video generation or automatic transcription inside group meetings.
+Ask Momo for explanations, summaries, quizzes, essays, and text concept maps. AI output is shared as Markdown on the board. Opening the board changes all participants to a compact strip. Participants can draw in a shared sketch area and download the generated text as Word. The room creator can start Momo or Lala voice tutoring. The room audio mix is sent to the selected provider, while AI output is transmitted as a separate WebRTC audio track to participants. Lala can receive the creator’s camera only after they enable it. Spoken requests to create material use the shared board. Individual Momo/Lala calls remain available. This version does not claim image/video generation or automatic transcription inside group meetings.
 
 ## Verify before production
 
@@ -29,3 +29,5 @@ Ask Momo for explanations, summaries, quizzes, essays, and text concept maps. AI
 - Have one participant ask Momo, verify the others see the busy state and final board; test board close and drawing.
 - Ensure a non-member cannot read room/events, signal peers, or change the board.
 - Data retention: purge `study_meet_events` signaling rows older than 24 hours and inactive rooms per product retention policy. Schedule cleanup before public rollout.
+
+Short invitations use `/m/<12-character-code>`, QR and code entry. Codes expire after 7 days; lookup requires login and is rate limited. Only the room owner can start group voice; a compare-and-set prevents simultaneous presenters. Test voice on two devices with headsets before a public launch.

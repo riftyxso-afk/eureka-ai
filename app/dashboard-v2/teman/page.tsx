@@ -5,6 +5,7 @@ import StudyArt from "@/components/dashboard/StudyArt";
 import V2FeaturePage from "@/components/dashboard/V2FeaturePage";
 import FriendsDirectory from "@/components/dashboard/FriendsDirectory";
 import CreateMeet from "@/components/meet/CreateMeet";
+import JoinMeet from "@/components/meet/JoinMeet";
 import FriendSharing from "@/components/dashboard/FriendSharing";
 import StudyFlowNav from "@/components/dashboard/StudyFlowNav";
 import "../study-flows.css";
@@ -40,7 +41,7 @@ export default function Page() {
         <header className="flow-heading">
           <h1 className="study-flow-title"><StudyArt name="friends" size={46} /><span>Teman belajar</span><small>Beta</small></h1>
           <p>Temukan teman dan tukar materi belajar.</p>
-          <CreateMeet />
+          <CreateMeet /><div className="meet-join-code"><JoinMeet /></div>
         </header>
         <div className="flow-layout">
           <StudyFlowNav label="Menu teman belajar" items={sections} current={section} onChange={navigate} />
