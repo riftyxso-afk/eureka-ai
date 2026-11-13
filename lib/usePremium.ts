@@ -6,6 +6,7 @@ import { getUserId } from "./identity";
 import { syncAuthSession, isLoggedIn } from "./auth";
 import { supabase } from "./supabase/client";
 import { FREE_PRO_START } from "./free-pro-period";
+import { requestPremiumStatus } from "./premiumRequest";
 
 export const PREMIUM_UPDATED_EVENT = "eureka-premium-updated";
 
@@ -69,10 +70,16 @@ function loadForUser(userId: string | null, force = false): Promise<void> {
   const controller = new AbortController();
   const promise = (async () => {
     try {
-      const response = await apiFetch(`/api/payments/status?userId=${encodeURIComponent(userId)}`, { signal: controller.signal });
-      if (!response.ok) throw new Error("Status paket belum bisa dimuat. Silakan coba lagi.");
-      const data = await response.json() as Partial<PremiumStatus>;
+      const data = await requestPremiumStatus(
+        () => apiFetch("/api/payments/status", { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]) }),
+        async () => {
+          if (!supabase) return false;
+          const { data, error } = await supabase.auth.refreshSession();
+          return !error && data.session?.user.id === userId;
+        }, controller.signal,
+      ) as Partial<PremiumStatus> & { userId?: string };
       if (version !== generation || controller.signal.aborted) return;
+      if (data.userId && data.userId !== userId) throw new Error("Sesi akun berubah. Silakan muat ulang halaman.");
       const status: PremiumStatus = {
         isPremium: data.isPremium === true,
         tier: data.tier ?? null,
@@ -86,10 +93,10 @@ function loadForUser(userId: string | null, force = false): Promise<void> {
         .filter((date): date is string => Boolean(date && Date.parse(date) > now))
         .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
       scheduleExpiry(userId, nextChange ?? null);
-    } catch {
+    } catch (cause) {
       if (version !== generation || controller.signal.aborted) return;
       verified = false;
-      publish(EMPTY, false, "Status paket belum bisa dimuat. Silakan coba lagi.");
+      publish(EMPTY, false, cause instanceof Error && cause.message.startsWith("Sesi akun") ? cause.message : "Status paket belum bisa dimuat. Silakan coba lagi.");
     } finally {
       if (pending?.controller === controller) pending = null;
     }
@@ -112,9 +119,12 @@ function subscribe(notify: () => void) {
   if (!started && typeof window !== "undefined") {
     started = true;
     window.addEventListener(PREMIUM_UPDATED_EVENT, refreshPremium);
+    const recover = () => { if (snapshot.error && !pending) void synchronize(true); };
+    window.addEventListener("online", recover);
+    window.addEventListener("focus", recover);
     supabase?.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") { authRevision++; void loadForUser(null); }
-      else if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+      else if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         const revision = ++authRevision;
         // Run outside the auth callback so Supabase can release its session lock.
         setTimeout(() => { if (revision === authRevision) void loadForUser(session?.user.id ?? null); }, 0);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getPremiumStatus } from "@/lib/premium";
-import { authorizeAssistantUser } from "@/lib/assistant/auth";
+import { requireAuth } from "@/lib/assistant/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,9 +16,9 @@ export async function GET(req: NextRequest) {
     const rawUserId = String(
       req.nextUrl.searchParams.get("userId") ?? ""
     ).trim();
-    const auth = await authorizeAssistantUser(
+    const auth = await requireAuth(
       req.headers.get("authorization"),
-      rawUserId
+      rawUserId || undefined
     );
     if (!auth.userId) {
       return NextResponse.json(
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     }
 
     const status = await getPremiumStatus(auth.userId);
-    return NextResponse.json(status, { headers: { "Cache-Control": "private, no-store" } });
+    return NextResponse.json({ ...status, userId: auth.userId }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (e) {
     const msg = "Gagal memuat status premium.";
     console.error("[api/payments/status] GET", e);
