@@ -64,7 +64,9 @@ export default function StudyArtifactDialog({ sessionId, artifactId, create, onC
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Artefak belum dimuat.");
         if (signal.aborted) return;
-        setItems(created ? [created, ...data.artifacts.filter((item: StudyArtifact) => item.id !== created.id)] : data.artifacts);
+        const artifacts: StudyArtifact[] = data.artifacts;
+        const createdId = created?.id;
+        setItems(created ? [created, ...artifacts.filter(item => item.id !== createdId)] : artifacts);
         setSelected(created?.id || artifactId || data.artifacts[0]?.id || "");
       } catch (cause) {
         if (signal.aborted) return;
