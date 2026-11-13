@@ -5,6 +5,7 @@
  * Perlu SUPABASE_SERVICE_ROLE_KEY di .env.local — JANGAN pernah dipakai client.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { supabaseTransport } from "./transport";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -36,16 +37,7 @@ export function db(): SupabaseClient<any, "public", any> {
     adminClient = createClient(url, serviceKey, {
       auth: { persistSession: false },
       global: {
-        // Supabase di balik Cloudflare: alamat IP pertama (104.18.38.10) kadang
-        // mengalami packet loss / connect timeout (10s default undici).
-        // Custom fetch dengan AbortSignal 25s memberi kesempatan fallback IP
-        // sebelum undici melempar ConnectTimeoutError ke handler.
-        fetch: (fetchUrl, opts) => {
-          return fetch(fetchUrl, {
-            ...opts,
-            signal: AbortSignal.timeout(25_000),
-          });
-        },
+        fetch: supabaseTransport(url),
       },
     });
   }

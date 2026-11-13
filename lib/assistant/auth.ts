@@ -69,6 +69,9 @@ export async function requireAuth(
   }
 
   const { data, error } = await db().auth.getUser(token);
+  if (error && (error.status === 0 || (error.status ?? 0) >= 500 || error.name === "AuthRetryableFetchError")) {
+    return { userId: "", error: "Layanan akun sementara tidak dapat dijangkau. Silakan coba lagi.", status: 503 };
+  }
   if (error || !data.user) {
     return {
       userId: "",
