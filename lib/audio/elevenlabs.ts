@@ -10,14 +10,20 @@ export async function elevenLabsFetch(url: string, init: RequestInit = {}): Prom
   for (let index = 0; index < keys.length; index++) {
     const headers = new Headers(init.headers);
     headers.set("xi-api-key", keys[index]);
-    const response = await fetch(url, { ...init, headers });
+    let response: Response;
+    try {
+      response = await fetch(url, { ...init, headers });
+    } catch (error) {
+      if (init.signal?.aborted || index === keys.length - 1 || init.body instanceof ReadableStream) throw error;
+      continue;
+    }
     if (response.ok || index === keys.length - 1 || init.signal?.aborted) return response;
-    let exhausted = response.status === 402 || response.status === 429;
+    let exhausted = response.status === 401 || response.status === 402 || response.status === 403 || response.status === 429 || response.status >= 500;
     if (response.status === 400 || response.status === 401) {
       const body = await response.clone().json().catch(() => null);
-      exhausted = body?.detail?.status === "quota_exceeded";
+      exhausted ||= body?.detail?.status === "quota_exceeded";
     }
-    if (!exhausted) return response;
+    if (!exhausted || init.body instanceof ReadableStream) return response;
     void response.body?.cancel().catch(() => {});
   }
   throw new Error("ElevenLabs request failed");
