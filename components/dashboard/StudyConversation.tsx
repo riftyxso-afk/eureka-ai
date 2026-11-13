@@ -7,7 +7,7 @@ import TrainingContribution from "./TrainingContribution";
 import { toast } from "@yusufceng1z/ding-react";
 import type {StudyActivity} from "@/lib/study-intent";
 import "./study-production.css";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -48,9 +48,9 @@ import Network from "kubai-icons-react/icons/network";
 
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { buildStudyCallContext, type StudyCallContext } from "@/lib/audio/studyCallContext";
-import StudyClipPlayer from "./StudyClipPlayer";
+import { studySourceVideos, type StudyVideo } from "@/lib/study-video";
 
-type Turn = { id: string; role: "user" | "assistant"; content: string; sources: StudySource[]; study?: SavedStudyResponse };
+type Turn = { id: string; role: "user" | "assistant"; content: string; sources: StudySource[]; study?: SavedStudyResponse; video?: StudyVideo };
 
 function fromMessage(message: AssistantChatMessage): Turn {
   return {
@@ -104,6 +104,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [pending, setPending] = useState<StudyChatPending | null>(null);
   const [lastPrompt, setLastPrompt] = useState("");
+  const [liveTurnId, setLiveTurnId] = useState<string | null>(null);
   const [lastNote, setLastNote] = useState<string | undefined>();
   const [lastSourceText, setLastSourceText] = useState<string | undefined>();
   const [lastActivity, setLastActivity] = useState<StudyActivity | undefined>();
@@ -162,6 +163,8 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     if (!text || !loaded || sending.current) return;
     if (text.length > 6000) { setError("Tulis pesan maksimal 6.000 karakter."); return; }
     sending.current = true;
+    const replyId = crypto.randomUUID();
+    setLiveTurnId(replyId);
     setError("");
     setLastPrompt(text);
     setLastNote(selectedNote);
@@ -180,7 +183,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         if(response.learningUpdated&&!notifiedLearning.current){notifiedLearning.current=true;toast.success("Personalisasi gaya belajar diperbarui",{description:"Sesuai izin akunmu. Ini tidak melatih bobot model."});}
         setTitle(response.title);
         setTurns(previous => [...previous, {
-          id: crypto.randomUUID(), role: "assistant", content: response.text, sources: response.sources,
+          id: replyId, role: "assistant", content: response.text, sources: response.sources, video: response.video,
           study: { title: response.title, document: response.document, artifactId: response.artifactId, browser: response.browser, computerUse: response.computerUse, files: response.files, fileErrors: response.fileErrors, interaction: response.interaction ?? { steps: [], suggestions: [] } },
         }]);
         if (response.artifactId) setArtifact({ id: response.artifactId });
@@ -243,6 +246,10 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     if (context) setCall({ context, video });
   }
 
+  const displayedTurns: Turn[] = agent.busy && liveTurnId && turns.at(-1)?.id !== liveTurnId ? [...turns, {
+    id: liveTurnId, role: "assistant", content: agent.text, sources: agent.sources, video: agent.video ?? undefined,
+  }] : turns;
+
   return <div className="momo-session study-session flex h-dvh overflow-hidden bg-clay-beige p-0">
     <ChatSidebar sessions={sessions} activeId={sessionId} onNew={() => router.push("/dashboard-v2?workspace=study")} onSelect={() => {}} onRename={async (id, newTitle) => { await changeSession(id, newTitle); }} onDelete={async id => { await changeSession(id); }} />
     {artifact && <StudyArtifactDialog sessionId={sessionId} artifactId={artifact.id} onClose={() => setArtifact(null)} />}
@@ -267,37 +274,45 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
 
         {!loaded && !error && <ChatSkeleton label="Memuat percakapan belajar…" />}
         {loaded && !turns.length && !agent.busy && <div className="study-chat-empty"><Image src="/icons/momo-192.png" alt="" width={56} height={56} /><h1>Mau belajar atau membuat apa?</h1><p>Tanya konsep, kirim tautan YouTube, cari sumber, atau buat dokumen bersama Momo.</p></div>}
-        {turns.map((turn, index) => <article className="study-chat-turn" key={turn.id}>
-          <MessageBubble message={message(turn)} videoEnabled={false} avatar={<StudyBotAvatar size={32} response={turn.content} still />} />
-          {turn.role === "assistant" && <div className="study-chat-extras">
-            <StudyVideoCards sources={turn.sources} />
-            <StudyFileCards sessionId={sessionId} files={turn.study?.files || []} errors={turn.study?.fileErrors || []} />
-            {turn.study?.artifactId && <button type="button" className="study-artifact-link" disabled={agent.busy} onClick={() => setArtifact({ id: turn.study?.artifactId })}>
-              <FolderOpen size={16} aria-hidden="true" /> Buka artefak
-            </button>}
-            {!!turn.study?.interaction.mindmap?.length && <StudyMindmap nodes={turn.study.interaction.mindmap} disabled={agent.busy} onExplore={prompt => void send(prompt)} />}
-            {turn.study && <StudyActivities storageKey={"eureka:study-checklist:" + getUserId() + ":" + sessionId + ":" + turn.content.slice(0, 70)} data={turn.study.interaction} disabled={agent.busy} onSend={prompt => void send(prompt)} />}
-            {!!turn.sources.length&&<WebSources results={turn.sources.map(source=>({url:source.url,title:source.title,description:source.excerpt,domain:new URL(source.url).hostname}))}/>}
-            <TrainingContribution sessionId={sessionId} answer={turn.content}/>
-            <StudyResponseTools
-              title={turn.study?.title || title}
-              content={turn.content}
-              disabled={agent.busy}
-              onSend={(prompt, activity) => void send(prompt, noteId, turn.content, activity, turn.study?.artifactId)}
-              onArtifact={turn.study?.artifactId ? undefined : () => void send("Kembangkan jawaban ini menjadi artefak belajar yang terstruktur.", noteId, turn.content.slice(0, 60000), "artifact")}
-              onVoice={() => void openStudyCall(turn, index, false)}
-              onVideo={() => void openStudyCall(turn, index, true)}
-            />
+        {displayedTurns.map((turn, index) => {
+          const latestRun = turn.id === liveTurnId;
+          const live = agent.busy && latestRun;
+          const videos = turn.role === "assistant" ? studySourceVideos(turn.sources, turn.video) : [];
+          const videoCards = <StudyVideoCards videos={videos} clipId={turn.video?.id} />;
+          return <Fragment key={turn.id}>
+            {latestRun && agent.browserActivity.length > 0 && <StudyBrowserPanel activities={agent.browserActivity} busy={live} />}
+            <article className={live ? "study-chat-turn study-chat-live" : "study-chat-turn"} aria-busy={live || undefined}>
+              {live && agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
+              {videos.length === 1 && <div className="study-chat-extras study-chat-video-lead">{videoCards}</div>}
+              {(!live || turn.content) && <MessageBubble message={message(turn)} isStreaming={live} videoEnabled={false} avatar={live
+                ? <StudyBotAvatar size={32} prompt={lastPrompt} response={turn.content} stage={agent.status?.stage} busy error={!!agent.error} />
+                : <StudyBotAvatar size={32} response={turn.content} still />} />}
+              {videos.length > 1 && <div className="study-chat-extras">{videoCards}</div>}
+              {live && agent.mindmap !== null && <div className="study-chat-extras"><StudyMindmap nodes={agent.mindmap} busy onExplore={() => {}} /></div>}
+              {!live && turn.role === "assistant" && <div className="study-chat-extras">
+                <StudyFileCards sessionId={sessionId} files={turn.study?.files || []} errors={turn.study?.fileErrors || []} />
+                {turn.study?.artifactId && <button type="button" className="study-artifact-link" disabled={agent.busy} onClick={() => setArtifact({ id: turn.study?.artifactId })}>
+                  <FolderOpen size={16} aria-hidden="true" /> Buka artefak
+                </button>}
+                {!!turn.study?.interaction.mindmap?.length && <StudyMindmap nodes={turn.study.interaction.mindmap} disabled={agent.busy} onExplore={prompt => void send(prompt)} />}
+                {turn.study && <StudyActivities storageKey={"eureka:study-checklist:" + getUserId() + ":" + sessionId + ":" + turn.content.slice(0, 70)} data={turn.study.interaction} disabled={agent.busy} onSend={prompt => void send(prompt)} />}
+                {!!turn.sources.length&&<WebSources results={turn.sources.map(source=>({url:source.url,title:source.title,description:source.excerpt,domain:new URL(source.url).hostname}))}/>}
+                <TrainingContribution sessionId={sessionId} answer={turn.content}/>
+                <StudyResponseTools
+                  title={turn.study?.title || title}
+                  content={turn.content}
+                  disabled={agent.busy}
+                  onSend={(prompt, activity) => void send(prompt, noteId, turn.content, activity, turn.study?.artifactId)}
+                  onArtifact={turn.study?.artifactId ? undefined : () => void send("Kembangkan jawaban ini menjadi artefak belajar yang terstruktur.", noteId, turn.content.slice(0, 60000), "artifact")}
+                  onVoice={() => void openStudyCall(turn, index, false)}
+                  onVideo={() => void openStudyCall(turn, index, true)}
+                />
 
-          </div>}
-        </article>)}
-        {agent.browserActivity.length > 0 && <StudyBrowserPanel activities={agent.browserActivity} busy={agent.busy} />}
-        {agent.video && <StudyClipPlayer video={agent.video} />}
-        {agent.busy && <article className="study-chat-live" aria-busy="true">
-          {agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
-          {agent.text && <MessageBubble message={message({ id: "study-stream", role: "assistant", content: agent.text, sources: [] })} isStreaming videoEnabled={false} avatar={<StudyBotAvatar size={32} prompt={lastPrompt} response={agent.text} stage={agent.status?.stage} busy error={!!agent.error} />} />}
-          {agent.mindmap !== null && <div className="study-chat-extras"><StudyMindmap nodes={agent.mindmap} busy onExplore={() => {}} /></div>}
-        </article>}
+              </div>}
+            </article>
+          </Fragment>;
+        })}
+        {!agent.busy && agent.browserActivity.length > 0 && turns.at(-1)?.id !== liveTurnId && <StudyBrowserPanel activities={agent.browserActivity} busy={false} />}
         {(agent.error || error) && <div className="study-chat-error" role="alert"><p>{error || agent.error}</p>
           {error && !loaded && <button type="button" onClick={() => { setError(""); setLoadAttempt(n => n + 1); }}>Muat ulang percakapan</button>}
           {lastPrompt && !agent.busy && <button type="button" onClick={() => void send(lastPrompt, lastNote, lastSourceText, lastActivity, lastArtifactId)}>Coba lagi</button>}
@@ -322,7 +337,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
             { key: "document", name: browserSelected ? "Buat file di komputer" : "Buat PDF / Word", icon: <Download size={16} />, action: () => setDraft("Buatkan PDF yang rapi tentang ") },
             { key: "mindmap", name: "Peta konsep", icon: <Network size={16} />, action: () => setDraft("Buatkan mindmap interaktif tentang ") },
           ]}
-          background="rgb(var(--clay-cream))" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="#a983e8" width={760} radius={18} maxRows={5} commands={[]} defaultEffort="Seimbang"
+          background="transparent" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="transparent" width={760} radius={18} maxRows={5} commands={[]} defaultEffort="Seimbang"
           models={[]} efforts={["Kilat", "Seimbang", "Mendalam"]} onEffortChange={effort => setSpeedMode(effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal")}
           onSend={prompt => { void send(prompt); }} onStop={agent.stop}
           voiceSlot={<SpeechInput userId={getUserId()} disabled={!loaded || agent.busy} onText={text => setDraft(previous => (previous + " " + text).trim())} onError={setMicError} />}

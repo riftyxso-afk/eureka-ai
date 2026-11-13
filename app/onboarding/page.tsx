@@ -22,9 +22,7 @@ import ButtonClay from "@/components/ui/ButtonClay";
 import CardClay from "@/components/ui/CardClay";
 import InputClay from "@/components/ui/InputClay";
 import InstitutionField from "./InstitutionField";
-import dynamic from "next/dynamic";
-const JellyBlobMascot = dynamic(() => import("feral-blob").then((mod) => mod.JellyBlobMascot), { ssr: false });
-import "feral-blob/blob.css";
+import OnboardingMascot, { MascotSlot as Mascot } from "./OnboardingMascot";
 import "./onboarding.css";
 
 import {
@@ -546,6 +544,7 @@ export default function OnboardingPage() {
         <span className="onboarding-wordmark">eureka<span>.ai</span></span>
       </header>
       <div className={`onboarding-stage ${phase === "result" ? "onboarding-result" : ""}`}>
+        <OnboardingMascot />
         <AnimatePresence mode="wait" initial={false} custom={direction} >
           {!ready ? (
             <motion.section key="boot" className="onboarding-intro" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={transition} aria-live="polite" aria-busy="true">
@@ -569,12 +568,12 @@ export default function OnboardingPage() {
               variants={{ enter: (d: number) => ({ opacity: 0, x: reduceMotion ? 0 : d * 24 }), visible: { opacity: 1, x: 0 }, leave: (d: number) => ({ opacity: 0, x: reduceMotion ? 0 : d * -16 }) }}
               initial="enter" animate="visible" exit="leave" transition={transition} onAnimationComplete={() => { if (current.key !== "name" && current.key !== "username") headingRef.current?.focus({ preventScroll: true }); }}>
               <div className="onboarding-question-heading">
-                <Mascot mood={canProceed ? "celebrate" : current.key === "psyTest" || current.key === "weakTopic" ? "think" : "listen"} />
+                <Mascot pose={psyQuestion?.id ?? current.key} mood={canProceed && (current.key !== "school" || !!data.school?.trim()) ? "celebrate" : "listen"} />
                 <div className="onboarding-speech">
                   <h1 id="onboarding-question" ref={headingRef} tabIndex={-1}>{psyQuestion?.question ?? current.question}</h1>
+                  {(psyQuestion?.subtitle ?? current.subtitle) && <p className="onboarding-subtitle">{psyQuestion?.subtitle ?? current.subtitle}</p>}
                 </div>
               </div>
-              {current.subtitle && <p className="onboarding-subtitle">{current.subtitle}</p>}
               <div className="onboarding-fields">
                 {current.key === "name" ? (
                   <div className="mt-6">
@@ -915,17 +914,11 @@ export default function OnboardingPage() {
                   : `${step + 1} dari ${ONBOARDING_STEPS.length}`}
             </span>
             <button type="button" className="onboarding-continue" disabled={intro >= 2 && !canProceed} onClick={() => { hasInteractedRef.current = true; setDirection(1); if (intro < 2) setIntro(intro + 1); else next(); }}>
-              {intro === 0 ? "Kenalan, yuk" : "Lanjutkan"}<ArrowRight size={18} />
+              {intro === 0 ? "Kenalan, yuk" : intro >= 2 && current.key === "school" && !data.school?.trim() ? "Lewati sekolah" : "Lanjutkan"}<ArrowRight size={18} />
             </button>
           </div>
         </footer>
       )}
     </main>
   );
-}
-
-function Mascot({ mood, large = false }: { mood: "wave" | "listen" | "think" | "celebrate"; large?: boolean }) {
-  return <div className={`onboarding-mascot ${large ? "is-large" : ""} mood-${mood}`} aria-hidden="true">
-    <JellyBlobMascot stillBody mood={mood === "think" ? "hmm" : mood === "listen" ? "curious" : "happy"} celebrate={mood === "celebrate" ? 1 : 0} />
-  </div>;
 }

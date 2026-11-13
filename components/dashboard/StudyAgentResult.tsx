@@ -51,6 +51,7 @@ export function useStudyAgent() {
       let done = false;
       let answer = "";
       let references: StudySource[] = [];
+      let clip: import("@/lib/study-video").StudyVideo | undefined;
       let completed: Extract<StudyAgentEvent, { type: "done" }> | undefined;
       try {
         while (!done) {
@@ -63,7 +64,7 @@ export function useStudyAgent() {
             buffer = buffer.slice(boundary + 2);
             if (!message.startsWith("data: ")) continue;
             const event = JSON.parse(message.slice(6)) as StudyAgentEvent;
-            if (event.type === "video") setVideo(event.video);
+            if (event.type === "video") { clip = event.video; setVideo(clip); }
             if (event.type === "mindmap") setMindmap(event.nodes);
             if (event.type === "browser") setBrowserActivity(previous => [...previous.slice(-19), event.activity]);
             if (event.type === "status") setStatus(event);
@@ -78,7 +79,7 @@ export function useStudyAgent() {
         await reader.cancel().catch(() => {});
       }
       if (!done && !request.signal.aborted) throw new Error("Aliran respons terputus. Coba lagi untuk hasil lengkap.");
-      return completed ? { ...completed, text: answer, sources: references } : undefined;
+      return completed ? { ...completed, text: answer, sources: references, video: clip } : undefined;
     } catch (cause) {
       if (!request.signal.aborted) setError(cause instanceof Error ? cause.message : "Coba lagi.");
     } finally {

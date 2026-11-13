@@ -21,6 +21,18 @@ test('free study does not inject an unrelated seven-day schedule', () => {
   assert.match(studyGoalPrompt('Energi', 7), /selama 7 hari/);
   assert.equal(studyGoalPrompt('Energi', 999), 'Energi');
 });
+test('video placement counts distinct YouTube videos, including a clip discussed in the reply', () => {
+  const { studySourceVideos } = load('study-video');
+  const youtube = { url: 'https://www.youtube.com/watch?v=abcdefghijk&t=120s', title: 'Video utama' };
+  const another = { url: 'https://youtu.be/lmnopqrstuv', title: 'Video kedua' };
+  const article = { url: 'https://example.com/artikel', title: 'Artikel' };
+  const clip = { id: 'abcdefghijk', title: 'Klip', seconds: 210 };
+  assert.deepEqual(studySourceVideos([article]), []);
+  assert.equal(studySourceVideos([youtube, article, { ...youtube, url: 'https://youtu.be/abcdefghijk?t=5s' }]).length, 1);
+  assert.equal(studySourceVideos([youtube], clip)[0].seconds, 210);
+  assert.equal(studySourceVideos([], clip).length, 1);
+  assert.equal(studySourceVideos([youtube, another, article], clip).length, 2);
+});
 test('stream accepts parent-first nodes and rejects invalid lines without losing prior nodes', () => {
   let nodes = parseStudyMapLine([], JSON.stringify(node('root')));
   nodes = parseStudyMapLine(nodes, JSON.stringify(node('child', 'root')));
@@ -168,6 +180,11 @@ test('vertical mindmap places children below parents without overlap and collaps
   const {layoutStudyMap,MAP_NODE_WIDTH,MAP_NODE_HEIGHT}=load('study-map-layout');
   const nodes=[node('r'),node('a','r'),node('b','r'),node('a1','a'),node('a2','a'),node('b1','b')];
   const layout=layoutStudyMap(nodes,new Set());
+  const compact=layoutStudyMap(nodes,new Set(),.5);
+  const expanded=layoutStudyMap(nodes,new Set(),2);
+  assert.ok(compact.width < layout.width && expanded.width > layout.width);
+  assert.ok(compact.height < layout.height && expanded.height > layout.height);
+  assert.ok(compact.positions.find(item=>item.node.id==='a').y >= compact.positions[0].y + MAP_NODE_HEIGHT);
   assert.equal(layout.edges.length,nodes.length-1);
   for(const position of layout.positions){
     const parent=layout.positions.find(item=>item.node.id===position.node.parentId);

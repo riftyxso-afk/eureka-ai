@@ -172,7 +172,6 @@
   }
   .momo-chat-shell .momo-start-content h2 { line-height:1.15; }
   .momo-chat-shell .momo-start-composer { position:relative; bottom:auto; margin-top:20px; }
-  .momo-session-composer { background:inherit; }
   .momo-session .momo-composer-companion,
   .momo-session .momo-composer-companion-motion,
   .momo-session .momo-composer-companion-offset,
@@ -288,7 +287,7 @@
 .dark .momo-sidebar-search { background: #2b2b2b; border-color: #444; color: rgb(var(--clay-dark)); }
 .dark .momo-message-user { background: #343433; color: rgb(var(--clay-dark)); }
 /* Quiet conversation surfaces; the content, not the chrome, leads. */
-.momo-session .chat-session-header { border: 0; background: inherit; }
+.momo-session .chat-session-header { border: 0; background: transparent; box-shadow: none; }
 .momo-session .chat-session-header :is(button, a) { box-shadow: none; }
 .momo-session .chat-session-header h1 { font-weight: 650; }
 .momo-session .momo-sidebar, .momo-chat-shell .momo-sidebar { border: 0; }
@@ -300,7 +299,10 @@
 .momo-session .chat-message-assistant-content > button { border: 0; border-radius: 10px; background: rgb(var(--clay-dark) / .045); padding: 10px 14px; }
 .momo-session .eureka-prompt-wrap .prompt-bar__field,
 .momo-chat-shell .eureka-prompt-wrap .prompt-bar__field { border-color: rgb(var(--clay-dark) / .12); box-shadow: 0 2px 8px rgb(0 0 0 / .03); border-radius: 22px; }
-.momo-session .momo-session-composer { border: 0; }
+.momo-session .momo-session-composer { border: 0; background: transparent; box-shadow: none; }
+.momo-session .eureka-prompt-wrap .prompt-bar__field { background: transparent; box-shadow: none; }
+.momo-session .prompt-bar__field::before { display: none; }
+.momo-session .prompt-bar__sparks { display: none; }
 .momo-session .chat-message-copy { width: 36px; height: 36px; box-shadow: none; }
 .dark .momo-session .momo-message-user { background: #303030; }
 @media (max-width: 639px) {

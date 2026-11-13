@@ -17,6 +17,7 @@ import "./answer-content.css";
 interface MarkdownViewProps {
   content: string;
   className?: string;
+  inline?: boolean;
 }
 
 /**
@@ -25,10 +26,26 @@ interface MarkdownViewProps {
  */
 // Memo: konten pesan selesai tidak berubah — lewati re-parse markdown/KaTeX
 // saat state streaming memicu re-render halaman berkali-kali per detik.
-function MarkdownView({ content, className = "" }: MarkdownViewProps) {
+function MarkdownView({ content, className = "", inline = false }: MarkdownViewProps) {
   // AI sering menulis rumus dengan \(...\), \[...\], atau \begin{align}...
   // yang tidak dikenali remark-math. Normalisasi dulu agar KaTeX merendernya.
-  const normalized = normalizeMathDelimiters(content);
+  let normalized = normalizeMathDelimiters(content);
+  if (inline && !normalized.includes("$") && /^\\(?:sqrt|frac|dfrac|tfrac|sum|int|alpha|beta|gamma|theta|pi|Delta|Sigma)\b/.test(normalized.trim())) {
+    normalized = "$" + normalized.trim() + "$";
+  }
+  if (inline) return (
+    <span className={className}>
+      <ReactMarkdown
+        remarkPlugins={[remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        disallowedElements={["a", "img", "input", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote", "pre", "hr"]}
+        unwrapDisallowed
+        components={{ p: ({ children }) => <>{children}</> }}
+      >
+        {normalized}
+      </ReactMarkdown>
+    </span>
+  );
   return (
     <div className={`asisten-md ${className}`}>
       <ReactMarkdown

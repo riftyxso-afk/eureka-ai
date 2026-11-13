@@ -1,4 +1,5 @@
 import { extractYoutubeVideoId } from "./assistant/videoUrl";
+import type { StudySource } from "./study-sources-types";
 export type StudyVideo = { id: string; seconds: number; title: string };
 export function requestedVideoTime(prompt: string): number | undefined {
   const words: Record<string, number> = { satu: 1, dua: 2, tiga: 3, empat: 4, lima: 5, enam: 6, tujuh: 7, delapan: 8, sembilan: 9, sepuluh: 10 };
@@ -21,6 +22,23 @@ export function studyVideoFromUrl(url: string, title = "Video yang sedang dibaha
     const seconds = /^\d+s?$/.test(raw) ? parseInt(raw, 10) : requestedVideoTime(raw.replace(/(\d+)m(\d+)s/, '$1:$2')) || 0;
     return { id, seconds: Math.min(86400, seconds), title };
   } catch { return; }
+}
+
+export function studySourceVideos(sources: StudySource[], clip?: StudyVideo) {
+  const videos = new Map<string, StudyVideo & { url: string }>();
+  if (clip) {
+    videos.set(clip.id, { ...clip, url: `https://www.youtube.com/watch?v=${clip.id}&t=${clip.seconds}s` });
+  }
+  for (const source of sources) {
+    const video = studyVideoFromUrl(source.url, source.title);
+    if (!video) continue;
+    if (video.id === clip?.id) {
+      videos.set(video.id, { ...clip, title: source.title, url: source.url });
+    } else if (!videos.has(video.id)) {
+      videos.set(video.id, { ...video, url: source.url });
+    }
+  }
+  return [...videos.values()];
 }
 export function videoTranscriptWindow(segments: { offsetMs: number; durationMs: number; text: string }[], seconds: number) {
   const start = Math.max(0, seconds - 15) * 1000, end = (seconds + 100) * 1000;
