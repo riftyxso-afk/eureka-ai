@@ -1,5 +1,6 @@
 "use client";
 
+import { usePinchZoom } from "@/lib/usePinchZoom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Minus, Plus, Maximize2, Search, ArrowUpRight } from "lucide-react";
 import type { StudyMapNode } from "@/lib/study-mindmap";
@@ -14,6 +15,7 @@ export default function StudyMindmap({ nodes, busy = false, disabled = false, on
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
+  usePinchZoom(viewport, zoom, setZoom);
   const touched = useRef(false);
   const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const layout = useMemo(() => layoutStudyMap(nodes, collapsed), [nodes, collapsed]);
@@ -42,7 +44,7 @@ export default function StudyMindmap({ nodes, busy = false, disabled = false, on
     <header><strong>Peta konsep</strong><span role="status">{busy ? `Menyusun · ${nodes.length} konsep` : `${nodes.length} konsep`}</span></header>
     <label className="study-map-search"><Search size={16} aria-hidden="true" /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Cari konsep…" aria-label="Cari konsep pada peta" /></label>
     {!!query.trim() && <div className="study-map-matches">{matches.length ? matches.map(node => <button type="button" key={node.id} onClick={() => focusNode(node)}>{node.label}</button>) : <span>Tidak ada konsep yang cocok.</span>}</div>}
-    <div ref={viewport} className="study-map-viewport" tabIndex={0} aria-label="Kanvas peta konsep. Geser untuk melihat cabang lainnya." onPointerDown={event => {
+    <div onTouchStart={()=>{touched.current=true;}} ref={viewport} className="study-map-viewport" tabIndex={0} aria-label="Kanvas peta konsep. Geser untuk melihat cabang lainnya." onPointerDown={event => {
       touched.current = true;
       if (event.pointerType !== "mouse" || event.button !== 0 || (event.target as HTMLElement).closest("button")) return;
       drag.current = { x: event.clientX, y: event.clientY, left: event.currentTarget.scrollLeft, top: event.currentTarget.scrollTop };
@@ -60,10 +62,10 @@ export default function StudyMindmap({ nodes, busy = false, disabled = false, on
         </div>)}
       </div></div> : <p role="status">Menentukan konsep utama dari materi…</p>}
     </div>
-    <div className="study-map-toolbar"><span>Geser untuk menjelajah</span><div>
+    <div className="study-map-toolbar"><span>Geser · cubit dua jari untuk zoom</span><div>
       <button type="button" aria-label="Perkecil peta" disabled={zoom <= .25} onClick={() => setZoom(value => Math.max(.25, value - .15))}><Minus size={17} /></button>
       <output aria-label="Perbesaran peta">{Math.round(zoom * 100)}%</output>
-      <button type="button" aria-label="Perbesar peta" disabled={zoom >= 1.6} onClick={() => setZoom(value => Math.min(1.6, value + .15))}><Plus size={17} /></button>
+      <button type="button" aria-label="Perbesar peta" disabled={zoom >= 2.5} onClick={() => setZoom(value => Math.min(2.5, value + .15))}><Plus size={17} /></button>
       <button type="button" aria-label="Tampilkan seluruh peta" onClick={fit}><Maximize2 size={16} /></button>
     </div></div>
     {active && <div className="study-map-detail"><strong>{active.label}</strong><p>{active.detail}</p><button type="button" disabled={disabled || busy} onClick={() => onExplore(`Jelaskan konsep “${active.label}” dalam peta “${root?.label}” dengan contoh, lalu bantu aku menguji pemahamanku.`)}>Bahas konsep ini<ArrowUpRight size={16} /></button></div>}

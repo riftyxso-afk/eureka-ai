@@ -1,39 +1,12 @@
 "use client";
-
-import ArrowUpRight from "kubai-icons-react/icons/arrow-up-right";
-import ChevronDown from "kubai-icons-react/icons/chevron-down";
-import { useId, useState } from "react";
-import type { StudyInteraction } from "@/lib/study-interaction";
-
-export default function StudyActivities({ data, disabled, onSend, storageKey }: {
-  data: StudyInteraction; disabled: boolean; onSend: (prompt: string) => void; storageKey: string;
-}) {
-  const questionId = useId();
-  const [choice, setChoice] = useState<number | null>(null);
-  const [completed, setCompleted] = useState<string[]>(() => {
-    try { const value = JSON.parse(localStorage.getItem(storageKey) || "[]"); return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []; } catch { return []; }
-  });
-
-  function toggle(step: string) {
-    const next = completed.includes(step) ? completed.filter(item => item !== step) : [...completed, step];
-    setCompleted(next);
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* Checklist remains available in this tab. */ }
-  }
-
-  return <div className="study-chat-activities">
-    {data.steps.length > 0 && <details open className="study-chat-plan"><summary><span>Langkah belajarmu · {completed.filter(step => data.steps.includes(step)).length}/{data.steps.length}</span><ChevronDown size={17} aria-hidden="true" /></summary>
-      {data.steps.map(step => <label key={step}><input type="checkbox" checked={completed.includes(step)} onChange={() => toggle(step)} /><span>{step}</span></label>)}
-    </details>}
-    {data.question && <section className="study-chat-quiz" aria-labelledby={questionId}>
-      <h3 id={questionId}>Coba jawab · {data.question.prompt}</h3>
-      {data.question.options.map((option, index) => <button type="button" key={index} aria-pressed={choice === index} onClick={() => setChoice(index)}><span className="study-choice-letter">{String.fromCharCode(65 + index)}.</span> {option}</button>)}
-      {choice !== null && <div role="status" className="study-chat-feedback">
-        <strong>{choice === data.question.correct ? "Tepat!" : "Yuk, periksa lagi alasannya."}</strong><p>{data.question.explanation}</p>
-        <button type="button" disabled={disabled} onClick={() => onSend("Aku menjawab " + data.question!.options[choice] + " untuk soal " + data.question!.prompt + ". Bantu aku memahami alasannya dengan contoh lain.")}>Bahas dengan Momo</button>
-      </div>}
-    </section>}
-    {data.suggestions.length > 0 && <div className="study-chat-suggestions">
-      {data.suggestions.map(prompt => <button type="button" disabled={disabled} key={prompt} onClick={() => onSend(prompt)}>{prompt} <ArrowUpRight size={15} aria-hidden="true" /></button>)}
-    </div>}
-  </div>;
+import {useId,useState} from 'react';
+import type { StudyInteraction } from '@/lib/study-interaction';
+type Question=NonNullable<StudyInteraction['question']>;
+function Quiz({question,onSend,disabled}:{question:Question;onSend:(p:string)=>void;disabled:boolean}){const id=useId(),[choice,setChoice]=useState<number|null>(null);return <section className="study-chat-quiz" aria-labelledby={id}><h3 id={id}>{question.prompt}</h3>{question.options.map((option,index)=><button key={index} type="button" disabled={choice!==null} aria-pressed={choice===index} onClick={()=>setChoice(index)} data-result={choice===index?(index===question.correct?'correct':'incorrect'):undefined}><span className="study-choice-letter">{String.fromCharCode(65+index)}</span><span>{option}</span></button>)}{choice!==null&&<div className="study-chat-feedback" role="status"><strong>{choice===question.correct?'Tepat!':'Belum tepat. Kita bahas alasannya.'}</strong><p>{question.explanation}</p><button disabled={disabled} onClick={()=>onSend(`Aku memilih ${question.options[choice]} untuk soal ${question.prompt}. Bantu jelaskan alasannya.`)}>Bahas jawaban</button><button onClick={()=>setChoice(null)}>Coba lagi</button></div>}</section>}
+function Essay({question,disabled,onSend}:{question:NonNullable<StudyInteraction['essays']>[number];disabled:boolean;onSend:(p:string)=>void}){const [answer,setAnswer]=useState('');return <section className="study-chat-quiz study-essay"><h3>{question.prompt}</h3><label>Jawabanmu<textarea value={answer} onChange={e=>setAnswer(e.target.value)} maxLength={3500} rows={4} placeholder="Tulis penjelasan dengan bahasamu sendiri…"/></label><p>{answer.length}/3500 karakter</p><button disabled={disabled||!answer.trim()} onClick={()=>onSend(`Tinjau jawaban esai saya, jelaskan bagian yang tepat, koreksi, dan satu saran perbaikan. Soal: ${question.prompt}\nKriteria: ${question.rubric.join('; ')}\nJawaban: ${answer}`)}>Minta umpan balik</button></section>}
+export default function StudyActivities({data,disabled,onSend,storageKey}:{data:StudyInteraction;disabled:boolean;onSend:(prompt:string)=>void;storageKey:string}){
+ const [completed,setCompleted]=useState<string[]>(()=>{try{const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');return Array.isArray(saved)?saved.filter((s):s is string=>typeof s==='string'):[];}catch{return []}});
+ if(!data.requested)return null;
+ const questions=data.questions|| (data.question?[data.question]:[]);
+ return <div className="study-chat-activities">{!!data.steps.length&&<details className="study-chat-plan"><summary>Rencana belajarmu · {completed.length}/{data.steps.length}</summary>{data.steps.map(step=><label key={step}><input type="checkbox" checked={completed.includes(step)} onChange={()=>{const next=completed.includes(step)?completed.filter(s=>s!==step):[...completed,step];setCompleted(next);try{localStorage.setItem(storageKey,JSON.stringify(next));}catch{}}}/>{step}</label>)}</details>}{questions.map((q,i)=><Quiz key={i} question={q} disabled={disabled} onSend={onSend}/>)}{data.essays?.map((q,i)=><Essay key={i} question={q} disabled={disabled} onSend={onSend}/>)}</div>
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import LearningConsent from "@/components/dashboard/LearningConsent";
+import "@/components/dashboard/study-production.css";
 import { useState } from "react";
 import { ArrowUpRight, Check } from "lucide-react";
 import StudyArt from "@/components/dashboard/StudyArt";
@@ -11,6 +13,7 @@ import "../study-flows.css";
 
 const sections = [
   { id: "appearance", label: "Tampilan", icon: <StudyArt name="palette" /> },
+  { id: "privacy", label: "Data & AI", icon: <StudyArt name="gear" /> },
   { id: "account", label: "Akun", icon: <StudyArt name="profile" /> },
 ] as const;
 
@@ -45,7 +48,7 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </>
-            ) : (
+            ) : section === "privacy" ? (<><h2 id="settings-title">Data & AI</h2><LearningConsent/></>) : (
               <>
                 <h2 id="settings-title">Akun</h2>
                 <div className="settings-links">

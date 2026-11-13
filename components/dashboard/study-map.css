@@ -48,3 +48,4 @@
   @keyframes study-map-line { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
 }
 @media (max-width: 600px) { .study-map-viewport { max-height: 400px; } .study-explain-call > div { width: 100%; } }
+.chat-concept-map{--learn-bg:rgb(var(--clay-cream));--learn-surface:rgb(var(--clay-dark)/.04);--learn-ink:rgb(var(--clay-dark));--learn-muted:rgb(var(--clay-muted));--learn-line:rgb(var(--clay-dark)/.12);--learn-accent:rgb(var(--clay-primary));min-width:0;max-width:100%;}.study-map-viewport{touch-action:pan-x pan-y;}

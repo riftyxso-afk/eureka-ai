@@ -1,5 +1,6 @@
 "use client";
 
+import "./study-production.css";
 import { useEffect, useRef, useState } from "react";
 import ArrowUp from "kubai-icons-react/icons/arrow-up";
 import ChevronDown from "kubai-icons-react/icons/chevron-down";

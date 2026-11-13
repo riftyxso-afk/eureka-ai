@@ -48,9 +48,11 @@ test('PDF renders headings, a multipage table, and sources into a real PDF', asy
   assert.ok((bytes.toString('latin1').match(/\/Type \/Page\b/g) || []).length > 1);
 });
 
-async function runAgent({ document = false, mindmap = false, authError = false, exportFailure = false } = {}) {
+async function runAgent({ document = false, mindmap = false, authError = false, exportFailure = false, explicitMindmap = true } = {}) {
   const saved = [], exports = [];
   const mocks = {
+    '@/lib/study-intent':load('study-intent'),
+    '@/lib/learningPreferences':{learningContext:async()=>'',observeLearning:async()=>false},
     '@/lib/ai': {
       aiChatJson: async () => ({ title: 'Energi', document, mindmap, tools: [] }),
       aiChatStream: async (options, emit) => {
@@ -77,7 +79,7 @@ async function runAgent({ document = false, mindmap = false, authError = false, 
   const source = ts.transpileModule(fs.readFileSync(path.resolve(__dirname,'../../app/api/study-agent/route.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   new Function('require','module','exports',source)(id=>mocks[id] || (id.startsWith('@/')?{}:require(id)),module,module.exports);
   const {NextRequest}=require('next/server');
-  const response=await module.exports.POST(new NextRequest('http://localhost/api/study-agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:'11111111-1111-4111-8111-111111111111',prompt:'Buat materi tentang energi',browser:false})}));
+  const response=await module.exports.POST(new NextRequest('http://localhost/api/study-agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:'11111111-1111-4111-8111-111111111111',prompt:mindmap&&explicitMindmap?'Buat mindmap tentang energi':'Buat materi tentang energi',browser:false})}));
   const body=await response.text();
   const events=body.split('\n\n').filter(line=>line.startsWith('data: ')).map(line=>JSON.parse(line.slice(6)));
   return {response,events,saved,exports};
@@ -202,3 +204,5 @@ test('call video tool reads the requested segment of the selected video',async()
  assert.equal(response.status,200);assert.equal(seen[0].seconds,200);assert.equal(seen[0].id,'abcdefghijk');
  const missing=await module.exports.POST(new Request('http://localhost/api/call',{method:'POST',body:JSON.stringify({...body,studyContext:undefined})}));assert.equal(missing.status,400);
 });
+
+test('a classifier cannot enable an unrequested mindmap or quiz',async()=>{const f=await runAgent({mindmap:true,explicitMindmap:false});assert.equal(f.events.filter(e=>e.type==='mindmap').length,0);assert.equal(f.events.at(-1).type,'done');assert.equal(f.saved.at(-1).study.interaction.question,undefined);assert.equal(f.saved.at(-1).study.interaction.requested,false);});

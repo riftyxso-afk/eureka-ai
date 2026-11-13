@@ -1,5 +1,6 @@
 "use client";
 
+import {usePinchZoom} from "@/lib/usePinchZoom";
 import { toast } from "@yusufceng1z/ding-react";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -29,6 +30,8 @@ export default function RoomMindmap({ note, onOpen, onSaved, onDirtyChange }: { 
   const locked = useRef(false);
   const [view, setView] = useState({ x: 25, y: 30, scale: .75 });
   const canvas = useRef<HTMLDivElement>(null);
+  const pinch=useCallback((scale:number)=>setView(v=>({...v,scale})),[]);
+  usePinchZoom(canvas,view.scale,pinch);
   const request = useRef<AbortController | null>(null);
   const drag = useRef<{ x: number; y: number; originX: number; originY: number } | null>(null);
   const storage = `eureka:v2:mindmap:${getUserId()}:${note.id}`;
@@ -110,7 +113,7 @@ export default function RoomMindmap({ note, onOpen, onSaved, onDirtyChange }: { 
     <div className="rm-map-pane-switch" role="group" aria-label="Tampilan mindmap"><button aria-pressed={mobilePane === "map"} onClick={() => setMobilePane("map")}>Mindmap</button><button aria-pressed={mobilePane === "notes"} onClick={() => setMobilePane("notes")}>Isi bab {busy ? "· Menyusun…" : ""}</button></div>
     <div className={`rm-map-layout show-${mobilePane} ${busy ? "is-generating" : ""}`}>
       <div className="rm-map-side"><label className="rm-map-search"><Search size={15} /><input disabled={busy} aria-label="Cari konsep" value={query} onChange={e => setQuery(e.target.value)} placeholder="Cari konsep atau bab…" /></label>
-        <div className="rm-map-canvas" ref={canvas} aria-label="Kanvas mindmap, seret latar untuk menggeser" onPointerDown={e => { if ((e.target as Element).closest("button,input")) return; e.currentTarget.setPointerCapture(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, originX: view.x, originY: view.y }; }} onPointerMove={e => { const d = drag.current; if (d) setView(v => ({ ...v, x: d.originX + e.clientX - d.x, y: d.originY + e.clientY - d.y })); }} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
+        <div onTouchStart={e=>{if(e.touches.length===2)drag.current=null;}} className="rm-map-canvas" ref={canvas} aria-label="Kanvas mindmap, seret latar untuk menggeser" onPointerDown={e => { if ((e.target as Element).closest("button,input")) return; e.currentTarget.setPointerCapture(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, originX: view.x, originY: view.y }; }} onPointerMove={e => { const d = drag.current; if (d) setView(v => ({ ...v, x: d.originX + e.clientX - d.x, y: d.originY + e.clientY - d.y })); }} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
           <div className="rm-map-viewport" style={{ width: graph.width, height: graph.height, transform: `translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
             <svg width={graph.width} height={graph.height} aria-hidden="true">{graph.edges.map(({ from, to }) => <path key={`${from.key}:${to.key}`} d={`M ${from.x + from.width} ${from.y + 35} C ${from.x + from.width + 44} ${from.y + 35}, ${to.x - 44} ${to.y + 35}, ${to.x} ${to.y + 35}`} className={to.chapter === selected ? "is-selected" : ""} />)}</svg>
             {graph.nodes.map(node => <div key={node.key} className={`rm-map-node ${busy && node.leaf ? "is-revealing" : ""} ${busy && !node.root && !branches.some(branch => branch.id === node.chapter) ? "is-pending" : ""} ${node.root ? "is-root" : ""} ${node.leaf ? "is-leaf" : ""} ${node.chapter === selected && !node.leaf ? "is-selected" : ""} ${query && node.label.toLocaleLowerCase().includes(query.toLocaleLowerCase()) ? "is-match" : ""}`} style={{ left: node.x, top: node.y, width: node.width }}><button aria-pressed={node.root ? selected === null : node.chapter === selected && (!node.leaf || detail?.label === node.label)} onClick={() => select(node)}>{node.root && <small>CATATANMU</small>}{node.label}</button>{!node.root && !node.leaf && <button disabled={busy} className="rm-collapse" aria-label={`${collapsed.includes(node.chapter!) ? "Perluas" : "Ciutkan"} ${node.label}`} aria-expanded={!collapsed.includes(node.chapter!)} onClick={() => setCollapsed(c => c.includes(node.chapter!) ? c.filter(id => id !== node.chapter) : [...c, node.chapter!])}>{collapsed.includes(node.chapter!) ? <ChevronRight size={14} /> : <ChevronDown size={14} />}</button>}</div>)}

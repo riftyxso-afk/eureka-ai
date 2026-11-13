@@ -1,4 +1,8 @@
 "use client";
+import dynamic from "next/dynamic";
+import {boardMap} from "@/lib/meetBoard";
+import Network from "kubai-icons-react/icons/network";
+const ConceptMap=dynamic(()=>import("@/components/dashboard/StudyMindmap"));
 import DocumentLogo from "@/components/ui/DocumentLogo";
 
 import { useMemo, useState } from "react";
@@ -119,6 +123,7 @@ export default function MessageBubble({
   onViewVideo,
   videoEnabled = true,
 }: MessageBubbleProps & { thinking?: string | null }) {
+  const [mapOpen,setMapOpen]=useState(false);
   const isUser = message.role === "user";
   const empty = !message.content.trim();
   const duration = isUser
@@ -235,9 +240,11 @@ export default function MessageBubble({
               </span>
             )}
             {displayContent && <CopyButton content={displayContent} />}
+            {displayContent&&message.model!=="eureka-study"&&<button aria-label="Petakan jawaban ini" title="Peta konsep" aria-expanded={mapOpen} onClick={()=>setMapOpen(!mapOpen)} className="chat-message-copy inline-flex h-8 w-8 items-center justify-center text-clay-muted"><Network size={15}/></button>}
           </div>
         )}
 
+        {mapOpen&&<div className="chat-concept-map"><ConceptMap nodes={boardMap(displayContent,"Peta jawaban")} disabled onExplore={()=>{}}/></div>}
         {!isStreaming && message.sources.length > 0 && (
           <SourceChips sources={citedNoteSources(message.content, message.sources)} />
         )}

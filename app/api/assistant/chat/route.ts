@@ -1,3 +1,4 @@
+import { learningContext,observeLearning } from "@/lib/learningPreferences";
 import { NextRequest } from "next/server";
 import { citedNoteSources } from "@/lib/assistant/citedSources";
 import { normalizeWebResults } from "@/lib/assistant/webSources";
@@ -645,6 +646,7 @@ export async function POST(req: NextRequest) {
           attachedDocument,
           language: languageFromRequest(req),
         });
+        system += "\n" + await learningContext(userId);
         if (videoContextMd) {
           system += `\n\nMODE "DISKUSI VIDEO":\nPengguna sedang berdiskusi tentang video YouTube (${activeVideoUrl}). Jawab pertanyaan BERDASARKAN transkrip video berikut bila tersedia. Bila transkrip tidak tersedia, akui dengan jujur bahwa kamu tidak bisa membaca isi video, dan JANGAN mengarang kutipan atau klaim dari isi video.\n\n${videoContextMd}`;
         }
@@ -757,6 +759,7 @@ export async function POST(req: NextRequest) {
           webResults,
           model: modelUsed || null,
         });
+        await observeLearning(userId,"answer");
 
         // Model asli yang dipakai (fallback chain) dikirim setelah selesai.
         emit({ type: "meta", mode: "assistant", model: modelUsed });

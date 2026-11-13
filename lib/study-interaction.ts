@@ -2,7 +2,11 @@ import type { StudyFile } from "./study-file-types";
 import { z } from "zod";
 import { studyMindmapSchema } from "./study-mindmap";
 
+const questionSchema = z.object({ prompt:z.string().min(5).max(500), options:z.array(z.string().min(1).max(240)).length(4), correct:z.number().int().min(0).max(3), explanation:z.string().min(5).max(900) });
 export const studyInteractionSchema = z.object({
+  requested:z.boolean().optional(),
+  questions:z.array(questionSchema).max(10).optional(),
+  essays:z.array(z.object({prompt:z.string().min(5).max(800),rubric:z.array(z.string().max(200)).max(5)})).max(5).optional(),
   mindmap: studyMindmapSchema.optional(),
   question: z.object({
     prompt: z.string().min(5).max(500),
