@@ -6,7 +6,7 @@ import ChatPage from "@/app/chat/[id]/page";
 import StudyConversation from "@/components/dashboard/StudyConversation";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
-import LoadingStatus from "@/components/ui/LoadingStatus";
+import ChatSkeleton from "@/components/asisten/ChatSkeleton";
 import type { AssistantChatMessage } from "@/lib/assistant/types";
 
 export default function Page() {
@@ -26,6 +26,10 @@ export default function Page() {
     return () => controller.abort();
   }, [id, explicit]);
   if (explicit) return <StudyConversation key={id} sessionId={id} />;
-  if (detected?.id !== id) return <LoadingStatus stage="synchronizing" detail="Memuat percakapan" />;
+  if (detected?.id !== id) return (
+    <main className="px-3.5 pb-6 pt-20 sm:px-6">
+      <ChatSkeleton />
+    </main>
+  );
   return detected.study ? <StudyConversation key={id} sessionId={id} initialMessages={detected.messages} initialTitle={detected.title} /> : <ChatPage />;
 }

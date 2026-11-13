@@ -222,6 +222,16 @@ test("agenticGreeting adapts to activities, due flashcards, recent sessions, mod
   assert.ok(sessionCard);
   assert.equal(sessionCard.primaryAction.href, "/dashboard-v2/tanya-momo/sess-abc");
 
+  const longTitle = "Setup Google Colab untuk Fine-tuning Model Bahasa";
+  const noteCard = buildAgenticCandidates({
+    mode: "ask",
+    effort: "Seimbang",
+    recentNotes: [{ id: "n-1", title: longTitle, subject: "Umum" }],
+  }).find((candidate) => candidate.id === "recent-note");
+  assert.equal(noteCard.headline, "Mau latihan dari catatanmu?");
+  assert.equal(noteCard.subline, longTitle);
+  assert.equal(noteCard.eyebrow, "Catatan terbarumu");
+
   const deepCard = candidates.find((c) => c.id === "effort-deep");
   assert.ok(deepCard);
   assert.match(deepCard.subline, /Matematika & hitungan/);

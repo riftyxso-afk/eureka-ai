@@ -282,17 +282,17 @@ export function buildAgenticCandidates(input: AgenticGreetingInput): AgenticGree
 
   // 4. Recent note follow-up
   if (latestNote) {
-    const cleanTitle = truncateText(latestNote.title!, 28);
+    const subject = latestNote.subject?.trim();
     candidates.push({
       id: "recent-note",
       eyebrow: [
-        latestNote.subject ? `Catatan · ${latestNote.subject}` : "Catatan terbarumu",
+        subject && subject.toLowerCase() !== "umum" ? `Catatan · ${subject}` : "Catatan terbarumu",
         metaSuffix,
       ]
         .filter(Boolean)
         .join(" · "),
-      headline: `Mau latih "${cleanTitle}"?`,
-      subline: "Ubah catatanmu jadi latihan soal biar makin paham.",
+      headline: "Mau latihan dari catatanmu?",
+      subline: latestNote.title!.replace(/\s+/g, " ").trim(),
       primaryAction: {
         label: "Latih dengan soal",
         prompt: `Berdasarkan topik catatan "${latestNote.title}", buatkan 4 soal latihan beserta pembahasan langkah demi langkah.`,

@@ -23,6 +23,7 @@ import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
 import PageTutorial from "@/components/tutorial/PageTutorial";
 import MessageBubble from "@/components/asisten/MessageBubble";
 import ChatSidebar from "@/components/asisten/ChatSidebar";
+import ChatSkeleton from "@/components/asisten/ChatSkeleton";
 import PromptBar from "@/components/asisten/reactbits/PromptBar";
 import SpeechInput from "@/components/asisten/SpeechInput";
 import LoadingStatus from "@/components/ui/LoadingStatus";
@@ -237,12 +238,12 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       followBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 180;
     }}>
       <div className="study-chat-width">
-        <details className="study-chat-research" open={researchOpen} onToggle={event => setResearchOpen(event.currentTarget.open)}>
+        {loaded && <details className="study-chat-research" open={researchOpen} onToggle={event => setResearchOpen(event.currentTarget.open)}>
           <summary><FolderOpen size={18} aria-hidden="true" />Proyek riset bersama teman<ChevronDown size={16} aria-hidden="true" /></summary>
           {researchOpen && <div className="study-flow"><ResearchStudio sourcesEnabled /></div>}
-        </details>
+        </details>}
 
-        {!loaded && !error && <LoadingStatus stage="synchronizing" detail="Memuat percakapan belajar" />}
+        {!loaded && !error && <ChatSkeleton label="Memuat percakapan belajar…" />}
         {loaded && !turns.length && !agent.busy && <div className="study-chat-empty"><Image src="/icons/momo-192.png" alt="" width={56} height={56} /><h1>Mau belajar atau membuat apa?</h1><p>Tanya konsep, kirim tautan YouTube, cari sumber, atau buat dokumen bersama Momo.</p></div>}
         {turns.map((turn, index) => <article className="study-chat-turn" key={turn.id}>
           <MessageBubble message={message(turn)} videoEnabled={false} avatar={<StudyBotAvatar size={32} response={turn.content} still />} />

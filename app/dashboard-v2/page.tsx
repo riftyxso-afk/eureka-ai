@@ -12,7 +12,7 @@ import Globe from "kubai-icons-react/icons/globe";
 import MessageCircle from "kubai-icons-react/icons/message-circle";
 import Trophy from "kubai-icons-react/icons/trophy";
 import Crown from "kubai-icons-react/icons/crown";
-import { ArrowUpRight, PhoneCall, Sparkles, Upload } from "lucide-react";
+import { ArrowUpRight, PhoneCall, Upload } from "lucide-react";
 import PromptBar from "@/components/asisten/reactbits/PromptBar";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
 import DocumentAttachments from "@/components/dashboard/DocumentAttachments";
@@ -287,12 +287,7 @@ export default function DashboardV2() {
             />
           </div>
           <div className="dv2-greeting-copy" key={greeting.id}>
-            <div className="dv2-greeting-meta">
-              <span className="dv2-greeting-eyebrow">
-                <Sparkles size={12} aria-hidden="true" />
-                <span>{greeting.eyebrow}</span>
-              </span>
-            </div>
+            <span className="dv2-greeting-eyebrow">{greeting.eyebrow}</span>
             <h1 id="dv2-title">{greeting.headline}</h1>
             <p className="dv2-greeting-sub">{greeting.subline}</p>
           </div>
@@ -341,7 +336,6 @@ export default function DashboardV2() {
                 className="dv2-agentic-chip is-primary"
                 onClick={() => triggerGreetingAction(greeting.primaryAction!)}
               >
-                <Sparkles size={13} aria-hidden="true" />
                 <span>{greeting.primaryAction.label}</span>
                 <ArrowUpRight size={13} aria-hidden="true" />
               </button>
