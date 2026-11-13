@@ -27,6 +27,8 @@ function mount(app: Hono, path: string, mod: AnyModule | Promise<AnyModule>) {
  */
 export async function mountAllRoutes(app: Hono): Promise<number> {
   let count = 0;
+  mount(app, "/api/meet", await import("@/app/api/meet/route"));
+  count++;
 
   // ─── Auth ──────────────────────────────────────────────
   const otp = await import("@/app/api/auth/otp/route");

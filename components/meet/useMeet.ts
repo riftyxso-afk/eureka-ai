@@ -1,0 +1,77 @@
+"use client";
+import { useEffect, useRef, useState } from 'react';
+import { apiFetch } from '@/lib/apiClient';
+import type { MeetMember, MeetEvent } from '@/lib/meet';
+export type MeetRoom = {title:string;board:string;board_open:boolean;ai_busy_until:string;owner_id:string};
+export async function meetRequest(body:Record<string,unknown>,signal?:AbortSignal){
+ const response=await apiFetch('/api/meet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});
+ const data=await response.json();if(!response.ok)throw new Error(data.error||'Ruang belum bisa dihubungkan');return data;
+}
+export function useMeet(id:string,invite:string){
+ const [joined,setJoined]=useState(false),[joining,setJoining]=useState(false),[error,setError]=useState('');
+ const [room,setRoom]=useState<MeetRoom|null>(null),[members,setMembers]=useState<MeetMember[]>([]),[events,setEvents]=useState<MeetEvent[]>([]);
+ const [streams,setStreams]=useState<Record<string,MediaStream>>({}),[local,setLocal]=useState<MediaStream|null>(null);
+ const [mic,setMic]=useState(true),[camera,setCamera]=useState(true),[relay,setRelay]=useState(true);
+ const [clientId,setClientId]=useState('');
+ const client=useRef(''),peers=useRef(new Map<string,{pc:RTCPeerConnection;pending:RTCIceCandidateInit[]}>()),media=useRef<MediaStream|null>(null);
+ const alive=useRef(true),lock=useRef(false),ice=useRef<RTCIceServer[]>([]),cursor=useRef(0);
+ const act=(body:Record<string,unknown>)=>meetRequest({...body,roomId:id,clientId:client.current});
+ function close(){peers.current.forEach(p=>p.pc.close());peers.current.clear();media.current?.getTracks().forEach(t=>t.stop());media.current=null;}
+ useEffect(()=>{alive.current=true;return()=>{alive.current=false;close();if(client.current)void meetRequest({action:'leave',roomId:id,clientId:client.current}).catch(()=>{});};},[id]);
+ async function join(){
+ if(lock.current)return;lock.current=true;setJoining(true);setError('');
+ try{
+ if(!navigator.mediaDevices?.getUserMedia)throw new Error('Buka Eureka melalui HTTPS untuk mengaktifkan kamera dan mikrofon.');
+ const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:{width:{ideal:640},height:{ideal:360},facingMode:'user'}});
+ if(!alive.current){stream.getTracks().forEach(t=>t.stop());return;}
+ media.current=stream;client.current=crypto.randomUUID();cursor.current=0;
+ setClientId(client.current);setMic(true);setCamera(true);setEvents([]);setRoom(null);
+ const data=await act({action:'join',invite});
+ if(!alive.current){close();return;}
+ ice.current=data.iceServers;setRelay(data.relayReady);setLocal(stream);setJoined(true);
+ }catch(cause){close();setError(cause instanceof Error?cause.message:'Izin kamera atau mikrofon belum tersedia. Periksa pengaturan browser.');}
+ finally{lock.current=false;if(alive.current)setJoining(false);}
+ }
+ useEffect(()=>{
+ if(!joined)return;let stopped=false;const controller=new AbortController();
+ const report=(cause:unknown)=>{if(!stopped)setError(cause instanceof Error?cause.message:'Koneksi ruang terputus. Mencoba lagi…');};
+ function peer(memberId:string){
+ const existing=peers.current.get(memberId);if(existing)return existing;
+ const pc=new RTCPeerConnection({iceServers:ice.current});const p={pc,pending:[] as RTCIceCandidateInit[]};peers.current.set(memberId,p);
+ media.current?.getTracks().forEach(track=>pc.addTrack(track,media.current!));
+ pc.onicecandidate=e=>{if(e.candidate&&!stopped)void act({action:'signal',recipient:memberId,signal:{candidate:e.candidate.toJSON()}}).catch(report);};
+ pc.ontrack=e=>{if(!stopped)setStreams(old=>({...old,[memberId]:e.streams[0]}));};
+ pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed')report(new Error('Koneksi video gagal. Coba bergabung kembali. Jaringan ini mungkin memerlukan TURN.'));};
+ return p;
+ }
+ async function poll(){
+ try{
+ const response=await apiFetch(`/api/meet?id=${id}&client=${client.current}&after=${cursor.current}`,{signal:controller.signal});
+ const data=await response.json();if(!response.ok)throw new Error(data.error);if(stopped)return;
+ setRoom(data.room);setMembers(data.members);
+ for(const member of data.members as MeetMember[]){if(member.id===client.current)continue;if(!peers.current.has(member.id)){
+ const p=peer(member.id);
+ if(client.current<member.id){await p.pc.setLocalDescription(await p.pc.createOffer());await act({action:'signal',recipient:member.id,signal:{description:p.pc.localDescription}});}
+ }}
+ for(const [memberId,p] of peers.current){if(!data.members.some((m:MeetMember)=>m.id===memberId)){p.pc.close();peers.current.delete(memberId);setStreams(old=>{const next={...old};delete next[memberId];return next;});}}
+ for(const event of data.events as MeetEvent[]){
+ if(event.id<=cursor.current)continue;
+ if(event.kind==='signal'&&event.sender!==client.current&&data.members.some((m:MeetMember)=>m.id===event.sender)){
+ const p=peer(event.sender),payload=event.payload as {description?:RTCSessionDescriptionInit;candidate?:RTCIceCandidateInit};
+ if(payload.description){await p.pc.setRemoteDescription(payload.description);for(const c of p.pending)await p.pc.addIceCandidate(c);p.pending=[];
+ if(payload.description.type==='offer'){await p.pc.setLocalDescription(await p.pc.createAnswer());await act({action:'signal',recipient:event.sender,signal:{description:p.pc.localDescription}});}}
+ if(payload.candidate){if(p.pc.remoteDescription)await p.pc.addIceCandidate(payload.candidate);else p.pending.push(payload.candidate);}
+ }else if(event.kind!=='signal')setEvents(old=>[...old,event].slice(-500));
+ cursor.current=event.id;
+ }
+ }catch(cause){if(!controller.signal.aborted)report(cause);}
+ if(!stopped)timer=setTimeout(()=>void poll(),1500);
+ }
+ let timer:ReturnType<typeof setTimeout>;void poll();return()=>{stopped=true;controller.abort();clearTimeout(timer);};
+ // A joined room owns a single signaling loop. Requests read current refs.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[joined,id]);
+ function toggle(kind:'audio'|'video'){const enabled=kind==='audio'?!mic:!camera;media.current?.getTracks().filter(t=>t.kind===kind).forEach(t=>{t.enabled=enabled;});if(kind==='audio')setMic(enabled);else setCamera(enabled);}
+ async function leave(){close();setJoined(false);setLocal(null);setStreams({});await act({action:'leave'}).catch(()=>{});}
+ return {joined,joining,error,setError,room,members,events,streams,local,mic,camera,relay,join,leave,toggle,act,clientId};
+}
