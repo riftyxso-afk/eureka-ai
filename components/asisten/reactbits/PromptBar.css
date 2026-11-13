@@ -340,7 +340,7 @@
 }
 
 .prompt-bar__pick[data-max] {
-  color: var(--pb-spark);
+  color: var(--pb-effort-accent, var(--pb-spark));
 }
 
 .prompt-bar__menu[data-kind='effort'] {
@@ -387,11 +387,13 @@
   margin-top: 8px;
   border-radius: 11px;
   background: var(--pb-hover);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pb-ink) 8%, transparent);
   cursor: pointer;
   outline: none;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  transition: box-shadow 220ms ease;
 }
 
 .prompt-bar__effort-fill {
@@ -401,43 +403,63 @@
   left: 0;
   width: var(--pb-effort-fill);
   border-radius: 11px;
-  background: color-mix(in srgb, var(--pb-ink) 18%, transparent);
+  background: color-mix(in srgb, var(--pb-ink) 20%, transparent);
   transition:
     width 220ms var(--pb-ease-out),
-    background-color 300ms ease;
+    background-color 260ms ease;
 }
 
 .prompt-bar__effort-dot {
   position: absolute;
   top: 50%;
+  z-index: 1;
   width: 4px;
   height: 4px;
   margin: -2px 0 0 -2px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--pb-ink) 30%, transparent);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--pb-ink) 32%, transparent);
 }
 
 .prompt-bar__effort-thumb {
   position: absolute;
-  top: -3px;
+  top: 2px;
   left: var(--pb-effort-x);
-  width: 14px;
-  height: 28px;
-  margin-left: -7px;
-  border-radius: 7px;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border-radius: 999px;
   background: var(--pb-ink);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  border: 1.5px solid color-mix(in srgb, var(--pb-menu) 45%, transparent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
   transition:
     left 220ms var(--pb-ease-out),
-    background-color 300ms ease;
+    background-color 260ms ease,
+    transform 160ms var(--pb-ease-out);
+}
+
+.prompt-bar__effort-track:active .prompt-bar__effort-thumb,
+.prompt-bar__effort-track:focus-visible .prompt-bar__effort-thumb {
+  transform: scale(1.08);
+}
+
+.prompt-bar[data-max] .prompt-bar__effort-track {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pb-effort-accent, var(--pb-spark)) 28%, transparent);
 }
 
 .prompt-bar[data-max] .prompt-bar__effort-fill {
-  background: color-mix(in srgb, var(--pb-spark) 35%, transparent);
+  background: color-mix(in srgb, var(--pb-effort-accent, var(--pb-spark)) 34%, transparent);
 }
 
 .prompt-bar[data-max] .prompt-bar__effort-thumb {
-  background: var(--pb-spark);
+  background: var(--pb-effort-accent, var(--pb-spark));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--pb-effort-accent, var(--pb-spark)) 40%, transparent), 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+
+.prompt-bar[data-max] .prompt-bar__effort-level {
+  color: var(--pb-effort-accent, var(--pb-spark));
 }
 
 .prompt-bar__eq {

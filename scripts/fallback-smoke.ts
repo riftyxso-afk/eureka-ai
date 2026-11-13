@@ -1,4 +1,4 @@
-// Smoke fallback darurat: kunci Juan dikosongkan → teks harus dilayani OpenRouter.
+// Smoke fallback berantai: kunci Juan dikosongkan → teks dilayani OpenRouter (atau NusaRouter bila OpenRouter habis/kosong).
 import { readFileSync } from "fs";
 async function main() {
   for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {

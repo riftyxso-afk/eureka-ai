@@ -6,6 +6,7 @@ import type { BrowserActivity } from "./study-browser";
 import type { StudyFile } from "./study-file-types";
 
 export type StudyAgentEvent =
+  | { type: "mindmap"; nodes: import("./study-mindmap").StudyMapNode[] }
   | { type: "browser"; activity: BrowserActivity }
   | { type: "status"; stage: "thinking" | "retrieving" | "reading" | "combining" | "synchronizing"; label: string }
   | { type: "sources"; sources: StudySource[] }

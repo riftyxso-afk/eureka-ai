@@ -16,8 +16,9 @@ Panduan go-live Eureka.AI:
 | `NEXT_PUBLIC_API_URL` | **YES** | URL backend produksi, mis. `https://api.eureka-ai.web.id` (tanpa `/` di akhir) |
 | `NEXT_PUBLIC_SUPABASE_URL` | **YES** | Supabase Dashboard → Project Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **YES** | Supabase Dashboard → API (anon public key) |
-| `JUANROUTER_API_KEY` | **YES** | **WAJIB untuk semua generate TEKS** (chat, catatan, kuis, judul) — router.juan.web.id → Dashboard → API Keys |
-| `OPENROUTER_API_KEY` | No | Fallback DARURAT teks bila seluruh Juan Router gagal — openrouter.ai/keys |
+| `JUANROUTER_API_KEY` | Utama | Provider utama generate teks. Isi minimal satu key gateway teks. |
+| `OPENROUTER_API_KEY` | No | Fallback 1 teks bila kredit/upstream JuanRouter gagal atau habis — openrouter.ai/keys |
+| `NUSAROUTER_API_KEY` | No | Fallback 2 teks bila JuanRouter & OpenRouter habis atau gagal — nusarouter.com (`https://api.nusarouter.com/v1`) |
 | `OPENAGENTIC_API_KEY` | No | KHUSUS text-to-image (Eureka Draw & ilustrasi); tanpa ini hanya fitur gambar nonaktif |
 | `OPENAGENTIC_IMAGE_MODEL` | No | Model gambar OpenAgentic (default `ali-qwen-image-2.0-pro`) |
 | `AI_PROVIDER` / `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | No | Provider embedding/transkripsi (belum tersedia di Juan Router; default openagentic) |
@@ -41,8 +42,9 @@ Buat file `/var/www/eureka-backend/.env` (salin dari `backend/.env.example`):
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | **YES** | Supabase Project Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | **YES** | Supabase → service_role key (RAHASIA — jangan bocor ke frontend) |
-| `JUANROUTER_API_KEY` | **YES** | **WAJIB untuk semua generate TEKS** — router.juan.web.id |
-| `OPENROUTER_API_KEY` | No | Fallback DARURAT teks bila seluruh Juan Router gagal |
+| `JUANROUTER_API_KEY` | Utama | Provider utama generate teks. Isi minimal satu key gateway teks. |
+| `OPENROUTER_API_KEY` | No | Fallback 1 teks bila kredit/upstream JuanRouter habis/gagal |
+| `NUSAROUTER_API_KEY` | No | Fallback 2 teks bila JuanRouter & OpenRouter habis/gagal — nusarouter.com |
 | `OPENAGENTIC_API_KEY` | No | KHUSUS text-to-image (tanpa ini hanya fitur gambar nonaktif) |
 | `OPENAGENTIC_IMAGE_MODEL` | No | Model gambar OpenAgentic (default `ali-qwen-image-2.0-pro`) |
 | `AI_PROVIDER` / `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | No | Provider embedding/transkripsi (default openagentic) |

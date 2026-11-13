@@ -1,7 +1,9 @@
 import type { StudyFile } from "./study-file-types";
 import { z } from "zod";
+import { studyMindmapSchema } from "./study-mindmap";
 
 export const studyInteractionSchema = z.object({
+  mindmap: studyMindmapSchema.optional(),
   question: z.object({
     prompt: z.string().min(5).max(500),
     options: z.array(z.string().min(1).max(240)).length(4),

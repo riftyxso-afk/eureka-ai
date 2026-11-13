@@ -27,6 +27,14 @@ const JellyBlobMascot = dynamic(() => import("feral-blob").then((mod) => mod.Jel
 import "feral-blob/blob.css";
 import "./onboarding.css";
 
+import {
+  buildOnboardingProfilePayload,
+  extractOnboardingPatch,
+  firstPreferenceStepIndex,
+  parseOnboardingQuery,
+  resolveOnboardingStartStep,
+  type OnboardingFocus,
+} from "@/lib/onboardingResume";
 import { useOnboarding } from "@/context/OnboardingContext";
 import {
   ONBOARDING_STEPS,
@@ -126,7 +134,7 @@ export default function OnboardingPage() {
   const [intro, setIntro] = useState(0);
   const [direction, setDirection] = useState(1);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const { data, update } = useOnboarding();
+  const { data, hydrated, update } = useOnboarding();
   const [phase, setPhase] = useState<Phase>("form");
   const [step, setStep] = useState(0);
   const [loadingIdx, setLoadingIdx] = useState(0);
@@ -138,16 +146,14 @@ export default function OnboardingPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [skipping, setSkipping] = useState(false);
   const analyzedRef = useRef(false);
-  // Mode resume: pengguna yang pernah melewati onboarding melengkapinya
-  // dari halaman profil (/onboarding?resume=1).
-  const [resumeMode] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return new URLSearchParams(window.location.search).get("resume") === "1";
-    } catch {
-      return false;
-    }
-  });
+  const entryStepRef = useRef(0);
+  const hasInteractedRef = useRef(false);
+  const [{ ready, resumeMode, focusMode }, setRouteQuery] = useState<{
+    ready: boolean;
+    resumeMode: boolean;
+    focusMode: OnboardingFocus;
+  }>({ ready: false, resumeMode: false, focusMode: null });
+  const [saving, setSaving] = useState(false);
 
   const current = ONBOARDING_STEPS[step];
   const psyQuestion =
@@ -170,63 +176,100 @@ export default function OnboardingPage() {
       return;
     }
     setUsernameStatus("checking");
+    const controller = new AbortController();
     const t = setTimeout(async () => {
       try {
         const res = await apiFetch(
           `/api/profile?userId=${encodeURIComponent(
             getUserId()
-          )}&checkUsername=${encodeURIComponent(cleanUsername)}`
+          )}&checkUsername=${encodeURIComponent(cleanUsername)}`,
+          { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]) }
         );
+        if (!res.ok) throw new Error("Gagal memeriksa username.");
         const payload = await res.json();
-        setUsernameStatus(payload.available ? "available" : "taken");
+        if (!controller.signal.aborted) setUsernameStatus(payload.available ? "available" : "taken");
       } catch {
-        setUsernameStatus("idle");
+        if (!controller.signal.aborted) setUsernameStatus("idle");
       }
     }, 400);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
   }, [cleanUsername]);
 
-  // Sudah pernah onboarding → langsung ke dashboard.
+  // Sinkronkan mode resume / focus & muat profil yang sudah tersimpan.
   useEffect(() => {
-    let cancelled = false;
+    if (!hydrated) return;
+    const controller = new AbortController();
+    let redirecting = false;
+    const parsed =
+      typeof window !== "undefined"
+        ? parseOnboardingQuery(window.location.search)
+        : { resumeMode: false, focus: null as OnboardingFocus };
+
+    const fallbackStart = parsed.focus === "preferences" ? firstPreferenceStepIndex() : 0;
+    if (parsed.resumeMode) {
+      entryStepRef.current = fallbackStart;
+      setIntro(2);
+      setStep(fallbackStart);
+    }
+
     (async () => {
       try {
-        const res = await apiFetch(`/api/profile?userId=${encodeURIComponent(getUserId())}`);
+        const res = await apiFetch(`/api/profile?userId=${encodeURIComponent(getUserId())}`, {
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]),
+        });
+        if (!res.ok) return;
         const payload = await res.json();
-        if (!cancelled && payload?.user?.onboardingCompleted) {
+        if (controller.signal.aborted) return;
+        const user = payload?.user;
+        if (user?.onboardingCompleted && !parsed.resumeMode) {
+          redirecting = true;
           router.replace("/dashboard-v2");
+          return;
+        }
+        if (user) {
+          const patch = extractOnboardingPatch(user);
+          if (Object.keys(patch).length > 0) {
+            update(patch);
+          }
+          if (parsed.resumeMode && !hasInteractedRef.current) {
+            const targetStep = resolveOnboardingStartStep(user, parsed.focus);
+            entryStepRef.current = targetStep;
+            setIntro(2);
+            setStep(targetStep);
+          }
         }
       } catch {
-        // biarkan (profil belum tersimpan)
+        // biarkan (profil belum tersimpan atau offline)
+      } finally {
+        if (!controller.signal.aborted && !redirecting) {
+          setRouteQuery({
+            ready: true,
+            resumeMode: parsed.resumeMode,
+            focusMode: parsed.focus,
+          });
+        }
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
+    return () => controller.abort();
+  }, [hydrated, router, update]);
 
    const saveProfile = useCallback(
      async (nextAnalysis: ProfileAnalysis | null) => {
        try {
+         const bodyPayload = buildOnboardingProfilePayload({
+           userId: getUserId(),
+           email: getSession()?.email ?? "",
+           data,
+           cleanUsername,
+           analysis: nextAnalysis,
+         });
          const res = await apiFetch("/api/profile", {
            method: "PUT",
            headers: { "Content-Type": "application/json" },
-           body: JSON.stringify({
-             userId: getUserId(),
-             email: getSession()?.email ?? "",
-             name: data.name,
-             username: cleanUsername,
-              profileData: {
-                education: data.education,
-                school: data.school?.trim(),
-                grade: data.grade,
-                psyAnswers: data.psyAnswers,
-                weakTopic: data.weakTopic,
-                learningHabit: data.learningHabit,
-                peakHour: data.peakHour,
-                analysis: nextAnalysis,
-              },
-           }),
+           body: JSON.stringify(bodyPayload),
          });
          const payload = await res.json();
          if (!res.ok) throw new Error(payload?.error ?? "Gagal menyimpan profil.");
@@ -234,7 +277,10 @@ export default function OnboardingPage() {
            setUserNumber(Number(payload.user.userNumber));
          }
          // Sinkronkan nama ke sesi lokal agar home/chat/sidebar konsisten.
-         updateSessionName(data.name);
+         if (data.name.trim()) updateSessionName(data.name.trim());
+         if (typeof window !== "undefined") {
+           window.dispatchEvent(new Event("eureka:profile-updated"));
+         }
          return true;
        } catch (e) {
          const msg = e instanceof Error ? e.message : "Gagal menyimpan profil.";
@@ -259,6 +305,7 @@ export default function OnboardingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        signal: AbortSignal.timeout(30_000),
       }).catch(() => null),
       minWait,
     ]);
@@ -289,14 +336,14 @@ export default function OnboardingPage() {
       }
     }
     setAnalysis(next);
-    await saveProfile(next);
+    if (!resumeMode) await saveProfile(next);
     setPhase("result");
     try {
       window.localStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(next));
     } catch {
       // storage unavailable
     }
-  }, [data, saveProfile]);
+  }, [data, resumeMode, saveProfile]);
 
   useEffect(() => {
     if (phase !== "loading") return;
@@ -346,6 +393,7 @@ export default function OnboardingPage() {
 
   const next = () => {
     if (!canProceed) return;
+    hasInteractedRef.current = true;
     if (step < ONBOARDING_STEPS.length - 1) {
       setDirection(1);
       setStep((s) => s + 1);
@@ -354,54 +402,72 @@ export default function OnboardingPage() {
     }
   };
 
-  const choosePlan = async (plan: "pro" | "free") => {
+  const finishOnboarding = async (plan?: "pro" | "free") => {
+    if (saving) return;
+    setSaving(true);
+    setSaveError(null);
     try {
-      localStorage.setItem("eureka_plan", plan);
-    } catch {
-      // storage unavailable
-    }
-    try {
-      const res = await apiFetch("/api/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: getUserId(),
-          email: getSession()?.email ?? "",
-          name: data.name,
-          username: cleanUsername,
-          plan,
-          onboardingCompleted: true,
-          profileData: {
-            education: data.education,
-            school: data.school?.trim(),
-            grade: data.grade,
+      const profileData = focusMode === "preferences"
+        ? {
+            name: "",
+            username: "",
             psyAnswers: data.psyAnswers,
             weakTopic: data.weakTopic,
             learningHabit: data.learningHabit,
             peakHour: data.peakHour,
-            analysis,
-            // Selesai onboarding → bersihkan penanda skip (termasuk mode resume).
-            onboardingSkipped: false,
-          },
-        }),
+          }
+        : data;
+      const bodyPayload = buildOnboardingProfilePayload({
+        userId: getUserId(),
+        email: getSession()?.email ?? "",
+        data: profileData,
+        cleanUsername: focusMode === "preferences" ? "" : cleanUsername,
+        analysis,
+        onboardingCompleted: true,
+        onboardingSkipped: false,
+        plan,
+      });
+      const res = await apiFetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyPayload),
+        signal: AbortSignal.timeout(15_000),
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok || !payload?.user?.onboardingCompleted) {
         setSaveError(payload?.error ?? "Gagal menyelesaikan onboarding. Coba lagi.");
         return;
       }
+      if (plan) {
+        try {
+          localStorage.setItem("eureka_plan", plan);
+        } catch {
+          // storage unavailable
+        }
+      }
       // Sinkronkan nama ke sesi lokal agar home/chat/sidebar konsisten.
-      updateSessionName(data.name);
+      if (typeof payload.user.name === "string" && payload.user.name.trim()) {
+        updateSessionName(payload.user.name.trim());
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("eureka:profile-updated"));
+      }
       if (!resumeMode) offerFirstNoteGuide();
     } catch {
       setSaveError("Gagal menyimpan profil. Coba lagi.");
       return;
+    } finally {
+      setSaving(false);
     }
     router.replace("/dashboard-v2");
   };
 
   const skipOnboarding = async () => {
     if (skipping) return;
+    if (resumeMode) {
+      router.replace("/dashboard-v2");
+      return;
+    }
     const ok = window.confirm(
       "Lewati orientasi? Kamu bisa melengkapinya nanti dari halaman Profil."
     );
@@ -425,31 +491,70 @@ export default function OnboardingPage() {
     router.replace("/dashboard-v2");
   };
 
+  const prefStartIdx = firstPreferenceStepIndex();
+  const isPreferenceFocus = focusMode === "preferences";
+  const progress =
+    phase === "form"
+      ? intro < 2
+        ? 0
+        : isPreferenceFocus
+          ? (step - prefStartIdx + 1) / Math.max(1, ONBOARDING_STEPS.length - prefStartIdx)
+          : (step + 1) / ONBOARDING_STEPS.length
+      : 1;
 
-  const progress = phase === "form" ? (intro < 2 ? 0 : (step + 1) / ONBOARDING_STEPS.length) : 1;
   const goBack = () => {
+    hasInteractedRef.current = true;
     setDirection(-1);
+    if (resumeMode && step <= entryStepRef.current) {
+      router.push("/dashboard-v2");
+      return;
+    }
     if (intro < 2) setIntro(Math.max(0, intro - 1));
     else if (step > 0) setStep((value) => value - 1);
     else setIntro(1);
   };
-  const screenKey = intro < 2 ? `intro-${intro}` : `${phase}-${step}`;
+  const screenKey = !ready ? "boot" : intro < 2 ? `intro-${intro}` : `${phase}-${step}`;
   const transition = { duration: reduceMotion ? 0 : 0.22, ease: [0.23, 1, 0.32, 1] as const };
+
+  const handleBackClick = () => {
+    if (!ready || (resumeMode && step <= entryStepRef.current)) {
+      router.push("/dashboard-v2");
+      return;
+    }
+    if (intro === 0) {
+      router.push("/");
+      return;
+    }
+    goBack();
+  };
 
   return (
     <main className="eureka-onboarding">
       <header className="onboarding-header">
-        <button type="button" className="onboarding-back" aria-label="Kembali" onClick={intro === 0 ? () => router.push("/") : goBack} disabled={phase !== "form"}>
+        <button
+          type="button"
+          className="onboarding-back"
+          aria-label="Kembali"
+          onClick={handleBackClick}
+          disabled={phase !== "form"}
+        >
           <ArrowLeft size={23} />
         </button>
-        <div className="onboarding-progress" role="progressbar" aria-label="Progres perkenalan" aria-valuemin={0} aria-valuemax={ONBOARDING_STEPS.length} aria-valuenow={intro < 2 ? 0 : phase === "form" ? step + 1 : ONBOARDING_STEPS.length}>
+        <div className="onboarding-progress" role="progressbar" aria-label="Progres perkenalan" aria-valuemin={0} aria-valuemax={isPreferenceFocus ? ONBOARDING_STEPS.length - prefStartIdx : ONBOARDING_STEPS.length} aria-valuenow={!ready || intro < 2 ? 0 : phase === "form" ? (isPreferenceFocus ? Math.max(1, step - prefStartIdx + 1) : step + 1) : isPreferenceFocus ? ONBOARDING_STEPS.length - prefStartIdx : ONBOARDING_STEPS.length}>
           <motion.div animate={{ scaleX: progress }} initial={false} transition={transition} />
         </div>
         <span className="onboarding-wordmark">eureka<span>.ai</span></span>
       </header>
       <div className={`onboarding-stage ${phase === "result" ? "onboarding-result" : ""}`}>
         <AnimatePresence mode="wait" initial={false} custom={direction} >
-          {intro < 2 ? (
+          {!ready ? (
+            <motion.section key="boot" className="onboarding-intro" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={transition} aria-live="polite" aria-busy="true">
+              <Mascot mood="think" large />
+              <h1>Menyiapkan preferensi belajarmu…</h1>
+              <p>Sebentar, kami memuat jawabanmu yang sudah tersimpan.</p>
+              <span className="onboarding-loading-dots" aria-hidden="true"><i /><i /><i /></span>
+            </motion.section>
+          ) : intro < 2 ? (
             <motion.section key={screenKey} className="onboarding-intro" initial={{ opacity: 0, y: reduceMotion ? 0 : 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={transition}>
               <div className="onboarding-intro-bubble" key={intro}>
                 {intro === 0 ? "Hai! Aku Eureka." : "Yuk, buat belajarmu lebih seru!"}
@@ -459,7 +564,7 @@ export default function OnboardingPage() {
               <p>{intro === 0 ? "Aku akan menemanimu memahami hal baru, satu langkah setiap hari." : "Jawab beberapa pertanyaan supaya aku bisa menyesuaikan cara belajarmu."}</p>
               <span className="onboarding-time">{intro === 0 ? "Belajar dengan caramu, bersama Eureka." : "Sekitar 2 menit · Nggak ada jawaban salah"}</span>
             </motion.section>
-          ) : phase === "form" ? (
+          ) : ready && phase === "form" ? (
             <motion.section key={screenKey} className="onboarding-question-panel" custom={direction}
               variants={{ enter: (d: number) => ({ opacity: 0, x: reduceMotion ? 0 : d * 24 }), visible: { opacity: 1, x: 0 }, leave: (d: number) => ({ opacity: 0, x: reduceMotion ? 0 : d * -16 }) }}
               initial="enter" animate="visible" exit="leave" transition={transition} onAnimationComplete={() => { if (current.key !== "name" && current.key !== "username") headingRef.current?.focus({ preventScroll: true }); }}>
@@ -620,7 +725,13 @@ export default function OnboardingPage() {
                 )}
 
               </div>
-              {resumeMode && <p className="onboarding-time">Melengkapi orientasi — jawaban sebelumnya tetap tersimpan.</p>}
+              {resumeMode && (
+                <p className="onboarding-time">
+                  {isPreferenceFocus
+                    ? "Langsung mengatur preferensi belajarmu — data profil lain tetap aman."
+                    : "Melengkapi orientasi — jawaban sebelumnya tetap tersimpan."}
+                </p>
+              )}
             </motion.section>
           ) : null}
           {intro >= 2 && phase === "loading" && (
@@ -748,7 +859,7 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                <div className="mt-6 rounded-clay-md border-2 border-clay-borderLight bg-clay-primary/5 p-6 text-center shadow-clay-sm">
+                {!resumeMode && <div className="mt-6 rounded-clay-md border-2 border-clay-borderLight bg-clay-primary/5 p-6 text-center shadow-clay-sm">
                   <p className="text-xs font-extrabold uppercase tracking-widest text-clay-muted">
                     Paket Pro
                   </p>
@@ -761,19 +872,28 @@ export default function OnboardingPage() {
                   <p className="mt-1 text-sm font-bold text-clay-muted">
                     Sesi tak terbatas + prioritas fitur baru
                   </p>
-                </div>
+                </div>}
 
                 <div className="mt-6 flex flex-col gap-4">
-                  <ButtonClay fullWidth onClick={() => choosePlan("pro")}>
-                    <Crown size={18} className="mr-2" /> Mulai Pro Sekarang
-                  </ButtonClay>
-                  <ButtonClay
-                    fullWidth
-                    variant="secondary"
-                    onClick={() => choosePlan("free")}
-                  >
-                    Nanti aja, pakai gratisan dulu
-                  </ButtonClay>
+                  {resumeMode ? (
+                    <ButtonClay fullWidth disabled={saving} onClick={() => void finishOnboarding()}>
+                      {saving ? "Menyimpan…" : "Simpan preferensi dan kembali ke Beranda"}
+                    </ButtonClay>
+                  ) : (
+                    <>
+                      <ButtonClay fullWidth disabled={saving} onClick={() => void finishOnboarding("pro")}>
+                        <Crown size={18} className="mr-2" /> Mulai Pro Sekarang
+                      </ButtonClay>
+                      <ButtonClay
+                        fullWidth
+                        variant="secondary"
+                        disabled={saving}
+                        onClick={() => void finishOnboarding("free")}
+                      >
+                        Nanti aja, pakai gratisan dulu
+                      </ButtonClay>
+                    </>
+                  )}
                 </div>
               </CardClay>
             </motion.div>
@@ -781,12 +901,20 @@ export default function OnboardingPage() {
 
         </AnimatePresence>
       </div>
-      {phase === "form" && (
+      {ready && phase === "form" && (
         <footer className="onboarding-footer">
           <div className="onboarding-footer-inner">
-            <button type="button" className="onboarding-skip" onClick={() => void skipOnboarding()} disabled={skipping}>{skipping ? "Melewati…" : "Nanti saja"}</button>
-            <span className="onboarding-step-count">{intro < 2 ? "Langkah kecil pertamamu" : `${step + 1} dari ${ONBOARDING_STEPS.length}`}</span>
-            <button type="button" className="onboarding-continue" disabled={intro >= 2 && !canProceed} onClick={() => { setDirection(1); if (intro < 2) setIntro(intro + 1); else next(); }}>
+            <button type="button" className="onboarding-skip" onClick={() => void skipOnboarding()} disabled={skipping}>
+              {skipping ? "Melewati…" : resumeMode ? "Kembali ke Beranda" : "Nanti saja"}
+            </button>
+            <span className="onboarding-step-count">
+              {intro < 2
+                ? "Langkah kecil pertamamu"
+                : isPreferenceFocus
+                  ? `Preferensi ${Math.max(1, step - prefStartIdx + 1)} dari ${Math.max(1, ONBOARDING_STEPS.length - prefStartIdx)}`
+                  : `${step + 1} dari ${ONBOARDING_STEPS.length}`}
+            </span>
+            <button type="button" className="onboarding-continue" disabled={intro >= 2 && !canProceed} onClick={() => { hasInteractedRef.current = true; setDirection(1); if (intro < 2) setIntro(intro + 1); else next(); }}>
               {intro === 0 ? "Kenalan, yuk" : "Lanjutkan"}<ArrowRight size={18} />
             </button>
           </div>

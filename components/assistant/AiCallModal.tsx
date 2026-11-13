@@ -8,13 +8,14 @@ import { useMomoCall, type CallProvider } from "./useMomoCall";
 import "./momo-call.css";
 import LalaCallVideo from "./LalaCallVideo";
 import CallAurora from "./CallAurora";
+import type { StudyCallContext } from "@/lib/audio/studyCallContext";
 
 const labels = {
   permission: "Menunggu izin mikrofon…",
   connecting: "Menghubungkan…",
 };
 
-function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
+function CallScreen({ onClose, chat, studyContext, initialVideo = false }: { onClose: () => void; chat: boolean; studyContext?: StudyCallContext; initialVideo?: boolean }) {
   const opened = useRef(false);
   const dismissed = useRef(false);
 
@@ -105,26 +106,29 @@ function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
   }
 
   function choose(choice: CallProvider) {
-    if (provider || (choice === "lala" && lalaAvailable !== true)) return;
+    if (provider || (initialVideo && choice !== "lala") || (choice === "lala" && lalaAvailable !== true)) return;
     setProvider(choice);
-    void start(choice);
+    setVideoEnabled(initialVideo && choice === "lala");
+    void start(choice, studyContext);
   }
 
   if (!provider) return <dialog className="momo-call is-choosing" ref={dialog} aria-labelledby="momo-call-title"
     onCancel={event => { event.preventDefault(); end(); }}>
     <header className="momo-call-header">
-      <h2 id="momo-call-title">Mau ngobrol dengan siapa?</h2>
+      <h2 id="momo-call-title">{initialVideo ? "Jelaskan lewat video" : "Mau ngobrol dengan siapa?"}</h2>
       <button type="button" className="momo-call-settings" aria-label="Tutup pilihan" onClick={end}>
         <X size={22} aria-hidden="true" />
       </button>
     </header>
     <div className="momo-call-choice">
+      {studyContext && <p className="momo-call-topic">Melanjutkan: <strong>{studyContext.title}</strong><br />Materi chat ikut dibawa, jadi kamu tidak perlu mengulang topiknya.</p>}
+      {initialVideo && <p>Kamera tersedia bersama Lala. Izinkan kamera setelah panggilan terhubung untuk menunjukkan soal.</p>}
       <div className="momo-call-picker" role="group" aria-label="Teman bicara">
-        <button type="button" onClick={() => choose("momo")}>
+        {!initialVideo && <button type="button" onClick={() => choose("momo")}>
           <span className="momo-call-swatch" aria-hidden="true" />
           <span className="momo-call-option-copy"><strong>Momo</strong><small>Bantu kamu memahami topik langkah demi langkah.</small></span>
           <ChevronRight className="momo-call-option-arrow" size={18} aria-hidden="true" />
-        </button>
+        </button>}
         <button type="button" disabled={lalaAvailable !== true} onClick={() => choose("lala")}>
           <span className="momo-call-swatch is-lala" aria-hidden="true" />
           <span className="momo-call-option-copy"><strong>Lala</strong><small>Jawaban cepat. Bisa bantu melihat soal lewat kamera.</small></span>
@@ -220,8 +224,8 @@ function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
         aria-pressed={phase === "idle" || waiting ? undefined : muted}
         onClick={() => {
           if (phase === "idle") {
-            setVideoEnabled(false);
-            void start(provider);
+            setVideoEnabled(initialVideo && provider === "lala");
+            void start(provider, studyContext);
           } else toggleMute();
         }}>
         {muted ? <MicOff size={21} aria-hidden="true" /> : <Mic size={21} aria-hidden="true" />}
@@ -233,6 +237,6 @@ function CallScreen({ onClose, chat }: { onClose: () => void; chat: boolean }) {
   </dialog>;
 }
 
-export default function AiCallModal({ open, onClose, chat = false }: { open: boolean; onClose: () => void; chat?: boolean }) {
-  return open ? <CallScreen onClose={onClose} chat={chat} /> : null;
+export default function AiCallModal({ open, onClose, chat = false, studyContext, initialVideo = false }: { open: boolean; onClose: () => void; chat?: boolean; studyContext?: StudyCallContext; initialVideo?: boolean }) {
+  return open ? <CallScreen onClose={onClose} chat={chat} studyContext={studyContext} initialVideo={initialVideo} /> : null;
 }

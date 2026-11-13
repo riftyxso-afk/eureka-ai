@@ -63,14 +63,23 @@ export const OPENAGENTIC_FREE_MODELS = [
 ] as const;
 export const AIMURAH_FREE_MODELS = ["deepseek-v4-flash-free", "hy3-free"] as const;
 
-/** Model free untuk OpenRouter — hanya yang :free sesuai instruksi (urut ON di depan, 429/timeout di belakang). */
+/** Model free untuk OpenRouter — memakai router otomatis openrouter/free. */
 export const OPENROUTER_FREE_MODELS = [
-  "nvidia/nemotron-3.5-lightning:free",
-  "liquid/lfm-2.5-2.6b:free",
-  "z-ai/glm-5.2:free",
-  "poolside/laguna-s-2.1:free",
-  "thinkingmachines/inkling-small:free",
+  "openrouter/free",
 ] as const;
+
+/** Daftar model gratis aktif NusaRouter (api.nusarouter.com) sebagai fallback lapis kedua. */
+export const NUSAROUTER_FREE_MODELS = [
+  "openai/gpt-oss-120b:free",
+  "meta-llama/llama-3.1-70b-instruct:free",
+] as const;
+
+/** Daftar model aktif NusaRouter (api.nusarouter.com) sesuai mode kecepatan sebagai fallback lapis kedua. */
+export const NUSAROUTER_MODEL_LISTS: Record<AiSpeedMode, readonly string[]> = {
+  fast: NUSAROUTER_FREE_MODELS,
+  normal: NUSAROUTER_FREE_MODELS,
+  deep: NUSAROUTER_FREE_MODELS,
+};
 
 export const SPEED_LABELS: Record<AiSpeedMode, string> = {
   fast: "Kilat",
@@ -106,7 +115,7 @@ export const OPENROUTER_BASE_URL =
 export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
 
 export const OPENROUTER_MODEL =
-  process.env.OPENROUTER_MODEL ?? "z-ai/glm-5.2:free";
+  process.env.OPENROUTER_MODEL ?? "openrouter/free";
 
 export const JUANROUTER_BASE_URL =
   process.env.JUANROUTER_BASE_URL ?? "https://api.juanrouter.com/v1";
@@ -115,6 +124,14 @@ export const JUANROUTER_API_KEY = process.env.JUANROUTER_API_KEY ?? "";
 
 export const JUANROUTER_MODEL =
   process.env.JUANROUTER_MODEL ?? "deepseek-v4.1-flash";
+
+export const NUSAROUTER_BASE_URL =
+  process.env.NUSAROUTER_BASE_URL ?? "https://api.nusarouter.com/v1";
+
+export const NUSAROUTER_API_KEY = process.env.NUSAROUTER_API_KEY ?? "";
+
+export const NUSAROUTER_MODEL =
+  process.env.NUSAROUTER_MODEL ?? "openai/gpt-oss-120b:free";
 
 export const NINE_ROUTER_BASE_URL =
   process.env.NINE_ROUTER_BASE_URL ?? "http://localhost:20128/v1";
@@ -209,9 +226,25 @@ function getProviderConfig(): ProviderConfig | null {
   };
 }
 
+function parseCsvModels(raw?: string): string[] {
+  if (!raw) return [];
+  return raw.split(",").map(s => s.trim()).filter(Boolean);
+}
+
+function appendGatewayModels(
+  chain: ProviderConfig[],
+  gateway: { baseURL: string; apiKey: string; name: string },
+  models: readonly string[]
+): void {
+  if (!gateway.apiKey) return;
+  for (const model of new Set(models)) {
+    chain.push({ ...gateway, model, defaultModel: model });
+  }
+}
+
 export function hasAiKey(): boolean {
-  // Rantai teks baru (juan-router-provider-split): terisi bila kunci Juan
-  // Router ATAU OpenRouter tersedia (atau NINE_ROUTER_API_KEY di mode 9router).
+  // Rantai teks terisi bila minimal satu key tersedia:
+  // JuanRouter, OpenRouter, atau NusaRouter (atau NINE_ROUTER_API_KEY di mode 9router).
   return getProviderChain("normal", true, true).length > 0;
 }
 
@@ -222,9 +255,13 @@ export function isOpenAICompatible(): boolean {
 
 
 /**
- * Rantai model yang dicoba berurutan sesuai mode kecepatan.
+ * Rantai model yang dicoba berurutan sesuai mode kecepatan dan urutan fallback provider:
+ * 1. JuanRouter (utama)
+ * 2. OpenRouter (fallback 1 saat kredit/upstream JuanRouter bermasalah)
+ * 3. NusaRouter / nusarouter.com (fallback 2 saat OpenRouter habis/gagal)
+ *
  * Setiap model di daftar menjadi satu entri terpisah → saat satu model error,
- * loop provider otomatis mencoba model berikutnya (fallback antar model),
+ * loop provider otomatis mencoba model/provider berikutnya,
  * dengan batas tunggu token pertama dan batas jeda selama streaming.
  *
  * Diekspor untuk diagnostik/probe (scripts/) — jangan dipakai untuk request
@@ -234,14 +271,49 @@ export function getProviderChain(speedMode: AiSpeedMode = "normal", _forChat = f
   void [_forChat, _reasoning, _preferredModel, _premiumOverride];
   // Effort determines priority; stale clients cannot pin an obsolete model.
   const models = SPEED_MODEL_LISTS[speedMode] ?? SPEED_MODEL_LISTS.normal;
-  const gateway = AI_PROVIDER === "9router"
-    ? { baseURL: NINE_ROUTER_BASE_URL, apiKey: NINE_ROUTER_API_KEY, name: "9Router" }
-    : { baseURL: JUANROUTER_BASE_URL, apiKey: JUANROUTER_API_KEY, name: "JuanRouter" };
-  if (!gateway.apiKey) return [];
-  return models.map(id => {
-    const model = AI_PROVIDER === "9router" ? "jr/" + id : id;
-    return { ...gateway, model, defaultModel: model };
-  });
+  const providerMode = process.env.AI_PROVIDER ?? AI_PROVIDER;
+  if (providerMode === "9router") {
+    const nineKey = (process.env.NINE_ROUTER_API_KEY ?? NINE_ROUTER_API_KEY).trim();
+    const nineUrl = (process.env.NINE_ROUTER_BASE_URL ?? NINE_ROUTER_BASE_URL).trim();
+    if (!nineKey) return [];
+    return models.map(id => {
+      const model = "jr/" + id;
+      return { baseURL: nineUrl, apiKey: nineKey, name: "9Router", model, defaultModel: model };
+    });
+  }
+
+  const chain: ProviderConfig[] = [];
+  appendGatewayModels(
+    chain,
+    {
+      baseURL: (process.env.JUANROUTER_BASE_URL ?? JUANROUTER_BASE_URL).trim(),
+      apiKey: (process.env.JUANROUTER_API_KEY ?? JUANROUTER_API_KEY).trim(),
+      name: "JuanRouter",
+    },
+    models
+  );
+  appendGatewayModels(
+    chain,
+    {
+      baseURL: (process.env.OPENROUTER_BASE_URL ?? OPENROUTER_BASE_URL).trim(),
+      apiKey: (process.env.OPENROUTER_API_KEY ?? OPENROUTER_API_KEY).trim(),
+      name: "OpenRouter",
+    },
+    [...parseCsvModels(process.env.OPENROUTER_MODEL), ...OPENROUTER_FREE_MODELS]
+  );
+  appendGatewayModels(
+    chain,
+    {
+      baseURL: (process.env.NUSAROUTER_BASE_URL ?? NUSAROUTER_BASE_URL).trim(),
+      apiKey: (process.env.NUSAROUTER_API_KEY ?? NUSAROUTER_API_KEY).trim(),
+      name: "NusaRouter",
+    },
+    [
+      ...parseCsvModels(process.env.NUSAROUTER_MODEL),
+      ...(NUSAROUTER_MODEL_LISTS[speedMode] ?? NUSAROUTER_MODEL_LISTS.normal),
+    ]
+  );
+  return chain;
 }
 
 /** Config {baseURL, apiKey} provider terpilih untuk SDK openai (embedding/transkripsi). */
@@ -394,11 +466,32 @@ export function isAiBusyError(e: unknown): boolean {
   return e instanceof AiBusyError;
 }
 
-/** Pesan error saat rantai provider teks kosong — Juan Router wajib untuk teks. */
+/** Pesan error saat rantai provider teks kosong — minimal satu gateway teks harus dikonfigurasi. */
 function noTextProviderError(): Error {
   return new Error(
-    "Konfigurasi AI teks belum lengkap. Isi JUANROUTER_API_KEY di .env.local (router.juan.web.id) — semua generate teks memakai Juan Router."
+    "Konfigurasi AI teks belum lengkap. Isi JUANROUTER_API_KEY, OPENROUTER_API_KEY, atau NUSAROUTER_API_KEY (api.nusarouter.com) di .env.local."
   );
+}
+
+/** Deteksi error kredit habis / otentikasi gateway agar sisa model di gateway yang sama langsung dilewati. */
+function isGatewayExhaustedResponse(status: number, detail: string): boolean {
+  if (status === 402 || status === 401) return true;
+  if (status === 403 || status === 429) {
+    return /key_disabled|insufficient_balance|insufficient_quota|insufficient credits|credit balance|out of credits|spend_limit|team_budget|billing/i.test(detail);
+  }
+  return false;
+}
+
+function buildProviderHeaders(provider: ProviderConfig): Record<string, string> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${provider.apiKey}`,
+    "Content-Type": "application/json",
+  };
+  if (provider.name === "OpenRouter") {
+    headers["HTTP-Referer"] = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.eureka-ai.web.id";
+    headers["X-Title"] = "Eureka.AI";
+  }
+  return headers;
 }
 
 /**
@@ -463,6 +556,8 @@ export async function aiChatStream(
   const mode = options.speedMode ?? "normal";
   const providers = getProviderChain(mode);
   if (!providers.length) throw noTextProviderError();
+  const unavailableGateways = new Set<string>();
+  const paymentRequiredGateways = new Set<string>();
   const effort = options.reasoning === false || mode === "fast" ? "low" : mode === "deep" ? "high" : "medium";
   const firstTokenMs = mode === "fast" ? 10_000 : mode === "deep" ? 22_000 : 14_000;
   const codes = new Set<number>();
@@ -471,6 +566,8 @@ export async function aiChatStream(
 
   const run = async (withVision: boolean) => {
     for (const provider of providers) {
+      const gatewayKey = provider.name;
+      if (unavailableGateways.has(gatewayKey)) continue;
       options.signal?.throwIfAborted();
       const abort = new AbortController();
       const signal = options.signal ? AbortSignal.any([options.signal, abort.signal]) : abort.signal;
@@ -512,16 +609,21 @@ export async function aiChatStream(
       try {
         emit({ type: "meta", provider: provider.name, model: provider.model });
         const request = () => fetch(`${provider.baseURL.replace(/\/$/, "")}/chat/completions`, {
-          method: "POST", headers: { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" },
+          method: "POST", headers: buildProviderHeaders(provider),
           body: JSON.stringify(body), signal,
         });
         let response = await request();
+        const readErrorDetail = async (res: Response): Promise<string> => {
+          if (typeof res.text === "function") return res.text().catch(() => "");
+          await res.body?.cancel();
+          return "";
+        };
         // Retry only explicit parameter incompatibility, within the same deadline.
         if (response.status === 400) {
-          const detail = await response.text();
-          if (/response_format|json_object|reasoning_effort/i.test(detail)) {
-            if (/response_format|json_object/i.test(detail)) delete body.response_format;
-            if (/reasoning_effort/i.test(detail)) delete body.reasoning_effort;
+          const detail = await readErrorDetail(response);
+          if (/response_format|json_object|json_schema|reasoning/i.test(detail)) {
+            if (/response_format|json_object|json_schema/i.test(detail)) delete body.response_format;
+            if (/reasoning/i.test(detail)) delete body.reasoning_effort;
             response = await request();
           } else {
             if (withVision && /image|vision|multimodal/i.test(detail)) visionRejected++;
@@ -530,7 +632,12 @@ export async function aiChatStream(
         }
         if (!response.ok) {
           codes.add(response.status);
-          await response.body?.cancel();
+          const detail = await readErrorDetail(response);
+          if (isGatewayExhaustedResponse(response.status, detail)) {
+            unavailableGateways.add(gatewayKey);
+            if (response.status === 402) paymentRequiredGateways.add(gatewayKey);
+            console.warn(`[AI] Gateway ${provider.name} habis kredit/tidak dapat dipakai (${response.status}), lanjut fallback berikutnya`);
+          }
           throw new Error(`AI API error ${response.status}`);
         }
         if (!response.body) throw new Error("AI mengembalikan respons kosong.");
@@ -594,6 +701,9 @@ export async function aiChatStream(
     }
     const busy = [...codes].filter(code => code === 429 || code >= 500);
     if (busy.length) throw new AiBusyError(busy);
+    if (providers.every((provider) => paymentRequiredGateways.has(provider.name))) {
+      throw new Error("Kredit semua provider AI aktif telah habis (HTTP 402). Periksa saldo atau konfigurasi fallback.");
+    }
     throw new Error("Model AI belum dapat menjawab. Silakan coba kembali.");
   };
   try {

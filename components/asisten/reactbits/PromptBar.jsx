@@ -273,7 +273,7 @@ export default function PromptBar({
 
   useEffect(() => {
     const canvas = sparkRef.current;
-    if (!maxed || reduce || !canvas) return undefined;
+    if (!maxed || reduce || !canvas || sparkColor === 'transparent') return undefined;
     const ctx = canvas.getContext('2d');
     if (!ctx) return undefined;
     typing.current.strokes = 0;
@@ -397,7 +397,8 @@ export default function PromptBar({
     }
   };
   const stepAt = i => `calc(${EDGE}px + (100% - ${EDGE * 2}px) * ${i / Math.max(1, efforts.length - 1)})`;
-  const fillAt = i => (i === efforts.length - 1 ? '100%' : `calc(${stepAt(i)} + 7px)`);
+  const fillAt = i => (i === efforts.length - 1 ? '100%' : `calc(${stepAt(i)} + 9px)`);
+  const effortAccent = !sparkColor || sparkColor === 'transparent' ? 'var(--v2-accent, var(--pb-ink))' : sparkColor;
 
   const pick = row => {
     if (plusOpen && row.action) {
@@ -509,6 +510,7 @@ export default function PromptBar({
         '--pb-w': `${width}px`,
         '--pb-radius': `${radius}px`,
         '--pb-spark': sparkColor,
+        '--pb-effort-accent': effortAccent,
         '--pb-press': pressScale
       }}
     >

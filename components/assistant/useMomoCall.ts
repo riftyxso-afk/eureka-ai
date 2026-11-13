@@ -6,6 +6,7 @@ import { getUserId } from "@/lib/identity";
 import { recordCallTurns } from "./recordCallTurns";
 import { readCallReply } from "@/lib/audio/callReply";
 import { runLalaWorkspace, type LalaWorkspaceLink } from "./lalaWorkspace";
+import { readStudyCallContext, type StudyCallContext } from "@/lib/audio/studyCallContext";
 
 type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "searching" | "working" | "speaking";
 export type CallProvider = "momo" | "lala";
@@ -13,6 +14,7 @@ type Turn = { role: "user" | "assistant"; content: string };
 type CallTurn = { question: string; answer: string };
 type Playback = { controller: AbortController; sources: Set<AudioBufferSourceNode>; spoken?: string };
 type Session = {
+  studyContext?: StudyCallContext;
   controller: AbortController;
   context: AudioContext;
   stream?: MediaStream;
@@ -354,7 +356,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
         const response = await apiFetch("/api/call", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question, history, stream: true }),
+          body: JSON.stringify({ question, history, stream: true, studyContext: session.studyContext }),
           signal,
         });
         if (!response.ok) throw new Error(await readError(response, "Momo belum bisa menjawab."));
@@ -391,7 +393,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
       apiFetch("/api/call/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "lala", language }),
+        body: JSON.stringify({ provider: "lala", language, studyContext: session.studyContext }),
         signal,
       }),
       session.context.audioWorklet.addModule("/audio/call-capture.js"),
@@ -579,7 +581,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
             setPhase("thinking");
             send({ realtimeInput: { text } });
           };
-          send({ realtimeInput: { text: language === "en"
+          send({ realtimeInput: { text: session.studyContext ? "Mulai jelaskan materi chat Belajar yang diberikan dalam konteks sesi. Sapa singkat lalu langsung bahas inti topik, jangan meminta topik baru." : language === "en"
             ? "Open the call by saying: Hi, I'm Lala. How can I help?"
             : "Buka panggilan dengan hangat: Hai, aku Lala! Mau ngobrol atau mau aku bantu bikin sesuatu?" } });
         }
@@ -636,7 +638,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     };
   }
 
-  async function start(provider: CallProvider = "momo") {
+  async function start(provider: CallProvider = "momo", studyContext?: StudyCallContext) {
     if (active.current) return;
     setMuted(false);
     setBackup(false);
@@ -671,6 +673,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     speaker.fftSize = 512;
     speaker.connect(context.destination);
     const session: Session = {
+      studyContext: readStudyCallContext(studyContext),
       controller: new AbortController(), context, speaker, history: [],
       muted: false, speaking: false, echoUntil: 0, freshSpeech: true, timers: new Set(),
     };
@@ -681,6 +684,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     const greet = () => {
       if (greeted) return;
       greeted = true;
+      if (session.studyContext) { void answer(session, "Jelaskan materi dari chat Belajar yang sedang kita bahas. Mulai dari inti konsep dan satu contoh sederhana."); return; }
       void answer(session, "", language === "en"
         ? "Hi, I'm Momo. How can I help?"
         : "Hai, aku Momo. Ada yang bisa aku bantu?");

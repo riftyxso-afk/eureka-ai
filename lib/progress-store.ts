@@ -71,6 +71,7 @@ export interface ProgressStats {
   streakDetails: StreakSummary;
   totalDays: number;
   dueCards: number;
+  nextDueNoteId?: string;
   rank: number | null;
   recentActivity: ActivityEntry[];
 }
@@ -236,8 +237,10 @@ export async function getStats(userId: string): Promise<ProgressStats> {
   const client = db();
   const p = await loadUserProgress(userId);
   const now = Date.now();
-  const dueCards = p.cards.filter((c) => new Date(c.dueDate).getTime() <= now)
-    .length;
+  const dueCards = p.cards.filter((card) => Date.parse(card.dueDate) <= now);
+  const nextDueCard = dueCards.reduce<ProgressCard | undefined>((oldest, card) => {
+    return !oldest || Date.parse(card.dueDate) < Date.parse(oldest.dueDate) ? card : oldest;
+  }, undefined);
 
   let rank: number | null = null;
   if (p.xp > 0) {
@@ -276,7 +279,8 @@ export async function getStats(userId: string): Promise<ProgressStats> {
     longestStreak: streakDetails.longest,
     streakDetails,
     totalDays: streakDetails.totalDays,
-    dueCards,
+    dueCards: dueCards.length,
+    nextDueNoteId: nextDueCard?.noteId,
     rank,
     recentActivity: p.activityLog,
   };

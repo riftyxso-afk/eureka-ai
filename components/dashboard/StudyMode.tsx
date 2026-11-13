@@ -8,6 +8,8 @@ import Timer from "kubai-icons-react/icons/timer";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StudyArt from "@/components/dashboard/StudyArt";
+import StudyTarget from "./StudyTarget";
+import { studyGoalPrompt } from "@/lib/study-goal";
 
 import { useDashboardNotes } from "@/components/dashboard/useDashboardNotes";
 import { openStudyChat } from "@/lib/study-chat-pending";
@@ -16,7 +18,8 @@ import { getUserId } from "@/lib/identity";
 const examples = [
   { title: "Siap ulangan dalam 7 hari", body: "Susun bab, cari sumber, dan ulangi konsep yang masih sulit.", prompt: "Persiapan ulangan persamaan kuadrat", art: "map" },
   { title: "Belajar dari video", body: "Temukan bagian yang menjawab pertanyaanmu.", prompt: "Bantu aku mempelajari video YouTube. Minta tautan videonya terlebih dahulu.", art: "search" },
-  { title: "Buat dokumen belajar", body: "Susun penjelasan dan sumber dalam DOCX.", prompt: "Buat dokumen belajar tentang energi terbarukan dengan contoh dan sumber.", art: "notebook" },
+  { title: "Buat dokumen belajar", body: "Dari ide menjadi PDF atau Word yang siap diunduh.", prompt: "Buat PDF tentang energi terbarukan dengan contoh dan sumber.", art: "notebook" },
+  { title: "Petakan konsep", body: "Lihat hubungan ide, lalu bahas tiap cabangnya.", prompt: "Buat mindmap interaktif tentang sistem tata surya.", art: "map" },
   { title: "Riset bersama teman", body: "Bagi bacaan dan bandingkan abstrak.", prompt: "Bantu aku mencari dan membandingkan paper untuk riset bersama teman.", art: "friends" },
 ] as const;
 
@@ -32,7 +35,7 @@ export default function StudyMode({ active }: { active: boolean }) {
   const [opening, setOpening] = useState(false);
   const openingRef = useRef(false);
   const imported = useRef(false);
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState(0);
   const [noteId, setNoteId] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
   const [error, setError] = useState("");
@@ -86,7 +89,7 @@ export default function StudyMode({ active }: { active: boolean }) {
     setOpening(true);
     setError("");
     try {
-      const path = await openStudyChat(prompt + "\nTarget waktu belajar: " + days + " hari.", noteId || undefined);
+      const path = await openStudyChat(studyGoalPrompt(prompt, days), noteId || undefined);
       router.push(path);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Coba lagi.");
@@ -103,15 +106,13 @@ export default function StudyMode({ active }: { active: boolean }) {
           <div className="dv2-study-input">
             <textarea ref={input} value={goal} onChange={event => { setGoal(event.target.value); setError(""); }} rows={3} maxLength={2000} minLength={1} required aria-label="Tujuan belajar" placeholder="Tulis tujuan, cari video, atau minta dokumen belajar…" />
             <div className="dv2-study-composer-actions">
-              <label>Target <span className="dv2-study-select"><select aria-label="Target waktu belajar" value={days} onChange={event => setDays(Number(event.target.value))}>
-                {[1, 3, 7, 14, 30].map(value => <option key={value} value={value}>{value} hari</option>)}
-              </select><ChevronDown size={15} aria-hidden="true" /></span></label>
+              <StudyTarget value={days} onChange={setDays} disabled={opening} />
               <button className="dv2-study-send" type="submit" aria-label="Mulai percakapan belajar" title="Mulai percakapan belajar" disabled={!goal.trim() || opening}><ArrowUp size={20} aria-hidden="true" /></button>
             </div>
           </div>
           <div className="dv2-study-tools">
             <button type="button" aria-expanded={notesOpen} aria-label={noteId ? "Ganti catatan" : "Pakai catatan"} aria-controls="dv2-study-notes" onClick={() => setNotesOpen(open => !open)}><BookOpen size={16} aria-hidden="true" />{noteId ? "Catatan dipilih" : "Pakai catatan"}</button>
-            <button type="button" onClick={() => { setGoal("Buatkan dokumen belajar yang rapi. Tanyakan dulu topik yang ingin kubahas."); input.current?.focus(); }}><StudyArt name="notebook" size={19} />Buat dokumen</button>
+            <button type="button" onClick={() => { setDays(0); setGoal("Buatkan PDF belajar yang rapi. Tanyakan dulu topik yang ingin kubahas."); input.current?.focus(); }}><StudyArt name="notebook" size={19} />Buat PDF / Word</button>
             <button type="button" onClick={toggleFocus} aria-label={end === null ? "Mulai fokus 25 menit" : "Hentikan sesi fokus"}><Timer size={16} aria-hidden="true" />{end === null ? "Fokus 25 mnt" : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`}</button>
           </div>
           <div className="dv2-study-notes" id="dv2-study-notes" hidden={!notesOpen}>
@@ -132,7 +133,7 @@ export default function StudyMode({ active }: { active: boolean }) {
           <div className="dv2-study-example-grid">
             {examples.map(example => {
               const label = <><StudyArt name={example.art} size={34} /><span><strong>{example.title}</strong><small>{example.body}</small></span></>;
-              return <button key={example.title} type="button" onClick={() => { setGoal(example.prompt); setDays(7); setError(""); input.current?.focus(); }}>{label}</button>;
+              return <button key={example.title} type="button" onClick={() => { setGoal(example.prompt); setDays(example.title.includes("7 hari") ? 7 : 0); setError(""); input.current?.focus(); }}>{label}</button>;
             })}
           </div>
         </section>

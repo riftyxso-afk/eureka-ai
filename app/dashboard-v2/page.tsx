@@ -12,7 +12,7 @@ import Globe from "kubai-icons-react/icons/globe";
 import MessageCircle from "kubai-icons-react/icons/message-circle";
 import Trophy from "kubai-icons-react/icons/trophy";
 import Crown from "kubai-icons-react/icons/crown";
-import { PhoneCall, Upload } from "lucide-react";
+import { ArrowUpRight, PhoneCall, Sparkles, Upload } from "lucide-react";
 import PromptBar from "@/components/asisten/reactbits/PromptBar";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
 import DocumentAttachments from "@/components/dashboard/DocumentAttachments";
@@ -34,6 +34,13 @@ import { useV2Progress } from "@/components/dashboard/V2Progress";
 import { supabase } from "@/lib/supabase/client";
 import { PENDING_PROMPT_KEY, type PendingPrompt } from "@/lib/assistant/pendingPrompt";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
+import {
+  selectAgenticGreeting,
+  type GreetingAction,
+  type GreetingNoteSummary,
+  type GreetingProfileSummary,
+  type GreetingSessionSummary,
+} from "@/lib/dashboard/agenticGreeting";
 import "./v2.css";
 import "./simple-home.css";
 import "./study-mode.css";
@@ -51,8 +58,82 @@ export default function DashboardV2() {
   const chatLock = useRef(false);
   const [effort, setEffort] = useState("Seimbang");
   const { stats } = useV2Progress();
+  const [recentNotes, setRecentNotes] = useState<GreetingNoteSummary[]>([]);
+  const [recentSessions, setRecentSessions] = useState<GreetingSessionSummary[]>([]);
+  const [agentProfile, setAgentProfile] = useState<GreetingProfileSummary | null>(null);
+  const [greetingTick, setGreetingTick] = useState(0);
+  const [clientNow, setClientNow] = useState<Date | null>(null);
   const [inputError, setInputError] = useState("");
   const [callOpen, setCallOpen] = useState<"default" | "chat" | null>(null);
+
+  useEffect(() => {
+    setClientNow(new Date());
+  }, []);
+
+  useEffect(() => {
+    let request: AbortController | undefined;
+    const loadAgenticContext = async () => {
+      request?.abort();
+      const controller = new AbortController();
+      request = controller;
+      try {
+        const sessionUserId = (await supabase?.auth.getSession())?.data.session?.user?.id;
+        const uid = sessionUserId || getUserId();
+        if (!uid || controller.signal.aborted) return;
+        const encoded = encodeURIComponent(uid);
+        const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]);
+        const profile = apiFetch(`/api/profile?userId=${encoded}`, { signal })
+          .then((res) => res.ok ? res.json() : null)
+          .then((payload) => {
+            if (!signal.aborted && payload?.user) setAgentProfile(payload.user);
+          });
+        const requests = [profile];
+        if (isPremium) {
+          requests.push(
+            apiFetch(`/api/assistant/sessions?userId=${encoded}`, { signal })
+              .then((res) => res.ok ? res.json() : null)
+              .then((payload) => {
+                if (!signal.aborted && Array.isArray(payload?.sessions)) {
+                  setRecentSessions(payload.sessions.slice(0, 5));
+                }
+              }),
+            apiFetch(`/api/notes?userId=${encoded}`, { signal })
+              .then((res) => res.ok ? res.json() : null)
+              .then((payload) => {
+                if (!signal.aborted && Array.isArray(payload?.notes)) {
+                  setRecentNotes(payload.notes.slice(0, 5));
+                }
+              }),
+          );
+        }
+        await Promise.allSettled(requests);
+      } catch {
+        // konteks opsional — tetap gunakan stats lokal & mode aktif
+      }
+    };
+
+    void loadAgenticContext();
+    window.addEventListener("eureka:profile-updated", loadAgenticContext);
+    return () => {
+      request?.abort();
+      window.removeEventListener("eureka:profile-updated", loadAgenticContext);
+    };
+  }, [isPremium]);
+
+  useEffect(() => {
+    setGreetingTick(0);
+  }, [mode, effort]);
+
+  useEffect(() => {
+    if (workspace !== "chat" || draft.trim().length > 0 || openingChat || generation.busy) {
+      return undefined;
+    }
+    const timer = window.setInterval(() => {
+      setClientNow(new Date());
+      setGreetingTick((prev) => prev + 1);
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [workspace, draft, openingChat, generation.busy]);
   useEffect(() => {
     if (generation.job?.status === "done" && generation.job.noteId) router.push(`/dashboard-v2/note/${encodeURIComponent(generation.job.noteId)}`);
   }, [generation.job?.status, generation.job?.noteId, router]);
@@ -128,6 +209,41 @@ export default function DashboardV2() {
     if (files.length === 1 && draft === "Buat catatan lengkap dari materi terlampir.") setDraft("");
   }
   const prefs: NoteCreatePrefs = { generationMode: effort === "Mendalam" ? "lengkap" : "cepat", chapterCount: effort === "Kilat" ? 2 : effort === "Mendalam" ? 5 : 3, studyMode: effort === "Kilat" ? "ringkas" : effort === "Mendalam" ? "lengkap" : "standar", noteType: "rangkuman" };
+  const greetingInput = {
+    userName: agentProfile?.name,
+    now: clientNow ?? new Date(2026, 0, 1, 10, 0, 0),
+    mode,
+    effort,
+    stats,
+    recentNotes: isPremium ? recentNotes : [],
+    recentSessions: isPremium ? recentSessions : [],
+    profile: agentProfile,
+    rotationIndex: greetingTick,
+  };
+  const greeting = clientNow
+    ? selectAgenticGreeting(greetingInput)
+    : {
+        id: "ssr-default",
+        eyebrow: "Momo AI",
+        headline: "Mau belajar apa hari ini?",
+        subline: "Tanya konsep, buat catatan, atau latihan soal.",
+      };
+
+  function triggerGreetingAction(action: GreetingAction) {
+    if (action.href) {
+      router.push(action.href);
+      return;
+    }
+    if (action.prompt) {
+      if (action.mode) setMode(action.mode);
+      setInputError("");
+      setDraft(action.prompt);
+      requestAnimationFrame(() => {
+        const input = document.querySelector<HTMLTextAreaElement>(".dv2-prompt .prompt-bar__input");
+        input?.focus();
+      });
+    }
+  }
   function submit(text: string) {
     if (!isPremium) { router.push("/dashboard-v2/pricing"); return; }
     if (generation.busy || chatLock.current) return;
@@ -154,7 +270,25 @@ export default function DashboardV2() {
     <main className="dv2-main">
       <StudyMode active={workspace === "study"} />
       <section className="dv2-workspace" hidden={workspace === "study"} aria-labelledby="dv2-title">
-        <div className="dv2-greeting"><div className="dv2-momo" data-momo-splash-target><MomoCompanion mode={effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal"} thinking={openingChat} question={draft} /></div><h1 id="dv2-title">Mau belajar apa hari ini?</h1></div>
+        <div className="dv2-greeting">
+          <div className="dv2-momo" data-momo-splash-target>
+            <MomoCompanion
+              mode={effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal"}
+              thinking={openingChat}
+              question={draft}
+            />
+          </div>
+          <div className="dv2-greeting-copy" key={greeting.id}>
+            <div className="dv2-greeting-meta">
+              <span className="dv2-greeting-eyebrow">
+                <Sparkles size={12} aria-hidden="true" />
+                <span>{greeting.eyebrow}</span>
+              </span>
+            </div>
+            <h1 id="dv2-title">{greeting.headline}</h1>
+            <p className="dv2-greeting-sub">{greeting.subline}</p>
+          </div>
+        </div>
         <div className={`dv2-compose-area${!planLoading && !isPremium ? " is-pro-locked" : ""}`}>
           {planLoading ? <LoadingStatus stage="synchronizing" detail="Memeriksa paketmu" /> : planError ? <div className="eureka-pro-lock"><p role="alert">{planError}</p><button type="button" className="eureka-pro-cta" onClick={() => void refreshPlan()}>Coba lagi</button></div> : !isPremium ? <ProLockedCard /> : <>
           {generation.job ? <PromptNoteProgress generation={generation} /> : <>
@@ -191,6 +325,31 @@ export default function DashboardV2() {
         </>}
         </>}
         </div>
+        {clientNow && !planLoading && isPremium && !openingChat && !generation.busy && (greeting.primaryAction || greeting.secondaryAction) && (
+          <div className="dv2-agentic-actions" aria-label="Rekomendasi langkah belajar">
+            {greeting.primaryAction && (
+              <button
+                type="button"
+                className="dv2-agentic-chip is-primary"
+                onClick={() => triggerGreetingAction(greeting.primaryAction!)}
+              >
+                <Sparkles size={13} aria-hidden="true" />
+                <span>{greeting.primaryAction.label}</span>
+                <ArrowUpRight size={13} aria-hidden="true" />
+              </button>
+            )}
+            {greeting.secondaryAction && (
+              <button
+                type="button"
+                className="dv2-agentic-chip"
+                onClick={() => triggerGreetingAction(greeting.secondaryAction!)}
+              >
+                <span>{greeting.secondaryAction.label}</span>
+                <ArrowUpRight size={13} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        )}
 
       </section>
 

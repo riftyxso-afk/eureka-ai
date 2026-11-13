@@ -7,6 +7,7 @@ import { momoPersona } from "@/lib/prompts/momoPersona";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { searchWeb } from "@/lib/firecrawl";
 import { buildWebSearchQuery } from "@/lib/assistant/webSearchQuery";
+import { readStudyCallContext, studyCallInstructions } from "@/lib/audio/studyCallContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,12 +33,13 @@ async function getVoiceSearchResults(query: string, signal: AbortSignal) {
   }
 }
 
-async function voiceContext(question: string, history: Turn[], signal: AbortSignal, onSearch?: () => void) {
-  const base = `${VOICE_SYSTEM}\n\n${AI_SAFETY_GUARDRAIL}`;
+async function voiceContext(question: string, history: Turn[], signal: AbortSignal, onSearch?: () => void, studyContext?: unknown) {
+  const base = `${VOICE_SYSTEM}\n${studyCallInstructions(studyContext)}\n${AI_SAFETY_GUARDRAIL}`;
   if (!NEEDS_WEB.test(question)) return { system: base };
 
   onSearch?.();
-  const topic = buildWebSearchQuery(question, history);
+  const context = readStudyCallContext(studyContext);
+  const topic = buildWebSearchQuery(question, context ? [{ role: "user", content: context.title }, ...history] : history);
   // The shared query cleaner removes some recency phrases. Preserve that
   // intent for voice queries so the provider doesn't return evergreen results.
   const needsFreshness = REMOVED_FRESHNESS.test(question)
@@ -116,7 +118,7 @@ export async function POST(request: Request) {
             catch { cancelled = true; controller.abort(); }
           };
           try {
-            const { system, fallback } = await voiceContext(question, history, signal, () => send({ type: "searching" }));
+            const { system, fallback } = await voiceContext(question, history, signal, () => send({ type: "searching" }), body.studyContext);
             const result = fallback ? { content: fallback } : await aiChatStream({
               system,
               user: question, history,
@@ -150,7 +152,7 @@ export async function POST(request: Request) {
       return new Response(stream, { headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store, no-transform", "X-Accel-Buffering": "no" } });
     }
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]);
-    const { system, fallback } = await voiceContext(question, history, signal);
+    const { system, fallback } = await voiceContext(question, history, signal, undefined, body.studyContext);
     const { content } = fallback ? { content: fallback } : await aiChatStream({
       system,
       user: question,

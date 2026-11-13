@@ -23,6 +23,7 @@ import {
 process.env.JUANROUTER_API_KEY = "sk-invalid-forced-failure";
 process.env.JUANROUTER_BASE_URL = "http://127.0.0.1:9/v1";
 process.env.OPENROUTER_API_KEY = "";
+process.env.NUSAROUTER_API_KEY = "";
 process.env.ALLOW_INSECURE_DEV_AUTH = "true";
 // Sandbox tanpa key → SandboxUnavailableError("no_api_key") terstruktur.
 delete process.env.E2B_API_KEY;

@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -51,17 +52,19 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
-  const update = (patch: Partial<OnboardingData>) => {
-    setData((prev) => {
-      const next = { ...prev, ...patch };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // storage unavailable
-      }
-      return next;
-    });
-  };
+  const update = useCallback((patch: Partial<OnboardingData>) => {
+    setData((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      if (data === DEFAULT_DATA) localStorage.removeItem(STORAGE_KEY);
+      else localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // storage unavailable
+    }
+  }, [data, hydrated]);
 
   const reset = () => {
     setData(DEFAULT_DATA);

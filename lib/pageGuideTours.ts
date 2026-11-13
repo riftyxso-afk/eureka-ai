@@ -65,7 +65,9 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
     step("Lanjutkan belajar", "Tanyakan konsep, kirim tautan YouTube, atau minta dokumen. Momo memakai konteks percakapan sebelumnya.", ".study-chat-composer"),
     step("Coba latihan", "Pilih jawaban untuk melihat alasannya, tandai langkah belajar, dan minta bantuan lanjutan.", ".study-chat-activities"),
     step("Putar video", "Tekan Putar video untuk menonton langsung di percakapan. Tautan YouTube tetap tersedia.", ".study-chat-videos"),
-    step("Simpan dan periksa sumber", "Unduh DOCX atau buka referensi yang digunakan Momo.", ".study-chat-response-actions"),
+    step("Buat dokumen langsung", "Minta PDF atau Word lewat tombol + atau pesan biasa. File yang selesai dibuat muncul di chat dan bisa diunduh. Kamu juga bisa mengubah jawaban menjadi PDF.", ".study-chat-response-actions"),
+    step("Jelajahi peta konsep", "Peta tumbuh dari atas ke bawah. Geser kanvas, atur zoom, atau cari konsep. Klik node untuk membaca detail dan pilih Bahas konsep ini. Panah menutup cabang.", ".study-map"),
+    step("Dengarkan penjelasannya", "Pilih Suara untuk Momo atau Lala, atau Video untuk menunjukkan soal ke Lala. Panggilan membawa jawaban yang kamu pilih dan konteks chat, lalu langsung menjelaskan topik itu.", ".study-explain-call"),
     step("Riset bersama", "Buka daftar bacaan kelompok untuk mengumpulkan paper, membagi bacaan, dan membandingkan abstrak.", ".study-chat-research"),
   ],
   "chat": [

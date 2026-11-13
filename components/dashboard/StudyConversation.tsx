@@ -35,6 +35,11 @@ import "./study-conversation.css";
 import StudyBrowserPanel from "./StudyBrowserPanel";
 import StudyFileCards from "./StudyFileCards";
 import StudyBotAvatar from "./StudyBotAvatar";
+import StudyMindmap from "./StudyMindmap";
+import Network from "kubai-icons-react/icons/network";
+import { Mic, Video } from "lucide-react";
+import AiCallModal from "@/components/assistant/AiCallModal";
+import { buildStudyCallContext, type StudyCallContext } from "@/lib/audio/studyCallContext";
 
 type Turn = { id: string; role: "user" | "assistant"; content: string; sources: StudySource[]; study?: SavedStudyResponse };
 
@@ -91,9 +96,11 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
   const [pending, setPending] = useState<StudyChatPending | null>(null);
   const [lastPrompt, setLastPrompt] = useState("");
   const [lastNote, setLastNote] = useState<string | undefined>();
+  const [lastSourceText, setLastSourceText] = useState<string | undefined>();
   const [noteId, setNoteId] = useState<string | undefined>();
   const [researchOpen, setResearchOpen] = useState(false);
   const [exportError, setExportError] = useState("");
+  const [call, setCall] = useState<{ context: StudyCallContext; video: boolean } | null>(null);
   const autoStarted = useRef(false);
   const sending = useRef(false);
   const transcript = useRef<HTMLDivElement>(null);
@@ -137,7 +144,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     return () => controller.abort();
   }, [sessionId, initialMessages, loadAttempt]);
 
-  async function send(prompt: string, selectedNote = noteId) {
+  async function send(prompt: string, selectedNote = noteId, sourceText?: string) {
     const text = prompt.trim();
     if (!text || !loaded || sending.current) return;
     if (text.length > 6000) { setError("Tulis pesan maksimal 6.000 karakter."); return; }
@@ -145,6 +152,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     setError("");
     setLastPrompt(text);
     setLastNote(selectedNote);
+    setLastSourceText(sourceText);
     setPending(null);
     sessionStorage.removeItem(STUDY_CHAT_PENDING);
     followBottom.current = true;
@@ -152,7 +160,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       ...previous, { id: crypto.randomUUID(), role: "user", content: text, sources: [] },
     ]);
     try {
-      const response = await agent.run(text, { sessionId, noteId: selectedNote, browser: browserSelected, speedMode });
+      const response = await agent.run(text, { sessionId, noteId: selectedNote, browser: browserSelected, speedMode, sourceText });
       if (response) {
         setTitle(response.title);
         setTurns(previous => [...previous, {
@@ -226,13 +234,19 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         </details>
         {!loaded && !error && <LoadingStatus stage="synchronizing" detail="Memuat percakapan belajar" />}
         {loaded && !turns.length && !agent.busy && <div className="study-chat-empty"><Image src="/icons/momo-192.png" alt="" width={56} height={56} /><h1>Mau belajar atau membuat apa?</h1><p>Tanya konsep, kirim tautan YouTube, cari sumber, atau buat dokumen bersama Momo.</p></div>}
-        {turns.map(turn => <article className="study-chat-turn" key={turn.id}>
+        {turns.map((turn, index) => <article className="study-chat-turn" key={turn.id}>
           <MessageBubble message={message(turn)} videoEnabled={false} avatar={<StudyBotAvatar size={32} response={turn.content} still />} />
           {turn.role === "assistant" && <div className="study-chat-extras">
+            <div className="study-explain-call"><span>Mau dijelaskan langsung?</span><div>
+              <button type="button" disabled={agent.busy} onClick={() => { const context = buildStudyCallContext(turn.study?.title || title, turns, index); if (context) setCall({ context, video: false }); }}><Mic size={16} aria-hidden="true" />Suara · Momo / Lala</button>
+              <button type="button" disabled={agent.busy} onClick={() => { const context = buildStudyCallContext(turn.study?.title || title, turns, index); if (context) setCall({ context, video: true }); }}><Video size={16} aria-hidden="true" />Video · Lala</button>
+            </div></div>
             <StudyVideoCards sources={turn.sources} />
             <StudyFileCards sessionId={sessionId} files={turn.study?.files || []} errors={turn.study?.fileErrors || []} />
+            {!!turn.study?.interaction.mindmap?.length && <StudyMindmap nodes={turn.study.interaction.mindmap} disabled={agent.busy} onExplore={prompt => void send(prompt)} />}
             {turn.study && <StudyActivities storageKey={"eureka:study-checklist:" + getUserId() + ":" + sessionId + ":" + turn.content.slice(0, 70)} data={turn.study.interaction} disabled={agent.busy} onSend={prompt => void send(prompt)} />}
-            <div className="study-chat-response-actions"><button type="button" onClick={() => void download(turn)}><Download size={16} aria-hidden="true" />Unduh DOCX</button>
+            <div className="study-chat-response-actions"><button type="button" disabled={agent.busy} onClick={() => void send(`Buat PDF dari materi “${turn.study?.title || title}” yang kulampirkan. Pertahankan isi, tabel, dan hierarkinya.`, noteId, turn.content)}><Download size={16} aria-hidden="true" />Buat PDF</button><button type="button" onClick={() => void download(turn)}><Download size={16} aria-hidden="true" />Unduh DOCX</button>
+              <button type="button" disabled={agent.busy} onClick={() => void send(`Buat mindmap interaktif dari materi “${turn.study?.title || title}” yang kulampirkan.`, noteId, turn.content)}><Network size={16} aria-hidden="true" />Peta konsep</button>
               {turn.sources.length > 0 && <details><summary><Link2 size={16} aria-hidden="true" />Sumber · {turn.sources.length}<ChevronDown size={15} aria-hidden="true" /></summary><ol>{turn.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a></li>)}</ol></details>}
             </div>
           </div>}
@@ -241,10 +255,11 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         {agent.busy && <article className="study-chat-live" aria-busy="true">
           {agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
           {agent.text && <MessageBubble message={message({ id: "study-stream", role: "assistant", content: agent.text, sources: [] })} isStreaming videoEnabled={false} avatar={<StudyBotAvatar size={32} prompt={lastPrompt} response={agent.text} stage={agent.status?.stage} busy error={!!agent.error} />} />}
+          {agent.mindmap !== null && <div className="study-chat-extras"><StudyMindmap nodes={agent.mindmap} busy onExplore={() => {}} /></div>}
         </article>}
         {(agent.error || error) && <div className="study-chat-error" role="alert"><p>{error || agent.error}</p>
           {error && !loaded && <button type="button" onClick={() => { setError(""); setLoadAttempt(n => n + 1); }}>Muat ulang percakapan</button>}
-          {lastPrompt && !agent.busy && <button type="button" onClick={() => void send(lastPrompt, lastNote)}>Coba lagi</button>}
+          {lastPrompt && !agent.busy && <button type="button" onClick={() => void send(lastPrompt, lastNote, lastSourceText)}>Coba lagi</button>}
         </div>}
         {exportError && <p className="study-chat-error" role="alert">{exportError}</p>}
       </div>
@@ -263,7 +278,8 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
             } },
             { key: "research", name: "Proyek riset", icon: <FolderOpen size={16} />, action: () => setResearchOpen(true) },
             { key: "video", name: "Cari video", icon: <Globe size={16} />, action: () => setDraft("Carikan video pembelajaran tentang ") },
-            { key: "document", name: browserSelected ? "Buat file di komputer" : "Buat dokumen", icon: <Download size={16} />, action: () => setDraft(browserSelected ? "Buatkan PDF dan Word tentang " : "Buatkan dokumen yang rapi tentang ") },
+            { key: "document", name: browserSelected ? "Buat file di komputer" : "Buat PDF / Word", icon: <Download size={16} />, action: () => setDraft("Buatkan PDF yang rapi tentang ") },
+            { key: "mindmap", name: "Peta konsep", icon: <Network size={16} />, action: () => setDraft("Buatkan mindmap interaktif tentang ") },
           ]}
           background="rgb(var(--clay-cream))" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="#a983e8" width={760} radius={18} maxRows={5} commands={[]} defaultEffort="Seimbang"
           models={[]} efforts={["Kilat", "Seimbang", "Mendalam"]} onEffortChange={effort => setSpeedMode(effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal")}
@@ -272,5 +288,5 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         />
       </div>
     </footer>
-  </main></div>;
+  </main><AiCallModal open={call !== null} onClose={() => setCall(null)} chat studyContext={call?.context} initialVideo={call?.video} /></div>;
 }
