@@ -17,3 +17,10 @@ export async function saveStudyArtifact(userId: string, input: z.infer<typeof st
   if (error || !data) throw new Error("Artefak belum tersimpan.");
   return data;
 }
+
+export async function readStudyArtifact(userId: string, sessionId: string, artifactId: string) {
+  const { data, error } = await db().from("study_artifacts").select("title,content")
+    .eq("user_id", userId).eq("session_id", sessionId).eq("id", artifactId).maybeSingle();
+  if (error) throw new Error("Artefak belum dimuat.");
+  return data;
+}

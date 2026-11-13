@@ -48,11 +48,11 @@ test('PDF renders headings, a multipage table, and sources into a real PDF', asy
   assert.ok((bytes.toString('latin1').match(/\/Type \/Page\b/g) || []).length > 1);
 });
 
-async function runAgent({ document = false, mindmap = false, authError = false, exportFailure = false, explicitMindmap = true, prompt, artifactFailure = false } = {}) {
-  const saved = [], exports = [], artifacts = [];
+async function runAgent({ document = false, mindmap = false, authError = false, exportFailure = false, explicitMindmap = true, prompt, artifactFailure = false, summaryFailure = false, activity, sourceText, history = [] } = {}) {
+  const saved = [], exports = [], artifacts = [], generations = [];
   const mocks = {
     '@/lib/study-intent':load('study-intent'),
-    '@/lib/study-artifacts':{saveStudyArtifact:async(userId,input)=>{
+    '@/lib/study-artifacts':{readStudyArtifact:async()=>({title:'Energi',content:'Isi artefak hasil revisi.'}),saveStudyArtifact:async(userId,input)=>{
       if (artifactFailure) throw new Error('Storage unavailable');
       artifacts.push({userId,...input});
       return {id:'artifact-1'};
@@ -61,6 +61,11 @@ async function runAgent({ document = false, mindmap = false, authError = false, 
     '@/lib/ai': {
       aiChatJson: async () => ({ title: 'Energi', document, mindmap, tools: [] }),
       aiChatStream: async (options, emit) => {
+        generations.push(JSON.parse(options.user));
+        if (options.maxTokens === 140) {
+          if (summaryFailure) throw new Error('Summary provider unavailable');
+          return {content:'Buka artefaknya untuk melihat cara energi berpindah dalam kehidupan sehari-hari.'};
+        }
         if (options.maxTokens === 2600) {
           const text = JSON.stringify(node('root')) + '\n' + JSON.stringify(node('child', 'root'));
           emit({type:'token',text:text.slice(0,31)}); emit({type:'token',text:text.slice(31)});
@@ -71,7 +76,7 @@ async function runAgent({ document = false, mindmap = false, authError = false, 
       },
     },
     '@/lib/assistant/auth': { requirePro: async () => authError ? ({error:'Unauthorized',status:401}) : ({userId:'owner'}) },
-    '@/lib/assistant/store': { getSession: async()=>({}), getMessages: async()=>[], appendMessage:async message=>saved.push(message), renameSession:async()=>{} },
+    '@/lib/assistant/store': { getSession: async()=>({}), getMessages: async()=>history, appendMessage:async message=>saved.push(message), renameSession:async()=>{} },
     '@/lib/rateLimit': { ensureRateLimitPrune(){}, checkRateLimit:()=>({ok:true}) },
     '@/lib/prompts/safety': { AI_SAFETY_GUARDRAIL:'' },
     '@/lib/computer-files': { requestedComputerFormats:()=>[], createComputerFiles:()=>assert.fail('Should not require Computer Use') },
@@ -84,19 +89,34 @@ async function runAgent({ document = false, mindmap = false, authError = false, 
   const source = ts.transpileModule(fs.readFileSync(path.resolve(__dirname,'../../app/api/study-agent/route.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   new Function('require','module','exports',source)(id=>mocks[id] || (id.startsWith('@/')?{}:require(id)),module,module.exports);
   const {NextRequest}=require('next/server');
-  const response=await module.exports.POST(new NextRequest('http://localhost/api/study-agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:'11111111-1111-4111-8111-111111111111',prompt:prompt ?? (mindmap&&explicitMindmap?'Buat mindmap tentang energi':'Buat materi tentang energi'),browser:false})}));
+  const response=await module.exports.POST(new NextRequest('http://localhost/api/study-agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:'11111111-1111-4111-8111-111111111111',prompt:prompt ?? (mindmap&&explicitMindmap?'Buat mindmap tentang energi':'Buat materi tentang energi'),browser:false,activity,sourceText})}));
   const body=await response.text();
   const events=body.split('\n\n').filter(line=>line.startsWith('data: ')).map(line=>JSON.parse(line.slice(6)));
-  return {response,events,saved,exports,artifacts};
+  return {response,events,saved,exports,artifacts,generations};
 }
 test('explicit artifact generation saves the answer and returns its ID to open the editor', async () => {
   const result = await runAgent({document:true,prompt:'Buat artefak tentang energi'});
   assert.equal(result.exports.length,0);
   assert.equal(result.artifacts.length,1);
   assert.equal(result.artifacts[0].userId,'owner');
-  assert.equal(result.artifacts[0].content,result.saved.at(-1).content);
+  assert.match(result.artifacts[0].content,/## Energi/);
+  assert.notEqual(result.artifacts[0].content,result.saved.at(-1).content);
+  assert.equal(result.events.filter(event=>event.type==='token').map(event=>event.text).join(''),result.saved.at(-1).content);
   assert.equal(result.saved.at(-1).study.artifactId,'artifact-1');
   assert.equal(result.events.at(-1).artifactId,'artifact-1');
+});
+test('artifact action expands the selected answer and has a short fallback when summarization fails', async () => {
+  const sourceText = 'Jawaban terpilih tentang perubahan bentuk energi.';
+  const result = await runAgent({activity:'artifact',sourceText,summaryFailure:true});
+  assert.equal(result.generations[0].sourceMaterial,sourceText);
+  assert.equal(result.artifacts.length,1);
+  assert.match(result.saved.at(-1).content,/Buka artefak/);
+  assert.notEqual(result.saved.at(-1).content,result.artifacts[0].content);
+});
+test('follow-up still receives the latest saved artifact content after chat is summarized', async () => {
+  const result = await runAgent({history:[{role:'assistant',content:'Buka artefak.',study:{artifactId:'artifact-1'}}]});
+  assert.equal(result.generations[0].recentArtifact.content,'Isi artefak hasil revisi.');
+  assert.equal(result.artifacts.length,0);
 });
 test('plain replies never create artifacts and a failed artifact save preserves the reply', async () => {
   const plain = await runAgent();

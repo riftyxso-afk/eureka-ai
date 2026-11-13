@@ -106,14 +106,13 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
   const [lastPrompt, setLastPrompt] = useState("");
   const [lastNote, setLastNote] = useState<string | undefined>();
   const [lastSourceText, setLastSourceText] = useState<string | undefined>();
+  const [lastActivity, setLastActivity] = useState<StudyActivity | undefined>();
+  const [lastArtifactId, setLastArtifactId] = useState<string | undefined>();
   const [noteId, setNoteId] = useState<string | undefined>();
   const [researchOpen, setResearchOpen] = useState(false);
 
   const [call, setCall] = useState<{ context: StudyCallContext; video: boolean } | null>(null);
-  const [artifact, setArtifact] = useState<{
-    id?: string;
-    create?: { title: string; content: string };
-  } | null>(null);
+  const [artifact, setArtifact] = useState<{ id?: string } | null>(null);
   const notifiedLearning=useRef(false);
   const autoStarted = useRef(false);
   const sending = useRef(false);
@@ -158,7 +157,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     return () => controller.abort();
   }, [sessionId, initialMessages, loadAttempt]);
 
-  async function send(prompt: string, selectedNote = noteId, sourceText?: string, activity?:StudyActivity) {
+  async function send(prompt: string, selectedNote = noteId, sourceText?: string, activity?: StudyActivity, artifactId?: string) {
     const text = prompt.trim();
     if (!text || !loaded || sending.current) return;
     if (text.length > 6000) { setError("Tulis pesan maksimal 6.000 karakter."); return; }
@@ -167,6 +166,8 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     setLastPrompt(text);
     setLastNote(selectedNote);
     setLastSourceText(sourceText);
+    setLastActivity(activity);
+    setLastArtifactId(artifactId);
     setPending(null);
     sessionStorage.removeItem(STUDY_CHAT_PENDING);
     followBottom.current = true;
@@ -174,7 +175,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       ...previous, { id: crypto.randomUUID(), role: "user", content: text, sources: [] },
     ]);
     try {
-      const response = await agent.run(text, { sessionId, noteId: selectedNote, browser: browserSelected, speedMode, sourceText,activity });
+      const response = await agent.run(text, { sessionId, noteId: selectedNote, browser: browserSelected, speedMode, sourceText, activity, artifactId });
       if (response) {
         if(response.learningUpdated&&!notifiedLearning.current){notifiedLearning.current=true;toast.success("Personalisasi gaya belajar diperbarui",{description:"Sesuai izin akunmu. Ini tidak melatih bobot model."});}
         setTitle(response.title);
@@ -221,9 +222,30 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     return { ...turn, sessionId, mentions: [], sources: [], model: "eureka-study", createdAt: "", study: turn.study };
   }
 
+  async function openStudyCall(turn: Turn, index: number, video: boolean) {
+    const callTitle = turn.study?.title || title;
+    const artifactId = turn.study?.artifactId;
+    let callTurns = turns;
+    if (artifactId) {
+      try {
+        const query = new URLSearchParams({ sessionId, artifactId });
+        const response = await apiFetch("/api/study-artifacts?" + query);
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        const saved = data.artifacts.find((item: { id: string }) => item.id === artifactId);
+        if (saved) callTurns = turns.map((item, position) => position === index ? { ...item, content: saved.content } : item);
+      } catch {
+        setError("Artefak belum bisa dimuat untuk panggilan. Coba lagi.");
+        return;
+      }
+    }
+    const context = buildStudyCallContext(callTitle, callTurns, index);
+    if (context) setCall({ context, video });
+  }
+
   return <div className="momo-session study-session flex h-dvh overflow-hidden bg-clay-beige p-0">
     <ChatSidebar sessions={sessions} activeId={sessionId} onNew={() => router.push("/dashboard-v2?workspace=study")} onSelect={() => {}} onRename={async (id, newTitle) => { await changeSession(id, newTitle); }} onDelete={async id => { await changeSession(id); }} />
-    {artifact && <StudyArtifactDialog sessionId={sessionId} artifactId={artifact.id} create={artifact.create} onClose={() => setArtifact(null)} />}
+    {artifact && <StudyArtifactDialog sessionId={sessionId} artifactId={artifact.id} onClose={() => setArtifact(null)} />}
     <main className="study-conversation">
     <header className="study-chat-header chat-session-header">
       <V2MobileSidebar sessions={sessions} />
@@ -257,7 +279,15 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
             {turn.study && <StudyActivities storageKey={"eureka:study-checklist:" + getUserId() + ":" + sessionId + ":" + turn.content.slice(0, 70)} data={turn.study.interaction} disabled={agent.busy} onSend={prompt => void send(prompt)} />}
             {!!turn.sources.length&&<WebSources results={turn.sources.map(source=>({url:source.url,title:source.title,description:source.excerpt,domain:new URL(source.url).hostname}))}/>}
             <TrainingContribution sessionId={sessionId} answer={turn.content}/>
-            <StudyResponseTools title={turn.study?.title||title} content={turn.content} disabled={agent.busy} onSend={(prompt,activity)=>void send(prompt,noteId,turn.content,activity)} onArtifact={turn.study?.artifactId ? undefined : () => setArtifact({ create: { title: turn.study?.title || title, content: turn.content } })} onVoice={()=>{const context=buildStudyCallContext(turn.study?.title||title,turns,index);if(context)setCall({context,video:false});}} onVideo={()=>{const context=buildStudyCallContext(turn.study?.title||title,turns,index);if(context)setCall({context,video:true});}}/>
+            <StudyResponseTools
+              title={turn.study?.title || title}
+              content={turn.content}
+              disabled={agent.busy}
+              onSend={(prompt, activity) => void send(prompt, noteId, turn.content, activity, turn.study?.artifactId)}
+              onArtifact={turn.study?.artifactId ? undefined : () => void send("Kembangkan jawaban ini menjadi artefak belajar yang terstruktur.", noteId, turn.content.slice(0, 60000), "artifact")}
+              onVoice={() => void openStudyCall(turn, index, false)}
+              onVideo={() => void openStudyCall(turn, index, true)}
+            />
 
           </div>}
         </article>)}
@@ -270,7 +300,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         </article>}
         {(agent.error || error) && <div className="study-chat-error" role="alert"><p>{error || agent.error}</p>
           {error && !loaded && <button type="button" onClick={() => { setError(""); setLoadAttempt(n => n + 1); }}>Muat ulang percakapan</button>}
-          {lastPrompt && !agent.busy && <button type="button" onClick={() => void send(lastPrompt, lastNote, lastSourceText)}>Coba lagi</button>}
+          {lastPrompt && !agent.busy && <button type="button" onClick={() => void send(lastPrompt, lastNote, lastSourceText, lastActivity, lastArtifactId)}>Coba lagi</button>}
         </div>}
 
       </div>

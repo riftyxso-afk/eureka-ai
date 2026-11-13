@@ -17,14 +17,12 @@ const tabs = [
 
 type StudyArtifact = { id: string; title: string; content: string; revision: number };
 
-export default function StudyArtifactDialog({ sessionId, artifactId, create, onClose }: {
+export default function StudyArtifactDialog({ sessionId, artifactId, onClose }: {
   sessionId: string;
   artifactId?: string;
-  create?: { title: string; content: string };
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const creation = useRef<Promise<StudyArtifact> | null>(null);
   const [items, setItems] = useState<StudyArtifact[]>([]);
   const [selected, setSelected] = useState("");
   const [view, setView] = useState<(typeof tabs)[number]["id"]>("read");
@@ -42,22 +40,7 @@ export default function StudyArtifactDialog({ sessionId, artifactId, create, onC
     const controller = new AbortController();
     const { signal } = controller;
     async function load() {
-      let created: StudyArtifact | undefined;
       try {
-        if (create) {
-          // Share the pending write across Strict Mode's effect replay.
-          creation.current ??= apiFetch("/api/study-artifacts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionId, ...create, content: create.content.slice(0, 60000) }),
-          }).then(async response => {
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Artefak belum tersimpan.");
-            return data;
-          });
-          created = await creation.current;
-        }
-        if (signal.aborted) return;
         const query = new URLSearchParams({ sessionId });
         if (artifactId) query.set("artifactId", artifactId);
         const response = await apiFetch("/api/study-artifacts?" + query, { signal });
@@ -65,15 +48,10 @@ export default function StudyArtifactDialog({ sessionId, artifactId, create, onC
         if (!response.ok) throw new Error(data.error || "Artefak belum dimuat.");
         if (signal.aborted) return;
         const artifacts: StudyArtifact[] = data.artifacts;
-        const createdId = created?.id;
-        setItems(created ? [created, ...artifacts.filter(item => item.id !== createdId)] : artifacts);
-        setSelected(created?.id || artifactId || data.artifacts[0]?.id || "");
+        setItems(artifacts);
+        setSelected(artifactId || artifacts[0]?.id || "");
       } catch (cause) {
         if (signal.aborted) return;
-        if (created) {
-          setItems([created]);
-          setSelected(created.id);
-        }
         setError(cause instanceof Error ? cause.message : "Artefak belum dimuat.");
       } finally {
         if (!signal.aborted) setLoading(false);
@@ -81,7 +59,7 @@ export default function StudyArtifactDialog({ sessionId, artifactId, create, onC
     }
     void load();
     return () => controller.abort();
-  }, [sessionId, artifactId, create]);
+  }, [sessionId, artifactId]);
 
   const active = items.find(item => item.id === selected);
   function close() {
@@ -111,7 +89,7 @@ export default function StudyArtifactDialog({ sessionId, artifactId, create, onC
     </div>}
     {error && <p role="alert" className="study-chat-error">{error}</p>}
     <div className="study-artifact-body">
-      {loading && <LoadingStatus stage="synchronizing" detail={create ? "Menyimpan artefak…" : "Membuka artefak…"} />}
+      {loading && <LoadingStatus stage="synchronizing" detail="Membuka artefak…" />}
       {!loading && !active && !error && <p>Belum ada artefak. Minta Momo membuat artefak atau pilih “Jadikan artefak” pada jawaban.</p>}
       {active && view === "read" && <MarkdownView content={active.content} />}
       {active && view === "map" && <StudyMindmap nodes={boardMap(active.content, active.title)} onExplore={() => setView("read")} />}

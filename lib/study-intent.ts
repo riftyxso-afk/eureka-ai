@@ -1,4 +1,4 @@
-export type StudyActivity = 'mindmap'|'quiz'|'essay'|'plan'|'image';
+export type StudyActivity = 'mindmap'|'quiz'|'essay'|'plan'|'image'|'artifact';
 
 export function requestedStudyArtifact(prompt: string): boolean {
   const text = prompt.trim();
