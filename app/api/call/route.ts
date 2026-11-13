@@ -8,6 +8,8 @@ import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
 import { searchWeb } from "@/lib/firecrawl";
 import { buildWebSearchQuery } from "@/lib/assistant/webSearchQuery";
 import { readStudyCallContext, studyCallInstructions } from "@/lib/audio/studyCallContext";
+import { readStudyVideo } from "@/lib/study-video-server";
+import { requestedVideoTime } from "@/lib/study-video";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,6 +85,13 @@ export async function POST(request: Request) {
   if (body.action === "web-search") {
     const results = await getVoiceSearchResults(question.slice(0, 200), request.signal);
     return Response.json({ results, date: new Date().toISOString().slice(0, 10) }, { headers: { "Cache-Control": "no-store" } });
+  }
+  if (body.action === "discuss-video") {
+    const context = readStudyCallContext(body.studyContext);
+    if (!context?.video) return Response.json({ error: "Pilih video dari chat Belajar terlebih dahulu." }, { status: 400 });
+    const seconds = typeof body.seconds === "number" && Number.isInteger(body.seconds) && body.seconds >= 0 && body.seconds <= 86400 ? body.seconds : requestedVideoTime(question) ?? context.video.seconds;
+    try { return Response.json(await readStudyVideo({ ...context.video, seconds }, AbortSignal.any([request.signal, AbortSignal.timeout(25000)])), { headers: { "Cache-Control": "no-store" } }); }
+    catch { return Response.json({ error: "Transkrip bagian video belum dapat dibaca. Coba lagi." }, { status: 502 }); }
   }
   if (body.action === "save-lala-chat") {
     const title = typeof body.title === "string" ? body.title.trim().slice(0, 120) : "";

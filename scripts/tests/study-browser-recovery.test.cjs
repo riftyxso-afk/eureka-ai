@@ -249,6 +249,7 @@ test("classification failure still runs Computer Use and streams and saves its a
     "@/lib/rateLimit": { ensureRateLimitPrune() {}, checkRateLimit: () => ({ ok: true }) },
     "@/lib/prompts/safety": { AI_SAFETY_GUARDRAIL: "" },
     "@/lib/computer-files": { requestedComputerFormats: () => [] },
+    "@/lib/study-video": { requestedVideoTime: () => undefined, studyVideoFromUrl: () => undefined },
     "@/lib/study-browser": {
       hasStudyBrowser: () => true,
       browseStudy: async () => { browsed++; return [{ kind: "web", title: "Rankings", url: rankings, excerpt: text }]; },

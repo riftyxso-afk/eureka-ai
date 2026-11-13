@@ -9,7 +9,7 @@ function load(name) {
   if (cache.has(file)) return cache.get(file);
   const module = { exports: {} };
   const js = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
-  new Function('require', 'module', 'exports', js)(id => id.startsWith('./') ? load(id.slice(2)) : require(id), module, module.exports);
+  new Function('require', 'module', 'exports', js)(id => id.startsWith('.') ? load(path.relative(path.resolve(__dirname, '../../lib'), path.resolve(path.dirname(file), id)).replace(/\\/g, '/')) : require(id), module, module.exports);
   cache.set(file, module.exports);
   return module.exports;
 }
@@ -70,6 +70,7 @@ async function runAgent({ document = false, mindmap = false, authError = false, 
     '@/lib/computer-files': { requestedComputerFormats:()=>[], createComputerFiles:()=>assert.fail('Should not require Computer Use') },
     '@/lib/study-documents': { createStudyDocuments:async input=>{exports.push(input); input.emit('Menata halaman PDF…'); return exportFailure ? {files:[],errors:['PDF belum tersimpan']} : {files:[{id:'file-1',name:'Energi.pdf',mime:'application/pdf',size:1024}],errors:[]};} },
     '@/lib/study-mindmap': load('study-mindmap'),
+    '@/lib/study-video': load('study-video'),
     '@/lib/zapi-study': {hasZapi:()=>false},
   };
   const module = {exports:{}};
@@ -167,4 +168,37 @@ test('Momo receives study context even after voice history rotates', async()=>{
   assert.equal(response.status,200);
   assert.match(calls[0].system,/Fotosintesis/);assert.match(calls[0].system,/Klorofil/);
   assert.equal(calls[0].history.length,12);
+});
+
+test('video commands parse requested time and select the matching transcript window',()=>{
+ const {requestedVideoTime,videoTranscriptWindow,studyVideoFromUrl}=load('study-video');
+ for(const prompt of ['bahas di menit 3:20','bahas menit 3 detik 20','bahas 3 menit 20 detik']) assert.equal(requestedVideoTime(prompt),200);
+ assert.equal(requestedVideoTime('bahas menit tiga'),180);
+ assert.equal(requestedVideoTime('carikan video tentang energi'),undefined);
+ const excerpt=videoTranscriptWindow([{offsetMs:0,durationMs:9000,text:'Opening'},{offsetMs:195000,durationMs:10000,text:'Fotosintesis'},{offsetMs:600000,durationMs:10000,text:'Outro'}],200);
+ assert.match(excerpt,/Fotosintesis/);assert.doesNotMatch(excerpt,/Opening|Outro/);
+ assert.equal(studyVideoFromUrl('https://www.youtube.com/watch?v=abcdefghijk&t=200s').seconds,200);
+ assert.equal(studyVideoFromUrl('https://example.com/file'),undefined);
+});
+test('voice handoff keeps the selected video and timestamp',()=>{
+ const {buildStudyCallContext}=load('audio/studyCallContext');
+ const context=buildStudyCallContext('Energi',[{role:'user',content:'Bahas video'},{role:'assistant',content:'Penjelasan dari transkrip',sources:[{title:'Video energi',url:'https://www.youtube.com/watch?v=abcdefghijk&t=200s'}]}],1);
+ assert.equal(context.video.id,'abcdefghijk');assert.equal(context.video.seconds,200);
+});
+test('call video tool reads the requested segment of the selected video',async()=>{
+ const seen=[];
+ const mocks={
+  '@/lib/assistant/auth':{requirePro:async()=>({userId:'owner'})},
+  '@/lib/rateLimit':{ensureRateLimitPrune(){},checkRateLimit:()=>({ok:true})},
+  '@/lib/prompts/momoPersona':{momoPersona:()=>''},
+  '@/lib/audio/studyCallContext':load('audio/studyCallContext'),
+  '@/lib/study-video':load('study-video'),
+  '@/lib/study-video-server':{readStudyVideo:async video=>{seen.push(video);return {video,excerpt:'Cuplikan transkrip di waktu yang diminta'};}},
+ };
+ const source=ts.transpileModule(fs.readFileSync(path.resolve(__dirname,'../../app/api/call/route.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ const module={exports:{}};new Function('require','module','exports',source)(id=>mocks[id]||{},module,module.exports);
+ const body={action:'discuss-video',question:'Bahas menit 3:20',studyContext:{title:'Video',material:'Pembahasan',video:{id:'abcdefghijk',seconds:0,title:'Video'}}};
+ const response=await module.exports.POST(new Request('http://localhost/api/call',{method:'POST',body:JSON.stringify(body)}));
+ assert.equal(response.status,200);assert.equal(seen[0].seconds,200);assert.equal(seen[0].id,'abcdefghijk');
+ const missing=await module.exports.POST(new Request('http://localhost/api/call',{method:'POST',body:JSON.stringify({...body,studyContext:undefined})}));assert.equal(missing.status,400);
 });

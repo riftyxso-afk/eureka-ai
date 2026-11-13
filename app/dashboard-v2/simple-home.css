@@ -223,3 +223,5 @@
 .dv2.dv2-simple .dv2-compose-area { background: transparent; }
 .dv2.dv2-simple .dv2-attachments li { background: transparent; border: 0; }
 .dv2-attachment-logo { background: transparent; }
+.dv2-note-options { max-width: 680px; margin: 20px auto; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 32px #00000012; }
+.dv2-main:has(.dv2-note-options) > .dv2-workspace, .dv2-main:has(.dv2-note-options) > .dv2-study-mode { display: none; }

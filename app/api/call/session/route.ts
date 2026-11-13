@@ -27,6 +27,10 @@ async function createLalaSession(request: Request, english: boolean, studyContex
     outputAudioTranscription: {},
     contextWindowCompression: { slidingWindow: {} },
     tools: [{ functionDeclarations: [{
+      name: "discuss_study_video",
+      description: "Putar bagian video YouTube yang sedang dibahas di chat Belajar dan baca transkrip pada waktunya. Wajib dipanggil ketika pengguna meminta penjelasan pada menit atau detik tertentu. Jelaskan hanya dari excerpt yang dikembalikan; jika error, jangan menebak isi video.",
+      parameters: { type: "OBJECT", properties: { seconds: { type: "INTEGER", description: "Waktu video dalam detik. Contoh menit 3:20 = 200." } }, required: ["seconds"] },
+    }, {
       name: "search_call_web",
       description: "Cari fakta terbaru atau verifikasi fakta di web sebelum memberi jawaban.",
       parameters: {

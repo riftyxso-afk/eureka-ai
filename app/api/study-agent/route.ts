@@ -19,6 +19,8 @@ import { createComputerFiles, requestedComputerFormats } from "@/lib/computer-fi
 import { createStudyDocuments } from "@/lib/study-documents";
 import { parseStudyMapLine, type StudyMapNode } from "@/lib/study-mindmap";
 import type { StudyInteraction } from "@/lib/study-interaction";
+import { requestedVideoTime, studyVideoFromUrl } from "@/lib/study-video";
+import { readStudyVideo } from "@/lib/study-video-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -189,6 +191,18 @@ export async function POST(req: NextRequest) {
             return { title: prompt.slice(0, 100), document: /\b(dokumen|makalah|laporan|modul|docx|pdf)\b/i.test(prompt), mindmap: /mind\s*map|peta konsep/i.test(prompt), tools: [] };
           });
           const sources: StudySource[] = [];
+          const videoUrl = prompt.match(/https?:\/\/[^\s<>]+/g)?.find(url => extractYoutubeVideoId(url))
+            ?? [...history].reverse().flatMap(message => [...(message.webResults ?? []).map(source => source.url), ...(message.content.match(/https?:\/\/[^\s<>]+/g) ?? [])]).find(url => extractYoutubeVideoId(url));
+          const requestedTime = requestedVideoTime(prompt);
+          const selectedVideo = videoUrl ? studyVideoFromUrl(videoUrl) : undefined;
+          if (selectedVideo && (requestedTime !== undefined || (selectedVideo.seconds > 0 && /bahas|jelaskan/i.test(prompt)))) {
+            const video = { ...selectedVideo, seconds: requestedTime ?? selectedVideo.seconds };
+            emit({ type: "video", video });
+            emit({ type: "status", stage: "reading", label: `Membaca video pada ${Math.floor(video.seconds / 60)}:${String(video.seconds % 60).padStart(2, "0")}…` });
+            const clip = await readStudyVideo(video, signal);
+            sources.push({ kind: "video", title: clip.video.title, url: `https://www.youtube.com/watch?v=${video.id}&t=${video.seconds}s`, excerpt: clip.excerpt || clip.error || "Transkrip tidak tersedia", byline: "YouTube" });
+            plan.tools = plan.tools.filter(tool => tool.tool !== "transcript");
+          }
           const urls = new Set<string>();
           const failures: string[] = [];
           if (input.data.browser) {

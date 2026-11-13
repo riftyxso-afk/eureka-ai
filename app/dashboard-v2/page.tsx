@@ -34,6 +34,7 @@ import { useV2Progress } from "@/components/dashboard/V2Progress";
 import { supabase } from "@/lib/supabase/client";
 import { PENDING_PROMPT_KEY, type PendingPrompt } from "@/lib/assistant/pendingPrompt";
 import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
+import { NoteCreateWizardPanel } from "@/components/note/NoteCreateWizard";
 import {
   selectAgenticGreeting,
   type GreetingAction,
@@ -208,7 +209,13 @@ export default function DashboardV2() {
     setFiles(previous => previous.filter((_, item) => item !== index));
     if (files.length === 1 && draft === "Buat catatan lengkap dari materi terlampir.") setDraft("");
   }
-  const prefs: NoteCreatePrefs = { generationMode: effort === "Mendalam" ? "lengkap" : "cepat", chapterCount: effort === "Kilat" ? 2 : effort === "Mendalam" ? 5 : 3, studyMode: effort === "Kilat" ? "ringkas" : effort === "Mendalam" ? "lengkap" : "standar", noteType: "rangkuman" };
+  const [noteRequest, setNoteRequest] = useState<{ prompt: string; files: File[] } | null>(null);
+  function startConfiguredNote(prefs: NoteCreatePrefs) {
+    if (!noteRequest || generation.busy) return;
+    const request = noteRequest;
+    setNoteRequest(null);
+    void generation.start(request.prompt, prefs, request.files);
+  }
   const greetingInput = {
     userName: agentProfile?.name,
     now: clientNow ?? new Date(2026, 0, 1, 10, 0, 0),
@@ -248,12 +255,12 @@ export default function DashboardV2() {
     if (!isPremium) { router.push("/dashboard-v2/pricing"); return; }
     if (generation.busy || chatLock.current) return;
     if (mode === "ask") { void askMomo(text.trim()); return; }
-    if (files.length) { setInputError(""); void generation.start(text.trim() || "Buat catatan dari materi terlampir", prefs, files); return; }
+    if (files.length) { setInputError(""); setNoteRequest({ prompt: text.trim() || "Buat catatan dari materi terlampir", files: [...files] }); return; }
     if (text.trim().length < 10) { setInputError("Ceritakan topikmu sedikit lebih lengkap, minimal 10 karakter."); return; }
     setInputError("");
     const topic = text.trim().replace(/^(buatkan|buat|bikin)\s+(catatan\s+)?(tentang\s+)?/i, "");
     if (topic.length < 10 || topic.length > 2000) { setInputError("Isi topik belajar antara 10 dan 2.000 karakter."); return; }
-    void generation.start(`Buat catatan tentang ${topic}`, prefs);
+    setNoteRequest({ prompt: `Buat catatan tentang ${topic}`, files: [] });
   }
   return <div className="dv2 dv2-simple">
     <header className="dv2-topbar dv2-mode-topbar">
@@ -268,6 +275,7 @@ export default function DashboardV2() {
       <div className="dv2-account"><PageTutorial guideId={workspace === "study" ? "study-mode" : "dashboard"} /><Link href="/dashboard-v2/aktivitas" className="dv2-stat dv2-streak"><Flame trigger="parent" size={16} />{stats ? `${stats.streak} hari` : "Streak"}</Link><Link href="/dashboard-v2/profil" className="dv2-stat dv2-level"><Trophy trigger="parent" size={16} />{stats ? `Level ${stats.level}` : "Profil"}</Link><Link href="/dashboard-v2/pricing" className="dv2-stat dv2-upgrade"><Crown trigger="parent" size={16} />Upgrade</Link></div>
     </header>
     <main className="dv2-main">
+      {noteRequest && <section className="dv2-note-options" aria-label="Atur catatan sebelum membuat"><NoteCreateWizardPanel prompt={noteRequest.prompt} onClose={() => setNoteRequest(null)} onStart={startConfiguredNote} /></section>}
       <StudyMode active={workspace === "study"} />
       <section className="dv2-workspace" hidden={workspace === "study"} aria-labelledby="dv2-title">
         <div className="dv2-greeting">

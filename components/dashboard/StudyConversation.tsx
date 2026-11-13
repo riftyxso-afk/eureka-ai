@@ -40,6 +40,7 @@ import Network from "kubai-icons-react/icons/network";
 import { Mic, Video } from "lucide-react";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import { buildStudyCallContext, type StudyCallContext } from "@/lib/audio/studyCallContext";
+import StudyClipPlayer from "./StudyClipPlayer";
 
 type Turn = { id: string; role: "user" | "assistant"; content: string; sources: StudySource[]; study?: SavedStudyResponse };
 
@@ -252,6 +253,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
           </div>}
         </article>)}
         {agent.browserActivity.length > 0 && <StudyBrowserPanel activities={agent.browserActivity} busy={agent.busy} />}
+        {agent.video && <StudyClipPlayer video={agent.video} />}
         {agent.busy && <article className="study-chat-live" aria-busy="true">
           {agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
           {agent.text && <MessageBubble message={message({ id: "study-stream", role: "assistant", content: agent.text, sources: [] })} isStreaming videoEnabled={false} avatar={<StudyBotAvatar size={32} prompt={lastPrompt} response={agent.text} stage={agent.status?.stage} busy error={!!agent.error} />} />}

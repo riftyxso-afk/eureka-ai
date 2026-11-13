@@ -8,6 +8,7 @@ import type { StudyAgentEvent } from "@/lib/study-agent-events";
 import type { StudySource } from "@/lib/study-sources-types";
 
 export function useStudyAgent() {
+  const [video, setVideo] = useState<import("@/lib/study-video").StudyVideo | null>(null);
   const [mindmap, setMindmap] = useState<import("@/lib/study-mindmap").StudyMapNode[] | null>(null);
   const [browserActivity, setBrowserActivity] = useState<import("@/lib/study-browser").BrowserActivity[]>([]);
   const [text, setText] = useState("");
@@ -30,6 +31,7 @@ export function useStudyAgent() {
     setSources([]);
     setBrowserActivity([]);
     setMindmap(null);
+    setVideo(null);
     setStatus({ type: "status", stage: "thinking", label: "Menyiapkan ruang belajar…" });
     try {
       const response = await apiFetch("/api/study-agent", {
@@ -61,6 +63,7 @@ export function useStudyAgent() {
             buffer = buffer.slice(boundary + 2);
             if (!message.startsWith("data: ")) continue;
             const event = JSON.parse(message.slice(6)) as StudyAgentEvent;
+            if (event.type === "video") setVideo(event.video);
             if (event.type === "mindmap") setMindmap(event.nodes);
             if (event.type === "browser") setBrowserActivity(previous => [...previous.slice(-19), event.activity]);
             if (event.type === "status") setStatus(event);
@@ -91,7 +94,7 @@ export function useStudyAgent() {
     active.current?.abort();
     setError("Penyusunan dihentikan.");
   }
-  return { run, stop, browserActivity, mindmap, text, sources, status, result, error, busy };
+  return { run, stop, browserActivity, mindmap, video, text, sources, status, result, error, busy };
 }
 
 export default function StudyAgentResult({ agent }: { agent: ReturnType<typeof useStudyAgent> }) {

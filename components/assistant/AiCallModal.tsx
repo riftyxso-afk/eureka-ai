@@ -9,6 +9,7 @@ import "./momo-call.css";
 import LalaCallVideo from "./LalaCallVideo";
 import CallAurora from "./CallAurora";
 import type { StudyCallContext } from "@/lib/audio/studyCallContext";
+import StudyClipPlayer from "@/components/dashboard/StudyClipPlayer";
 
 const labels = {
   permission: "Menunggu izin mikrofon…",
@@ -27,7 +28,7 @@ function CallScreen({ onClose, chat, studyContext, initialVideo = false }: { onC
   }
 
   const { phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
-    workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete, turns, showCurrent, sendText, sendVideoFrame } = useMomoCall(dismiss);
+    workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete, turns, showCurrent, sendText, sendVideoFrame, studyVideo } = useMomoCall(dismiss);
   const waiting = phase === "permission" || phase === "connecting";
   const dialog = useRef<HTMLDialogElement>(null);
   const cloud = useRef<HTMLSpanElement>(null);
@@ -163,12 +164,13 @@ function CallScreen({ onClose, chat, studyContext, initialVideo = false }: { onC
         {status}
       </p>
     </div>}
-    <div className="momo-call-text" ref={thread} hidden={videoCall && !workspaceVisible} aria-label={chat && !videoCall ? "Transkrip panggilan" : undefined}
+    <div className="momo-call-text" ref={thread} hidden={videoCall && !workspaceVisible && !studyVideo} aria-label={chat && !videoCall ? "Transkrip panggilan" : undefined}
       onScroll={chat ? event => {
         const el = event.currentTarget;
         followThread.current = el.scrollHeight - el.scrollTop - el.clientHeight < 56;
       } : undefined}
       data-workspace={Boolean(deleteTitle || workspaceLoading || workspaceLinks.length)}>
+      {studyVideo && <StudyClipPlayer video={studyVideo} quiet />}
       {chat && captions && !videoCall && <>
         {turns.map((turn, index) => <div className="momo-call-turn" key={index}>
           {turn.question && <p className="momo-call-user" aria-label="Kamu">{turn.question}</p>}

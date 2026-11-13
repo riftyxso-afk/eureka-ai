@@ -1,17 +1,20 @@
-export type StudyCallContext = { title: string; material: string };
+import { studyVideoFromUrl, type StudyVideo } from "../study-video";
+export type StudyCallContext = { title: string; material: string; video?: StudyVideo };
 
 export function readStudyCallContext(value: unknown): StudyCallContext | undefined {
   if (!value || typeof value !== "object") return;
   const raw = value as Record<string, unknown>;
   if (typeof raw.title !== "string" || typeof raw.material !== "string" || !raw.material.trim()) return;
-  return { title: raw.title.trim().slice(0, 120), material: raw.material.trim().slice(0, 16000) };
+  const video = raw.video as StudyVideo | undefined;
+  return { title: raw.title.trim().slice(0, 120), material: raw.material.trim().slice(0, 16000), ...(video && /^[\w-]{11}$/.test(video.id) && Number.isInteger(video.seconds) && video.seconds >= 0 && video.seconds <= 86400 ? { video: { id: video.id, seconds: video.seconds, title: String(video.title || "Video").slice(0, 230) } } : {}) };
 }
 
-export function buildStudyCallContext(title: string, turns: { role: string; content: string }[], index: number): StudyCallContext | undefined {
+export function buildStudyCallContext(title: string, turns: { role: string; content: string; sources?: { url: string; title: string }[] }[], index: number): StudyCallContext | undefined {
   const selected = turns[index];
   if (!selected || selected.role !== "assistant") return;
   const history = turns.slice(Math.max(0, index - 5), index).map(turn => `${turn.role === "user" ? "Pengguna" : "Tutor"}: ${turn.content.slice(0, 1000)}`).join("\n\n");
-  return readStudyCallContext({ title, material: `Percakapan sebelum jawaban yang dipilih:\n${history}\n\nJawaban yang ingin dijelaskan:\n${selected.content.slice(0, 10500)}` });
+  const video = turns.slice(0, index + 1).reverse().flatMap(turn => turn.sources ?? []).map(source => studyVideoFromUrl(source.url, source.title)).find(Boolean);
+  return readStudyCallContext({ title, video, material: `Percakapan sebelum jawaban yang dipilih:\n${history}\n\nJawaban yang ingin dijelaskan:\n${selected.content.slice(0, 10500)}` });
 }
 
 export function studyCallInstructions(value: unknown): string {

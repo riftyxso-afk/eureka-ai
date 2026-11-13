@@ -7,6 +7,7 @@ import { recordCallTurns } from "./recordCallTurns";
 import { readCallReply } from "@/lib/audio/callReply";
 import { runLalaWorkspace, type LalaWorkspaceLink } from "./lalaWorkspace";
 import { readStudyCallContext, type StudyCallContext } from "@/lib/audio/studyCallContext";
+import { requestedVideoTime, type StudyVideo } from "@/lib/study-video";
 
 type Phase = "idle" | "permission" | "connecting" | "listening" | "thinking" | "searching" | "working" | "speaking";
 export type CallProvider = "momo" | "lala";
@@ -246,6 +247,7 @@ async function playPcm(response: Response, session: Session, playback: Playback,
 }
 
 export function useMomoCall(onVoiceEnd?: () => void) {
+  const [studyVideo, setStudyVideo] = useState<StudyVideo | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [muted, setMuted] = useState(false);
   const [error, setError] = useState("");
@@ -353,6 +355,14 @@ export function useMomoCall(onVoiceEnd?: () => void) {
         showReply(immediate);
         queueSpeech(immediate);
       } else {
+        if (session.studyContext?.video && requestedVideoTime(question) !== undefined) {
+          const clip = await apiFetch("/api/call", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "discuss-video", question, studyContext: session.studyContext }), signal });
+          const data = await clip.json();
+          if (isCurrent()) {
+            if (data.video) { setStudyVideo(data.video); session.studyContext.video = data.video; }
+            session.studyContext.material = `${session.studyContext.material.slice(0, 8000)}\nBagian video yang diminta: ${data.excerpt || data.error || "Transkrip belum tersedia. Jangan menebak isi."}`;
+          }
+        }
         const response = await apiFetch("/api/call", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -499,6 +509,17 @@ export function useMomoCall(onVoiceEnd?: () => void) {
       if (signal.aborted || active.current !== session) return;
       send({ toolResponse: { functionResponses: [{ id, name: "search_call_web", response }] } });
     }
+    async function discussVideoForLala(id: string, args: Record<string, unknown>) {
+      setPhase("working");
+      let result: Record<string, unknown> = { error: "Transkrip belum tersedia. Jangan menebak isi video." };
+      try {
+        const response = await apiFetch("/api/call", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "discuss-video", question: "Bahas bagian video", seconds: args.seconds, studyContext: session.studyContext }), signal: session.controller.signal });
+        const data = await response.json();
+        result = data;
+        if (active.current === session && data.video) { setStudyVideo(data.video); if (session.studyContext) session.studyContext.video = data.video; }
+      } catch { /* The tool reports an explicit failure rather than invented video content. */ }
+      if (active.current === session && !session.controller.signal.aborted) send({ toolResponse: { functionResponses: [{ id, name: "discuss_study_video", response: result }] } });
+    }
 
     function confirmDelete(title: string, signal: AbortSignal) {
       if (deleteDecision.current || signal.aborted) return Promise.resolve(false);
@@ -559,6 +580,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
         }
         for (const call of message.toolCall?.functionCalls ?? []) {
           if (!call.id) continue;
+          if (call.name === "discuss_study_video") { void discussVideoForLala(call.id, call.args ?? {}); continue; }
           if (call.name === "lala_workspace") { void actForLala(call.id, call.args ?? {}); continue; }
           if (call.name !== "search_call_web") continue;
           const query = typeof call.args?.query === "string" ? call.args.query.trim() : "";
@@ -647,6 +669,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     setReply("");
     setTurns([]);
     setShowCurrent(false);
+    setStudyVideo(readStudyCallContext(studyContext)?.video ?? null);
     setWorkspaceLinks([]);
     setWorkspaceLoading("");
     setDeleteTitle("");
@@ -939,7 +962,7 @@ export function useMomoCall(onVoiceEnd?: () => void) {
   return {
     phase, muted, error, transcript, reply, backup, level, start, stop, toggleMute,
     workspaceLinks, workspaceLoading, deleteTitle,
-    turns, showCurrent, sendText, sendVideoFrame,
+    turns, showCurrent, sendText, sendVideoFrame, studyVideo,
     confirmWorkspaceDelete: (allowed: boolean) => deleteDecision.current?.(allowed),
   };
 }
