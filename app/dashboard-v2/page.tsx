@@ -13,6 +13,8 @@ import MessageCircle from "kubai-icons-react/icons/message-circle";
 import Trophy from "kubai-icons-react/icons/trophy";
 import Crown from "kubai-icons-react/icons/crown";
 import { ArrowUpRight, PhoneCall, Upload } from "lucide-react";
+import { prepareChatImage } from "@/lib/assistant/prepareChatImage";
+import type { ChatAttachment } from "@/lib/assistant/types";
 import PromptBar from "@/components/asisten/reactbits/PromptBar";
 import MomoCompanion from "@/components/asisten/MomoCompanion";
 import DocumentAttachments from "@/components/dashboard/DocumentAttachments";
@@ -160,9 +162,28 @@ export default function DashboardV2() {
     window.history.replaceState(null, "", url);
   }
 
-  function attach(selected: FileList | null) {
+  const [imageAttachment, setImageAttachment] = useState<ChatAttachment | null>(null);
+  const [preparingImage, setPreparingImage] = useState(false);
+  const attachmentLock = useRef(false);
+
+  async function attach(selected: FileList | null) {
     if (!selected?.length || generation.busy || chatLock.current) return;
+    if (attachmentLock.current) return;
     const incoming = Array.from(selected);
+    const images = incoming.filter(file => file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|heic|heif)$/i.test(file.name));
+    if (images.length) {
+      if (files.length) { setInputError("Hapus dokumen sebelum melampirkan gambar untuk chat."); return; }
+      if (images.length !== 1 || incoming.length !== 1) { setInputError("Lampirkan satu gambar untuk setiap pesan."); return; }
+      attachmentLock.current = true; setPreparingImage(true); setInputError("");
+      try {
+        const attachment = await prepareChatImage(images[0]);
+        setImageAttachment(attachment); setMode("ask");
+        if (!draft.trim()) setDraft("Tolong jelaskan isi gambar ini.");
+      } catch (error) { setInputError(error instanceof Error ? error.message : "Gambar belum dapat dilampirkan."); }
+      finally { attachmentLock.current = false; setPreparingImage(false); }
+      return;
+    }
+    if (imageAttachment) { setInputError("Hapus gambar sebelum melampirkan dokumen untuk catatan."); return; }
     if (files.length + incoming.length > 5) { setInputError("Lampirkan maksimal 5 file."); return; }
     if (incoming.some(file => !file.size || file.size > 4 * 1024 * 1024)) { setInputError("Setiap file harus berisi materi dan berukuran maksimal 4 MB."); return; }
     if (incoming.some(file => !/\.(pdf|doc|docx|ppt|pptx|xlsx|xls|csv|txt|md|rtf|odt|mp3|wav|m4a|ogg|flac|aac|mp4|webm|mov)$/i.test(file.name))) { setInputError("Gunakan dokumen PDF/Office/teks, audio, atau video yang didukung."); return; }
@@ -177,7 +198,7 @@ export default function DashboardV2() {
     setDraft(value);
   }
   async function askMomo(question: string) {
-    if (!question || chatLock.current) return;
+    if ((!question && !imageAttachment) || chatLock.current || attachmentLock.current) return;
     chatLock.current = true;
     setOpeningChat(true);
     setInputError("");
@@ -194,7 +215,8 @@ export default function DashboardV2() {
         throw new Error(data.error || "Percakapan belum bisa dibuat.");
       }
       const pending: PendingPrompt = {
-        prompt: question,
+        prompt: question || "Tolong jelaskan isi gambar ini.",
+        attachment: imageAttachment,
         sessionId: data.session.id,
         speedMode: effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal",
       };
@@ -254,7 +276,8 @@ export default function DashboardV2() {
   }
   function submit(text: string) {
     if (!isPremium) { router.push("/dashboard-v2/pricing"); return; }
-    if (generation.busy || chatLock.current) return;
+    if (generation.busy || chatLock.current || attachmentLock.current) return;
+    if (imageAttachment) { void askMomo(text.trim()); return; }
     if (mode === "ask") { void askMomo(text.trim()); return; }
     if (files.length) { setInputError(""); setNoteRequest({ prompt: text.trim() || "Buat catatan dari materi terlampir", files: [...files] }); return; }
     if (text.trim().length < 10) { setInputError("Ceritakan topikmu sedikit lebih lengkap, minimal 10 karakter."); return; }
@@ -296,11 +319,13 @@ export default function DashboardV2() {
         <div className={`dv2-compose-area${!planLoading && !isPremium ? " is-pro-locked" : ""}`}>
           {planLoading ? <LoadingStatus stage="synchronizing" detail="Memeriksa paketmu" /> : planError ? <div className="eureka-pro-lock"><p role="alert">{planError}</p><button type="button" className="eureka-pro-cta" onClick={() => void refreshPlan()}>Coba lagi</button></div> : !isPremium ? <ProLockedCard /> : <>
           {generation.job ? <PromptNoteProgress generation={generation} /> : <>
+          {imageAttachment && <div className="mb-3 flex items-center gap-3 rounded-xl p-2" aria-label="Gambar terlampir"><img src={imageAttachment.dataUrl} alt="Preview lampiran" className="h-16 w-16 rounded-lg object-cover" /><span className="min-w-0 flex-1 truncate text-sm">{imageAttachment.filename}</span><button type="button" disabled={openingChat} aria-label="Hapus gambar" onClick={() => setImageAttachment(null)}>Hapus</button></div>}
+          {preparingImage && <p role="status" className="mb-2 text-sm">Menyiapkan gambar...</p>}
           {mode === "note" && files.length > 0 && <DocumentAttachments files={files} onRemove={removeAttachment} />}
           <div className="dv2-prompt">
             <PromptBar clearOnSend={false} value={draft} onDraftChange={setDraft}
               placeholder={mode === "ask" ? "Tanya Momo apa saja…" : "Tulis topik atau tempel tautan materi…"}
-              onSend={submit} disabled={openingChat} background="transparent" color="var(--v2-ink)"
+              onSend={submit} disabled={openingChat || preparingImage} background="transparent" color="var(--v2-ink)"
               menuBackground="var(--v2-popover)" sparkColor="transparent" width={700}
               models={[]} efforts={["Kilat", "Seimbang", "Mendalam"]} defaultEffort={effort}
               onEffortChange={setEffort} commands={[]}
@@ -309,14 +334,14 @@ export default function DashboardV2() {
                 <button type="button" aria-pressed={mode === "ask"} disabled={openingChat}
                   onClick={() => { setMode("ask"); setInputError(""); }}>Chat</button>
                 <button type="button" aria-pressed={mode === "note"} disabled={openingChat}
-                  onClick={() => { setMode("note"); setInputError(""); }}>Note</button>
+                  onClick={() => { setMode("note"); setImageAttachment(null); setInputError(""); }}>Note</button>
               </div>}
               voiceSlot={<SpeechInput userId={getUserId()} disabled={openingChat || generation.busy}
                   onText={text => { setInputError(""); setDraft(previous => previous + (previous && !/\s$/.test(previous) ? " " : "") + text); }}
                   onError={setInputError} />}
               sources={[
                 ...(mode === "ask" && !openingChat ? [{ key: "momo-call", name: "Panggilan Momo atau Lala", description: "Panggilan suara dan kamera untuk Lala", icon: <PhoneCall size={16} />, action: () => setCallOpen("default") }] : []),
-                { key: "upload", name: "Unggah materi", description: "Dokumen, slide, atau audio", icon: <Upload size={16} /> },
+                { key: "upload", name: "Unggah materi", description: "Foto, dokumen, slide, atau audio", icon: <Upload size={16} /> },
                 { key: "web", name: "Tautan web", description: "Ringkas artikel menjadi catatan", icon: <Globe trigger="parent" size={16} /> },
                 { key: "youtube", name: "YouTube", description: "Pelajari isi video", icon: <span className="dv2-youtube-logo" aria-hidden="true" /> },
               ]}
@@ -360,6 +385,6 @@ export default function DashboardV2() {
     <ProfileChecklist />
     {isPremium && <><CallIntroBanner paused={Boolean(callOpen || openingChat || generation.busy || workspace === "study")} onTry={() => setCallOpen("chat")} /><CourseIntroBanner paused={Boolean(callOpen || openingChat || generation.busy || workspace === "study")} /></>}
     <AiCallModal open={callOpen !== null} chat={callOpen === "chat"} onClose={() => setCallOpen(null)} />
-    <input ref={fileInput} className="sr-only" type="file" multiple aria-label="Lampirkan materi belajar" accept=".pdf,.doc,.docx,.ppt,.pptx,.xlsx,.xls,.csv,.txt,.md,.rtf,.odt,.mp3,.wav,.m4a,.ogg,.flac,.aac,.mp4,.webm,.mov" onChange={event => { attach(event.target.files); event.target.value = ""; }} />
+    <input ref={fileInput} className="sr-only" type="file" multiple aria-label="Lampirkan materi belajar" accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xlsx,.xls,.csv,.txt,.md,.rtf,.odt,.mp3,.wav,.m4a,.ogg,.flac,.aac,.mp4,.webm,.mov" onChange={event => { attach(event.target.files); event.target.value = ""; }} />
   </div>;
 }
