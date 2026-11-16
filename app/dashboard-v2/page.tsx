@@ -25,6 +25,7 @@ import PromptNoteProgress from "@/components/dashboard/PromptNoteProgress";
 import SpeechInput from "@/components/asisten/SpeechInput";
 import AiCallModal from "@/components/assistant/AiCallModal";
 import CallIntroBanner from "@/components/dashboard/CallIntroBanner";
+import CourseIntroBanner from "@/components/dashboard/CourseIntroBanner";
 import { apiFetch } from "@/lib/apiClient";
 import { usePremium } from "@/lib/usePremium";
 import { ProLockedCard } from "@/components/ProGate";
@@ -357,7 +358,7 @@ export default function DashboardV2() {
 
     </main>
     <ProfileChecklist />
-    {isPremium && <CallIntroBanner paused={Boolean(callOpen || openingChat || generation.busy || workspace === "study")} onTry={() => setCallOpen("chat")} />}
+    {isPremium && <><CallIntroBanner paused={Boolean(callOpen || openingChat || generation.busy || workspace === "study")} onTry={() => setCallOpen("chat")} /><CourseIntroBanner paused={Boolean(callOpen || openingChat || generation.busy || workspace === "study")} /></>}
     <AiCallModal open={callOpen !== null} chat={callOpen === "chat"} onClose={() => setCallOpen(null)} />
     <input ref={fileInput} className="sr-only" type="file" multiple aria-label="Lampirkan materi belajar" accept=".pdf,.doc,.docx,.ppt,.pptx,.xlsx,.xls,.csv,.txt,.md,.rtf,.odt,.mp3,.wav,.m4a,.ogg,.flac,.aac,.mp4,.webm,.mov" onChange={event => { attach(event.target.files); event.target.value = ""; }} />
   </div>;

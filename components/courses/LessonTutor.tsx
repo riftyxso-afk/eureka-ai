@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Bot, LoaderCircle, Send, Sparkles, User } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 
+import MarkdownView from "@/components/asisten/MarkdownView";
+
 type Message = { role: "user" | "assistant"; content: string };
 const STARTERS = ["Jelaskan dengan contoh lain", "Apa bagian yang paling penting?", "Beri petunjuk untuk latihannya"];
 
@@ -12,6 +14,7 @@ export function LessonTutor({ courseId, lessonId, lessonTitle }: { courseId: str
   const [question, setQuestion] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const sendingRef = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const requestController = useRef<AbortController | null>(null);
 
@@ -19,6 +22,7 @@ export function LessonTutor({ courseId, lessonId, lessonTitle }: { courseId: str
     requestController.current?.abort();
     setMessages([]);
     setQuestion("");
+    sendingRef.current = false;
     setSending(false);
     setError("");
     return () => requestController.current?.abort();
@@ -26,7 +30,8 @@ export function LessonTutor({ courseId, lessonId, lessonTitle }: { courseId: str
 
   async function ask(value: string) {
     const clean = value.trim();
-    if (!clean || sending) return;
+    if (clean.length < 2 || sendingRef.current) return;
+    sendingRef.current = true;
     requestController.current?.abort();
     const controller = new AbortController();
     requestController.current = controller;
@@ -46,9 +51,10 @@ export function LessonTutor({ courseId, lessonId, lessonTitle }: { courseId: str
       if (!response.ok) throw new Error(data?.error || "Momo belum dapat menjawab.");
       setMessages([...next, { role: "assistant", content: String(data?.answer ?? "") }]);
     } catch (reason) {
-      if (!isStale()) setError(reason instanceof Error ? reason.message : "Momo belum dapat menjawab. Coba lagi.");
+      if (!isStale()) { setMessages(messages); setQuestion(clean); setError(reason instanceof Error ? reason.message : "Momo belum dapat menjawab. Coba lagi."); }
     } finally {
       if (!isStale()) {
+        sendingRef.current = false;
         setSending(false);
         inputRef.current?.focus();
       }
@@ -79,7 +85,7 @@ export function LessonTutor({ courseId, lessonId, lessonTitle }: { courseId: str
           {messages.map((message, index) => (
             <div className={`lesson-tutor-message is-${message.role}`} key={`${message.role}-${index}`}>
               <span aria-hidden="true">{message.role === "assistant" ? <Bot size={16} /> : <User size={16} />}</span>
-              <p>{message.content}</p>
+              <MarkdownView content={message.content} />
             </div>
           ))}
         </div>

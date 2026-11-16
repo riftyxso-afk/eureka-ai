@@ -270,12 +270,12 @@ export async function enrollInCourse(userId: string, courseId: string): Promise<
   if (!course) return null;
   await supabaseOrLocal(async () => {
     await ensureCuratedSynced(course);
-    const first = courseLessons(course).find((lesson) => lesson.status !== "pending");
+    const first = courseLessons(course)[0];
     const { error } = await db().from("course_enrollments").upsert({ user_id: userId, course_id: course.id, course_version: course.version, current_lesson_id: first?.id ?? null, updated_at: new Date().toISOString() }, { onConflict: "user_id,course_id", ignoreDuplicates: true });
     if (error) throw error;
   }, () => mutateLocal((state) => {
     if (!state.enrollments.some((item) => item.userId === userId && item.courseId === course.id)) {
-      state.enrollments.push({ userId, courseId: course.id, courseVersion: course.version, currentLessonId: courseLessons(course).find((lesson) => lesson.status !== "pending")?.id ?? null });
+      state.enrollments.push({ userId, courseId: course.id, courseVersion: course.version, currentLessonId: courseLessons(course)[0]?.id ?? null });
     }
   }));
   return getCourseOverview(userId, course.id);
@@ -302,8 +302,11 @@ export async function submitAttempt(userId: string, courseId: string, lessonId: 
   if (!found || found.lesson.status === "pending" || found.lesson.status === "error" || found.lesson.questions.length !== 2) throw new Error("Pelajaran belum tersedia.");
   const { course, lesson } = found;
   if (!/^[a-zA-Z0-9:_-]{8,100}$/.test(idempotencyKey)) throw new Error("Kunci percobaan tidak valid.");
-  const cleanAnswers = Object.fromEntries(lesson.questions.map((question) => [question.id, Number(answers[question.id])]));
-  if (Object.values(cleanAnswers).some((answer) => !Number.isInteger(answer) || answer < 0 || answer > 3)) throw new Error("Jawab semua soal sebelum mengirim.");
+  if (!answers || typeof answers !== "object" || Array.isArray(answers) || lesson.questions.some((question) => {
+    const answer = answers[question.id];
+    return typeof answer !== "number" || !Number.isInteger(answer) || answer < 0 || answer >= question.options.length;
+  })) throw new Error("Jawab semua soal sebelum mengirim.");
+  const cleanAnswers = Object.fromEntries(lesson.questions.map((question) => [question.id, answers[question.id]]));
   return supabaseOrLocal(async () => {
     await ensureCuratedSynced(course);
     const { data, error } = await db().rpc("submit_course_attempt", { p_user_id: userId, p_course_id: course.id, p_lesson_id: lesson.id, p_answers: cleanAnswers, p_idempotency_key: idempotencyKey });

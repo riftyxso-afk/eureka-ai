@@ -63,3 +63,8 @@ assert.equal(draft.sourceKind, "generated");
 assert.ok(courseLessons(draft).every((lesson) => lesson.status === "pending" && lesson.blocks.length === 0 && lesson.questions.length === 0));
 assert.ok(!JSON.stringify(draft).includes("explanation"), "client supplied answers must be discarded");
 console.log(`PASS courses: ${CURATED_COURSES.length} courses, ${lessonCount} lessons, ${questionCount} questions, sanitized DTOs, progress, and draft validation`);
+
+assert.equal(buildCourseProgress(course, [{ lessonId: lessons[0].id, status: "completed", bestScore: 100, completedAt: null }], lessons[0].id).currentLessonId, lessons[1].id, "a completed resume pointer must advance");
+const pendingFirst = structuredClone(course);
+pendingFirst.modules[0].lessons[0].status = "pending";
+assert.equal(buildCourseProgress(pendingFirst, []).currentLessonId, lessons[0].id, "pending first lessons must not be skipped");

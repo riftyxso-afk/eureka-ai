@@ -186,9 +186,9 @@ export const PAGE_TOURS: Record<PageGuideId, GuideStep[]> = {
     step("Lihat perkembanganmu", "Bandingkan rekor streak, total hari aktif, dan XP yang telah terkumpul.", ".streak-quick-stats"),
   ],
   "courses": [
-    step("Ruang kursus", "Lihat ketersediaan dan detail kursus pada halaman ini.", ".course-hero, .courses-hero, .v2-feature-content h1"),
-    step("Periksa ketersediaan", "Kursus personal masih dalam pengembangan. Keterangan ini menunjukkan status fitur yang sebenarnya.", ".v2-course-status"),
-    step("Lanjutkan dari catatan", "Koleksi catatan dan alat belajar tetap tersedia dari sidebar.", ".v2-drawer-group", true),
+    step("Pilih jalur belajarmu", "Cari topik atau lanjutkan kursus yang sudah diikuti.", ".course-heading, .course-detail-hero, .learning-topbar"),
+    step("Silabus yang runtut", "Buka kursus untuk melihat modul. Di ruang belajar, tombol Silabus menampilkan daftar pelajaran.", ".course-grid, .course-modules-section, .learning-controls"),
+    step("Pelajari, tanyakan, lalu latih", "Pelajari materi dan tanyakan bagian yang sulit kepada Momo. Kirim latihan untuk menyimpan progres.", ".course-continue, .course-catalog-filters, .course-detail-action, .learning-panel-tabs"),
   ],
   "leaderboard": [
     step("Lihat papan skor", "Peringkat mengikuti aktivitas dan XP yang tercatat.", "main h1, .v2-feature-content h1"),

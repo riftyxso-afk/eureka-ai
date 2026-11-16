@@ -369,7 +369,7 @@ export function PersonalCourseDialog({ open, onClose }: PersonalCourseDialogProp
       requestRef.current = null;
       setBusy(null);
       onClose();
-      router.push(`/dashboard/kursus/${encodeURIComponent(courseId)}`);
+      router.push(`/dashboard-v2/kursus/${encodeURIComponent(courseId)}`);
     } catch (error) {
       if (requestRef.current === controller && !controller.signal.aborted && !isAbortError(error)) {
         setRequestError(error instanceof Error ? error.message : "Kursus belum dapat disimpan. Coba lagi.");

@@ -132,8 +132,8 @@ export const PAGE_GUIDES = {
   },
   courses: {
     label: "Kursus · Pengembangan", title: "Kenali ruang kursus personal",
-    description: "Fitur kursus masih dalam pengembangan. Gunakan catatan dan ruang belajar untuk mempelajari materimu sekarang.",
-    steps: ["Lihat status ketersediaan fitur", "Kembali ke koleksi catatan", "Belajar lewat bab, kuis, dan kartu"], action: "Mengerti",
+    description: "Pilih kursus atau susun silabus personal. Pelajari materi, tanyakan bagian yang sulit kepada Momo, lalu uji pemahamanmu.",
+    steps: ["Pilih kursus atau buat silabus personal", "Buka modul dan pelajari materinya", "Kerjakan latihan untuk menyimpan progres"], action: "Mengerti",
   },
   settings: {
     label: "Pengaturan", title: "Atur Eureka sesuai kebutuhanmu",

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePro } from "@/lib/assistant/auth";
+import { requireCourseAccess } from "@/lib/courses/access";
 import { enrollInCourse, getCourseOverview } from "@/lib/courses/server";
 import { toSyllabusOverview } from "@/lib/courses/dto";
 
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 type Context = { params: Promise<{ courseId: string }> };
 
 export async function GET(req: NextRequest, { params }: Context) {
-  const auth = await requirePro(req.headers.get("authorization"));
+  const auth = await requireCourseAccess(req.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const overview = await getCourseOverview(auth.userId, (await params).courseId);
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: Context) {
 }
 
 export async function POST(req: NextRequest, { params }: Context) {
-  const auth = await requirePro(req.headers.get("authorization"));
+  const auth = await requireCourseAccess(req.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const overview = await enrollInCourse(auth.userId, (await params).courseId);

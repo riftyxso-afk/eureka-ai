@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
-import { requirePro } from "@/lib/assistant/auth";
-import { consumeCourseAiQuota, enrollInCourse, generateLessonForUser, getCourseCatalog, getCourseOverview, savePersonalCourse } from "@/lib/courses/server";
+import { requireCourseAccess } from "@/lib/courses/access";
+import { consumeCourseAiQuota, enrollInCourse, getCourseCatalog, getCourseOverview, savePersonalCourse } from "@/lib/courses/server";
 import { generateCourseSyllabus, normalizePersonalDraft, validatePersonalCourseInput } from "@/lib/courses/generator";
 import { toSyllabusOverview, toSyllabusPreview } from "@/lib/courses/dto";
-import { courseLessons } from "@/lib/courses/types";
 import { readCourseSources } from "@/lib/courses/readSources";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
-  const auth = await requirePro(req.headers.get("authorization"));
+  const auth = await requireCourseAccess(req.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     return NextResponse.json(await getCourseCatalog(auth.userId));
@@ -22,7 +21,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requirePro(req.headers.get("authorization"));
+  const auth = await requireCourseAccess(req.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     if (Number(req.headers.get("content-length")) > 21_000_000) {
@@ -48,18 +47,7 @@ export async function POST(req: NextRequest) {
         if (!await consumeCourseAiQuota(auth.userId, "create", 12)) return NextResponse.json({ error: "Batas pembuatan kursus hari ini tercapai. Kursus yang sudah ada tetap dapat dipelajari." }, { status: 429 });
         await savePersonalCourse(auth.userId, course);
       }
-      let warning = "";
-      const first = courseLessons(course)[0];
-      if (first) {
-        try {
-          await generateLessonForUser(auth.userId, course.id, first.id);
-        } catch (error) {
-          console.error("[api/courses] first lesson", error);
-          warning = "Silabus tetap tersimpan. Buka pelajaran pertama untuk mencoba menyusunnya kembali.";
-        }
-      } else {
-        warning = "Silabus tersimpan. Batas AI hari ini tercapai; buka pelajaran untuk mencoba lagi besok.";
-      }
+      const warning = "";
       const overview = await enrollInCourse(auth.userId, course.id);
       return NextResponse.json({ overview: overview ? toSyllabusOverview(overview) : null, warning }, { status: existing ? 200 : 201 });
     }

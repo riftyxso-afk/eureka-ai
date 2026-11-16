@@ -154,12 +154,12 @@ export function buildCourseProgress(course: Course, lessons: LessonProgress[], c
   const all = courseLessons(course);
   const completed = new Set(lessons.filter((item) => item.status === "completed").map((item) => item.lessonId));
   const completedLessons = all.filter((lesson) => completed.has(lesson.id)).length;
-  const next = all.find((lesson) => !completed.has(lesson.id) && lesson.status !== "pending");
+  const next = all.find((lesson) => !completed.has(lesson.id));
   return {
     completedLessons,
     totalLessons: all.length,
     percent: all.length ? Math.round((completedLessons / all.length) * 100) : 0,
-    currentLessonId: currentLessonId && all.some((lesson) => lesson.id === currentLessonId)
+    currentLessonId: currentLessonId && !completed.has(currentLessonId) && all.some((lesson) => lesson.id === currentLessonId)
       ? currentLessonId
       : next?.id ?? all.find((lesson) => !completed.has(lesson.id))?.id ?? all.at(-1)?.id ?? null,
   };

@@ -22,6 +22,11 @@ async function main() {
     const answers = Object.fromEntries(first.questions.map((question) => [question.id, question.answer]));
     await assert.rejects(service.submitAttempt(user, course.id, first.id, answers, "not-enrolled-01"), /Ikuti kursus/);
     await service.enrollInCourse(user, course.id);
+    for (const bad of [null, false, "0", [], {}]) {
+      const invalid = Object.fromEntries(first.questions.map(question => [question.id, bad]));
+      await assert.rejects(service.submitAttempt(user, course.id, first.id, invalid as Record<string, number>, "invalid-types-01"), /Jawab semua/);
+    }
+
     const wrong = Object.fromEntries(first.questions.map((question) => [question.id, (question.answer + 1) % 4]));
     const failed = await service.submitAttempt(user, course.id, first.id, wrong, "wrong-attempt-01");
     assert.equal(failed.passed, false);

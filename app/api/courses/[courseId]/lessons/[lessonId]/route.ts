@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePro } from "@/lib/assistant/auth";
+import { requireCourseAccess } from "@/lib/courses/access";
 import { CourseOperationError, generateLessonForUser, getLessonForUser, submitAttempt } from "@/lib/courses/server";
 import { toLearnerLesson } from "@/lib/courses/dto";
 
@@ -9,7 +9,7 @@ export const maxDuration = 60;
 type Context = { params: Promise<{ courseId: string; lessonId: string }> };
 
 export async function GET(req: NextRequest, { params }: Context) {
-  const auth = await requirePro(req.headers.get("authorization"));
+  const auth = await requireCourseAccess(req.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const { courseId, lessonId } = await params;
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: Context) {
 }
 
 export async function POST(req: NextRequest, { params }: Context) {
-  const auth = await requirePro(req.headers.get("authorization"));
+  const auth = await requireCourseAccess(req.headers.get("authorization"));
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const { courseId, lessonId } = await params;
