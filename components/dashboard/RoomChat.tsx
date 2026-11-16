@@ -62,7 +62,19 @@ export default function RoomChat({ noteId, title }: { noteId: string; title: str
   return <section className="rm-chat"><div className="rm-feature-heading"><div><h1>Tanya Momo</h1><p>Pendamping belajar untuk catatan ini.</p></div><span className="rm-context-label">Berdasarkan materi</span></div>
     <div className="rm-chat-thread" ref={scroll} onScroll={() => { const el = scroll.current; if (el) follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
       {!messages.length && <div className="rm-chat-welcome"><div className="sr-momo"><MomoCompanion mode="normal" /></div><h2>Ayo, kita pahami bersama.</h2><p>Aku sudah punya konteks “{title}”. Bagian mana yang ingin kamu bahas?</p><div>{suggestions.map(text => <button key={text} onClick={() => void send(text)}>{text}<ArrowUp size={14} /></button>)}</div></div>}
-      {messages.map(m => <article key={m.id} className={`rm-chat-message is-${m.role}`}>{m.role === "assistant" && <div className="rm-message-momo"><MomoCompanion response={m.content} question={messages[messages.indexOf(m) - 1]?.content} thinking={busy && !m.content} /></div>}<div>{busy && m.role === "assistant" && m.id === messages[messages.length - 1]?.id && <LoadingStatus stage={activity} compact />}{m.role === "user" ? <p>{m.content}</p> : m.content ? <><MarkdownView content={m.content} /><button className="rm-copy" aria-label="Salin jawaban" onClick={() => { void navigator.clipboard.writeText(m.content).then(() => setCopied(m.id)).catch(() => setError("Jawaban belum bisa disalin.")); }}><Copy size={13} />{copied === m.id ? "Tersalin" : "Salin"}</button></> : null}</div></article>)}<div ref={bottom} />
+      {messages.map((m, index) => {
+        const streaming = busy && m.role === "assistant" && index === messages.length - 1;
+        return <article key={m.id} className={`rm-chat-message is-${m.role}`}>
+          {m.role === "assistant" && !streaming && <div className="rm-message-momo"><MomoCompanion response={m.content} question={messages[index - 1]?.content} /></div>}
+          <div>
+            {streaming && <LoadingStatus stage={activity} compact />}
+            {m.role === "user" ? <p>{m.content}</p> : m.content && <>
+              <MarkdownView content={m.content} />
+              <button className="rm-copy" aria-label="Salin jawaban" onClick={() => { void navigator.clipboard.writeText(m.content).then(() => setCopied(m.id)).catch(() => setError("Jawaban belum bisa disalin.")); }}><Copy size={13} />{copied === m.id ? "Tersalin" : "Salin"}</button>
+            </>}
+          </div>
+        </article>;
+      })}<div ref={bottom} />
     </div>{error && <p className="rm-error" role="alert">{error}</p>}
     <form className="rm-chat-composer" onSubmit={e => { e.preventDefault(); void send(); }}><label className="sr-only" htmlFor="room-question">Pertanyaan untuk Momo</label><textarea id="room-question" maxLength={500} value={draft} rows={2} placeholder="Tanyakan tentang materi ini…" onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }} /><div><span className="rm-composer-context"><span aria-hidden="true" />Berdasarkan catatan ini</span><small className="rm-composer-keyhint">Enter untuk kirim</small>{busy ? <button type="button" aria-label="Hentikan jawaban" onClick={() => request.current?.abort()}><Square size={17} /></button> : <button type="submit" disabled={!draft.trim()} aria-label="Kirim pertanyaan"><ArrowUp size={19} /></button>}</div></form>
   </section>;

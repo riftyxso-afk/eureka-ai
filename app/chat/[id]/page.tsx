@@ -253,7 +253,7 @@ export default function ChatPage() {
   const latestQuestion = [...chat.renderedMessages].reverse().find((message) => message.role === "user")?.content ?? "";
 
   return (
-    <div className={`momo-session flex h-dvh overflow-hidden bg-clay-beige p-0 ${chat.sending ? "is-generating" : ""}`}>
+    <div className="momo-session flex h-dvh overflow-hidden bg-clay-beige p-0">
       <div className="flex h-full w-full overflow-hidden">
         <ChatSidebar
           sessions={chat.sessions}
@@ -518,7 +518,7 @@ export default function ChatPage() {
         {noteCommand && <div className="mx-auto max-w-[760px]"><NoteActions key={JSON.stringify(noteCommand)} command={noteCommand} onClose={() => setNoteCommand(null)} onChoose={setNoteCommand} /></div>}
         {taskCommand && <div className="mx-auto max-w-[760px]"><TaskActions key={JSON.stringify(taskCommand)} command={taskCommand} onClose={() => setTaskCommand(null)} onChoose={setTaskCommand} /></div>}
         {planningAction && <p role="status" className="mx-auto mb-2 max-w-[760px] text-sm text-clay-muted">Momo sedang memahami permintaan Anda…</p>}
-        {chat.renderedMessages.length > 0 && (
+        {!chat.sending && chat.renderedMessages.length > 0 && (
           <div className="momo-composer-companion">
             <motion.div
               className="momo-composer-companion-motion"
@@ -533,7 +533,6 @@ export default function ChatPage() {
                   mode={momoMode}
                   question={latestQuestion}
                   response={latestAnswer}
-                  thinking={chat.sending}
                   error={chat.hasError}
                 />
               </div>

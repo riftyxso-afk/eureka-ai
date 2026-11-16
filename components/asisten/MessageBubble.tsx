@@ -196,8 +196,8 @@ export default function MessageBubble({
       animate={{ opacity: 1, y: 0 }}
       className="group chat-message chat-message--assistant"
     >
-      {avatar ?? <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} thinking={isStreaming} />}
-      <div className="chat-message-assistant-content flex min-w-0 flex-col gap-1.5">
+      {!isStreaming && (avatar ?? <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} />)}
+      <div className={`chat-message-assistant-content flex min-w-0 flex-col gap-1.5${isStreaming ? " col-span-full" : ""}`}>
         {isStreaming && webStage && <WebSearchPipeline stage={webStage} results={message.webResults ?? []} query={webQuery} notice={webNotice} />}
         {isStreaming && <ResponseActivity thinking={thinking} stage={displayContent ? "combining" : activity} showIndicator={!webStage} />}
         {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}

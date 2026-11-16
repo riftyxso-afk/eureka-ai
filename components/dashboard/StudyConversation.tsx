@@ -294,9 +294,8 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
             <article className={live ? "study-chat-turn study-chat-live" : "study-chat-turn"} aria-busy={live || undefined}>
               {live && agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
               {videos.length === 1 && <div className="study-chat-extras study-chat-video-lead">{videoCards}</div>}
-              {(!live || turn.content) && <MessageBubble message={message(turn)} isStreaming={live} videoEnabled={false} avatar={live
-                ? <StudyBotAvatar size={32} prompt={lastPrompt} response={turn.content} stage={agent.status?.stage} busy error={!!agent.error} />
-                : <StudyBotAvatar size={32} response={turn.content} still />} />}
+              {(!live || turn.content) && <MessageBubble message={message(turn)} isStreaming={live} videoEnabled={false}
+                avatar={!live && <StudyBotAvatar size={32} response={turn.content} still />} />}
               {videos.length > 1 && <div className="study-chat-extras">{videoCards}</div>}
               {live && agent.mindmap !== null && <div className="study-chat-extras"><StudyMindmap nodes={agent.mindmap} busy onExplore={() => {}} /></div>}
               {!live && turn.role === "assistant" && <div className="study-chat-extras">
@@ -332,7 +331,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       </div>
     </div>
     <footer className="study-chat-footer momo-session-composer">
-      <div className="study-avatar-companion"><StudyBotAvatar prompt={lastPrompt || draft} response={agent.busy ? agent.text : turns.filter(turn => turn.role === "assistant").at(-1)?.content} stage={agent.status?.stage} busy={agent.busy} error={!!(agent.error || error || (!agent.busy && turns.at(-1)?.study?.fileErrors?.length))} /></div>
+      {!agent.busy && <div className="study-avatar-companion"><StudyBotAvatar prompt={lastPrompt || draft} response={turns.filter(turn => turn.role === "assistant").at(-1)?.content} error={!!(agent.error || error || turns.at(-1)?.study?.fileErrors?.length)} /></div>}
       {browserSelected && <div className="study-computer-controls"><div className="study-computer-chip"><Monitor color="#8253d4" size={17} aria-hidden="true" /><span>Computer Use</span><button type="button" disabled={agent.busy} aria-label="Nonaktifkan Computer Use" onClick={() => setBrowserSelected(false)}>×</button></div><PageTutorial guideId="computer-use" /></div>}
       {micError && <p className="study-chat-error" role="alert">{micError}</p>}
       <div className="eureka-prompt-wrap study-chat-composer">
