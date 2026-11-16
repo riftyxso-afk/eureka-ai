@@ -23,7 +23,7 @@ import Sparkles from "kubai-icons-react/icons/sparkles";
 import Terminal from "kubai-icons-react/icons/terminal";
 import Check from "kubai-icons-react/icons/circle-check";
 import Plus from "kubai-icons-react/icons/circle-plus";
-import { Zap } from "lucide-react";
+import { Plug, Zap } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import {
@@ -649,6 +649,7 @@ export default function Composer({
     ];
     if (!dahono.models.length) models.push({ key: "dahono-unavailable", name: "Dahono", logo: DAHONO_LOGO, tag: "Belum tersedia", disabled: true });
     const sources: PromptSource[] = [
+      { key: "connectors", name: "Konektor", description: "Hubungkan Canva, Drive, dan aplikasi belajar", icon: <Plug size={16} />, action: () => { window.location.assign("/dashboard-v2/pengaturan/konektor"); } },
       ...(onCall && !sending ? [{ key: "momo-call", name: "Panggilan Momo atau Lala", description: "Panggilan suara dan kamera untuk Lala", icon: <PhoneCall trigger="parent" size={16} />, action: onCall }] : []),
       { key: "file", name: "Foto & file", description: "Pilih dari perangkat", icon: <Paperclip trigger="parent" size={16} />, attach: true },
       ...notes.filter((note) => !mentionIds.includes(note.id)).map((note) => ({ key: `note:${note.id}`, name: note.title, description: note.subject || "Catatan", icon: <BookOpen trigger="parent" size={16} /> })),

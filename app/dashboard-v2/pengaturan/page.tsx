@@ -4,9 +4,10 @@ import {TrainingSettings} from "@/components/dashboard/TrainingContribution";
 import LearningConsent from "@/components/dashboard/LearningConsent";
 import "@/components/dashboard/study-production.css";
 import { useEffect, useState } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { Plug, ArrowUpRight } from "lucide-react";
 import StudyArt from "@/components/dashboard/StudyArt";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import V2FeaturePage from "@/components/dashboard/V2FeaturePage";
 import StudyFlowNav from "@/components/dashboard/StudyFlowNav";
 import { useTheme } from "@/context/ThemeContext";
@@ -17,6 +18,7 @@ import "../study-flows.css";
 
 const sections = [
   { id: "appearance", label: "Tampilan", icon: <StudyArt name="palette" /> },
+  { id: "connectors", label: "Konektor", icon: <Plug size={22} /> },
   { id: "privacy", label: "Data & AI", icon: <StudyArt name="gear" /> },
   { id: "account", label: "Akun", icon: <StudyArt name="profile" /> },
 ] as const;
@@ -65,6 +67,7 @@ function FlagshipCreditPill() {
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [section, setSection] = useState<(typeof sections)[number]["id"]>("appearance");
   const { theme, setTheme } = useTheme();
   return (
@@ -72,10 +75,13 @@ export default function SettingsPage() {
       <main className="study-flow settings-flow">
         <header className="flow-heading settings-heading">
           <h1 className="study-flow-title"><StudyArt name="gear" size={46} /><span>Pengaturan</span><small>Beta</small></h1>
-          <FlagshipCreditPill />
+          <div className="flex flex-wrap items-center gap-3"><Link href="/dashboard-v2/pengaturan/konektor" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-violet-200 px-4 text-sm font-bold text-violet-700 dark:border-violet-800 dark:text-violet-200"><Plug size={17} />Konektor</Link><FlagshipCreditPill /></div>
         </header>
         <div className="flow-layout">
-          <StudyFlowNav label="Kategori pengaturan" items={sections} current={section} onChange={setSection} />
+          <StudyFlowNav label="Kategori pengaturan" items={sections} current={section} onChange={id => {
+            if (id === "connectors") router.push("/dashboard-v2/pengaturan/konektor");
+            else setSection(id);
+          }} />
           <section className="flow-panel" id="flow-panel" aria-labelledby="settings-title">
             {section === "appearance" ? (
               <>
