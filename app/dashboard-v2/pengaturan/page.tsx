@@ -3,13 +3,16 @@
 import {TrainingSettings} from "@/components/dashboard/TrainingContribution";
 import LearningConsent from "@/components/dashboard/LearningConsent";
 import "@/components/dashboard/study-production.css";
-import { useState } from "react";
-import { ArrowUpRight, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowUpRight } from "lucide-react";
 import StudyArt from "@/components/dashboard/StudyArt";
 import Link from "next/link";
 import V2FeaturePage from "@/components/dashboard/V2FeaturePage";
 import StudyFlowNav from "@/components/dashboard/StudyFlowNav";
 import { useTheme } from "@/context/ThemeContext";
+import { SakugaRadio } from "@/components/ui/sakuga";
+import { apiFetch } from "@/lib/apiClient";
+import { FLAGSHIP_PROMPT_COST, FLAGSHIP_STARTING_CREDITS } from "@/lib/assistant/dahonoModels";
 import "../study-flows.css";
 
 const sections = [
@@ -19,10 +22,47 @@ const sections = [
 ] as const;
 
 const themes = [
-  { id: "light", label: "Terang", icon: <StudyArt name="sun" size={24} /> },
-  { id: "dark", label: "Gelap", icon: <StudyArt name="moon" size={24} /> },
-  { id: "system", label: "Ikuti perangkat", icon: <StudyArt name="system" size={24} /> },
+  { id: "light", label: "Terang" },
+  { id: "dark", label: "Gelap" },
+  { id: "system", label: "Ikuti perangkat" },
 ] as const;
+
+function FlagshipCreditPill() {
+  const [credits, setCredits] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let request: AbortController | undefined;
+    const refresh = async () => {
+      if (request) return;
+      const controller = new AbortController();
+      request = controller;
+      try {
+        const response = await apiFetch("/api/assistant/models", { signal: controller.signal });
+        const value = response.ok ? (await response.json()).dahono?.credits : null;
+        if (!controller.signal.aborted && Number.isFinite(value)) setCredits(value);
+      } catch {
+        // Keep the last known balance through temporary outages.
+      } finally {
+        request = undefined;
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+    void refresh();
+    window.addEventListener("focus", refresh);
+    return () => {
+      request?.abort();
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
+  const tone = credits === null ? "unknown" : credits < FLAGSHIP_PROMPT_COST ? "empty"
+    : credits < FLAGSHIP_PROMPT_COST * 3 ? "low" : "healthy";
+  const label = credits !== null ? `${credits} / ${FLAGSHIP_STARTING_CREDITS} kredit Flagship`
+    : loading ? "Memuat kredit Flagship…" : "Kredit Flagship belum tersedia";
+  return <span className="flagship-credit" data-balance={tone} aria-live="polite"
+    title={`${FLAGSHIP_PROMPT_COST} kredit per prompt Flagship`}>{label}</span>;
+}
 
 export default function SettingsPage() {
   const [section, setSection] = useState<(typeof sections)[number]["id"]>("appearance");
@@ -30,7 +70,10 @@ export default function SettingsPage() {
   return (
     <V2FeaturePage title="Pengaturan" art={10} guide="settings">
       <main className="study-flow settings-flow">
-        <header className="flow-heading"><h1 className="study-flow-title"><StudyArt name="gear" size={46} /><span>Pengaturan</span><small>Beta</small></h1></header>
+        <header className="flow-heading settings-heading">
+          <h1 className="study-flow-title"><StudyArt name="gear" size={46} /><span>Pengaturan</span><small>Beta</small></h1>
+          <FlagshipCreditPill />
+        </header>
         <div className="flow-layout">
           <StudyFlowNav label="Kategori pengaturan" items={sections} current={section} onChange={setSection} />
           <section className="flow-panel" id="flow-panel" aria-labelledby="settings-title">
@@ -38,15 +81,11 @@ export default function SettingsPage() {
               <>
                 <h2 id="settings-title">Tema aplikasi</h2>
                 <p className="flow-description">Pilih tampilan yang nyaman untukmu. Pilihan langsung tersimpan.</p>
-                <div className="settings-themes" role="group" aria-label="Pilih tema">
-                  {themes.map(({ id, label, icon }) => (
-                    <button type="button" key={id} aria-pressed={theme === id} onClick={() => setTheme(id)}>
-                      <span className="theme-preview" data-theme={id} aria-hidden="true">
-                        <i /><b><i /><i /></b>
-                      </span>
-                      <span className="theme-caption">{icon}<span>{label}</span>{theme === id && <Check size={16} aria-hidden="true" />}</span>
-                    </button>
-                  ))}
+                <div className="sakuga-radio-row settings-theme-options">
+                  <SakugaRadio label="Tema aplikasi" name="theme" value={theme} options={themes} onChange={value => {
+                    const choice = themes.find(item => item.id === value);
+                    if (choice) setTheme(choice.id);
+                  }} />
                 </div>
               </>
             ) : section === "privacy" ? (<><h2 id="settings-title">Data & AI</h2><TrainingSettings/><details className="settings-personalization"><summary>Personalisasi akun (terpisah dari fine-tuning)</summary><LearningConsent/></details></>) : (

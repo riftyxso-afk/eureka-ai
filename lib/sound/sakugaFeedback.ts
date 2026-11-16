@@ -1,8 +1,9 @@
-type SakugaKind = "button" | "checkbox" | "progress";
+export type SakugaKind = "button" | "checkbox" | "progress" | "radio" | "rating" | "toast" | "input";
 type SakugaEffects = {
   P: Record<string, string | string[]>;
   ticks: (x: number, y: number, options: { n: number; r: number; len: number; dir: number; life: number }) => void;
   kira: (x: number, y: number, options: { r: number; life: number; col: string }) => void;
+  puff: (x: number, y: number, options: { n: number; size: number; vy: number; life: number }) => void;
 };
 const scripts = new Map<SakugaKind, Promise<void>>();
 const effects = () => (window as Window & { SakugaFX?: SakugaEffects }).SakugaFX;
@@ -32,7 +33,7 @@ export function loadSakuga(kind: SakugaKind): Promise<void> {
 
 export function showSakugaFeedback(control: Element, event: MouseEvent | Event, toggle = false): void {
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
-  if (motion.matches || control.closest('[data-sakuga-feedback="off"], sakuga-button, sakuga-checkbox')) return;
+  if (motion.matches || control.closest('[data-sakuga-feedback="off"], sakuga-button, sakuga-checkbox, sakuga-radio, sakuga-rating, sakuga-input, sakuga-toast')) return;
   const started = performance.now();
   const rect = control.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
@@ -48,4 +49,13 @@ export function showSakugaFeedback(control: Element, event: MouseEvent | Event, 
   };
   if (effects()) paint();
   else void loadSakuga("button").then(paint).catch(() => {});
+}
+
+/** Give the multiline composer the same dust cue as the single-line Sakuga input. */
+export function showSakugaTyping(event: Event): void {
+  const fx = effects();
+  const control = event.target;
+  if (!event.isTrusted || !fx || matchMedia("(prefers-reduced-motion: reduce)").matches || !(control instanceof HTMLTextAreaElement)) return;
+  const rect = control.getBoundingClientRect();
+  fx.puff(rect.right - 16, rect.bottom - 8, { n: 2, size: 4, vy: -22, life: .32 });
 }

@@ -2,7 +2,7 @@
 
 
 import Image from "next/image";
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";

@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ArrowRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { isLoggedIn } from "@/lib/auth";
 import { useI18n } from "@/context/LocaleContext";
+import { SakugaButton } from "@/components/ui/sakuga";
 
 const SITE_URL = "https://www.eureka-ai.web.id";
 
 export default function LandingPage() {
+  const router = useRouter();
   const { locale, dict, setLocale } = useI18n();
   const [loggedIn, setLoggedIn] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
@@ -72,8 +75,7 @@ export default function LandingPage() {
     ? dict.nav.lanjutBelajar
     : locale === "en" ? "Start learning for free" : "Mulai belajar gratis";
 
-  const buttonBase = "landing-press inline-flex min-h-[50px] w-full items-center justify-center rounded-xl px-4 py-2 text-center text-sm font-black uppercase tracking-[0.6px]";
-  const primaryButton = `${buttonBase} border-b-4 border-[#512597] bg-[#7540D0] text-white`;
+  const startLearning = () => router.push(ctaHref);
 
   const en = locale === "en";
   const benefits = [
@@ -139,8 +141,8 @@ export default function LandingPage() {
               {en ? "A fun way to learn and understand anything!" : "Cara paling seru untuk belajar dan memahami apa saja!"}
             </h1>
             <div className="mx-auto mt-8 grid max-w-[330px] gap-3">
-              <Link href={ctaHref} className={primaryButton}>{ctaLabel}</Link>
-              {!loggedIn && <Link href="/login" className={`${buttonBase} border-2 border-b-4 border-[#E5E5E5] bg-[#FFFFFF] text-[#7038C8]`}>{en ? "I already have an account" : "Aku sudah punya akun"}</Link>}
+              <SakugaButton variant="primary" fallbackHref={ctaHref} onClick={startLearning} className="w-full">{ctaLabel}</SakugaButton>
+              {!loggedIn && <SakugaButton variant="secondary" fallbackHref="/login" onClick={() => router.push("/login")} className="w-full">{en ? "I already have an account" : "Aku sudah punya akun"}</SakugaButton>}
             </div>
           </div>
         </section>
@@ -204,7 +206,7 @@ export default function LandingPage() {
               <p className="mb-6 text-5xl font-black text-[#C4A5FF] sm:text-[64px]">eureka!</p>
               <h2 className="text-3xl font-black sm:text-[40px]">{en ? "Your curiosity has a friend." : "Rasa penasaranmu punya teman."}</h2>
               <p className="my-5 text-violet-100">{en ? "Bring your material. Ask about what you don’t understand. Find your Eureka moment." : "Bawa materimu. Tanyakan yang belum kamu pahami. Temukan momen “oh, begitu!” bersama Eureka."}</p>
-              <Link href={ctaHref} className={`${primaryButton} max-w-[330px]`}>{ctaLabel}</Link>
+              <SakugaButton variant="primary" fallbackHref={ctaHref} onClick={startLearning} className="w-full max-w-[330px]">{ctaLabel}</SakugaButton>
             </div>
           </div>
         </section>
@@ -212,7 +214,7 @@ export default function LandingPage() {
 
         <section className="flex min-h-svh flex-col items-center justify-end pt-12 text-center">
           <h2 className="mx-auto max-w-lg px-6 text-3xl font-black text-[#7540D0] sm:text-5xl">{en ? "Make learning fun with Eureka!" : "Belajar jadi seru bersama Eureka!"}</h2>
-          <Link href={ctaHref} className={`${primaryButton} mx-auto mt-6 max-w-[330px]`}>{ctaLabel}</Link>
+          <SakugaButton variant="primary" fallbackHref={ctaHref} onClick={startLearning} className="mx-auto mt-6 w-full max-w-[330px]">{ctaLabel}</SakugaButton>
           <Image src="/landing/B6jnFE.png" alt="" unoptimized width={1663} height={590} className="mt-8 h-auto max-h-[70svh] w-full object-cover" />
         </section>
       </main>

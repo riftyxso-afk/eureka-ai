@@ -15,6 +15,7 @@ import SparklesIcon from "kubai-icons-react/icons/sparkles";
 import Cancel01Icon from "kubai-icons-react/icons/circle-x";
 import PlusSignIcon from "kubai-icons-react/icons/circle-plus";
 import Tick02Icon from "kubai-icons-react/icons/circle-check";
+import { loadSakuga, showSakugaTyping } from "@/lib/sound/sakugaFeedback";
 import './PromptBar.css';
 
 const HugeiconsIcon = ({ icon: Icon, ...props }) => <Icon {...props} />;
@@ -653,6 +654,7 @@ export default function PromptBar({
           aria-label="Prompt"
           enterKeyHint="send"
           onChange={e => {
+            showSakugaTyping(e.nativeEvent);
             setDraft(e.target.value);
             if (/(^|\s)@[\w-]*$/.test(e.target.value)) onSourcesOpen?.();
             typing.current.energy = Math.min(1.6, typing.current.energy + 0.22);
@@ -661,7 +663,10 @@ export default function PromptBar({
             closeMenus();
             setActive(0);
           }}
-          onFocus={closeMenus}
+          onFocus={() => {
+            closeMenus();
+            void loadSakuga("input").catch(() => {});
+          }}
           onKeyDown={onKeyDown}
         />
 

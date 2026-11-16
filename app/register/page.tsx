@@ -12,7 +12,7 @@ import {
   User,
 } from "lucide-react";
 
-import ButtonClay from "@/components/ui/ButtonClay";
+import { confirmSakugaButton, SakugaButton, type SakugaButtonElement } from "@/components/ui/sakuga";
 import AuthShell from "@/components/auth/AuthShell";
 import InputClay from "@/components/ui/InputClay";
 import GoogleIcon from "@/components/ui/GoogleIcon";
@@ -48,6 +48,7 @@ export default function RegisterPage() {
   // tetap terbawa sampai proses OTP selesai).
   const [refCode, setRefCode] = useState("");
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const submitButton = useRef<SakugaButtonElement>(null);
 
   // CAPTCHA (Cloudflare Turnstile) — token sekali pakai, di-reset tiap submit.
   const captchaConfigured = isTurnstileClientConfigured();
@@ -143,12 +144,14 @@ export default function RegisterPage() {
     setSending(true);
     resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
     const result = await requestOtpLogin(email, name, captchaToken ?? undefined);
-    setSending(false);
     if (!result.ok) {
+      setSending(false);
       setError(result.error ?? a.errSend);
       return;
     }
 
+    if (step === "form") await confirmSakugaButton(submitButton.current);
+    setSending(false);
     setStep("otp");
     setOtpCode("");
     startCooldown();
@@ -184,7 +187,7 @@ export default function RegisterPage() {
     }
 
     // Sinkronkan identitas ke backend teman/kolaborasi.
-    await registerFriendsIdentity(result.user!.name);
+    await Promise.all([registerFriendsIdentity(result.user!.name), confirmSakugaButton(submitButton.current)]);
 
     router.replace("/onboarding");
   };
@@ -222,11 +225,11 @@ export default function RegisterPage() {
           {step === "form" ? (
             <>
               {/* Daftar dengan Google */}
-              <button
-                type="button"
+              <SakugaButton
+                variant="secondary"
                 onClick={handleGoogle}
                 disabled={googleBusy}
-                className="mt-8 flex w-full items-center justify-center gap-2.5 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-4 py-3.5 text-sm font-extrabold text-clay-dark transition-all duration-75 hover:-translate-y-0.5 hover:shadow-clay-sm active:translate-y-0.5 disabled:opacity-60"
+                className="mt-8 w-full"
               >
                 {googleBusy ? (
                   <Loader2 size={18} className="animate-spin text-clay-muted" />
@@ -234,7 +237,7 @@ export default function RegisterPage() {
                   <GoogleIcon size={18} />
                 )}
                 {a.regGoogle}
-              </button>
+              </SakugaButton>
 
               <div className="mt-5 flex items-center gap-3">
                 <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
@@ -303,11 +306,12 @@ export default function RegisterPage() {
                 />
               </div>}
 
-              <ButtonClay
+              <SakugaButton
                 type="submit"
-                fullWidth
+                variant="primary"
+                buttonRef={submitButton}
                 disabled={sending || !canSend}
-                className="!min-h-[56px]"
+                className="w-full"
               >
                 {sending ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -317,19 +321,19 @@ export default function RegisterPage() {
                     {a.regOtp}
                   </>
                 )}
-              </ButtonClay>
+              </SakugaButton>
               </form>
             </>
           ) : (
             <form onSubmit={handleVerify} className="mt-6 space-y-5">
-              <button
-                type="button"
+              <SakugaButton
+                variant="secondary"
                 onClick={backToForm}
-                className="flex items-center gap-1 text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary"
+                disabled={submitting}
               >
                 <ArrowLeft size={13} />
                 {a.changeNameEmail}
-              </button>
+              </SakugaButton>
               <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
                 {a.otpSent}{" "}
                 <b className="text-clay-dark">{email.trim().toLowerCase()}</b>.
@@ -369,13 +373,14 @@ export default function RegisterPage() {
                 />
               </div>}
 
-              <ButtonClay
+              <SakugaButton
                 type="submit"
-                fullWidth
+                variant="primary"
+                buttonRef={submitButton}
                 disabled={
                   submitting || otpCode.length !== 6 || (captchaConfigured && !captchaToken)
                 }
-                className="!min-h-[56px]"
+                className="w-full"
               >
                 {submitting ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -385,7 +390,7 @@ export default function RegisterPage() {
                     {a.createAccount}
                   </>
                 )}
-              </ButtonClay>
+              </SakugaButton>
 
               <button
                 type="button"

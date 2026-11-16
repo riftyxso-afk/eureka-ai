@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";

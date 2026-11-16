@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 
 import StoryPlayer from "@/components/note/StoryPlayer";
 

@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { markFeedbackDismissedLocally } from "@/lib/assistant/feedback";
-import { Heart, Loader2, Star, X } from "lucide-react";
+import { Heart, Loader2, X } from "lucide-react";
+import { SakugaButton, SakugaRating } from "@/components/ui/sakuga";
+import { toast } from "@/lib/toast";
 
 /**
  * Survey performa Eureka — sekali per user, ~1 menit setelah catatan pertama
@@ -19,7 +21,6 @@ export default function FeedbackSurveyModal({
   onClose: () => void;
 }) {
   const [rating, setRating] = useState(0);
-  const [hover, setHover] = useState(0);
   const [suggestion, setSuggestion] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +29,6 @@ export default function FeedbackSurveyModal({
   useEffect(() => {
     if (open) {
       setRating(0);
-      setHover(0);
       setSuggestion("");
       setSaving(false);
       setError(null);
@@ -62,6 +62,7 @@ export default function FeedbackSurveyModal({
         setError(data.error ?? "Gagal menyimpan jawaban. Coba lagi.");
         return;
       }
+      if (payload.rating) toast.success("Masukan tersimpan.");
       setDone(true);
       setTimeout(onClose, 900);
     } catch {
@@ -114,28 +115,8 @@ export default function FeedbackSurveyModal({
               Seberapa puas kamu dengan jawaban Eureka saat membuat catatan?
             </p>
 
-            {/* Rating 1-5 — target sentuh ≥44px */}
             <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setRating(n)}
-                  onMouseEnter={() => setHover(n)}
-                  onMouseLeave={() => setHover(0)}
-                  aria-label={`Rating ${n} dari 5`}
-                  aria-pressed={rating === n}
-                  className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-clay-md transition-all duration-75 hover:-translate-y-0.5 ${
-                    n <= (hover || rating)
-                      ? "bg-amber-400/20 text-amber-500"
-                      : "bg-clay-beige text-clay-muted"
-                  }`}
-                >
-                  <Star
-                    size={26}
-                    className={n <= (hover || rating) ? "fill-amber-400" : ""}
-                  />
-                </button>
-              ))}
+              <SakugaRating label="Kepuasan saat membuat catatan" value={rating} onChange={setRating} disabled={saving} />
             </div>
 
             <div>
@@ -175,13 +156,14 @@ export default function FeedbackSurveyModal({
               )}
             </button>
 
-            <button
+            <SakugaButton
+              variant="secondary"
               onClick={handleDismiss}
               disabled={saving}
-              className="btn-clay-ghost w-full !min-h-[44px] text-xs disabled:opacity-50"
+              className="w-full"
             >
               Nanti saja
-            </button>
+            </SakugaButton>
           </div>
         )}
       </div>

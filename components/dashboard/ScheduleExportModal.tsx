@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 
 /**
  * Modal Ekspor Jadwal (schedule-export) — ekspor jadwal belajar sebagai:

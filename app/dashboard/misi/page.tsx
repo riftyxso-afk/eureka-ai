@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { isDashboardV2 } from "@/lib/v2Navigation";

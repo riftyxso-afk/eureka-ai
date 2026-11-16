@@ -2,7 +2,7 @@
 
 
 import Image from "next/image";
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";

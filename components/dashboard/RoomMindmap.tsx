@@ -1,7 +1,7 @@
 "use client";
 
 import {usePinchZoom} from "@/lib/usePinchZoom";
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";

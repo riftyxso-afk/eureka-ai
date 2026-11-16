@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
@@ -273,7 +273,7 @@ export default function ProfileContent({ v2 = false }: { v2?: boolean }) {
       return;
     }
     window.dispatchEvent(new Event("eureka:profile-updated"));
-    showToast(l.saved);
+    toast.success(l.saved);
   };
 
   const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {

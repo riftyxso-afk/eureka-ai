@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";

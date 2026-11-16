@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 
 import { usePathname } from "next/navigation";
 import { isDashboardV2 } from "@/lib/v2Navigation";

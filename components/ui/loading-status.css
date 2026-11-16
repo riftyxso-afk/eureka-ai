@@ -8,6 +8,19 @@
   vertical-align: middle;
 }
 .eureka-loading > loading-indicator { flex-shrink: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  @supports (background-clip: text) {
+    .ai-status-shimmer {
+      background: linear-gradient(102deg, currentColor 34%, #a68cdf 50%, currentColor 66%) 100% 0 / 260% 100%;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: ai-status-shimmer 1.9s linear infinite;
+    }
+  }
+}
+@keyframes ai-status-shimmer {
+  to { background-position: -65% 0; }
+}
 .eureka-loading-copy {
   display: flex;
   flex-direction: column;

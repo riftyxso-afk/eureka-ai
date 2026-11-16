@@ -5,6 +5,7 @@ import { LoadingMomo } from "./LoadingMomo";
 import { NoteLoadingSteps } from "@/components/note/NoteLoadingSteps";
 import type { NoteStep } from "@/components/note/useNoteSteps";
 import LoadingStatus from "@/components/ui/LoadingStatus";
+import { SakugaButton, SakugaProgress } from "@/components/ui/sakuga";
 import { noteLoadingStage } from "@/lib/loading-stage";
 import "./note-generation-progress.css";
 
@@ -16,9 +17,10 @@ type Props = {
   onStop: () => void;
   canStop: boolean;
   stopping: boolean;
+  onDone: () => void;
 };
 
-export function NoteGenerationProgress({ message, percent, steps, onBackground, onStop, canStop, stopping }: Props) {
+export function NoteGenerationProgress({ message, percent, steps, onBackground, onStop, canStop, stopping, onDone }: Props) {
   const progress = Math.max(0, Math.min(100, Math.round(percent)));
   const readingWeb = /(?:membaca|memuat|mengambil|reading|loading|fetching).*(?:https?:|\bweb\b)/i.test(message);
   return <section className="note-generation" aria-labelledby="note-generation-title">
@@ -34,10 +36,8 @@ export function NoteGenerationProgress({ message, percent, steps, onBackground, 
       <LoadingMomo reading={readingWeb} />
     </div>
     <div className="note-generation-progress-card">
-      <div className="note-generation-progress-heading"><span>Progres pembuatan</span><strong>{progress}%</strong></div>
-      <div className="note-generation-track" role="progressbar" aria-label="Progres pembuatan catatan" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-        <div className="note-generation-fill" style={{ width: `${progress}%` }} />
-      </div>
+      <div className="note-generation-progress-heading">Progres pembuatan</div>
+      <SakugaProgress label="Progres pembuatan catatan" value={progress} onDone={onDone} />
       <div className="note-generation-current"><LoadingStatus stage={noteLoadingStage(steps.find(step => step.status === "active" && !step.isSubStep)?.id, message)} detail={message || "Menyiapkan materi…"} /></div>
     </div>
     {steps.length > 0 && <div className="note-generation-steps rounded-xl border border-violet-100 px-2 pb-2 dark:border-violet-900">
@@ -46,7 +46,7 @@ export function NoteGenerationProgress({ message, percent, steps, onBackground, 
     <p className="note-generation-hint">Catatan tetap diproses jika kamu menutup jendela ini.</p>
     <div className="note-generation-actions">
       <button type="button" className="note-generation-background" onClick={onBackground}>Lanjut di latar belakang <ArrowRight size={16} /></button>
-      <button type="button" className="note-generation-stop" onClick={onStop} disabled={!canStop || stopping}><Square size={12} fill="currentColor" />{stopping ? "Menghentikan…" : "Hentikan proses"}</button>
+      <SakugaButton variant="secondary" onClick={onStop} disabled={!canStop || stopping}><Square size={12} fill="currentColor" />{stopping ? "Menghentikan…" : "Hentikan proses"}</SakugaButton>
     </div>
   </section>;
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, ChevronDown, CreditCard, History, Loader2, Printer } from "lucide-react";
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 import SlideToConfirm from "@/components/ui/SlideToConfirm";
 import { TIER_PRICES } from "@/lib/paymentPricing";
 import { usePremium } from "@/lib/usePremium";

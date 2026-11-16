@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from 'react';
 import {apiFetch} from '@/lib/apiClient';
-import {toast} from '@yusufceng1z/ding-react';
+import {toast} from "@/lib/toast";
 export default function LearningConsent({compact=false}:{compact?:boolean}){
  const [decided,setDecided]=useState(false);
  const [enabled,setEnabled]=useState(false),[style,setStyle]=useState('auto'),[ready,setReady]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[open,setOpen]=useState(!compact),[counts,setCounts]=useState<Record<string,number>>({});

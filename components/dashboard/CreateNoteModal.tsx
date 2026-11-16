@@ -321,6 +321,7 @@ export const CreateNoteModal = ({
   const [newSubjectName, setNewSubjectName] = useState("");
   const [subjectError, setSubjectError] = useState<string | null>(null);
   const [createdNote, setCreatedNote] = useState<Note | null>(null);
+  const [pendingNote, setPendingNote] = useState<Note | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [stoppingJob, setStoppingJob] = useState(false);
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -410,6 +411,7 @@ export const CreateNoteModal = ({
   const canSubmit = !processing && Boolean(mataPelajaran) && sourcesValid;
 
   const reset = () => {
+    setPendingNote(null);
     setStep(1);
     setSources([]);
     setTranslateToIndo(false);
@@ -444,9 +446,10 @@ export const CreateNoteModal = ({
   const close = () => {
     // Selama proses berjalan di latar belakang, modal BOLEH ditutup —
     // job tetap jalan dan notifikasi selesai muncul lewat watcher.
-    if (createdNote) {
-      const note = createdNote;
+    const note = createdNote ?? pendingNote;
+    if (note) {
       setCreatedNote(null);
+      setProcessing(false);
       reset();
       onCreate(note);
     } else {
@@ -576,8 +579,7 @@ export const CreateNoteModal = ({
         setProgressPercent(100);
         setProgressMessage("Selesai!");
         if (guided) recordFirstNote(ndata.note.id, jobId);
-        setCreatedNote(ndata.note as Note);
-        setProcessing(false);
+        setPendingNote(ndata.note as Note);
       }
     } catch {
       // Biarkan watcher memantau dan memberi tahu lewat notifikasi.
@@ -770,7 +772,7 @@ export const CreateNoteModal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={close}
-          className="create-note-backdrop fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
+          className="create-note-backdrop fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden overflow-y-auto bg-black/40 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
         >
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.95 }}
@@ -855,7 +857,14 @@ export const CreateNoteModal = ({
                   </div>
                 </div>
               ) : processing ? (
-                <NoteGenerationProgress message={progressMessage} percent={progressPercent} steps={steps} onBackground={close} onStop={stopProcessing} canStop={!!activeJobId} stopping={stoppingJob} />
+                <NoteGenerationProgress message={progressMessage} percent={pendingNote ? 100 : Math.min(progressPercent, 99)}
+                  steps={steps} onBackground={close} onStop={stopProcessing} canStop={!!activeJobId && !pendingNote}
+                  stopping={stoppingJob} onDone={() => {
+                    if (!pendingNote) return;
+                    setCreatedNote(pendingNote);
+                    setPendingNote(null);
+                    setProcessing(false);
+                  }} />
               ) : step === 1 ? (
                 <>
                   <div className="flex items-start justify-between gap-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Grip, Pin, Plus, Search, Trash2, X } from "lucide-react";
 import { getUserId } from "@/lib/identity";

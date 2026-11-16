@@ -18,7 +18,7 @@ import {
   Mail,
 } from "lucide-react";
 
-import ButtonClay from "@/components/ui/ButtonClay";
+import { confirmSakugaButton, SakugaButton, SakugaRadio, type SakugaButtonElement } from "@/components/ui/sakuga";
 import AuthShell from "@/components/auth/AuthShell";
 import ImportAccount from "@/components/auth/ImportAccount";
 import InputClay from "@/components/ui/InputClay";
@@ -38,7 +38,7 @@ import { useI18n } from "@/context/LocaleContext";
 type LoginMode = "password" | "otp";
 
 export default function LoginPage() {
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const a = dict.auth;
   const router = useRouter();
   const [mode, setMode] = useState<LoginMode>("password");
@@ -54,6 +54,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [checked, setChecked] = useState(false);
+  const submitButton = useRef<SakugaButtonElement>(null);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // CAPTCHA (Cloudflare Turnstile) — token sekali pakai, di-reset tiap submit.
@@ -150,6 +151,7 @@ export default function LoginPage() {
       return;
     }
 
+    await confirmSakugaButton(submitButton.current);
     await goAfterLogin();
   };
 
@@ -170,12 +172,14 @@ export default function LoginPage() {
     setOtpSending(true);
     resetCaptcha(); // token sekali pakai — siapkan yang baru untuk percobaan berikutnya
     const result = await requestOtpLogin(email, undefined, captchaToken ?? undefined);
-    setOtpSending(false);
     if (!result.ok) {
+      setOtpSending(false);
       setError(result.error ?? a.errSend);
       return;
     }
 
+    if (!otpSent) await confirmSakugaButton(submitButton.current);
+    setOtpSending(false);
     setOtpSent(true);
     setOtpCode("");
     startCooldown();
@@ -204,7 +208,7 @@ export default function LoginPage() {
       return;
     }
 
-    setSubmitting(false);
+    await confirmSakugaButton(submitButton.current);
     await goAfterLogin();
   };
 
@@ -233,11 +237,11 @@ export default function LoginPage() {
           </p>
 
           {/* Login dengan Google */}
-          <button
-            type="button"
+          <SakugaButton
+            variant="secondary"
             onClick={handleGoogle}
             disabled={googleBusy}
-            className="mt-6 flex w-full items-center justify-center gap-2.5 rounded-clay-md border-2 border-clay-shadow/40 bg-white px-4 py-3.5 text-sm font-extrabold text-clay-dark transition-all duration-75 hover:-translate-y-0.5 hover:shadow-clay-sm active:translate-y-0.5 disabled:opacity-60"
+            className="mt-6 w-full"
           >
             {googleBusy ? (
               <Loader2 size={18} className="animate-spin text-clay-muted" />
@@ -245,7 +249,7 @@ export default function LoginPage() {
               <GoogleIcon size={18} />
             )}
             {a.loginGoogle}
-          </button>
+          </SakugaButton>
 
           <div className="mt-5 flex items-center gap-3">
             <span className="h-0.5 flex-1 rounded-full bg-clay-shadow/40" />
@@ -256,31 +260,10 @@ export default function LoginPage() {
           </div>
 
           <ImportAccount />
-          {/* Pilih metode login */}
-          <div className="mt-6 flex gap-2 rounded-clay-full border-3 border-clay-shadow/40 bg-clay-inputBg p-1 shadow-clay-inset">
-            {(
-              [
-                { id: "password", label: a.tabPassword },
-                { id: "otp", label: a.tabOtp },
-              ] as { id: LoginMode; label: string }[]
-            ).map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                aria-pressed={mode === tab.id}
-                onClick={() => {
-                  setMode(tab.id);
-                  setError(null);
-                }}
-                className={`min-h-[44px] flex-1 rounded-clay-full border-2 text-sm font-extrabold transition-all duration-75 ${
-                  mode === tab.id
-                    ? "border-clay-primary bg-clay-primary text-white shadow-clay-sm"
-                    : "border-transparent text-clay-muted hover:text-clay-dark"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="sakuga-radio-row mt-6 text-sm font-bold">
+            <SakugaRadio label={locale === "en" ? "Sign-in method" : "Metode masuk"} name="login-method" value={mode}
+              options={[{ id: "password", label: a.tabPassword }, { id: "otp", label: a.tabOtp }]}
+              onChange={value => { setMode(value === "otp" ? "otp" : "password"); setError(null); }} />
           </div>
 
           {mode === "password" ? (
@@ -352,11 +335,12 @@ export default function LoginPage() {
                 />
               </div>}
 
-              <ButtonClay
+              <SakugaButton
                 type="submit"
-                fullWidth
+                variant="primary"
+                buttonRef={submitButton}
                 disabled={submitting || (captchaConfigured && !captchaToken)}
-                className="!min-h-[56px]"
+                className="w-full"
               >
                 {submitting ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -366,7 +350,7 @@ export default function LoginPage() {
                     {a.login}
                   </>
                 )}
-              </ButtonClay>
+              </SakugaButton>
             </form>
           ) : !otpSent ? (
             <form onSubmit={handleSendOtp} className="mt-6 space-y-5">
@@ -409,11 +393,12 @@ export default function LoginPage() {
                 />
               </div>}
 
-              <ButtonClay
+              <SakugaButton
                 type="submit"
-                fullWidth
+                variant="primary"
+                buttonRef={submitButton}
                 disabled={otpSending || (captchaConfigured && !captchaToken)}
-                className="!min-h-[56px]"
+                className="w-full"
               >
                 {otpSending ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -423,18 +408,18 @@ export default function LoginPage() {
                     {a.sendCode}
                   </>
                 )}
-              </ButtonClay>
+              </SakugaButton>
             </form>
           ) : (
             <form onSubmit={handleVerifyOtp} className="mt-6 space-y-5">
-              <button
-                type="button"
+              <SakugaButton
+                variant="secondary"
                 onClick={backToEmail}
-                className="flex items-center gap-1 text-xs font-extrabold text-clay-muted transition-colors hover:text-clay-primary"
+                disabled={submitting}
               >
                 <ArrowLeft size={13} />
                 {a.changeEmail}
-              </button>
+              </SakugaButton>
               <p className="rounded-2xl border-2 border-dashed border-clay-shadow/40 p-3 text-center text-sm font-semibold text-clay-muted">
                 {a.otpSent}{" "}
                 <b className="text-clay-dark">{email.trim().toLowerCase()}</b>.
@@ -474,13 +459,14 @@ export default function LoginPage() {
                 />
               </div>}
 
-              <ButtonClay
+              <SakugaButton
                 type="submit"
-                fullWidth
+                variant="primary"
+                buttonRef={submitButton}
                 disabled={
                   submitting || otpCode.length !== 6 || (captchaConfigured && !captchaToken)
                 }
-                className="!min-h-[56px]"
+                className="w-full"
               >
                 {submitting ? (
                   <Loader2 size={20} className="animate-spin" />
@@ -490,7 +476,7 @@ export default function LoginPage() {
                     {a.login}
                   </>
                 )}
-              </ButtonClay>
+              </SakugaButton>
 
               <button
                 type="button"

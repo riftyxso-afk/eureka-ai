@@ -20,7 +20,7 @@ export default function LoadingStatus({ stage, detail, compact = false }: {
   return <span className="eureka-loading" data-stage={stage} role="status" aria-live="polite">
     <Loading animation={animations[stage]} size={compact ? 20 : 28} role="presentation" aria-hidden="true" />
     <span className="eureka-loading-copy">
-      <span className="eureka-loading-label" key={stage}>{stage[0].toUpperCase() + stage.slice(1)}<span aria-hidden="true">…</span></span>
+      <span className="eureka-loading-label ai-status-shimmer" key={stage}>{stage[0].toUpperCase() + stage.slice(1)}<span aria-hidden="true">…</span></span>
       {detail && <span className="eureka-loading-detail">{detail}</span>}
     </span>
   </span>;

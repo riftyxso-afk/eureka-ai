@@ -4,7 +4,7 @@ import WebSources from "@/components/asisten/WebSources";
 import StudyResponseTools from "./StudyResponseTools";
 import StudyArtifactDialog from "./StudyArtifactDialog";
 import TrainingContribution from "./TrainingContribution";
-import { toast } from "@yusufceng1z/ding-react";
+import { toast } from "@/lib/toast";
 import type {StudyActivity} from "@/lib/study-intent";
 import "./study-production.css";
 import { Fragment, useEffect, useRef, useState } from "react";
