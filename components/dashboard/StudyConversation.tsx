@@ -23,6 +23,8 @@ import V2MobileSidebar from "@/components/dashboard/V2MobileSidebar";
 import PageTutorial from "@/components/tutorial/PageTutorial";
 import MessageBubble from "@/components/asisten/MessageBubble";
 import ChatSidebar from "@/components/asisten/ChatSidebar";
+import ImageGenerationOverlay from "@/components/note/ImageGenerationOverlay";
+import { detectImageIntent } from "@/lib/assistant/imageIntent";
 import ChatSkeleton from "@/components/asisten/ChatSkeleton";
 import PromptBar from "@/components/asisten/reactbits/PromptBar";
 import SpeechInput from "@/components/asisten/SpeechInput";
@@ -158,10 +160,13 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     return () => controller.abort();
   }, [sessionId, initialMessages, loadAttempt]);
 
+  const [imagePrompt, setImagePrompt] = useState<string | null>(null);
+
   async function send(prompt: string, selectedNote = noteId, sourceText?: string, activity?: StudyActivity, artifactId?: string) {
     const text = prompt.trim();
     if (!text || !loaded || sending.current) return;
     if (text.length > 6000) { setError("Tulis pesan maksimal 6.000 karakter."); return; }
+    if (detectImageIntent(text).isImageRequest) { setImagePrompt(text); return; }
     sending.current = true;
     const replyId = crypto.randomUUID();
     setLiveTurnId(replyId);
@@ -251,6 +256,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
   }] : turns;
 
   return <div className="momo-session study-session flex h-dvh overflow-hidden bg-clay-beige p-0">
+      <ImageGenerationOverlay open={Boolean(imagePrompt)} prompt={imagePrompt ?? ""} history={turns.map(turn => ({ role: turn.role, content: turn.content }))} onClose={() => setImagePrompt(null)} />
     <ChatSidebar sessions={sessions} activeId={sessionId} onNew={() => router.push("/dashboard-v2?workspace=study")} onSelect={() => {}} onRename={async (id, newTitle) => { await changeSession(id, newTitle); }} onDelete={async id => { await changeSession(id); }} />
     {artifact && <StudyArtifactDialog sessionId={sessionId} artifactId={artifact.id} onClose={() => setArtifact(null)} />}
     <main className="study-conversation">

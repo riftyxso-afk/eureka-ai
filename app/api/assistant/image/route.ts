@@ -20,7 +20,7 @@ import {
   generateAiIllustration,
   isCloudflareImagesConfigured,
 } from "@/lib/cloudflareImages";
-import { generateImageViaOpenAgentic } from "@/lib/image-gen";
+import { generateImageViaCiora, generateImageViaOpenAgentic } from "@/lib/image-gen";
 import { authorizeAssistantUser } from "@/lib/assistant/auth";
 import { enforcePremium } from "@/lib/premium";
 import { checkRateLimit, ensureRateLimitPrune } from "@/lib/rateLimit";
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
     prompt?: unknown;
     history?: unknown;
     userId?: unknown;
+    stream?: boolean;
   } | null;
 
   const prompt = String(raw?.prompt ?? "").trim().slice(0, 500);
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
 
   // Provider gambar: OpenAgentic UTAMA, Cloudflare FLUX fallback.
   // Tolak hanya bila keduanya tidak tersedia.
-  if (!OPENAGENTIC_API_KEY && !isCloudflareImagesConfigured()) {
+  if (!process.env.CIORA_API_KEY && !OPENAGENTIC_API_KEY && !isCloudflareImagesConfigured()) {
     return Response.json(
       {
         error:
@@ -121,7 +122,9 @@ export async function POST(req: NextRequest) {
     : [];
   const contextTopic = extractTopicFromHistory(prompt, history);
 
+  const generate = async (emit: (data: Record<string, unknown>) => void) => {
   try {
+    emit({ status: "queued", message: "Menyiapkan gambarmu..." });
     // 1) Susun prompt ilustrasi yang sesuai TOPIK via AI (mode fast — hemat).
     let illustrationPrompt = "";
     if (hasAiKey()) {
@@ -150,7 +153,9 @@ export async function POST(req: NextRequest) {
     }
 
     // 2) Generate gambar — OpenAgentic utama, Cloudflare FLUX fallback.
+    emit({ status: "generating", message: "Membuat gambar..." });
     const dataUrl =
+      (await generateImageViaCiora(illustrationPrompt, req.signal)) ??
       (await generateImageViaOpenAgentic(illustrationPrompt)) ??
       (await generateAiIllustration(illustrationPrompt));
     if (!dataUrl) {
@@ -160,6 +165,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    emit({ status: "refining", message: "Menyiapkan hasil..." });
     return Response.json({
       ok: true,
       dataUrl,
@@ -173,4 +179,24 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+  };
+  if (raw?.stream !== true) return generate(() => {});
+  const encoder = new TextEncoder();
+  let closed = false;
+  const stream = new ReadableStream({
+    cancel() { closed = true; },
+    async start(controller) {
+      const emit = (data: Record<string, unknown>) => {
+        if (!closed) controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
+      try {
+        const result = await generate(emit);
+        const data = await result.json();
+        emit(result.ok ? { status: "complete", ...data } : { status: "error", error: data.error });
+      } catch { emit({ status: "error", error: "Gambar belum dapat dibuat. Coba lagi." }); }
+      finally { if (!closed) { closed = true; controller.close(); } }
+    },
+  });
+  return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-store, no-transform", "X-Accel-Buffering": "no" } });
+
 }

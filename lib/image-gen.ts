@@ -88,3 +88,21 @@ export async function generateImageViaOpenAgentic(
     return null;
   }
 }
+
+/** CIORA image generation stays server-side. */
+export async function generateImageViaCiora(prompt: string, signal?: AbortSignal): Promise<string | null> {
+  const key = process.env.CIORA_API_KEY?.trim();
+  if (!key) return null;
+  const response = await fetch("https://ciora.id/v1/images/generations", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "flux-2-dev", prompt: prompt.slice(0, 2000), size: "1024x1024", n: 1 }),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(90000)]) : AbortSignal.timeout(90000),
+  });
+  if (!response.ok) throw new Error(`Image gateway HTTP ${response.status}`);
+  const data = await response.json();
+  const item = data.data?.[0];
+  if (typeof item?.b64_json === "string" && item.b64_json.length <= MAX_IMAGE_BYTES * 1.4) return `data:image/png;base64,${item.b64_json}`;
+  if (typeof item?.url === "string" && item.url.startsWith("https://")) return downloadToDataUrl(item.url);
+  return null;
+}
