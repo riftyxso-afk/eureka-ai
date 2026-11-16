@@ -260,7 +260,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
   }] : turns;
 
   return <div className="momo-session study-session flex h-dvh overflow-hidden bg-clay-beige p-0">
-      <ImageGenerationOverlay open={Boolean(imagePrompt)} prompt={imagePrompt ?? ""} history={turns.map(turn => ({ role: turn.role, content: turn.content }))} onClose={() => setImagePrompt(null)} />
+
     <ChatSidebar sessions={sessions} activeId={sessionId} onNew={() => router.push("/dashboard-v2?workspace=study")} onSelect={() => {}} onRename={async (id, newTitle) => { await changeSession(id, newTitle); }} onDelete={async id => { await changeSession(id); }} />
     {artifact && <StudyArtifactDialog sessionId={sessionId} artifactId={artifact.id} onClose={() => setArtifact(null)} />}
     <main className="study-conversation">
@@ -328,6 +328,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
           {lastPrompt && !agent.busy && <button type="button" onClick={() => void send(lastPrompt, lastNote, lastSourceText, lastActivity, lastArtifactId)}>Coba lagi</button>}
         </div>}
 
+      <ImageGenerationOverlay showPrompt={false} open={Boolean(imagePrompt)} prompt={imagePrompt ?? ""} history={turns.map(turn => ({ role: turn.role, content: turn.content }))} onClose={() => setImagePrompt(null)} />
       </div>
     </div>
     <footer className="study-chat-footer momo-session-composer">

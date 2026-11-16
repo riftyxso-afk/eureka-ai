@@ -240,6 +240,14 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
               </p>
             </div>
 
+      {/* Overlay generate gambar AI (saat user minta "buat gambar") */}
+      <ImageGenerationOverlay
+        open={!!imagePrompt}
+        prompt={imagePrompt ?? ""}
+        onClose={() => setImagePrompt(null)}
+      />
+
+
             {/* Composer — focal point */}
             <div className="momo-start-composer mt-8 w-full">
               {noteCommand && <NoteActions key={JSON.stringify(noteCommand)} command={noteCommand} onClose={() => setNoteCommand(null)} onChoose={setNoteCommand} />}
@@ -338,13 +346,6 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
           setNotePrompt(null);
           setNotePrefs(null);
         }}
-      />
-
-      {/* Overlay generate gambar AI (saat user minta "buat gambar") */}
-      <ImageGenerationOverlay
-        open={!!imagePrompt}
-        prompt={imagePrompt ?? ""}
-        onClose={() => setImagePrompt(null)}
       />
 
       {/* Panggilan suara AI (beta) */}
