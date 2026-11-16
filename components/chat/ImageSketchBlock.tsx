@@ -60,7 +60,8 @@ export function ImageSketchBlock({ prompt, history = [], onClose }: Props) {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [prompt, retry]);
   return <section className="w-full max-w-[460px] text-clay-dark">
-    <ImageGeneration status={status} statusText={statusText} prompt={prompt} size="fluid" onRetry={() => setRetry(value => value + 1)}>
+    <p className="mb-4 whitespace-pre-wrap break-words rounded-2xl bg-clay-beige px-4 py-3 text-sm leading-relaxed">{prompt}</p>
+    <ImageGeneration status={status} statusText={statusText} size="fluid" onRetry={() => setRetry(value => value + 1)}>
       {image && <img src={image} alt={prompt} />}
     </ImageGeneration>
     {error && <p role="alert" className="mt-3 text-sm text-red-500">{error}</p>}

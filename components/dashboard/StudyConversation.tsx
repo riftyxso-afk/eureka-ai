@@ -166,7 +166,11 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     const text = prompt.trim();
     if (!text || !loaded || sending.current) return;
     if (text.length > 6000) { setError("Tulis pesan maksimal 6.000 karakter."); return; }
-    if (detectImageIntent(text).isImageRequest) { setImagePrompt(text); return; }
+    if (detectImageIntent(text).isImageRequest) {
+      setTurns(previous => [...previous, { id: crypto.randomUUID(), role: "user", content: text, sources: [] }]);
+      setImagePrompt(text);
+      return;
+    }
     sending.current = true;
     const replyId = crypto.randomUUID();
     setLiveTurnId(replyId);
