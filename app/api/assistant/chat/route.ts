@@ -1,6 +1,7 @@
 import { learningContext,observeLearning } from "@/lib/learningPreferences";
 import { NextRequest } from "next/server";
 import { dahonoApiKey, getDahonoModels } from "@/lib/assistant/dahonoGateway";
+import { FLAGSHIP_PROMPT_COST } from "@/lib/assistant/dahonoModels";
 import { consumeFlagshipCredit } from "@/lib/assistant/flagshipCredits";
 import { citedNoteSources } from "@/lib/assistant/citedSources";
 import { normalizeWebResults } from "@/lib/assistant/webSources";
@@ -694,7 +695,7 @@ export async function POST(req: NextRequest) {
             const remaining = await consumeFlagshipCredit(userId).catch(() => undefined);
             if (remaining == null) {
               emit({ type: "error", message: remaining === null
-                ? "Kredit Flagship habis. Pilih Otomatis atau model Reguler untuk lanjut."
+                ? `Kredit Flagship kurang dari ${FLAGSHIP_PROMPT_COST}. Pilih Otomatis atau model Reguler untuk lanjut.`
                 : "Saldo Flagship belum dapat diperiksa. Coba lagi atau pilih model Reguler." });
               return;
             }

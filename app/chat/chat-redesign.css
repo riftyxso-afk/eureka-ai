@@ -140,6 +140,9 @@
 .dark .momo-sidebar:not(.momo-sidebar-compact) { background:#202020; }
 .dark .momo-sidebar .momo-sidebar-new { background:#303030; border-color:#494949; color:#eadcf8; }
 @media (max-width:1023px) {
+  :is(.momo-chat-shell, .momo-session):has(.prompt-bar__menu[data-kind="model"])
+    :is(.momo-travelling-companion, .momo-composer-companion) { visibility:hidden; }
+
   .momo-chat-shell .momo-start-content.has-preview { padding-top:20px; padding-bottom:130px; }
   .momo-chat-shell .momo-start-content.has-preview .momo-start-composer { position:sticky; margin-top:auto; }
   .momo-preview-companion { width:76px; height:76px; }

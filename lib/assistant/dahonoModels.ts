@@ -1,5 +1,6 @@
 export const DAHONO_LOGO = "/images/ai-models/dahono.svg";
 export const FLAGSHIP_STARTING_CREDITS = 100;
+export const FLAGSHIP_PROMPT_COST = 15;
 
 export interface DahonoModel {
   id: string;

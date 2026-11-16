@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BorderBeam } from "border-beam";
 import PromptBar, { type PromptModel, type PromptSource } from "./reactbits/PromptBar";
-import { DAHONO_LOGO, FLAGSHIP_STARTING_CREDITS, type DahonoModel } from "@/lib/assistant/dahonoModels";
+import { DAHONO_LOGO, FLAGSHIP_PROMPT_COST, FLAGSHIP_STARTING_CREDITS, type DahonoModel } from "@/lib/assistant/dahonoModels";
 import SpeechInput from "./SpeechInput";
 import AtSign from "kubai-icons-react/icons/at-sign";
 import BookOpen from "kubai-icons-react/icons/book-open";
@@ -644,8 +644,8 @@ export default function Composer({
       ...dahono.models.map(model => ({ key: model.id, name: model.name, logo: model.logo,
         group: model.tier === "flagship" ? "Flagship" : "Reguler",
         description: `Dahono · ${model.vision ? "Teks + Vision" : "Teks"}`,
-        tag: !dahono.ready ? "Belum aktif" : model.tier === "flagship" ? "1 kredit" : undefined,
-        disabled: !dahono.ready || (model.tier === "flagship" && (dahono.credits ?? 0) <= 0) })),
+        tag: !dahono.ready ? "Belum aktif" : model.tier === "flagship" ? `${FLAGSHIP_PROMPT_COST} kredit` : undefined,
+        disabled: !dahono.ready || (model.tier === "flagship" && (dahono.credits ?? 0) < FLAGSHIP_PROMPT_COST) })),
     ];
     if (!dahono.models.length) models.push({ key: "dahono-unavailable", name: "Dahono", logo: DAHONO_LOGO, tag: "Belum tersedia", disabled: true });
     const sources: PromptSource[] = [
