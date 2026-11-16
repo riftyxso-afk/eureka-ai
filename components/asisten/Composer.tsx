@@ -4,7 +4,8 @@ import DocumentLogo from "@/components/ui/DocumentLogo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BorderBeam } from "border-beam";
-import PromptBar, { type PromptSource } from "./reactbits/PromptBar";
+import PromptBar, { type PromptModel, type PromptSource } from "./reactbits/PromptBar";
+import { DAHONO_LOGO, type DahonoModel } from "@/lib/assistant/dahonoModels";
 import SpeechInput from "./SpeechInput";
 import AtSign from "kubai-icons-react/icons/at-sign";
 import BookOpen from "kubai-icons-react/icons/book-open";
@@ -241,6 +242,7 @@ interface ComposerProps {
   initialMomoMode?: "fast" | "normal" | "deep";
   onMomoModeChange?: (mode: "fast" | "normal" | "deep") => void;
   onModelMenuHeightChange?: (height: number) => void;
+  initialModel?: string;
   /**
    * Prompt "buat catatan" yang tertahan — memunculkan wizard F&Q yang
    * menyatu di atas composer (bukan popup). null = tidak tampil.
@@ -280,6 +282,7 @@ export default function Composer({
   initialMomoMode = "normal",
   onMomoModeChange,
   onModelMenuHeightChange,
+  initialModel,
   noteWizardPrompt = null,
   onNoteWizardStart,
   onNoteWizardClose,
@@ -304,6 +307,19 @@ export default function Composer({
   const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [speedMode, setSpeedMode] = useState<SpeedMode>("normal");
+  const [dahono, setDahono] = useState<{ ready: boolean; models: DahonoModel[] }>({ ready: false, models: [] });
+  useEffect(() => {
+    if (!reactBits || !userId) return;
+    const request = new AbortController();
+    void apiFetch("/api/assistant/models", { signal: request.signal })
+      .then(async response => {
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!request.signal.aborted && data.dahono && Array.isArray(data.dahono.models)) setDahono(data.dahono);
+      })
+      .catch(() => {});
+    return () => request.abort();
+  }, [reactBits, userId]);
   const [speedOpen, setSpeedOpen] = useState(false);
   // Model spesifik pilihan user (Model Store) — "" = mode otomatis tier.
   // Menu "+" — semua tool (catatan, web, file, rekam, call, reasoning) di satu tempat.
@@ -623,6 +639,12 @@ export default function Composer({
   };
 
   if (reactBits) {
+    const models: PromptModel[] = [
+      { key: "auto", name: "Otomatis", logo: "/logo.png", description: "Eureka memilih model mengikuti effort" },
+      ...dahono.models.map(model => ({ key: model.id, name: model.name, logo: model.logo,
+        description: "Dahono · Vision", tag: dahono.ready ? undefined : "Belum aktif", disabled: !dahono.ready })),
+    ];
+    if (!dahono.models.length) models.push({ key: "dahono-unavailable", name: "Dahono", logo: DAHONO_LOGO, tag: "Belum tersedia", disabled: true });
     const sources: PromptSource[] = [
       ...(onCall && !sending ? [{ key: "momo-call", name: "Panggilan Momo atau Lala", description: "Panggilan suara dan kamera untuk Lala", icon: <PhoneCall trigger="parent" size={16} />, action: onCall }] : []),
       { key: "file", name: "Foto & file", description: "Pilih dari perangkat", icon: <Paperclip trigger="parent" size={16} />, attach: true },
@@ -642,13 +664,13 @@ export default function Composer({
           onModelMenuHeightChange={onModelMenuHeightChange}
           value={text} onDraftChange={setText} disabled={disabled} busy={sending} placeholder={placeholder ?? "Tanya Eureka apa saja…"}
           sources={sources} commands={[{ key: "quiz", name: "/kuis", description: "Buat kuis dari percakapan" }, { key: "cards", name: "/card", description: "Buat kartu hafalan" }]}
-          models={[]} efforts={["Kilat", "Seimbang", "Mendalam"]} defaultEffort={initialMomoMode === "fast" ? "Kilat" : initialMomoMode === "deep" ? "Mendalam" : "Seimbang"}
+          models={models} defaultModel={initialModel ?? "auto"} efforts={["Kilat", "Seimbang", "Mendalam"]} defaultEffort={initialMomoMode === "fast" ? "Kilat" : initialMomoMode === "deep" ? "Mendalam" : "Seimbang"}
           onEffortChange={(effort) => onMomoModeChange?.(effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal")}
           onSourcesOpen={() => setMentionOpen(true)} onAttach={() => fileInputRef.current?.click()}
           onSourceSelect={(source) => { if (source.key.startsWith("note:")) setMentionIds((ids) => [...new Set([...ids, source.key.slice(5)])]); setMentionOpen(false); }}
           onSend={(question, options) => {
             if (!question.trim() || disabled || sending) return;
-            onSend({ question, mentions: mentionIds, attachment: attachment ?? null, speedMode: options.effort === "Kilat" ? "fast" : options.effort === "Mendalam" ? "deep" : "normal", reasoning, solveThenGuide: stgOnce || undefined } as ComposerSendInput);
+            onSend({ question, mentions: mentionIds, attachment: attachment ?? null, model: options.model && !options.model.disabled && options.model.key !== "auto" ? options.model.key : undefined, speedMode: options.effort === "Kilat" ? "fast" : options.effort === "Mendalam" ? "deep" : "normal", reasoning, solveThenGuide: stgOnce || undefined });
             setMentionIds([]); setAttachment(null); setAttachError(null); setStgOnce(false);
           }}
           onStop={onStop} background="rgb(var(--clay-cream))" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="#a983e8" width={760} radius={18} maxRows={5}

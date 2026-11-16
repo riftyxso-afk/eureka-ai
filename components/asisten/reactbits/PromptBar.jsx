@@ -186,7 +186,7 @@ export default function PromptBar({
   const [listening, setListening] = useState(false);
   const [pressed, setPressed] = useState(false);
 
-  const model = models.find(m => m.key === modelKey) ?? models[0];
+  const model = models.find(m => m.key === modelKey && !m.disabled) ?? models[0];
   const token = dismissed ? null : parseToken(draft);
   const open = plusOpen ? 'at' : (token?.kind ?? (modelOpen ? 'model' : effortOpen ? 'effort' : null));
   useLayoutEffect(() => {
@@ -580,7 +580,7 @@ export default function PromptBar({
                   role="option"
                   data-eureka-sound={row.key === "momo-call" ? "off" : undefined}
                   disabled={open === 'model' && row.disabled}
-                  aria-selected={i === cursor}
+                  aria-selected={open === 'model' ? row.key === model?.key : i === cursor}
                   className="prompt-bar__row"
                   onMouseDown={e => e.preventDefault()}
                   onPointerEnter={() => setActive(i)}
@@ -588,8 +588,10 @@ export default function PromptBar({
                 >
                   {open === 'at' ? <span className="prompt-bar__row-icon">{renderIcon(row.icon, 15)}</span> : null}
                   {open === 'model' ? <span className="prompt-bar__model-logo" aria-hidden="true" style={row.logo ? { backgroundImage: `url(${row.logo})`, backgroundSize: row.logo.includes('official') ? 'auto 100%' : 'contain' } : undefined} /> : null}
-                  <span className="prompt-bar__row-name">{row.name}</span>
-                  {row.description ? <span className="prompt-bar__row-desc">{row.description}</span> : null}
+                  {open === 'model' ? <span className="prompt-bar__model-copy"><span className="prompt-bar__row-name">{row.name}</span>{row.description && <small>{row.description}</small>}</span> : <>
+                    <span className="prompt-bar__row-name">{row.name}</span>
+                    {row.description ? <span className="prompt-bar__row-desc">{row.description}</span> : null}
+                  </>}
                   {open === 'model' ? (
                     <>
                       <span className="prompt-bar__row-tag">{row.tag}</span>
@@ -683,8 +685,8 @@ export default function PromptBar({
           {models.length > 0 ? (
             <button
               type="button"
-              className="prompt-bar__pick"
-              aria-label={`Choose model: ${model.name}`}
+              className="prompt-bar__pick prompt-bar__pick--model"
+              aria-label={`Pilih model: ${model.name}`}
               disabled={disabled}
               aria-expanded={modelOpen}
               data-on={modelOpen ? '' : undefined}

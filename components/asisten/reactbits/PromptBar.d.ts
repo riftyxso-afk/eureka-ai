@@ -1,6 +1,6 @@
 import type { ReactNode, Dispatch, SetStateAction } from "react";
 export interface PromptSource { key: string; name: string; description?: string; icon: ReactNode; attach?: boolean; action?: () => void; }
-export interface PromptModel { key: string; name: string; tag?: string; logo?: string; disabled?: boolean; }
+export interface PromptModel { key: string; name: string; tag?: string; logo?: string; disabled?: boolean; description?: string; }
 export interface PromptCommand { key: string; name: string; description?: string; }
 export interface PromptBarProps {
   placeholder?: string; value?: string; onDraftChange?: Dispatch<SetStateAction<string>>; disabled?: boolean;

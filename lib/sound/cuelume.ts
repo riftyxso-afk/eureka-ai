@@ -1,7 +1,8 @@
 import { play, setEnabled, unlock, type PlayOptions, type SoundName } from "cuelume";
+import { showSakugaFeedback } from "./sakugaFeedback";
 
 const preferenceKey = "eureka_sound_enabled";
-const controls = 'button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="switch"]';
+const controls = 'button, a[href], summary, input[type="button"], input[type="submit"], [role="button"], [role="tab"], [role="menuitem"], [role="switch"], sakuga-button';
 let soundEnabled = true;
 
 function isSoundEnabled(): boolean {
@@ -57,13 +58,18 @@ export function initCuelume(): () => void {
 
   function onClick(event: MouseEvent): void {
     if (!event.isTrusted || event.button !== 0 || !(event.target instanceof Element)) return;
-    const control = event.target.closest(controls);
-    if (!control || control.closest(':disabled, [aria-disabled="true"], [data-eureka-sound="off"], dialog.momo-call')) return;
+    if (event.target.closest('input[type="checkbox"], input[type="radio"]')) return;
+    const control = event.composedPath().find((item): item is Element => item instanceof Element && item.matches(`${controls}, sakuga-checkbox`));
+    if (!control || control.closest(':disabled, [aria-disabled="true"], [inert]')) return;
 
     const now = performance.now();
     if (now - lastClick < 120) return;
     lastClick = now;
-    const cue = control.matches('a[href]') ? "navigate" : "tap";
+    const host = control.getRootNode();
+    const surface = host instanceof ShadowRoot ? host.host : control;
+    showSakugaFeedback(surface, event, control.matches('[aria-pressed], [role="switch"]'));
+    if (surface.closest('[data-eureka-sound="off"], dialog.momo-call')) return;
+    const cue = control.matches('a[href]') ? "navigate" : control.matches('[aria-pressed], [role="switch"], summary, sakuga-checkbox') ? "select" : "tap";
     playCue(cue, {
       theme: "bubble",
       volume: 0.18,
@@ -72,8 +78,17 @@ export function initCuelume(): () => void {
     });
   }
 
+  function onChange(event: Event): void {
+    if (!event.isTrusted || !(event.target instanceof Element)) return;
+    const control = event.target;
+    if (!control.matches('select, input[type="checkbox"], input[type="radio"]') || control.closest(":disabled, [inert]")) return;
+    showSakugaFeedback(control, event, true);
+    if (!control.closest('[data-eureka-sound="off"], dialog.momo-call')) playCue("select", { theme: "bubble", volume: 0.19, emphasis: "subtle" });
+  }
+
   window.addEventListener("pointerup", unlockOnGesture, options);
   window.addEventListener("keydown", unlockOnGesture, options);
   window.addEventListener("click", onClick, options);
+  window.addEventListener("change", onChange, options);
   return () => listeners.abort();
 }

@@ -218,6 +218,15 @@ export default function LandingPage() {
       </main>
 
       <footer className="bg-gradient-to-b from-[#7540D0] to-[#54269C] text-white">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-6 pt-9 text-sm text-violet-100" aria-label={en ? "Partners" : "Mitra"}>
+          <span className="font-bold">Backed by</span>
+          <a className="inline-flex min-h-11 items-center gap-2 font-extrabold text-white" href="https://dahono.com/">
+            <Image src="/images/ai-models/dahono.svg" alt="" width={24} height={24} unoptimized /> Dahono
+          </a>
+          <a className="inline-flex min-h-11 items-center gap-2 font-extrabold text-white" href="https://yuelhost.com/">
+            <Image src="/images/yuelhost.png" alt="" width={24} height={24} unoptimized /> YuelHost
+          </a>
+        </div>
         <div className="mx-auto grid max-w-5xl gap-8 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Link href="/" className="text-3xl font-black">eureka!</Link>

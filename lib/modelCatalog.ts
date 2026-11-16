@@ -8,6 +8,8 @@
  * rantai lanjut otomatis ke model berikutnya) — ditandai "segera tersedia".
  */
 
+import { dahonoModelName } from "./assistant/dahonoModels";
+
 /** Kecepatan jawaban AI yang bisa dipilih user (Kilat/Seimbang/Mendalam). */
 export type AiSpeedMode = "fast" | "normal" | "deep";
 
@@ -35,7 +37,7 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
 /** Nama tampilan rapi untuk id model apa pun (fallback: id mentah). */
 export function modelDisplayName(id: string | null | undefined): string {
   if (!id) return "";
-  return MODEL_CATALOG.find((m) => m.id === id)?.name ?? id;
+  return MODEL_CATALOG.find((m) => m.id === id)?.name ?? dahonoModelName(id) ?? id;
 }
 
 /** Set id model untuk cek allowlist API. */

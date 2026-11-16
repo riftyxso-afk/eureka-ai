@@ -228,6 +228,7 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const voices = await import("@/app/api/voices/route");
   mount(app, "/api/voices", voices);
   const assistantChat = await import("@/app/api/assistant/chat/route");
+  const assistantModels = await import("@/app/api/assistant/models/route");
   const assistantFlashcards = await import("@/app/api/assistant/flashcards/route");
   const assistantImage = await import("@/app/api/assistant/image/route");
   const assistantQuiz = await import("@/app/api/assistant/quiz/route");
@@ -237,6 +238,7 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const assistantSessionsId = await import("@/app/api/assistant/sessions/[sessionId]/route");
   const assistantSessionsShare = await import("@/app/api/assistant/sessions/[sessionId]/share/route");
   mount(app, "/api/assistant/chat", assistantChat);
+  mount(app, "/api/assistant/models", assistantModels);
   mount(app, "/api/assistant/flashcards", assistantFlashcards);
   mount(app, "/api/assistant/image", assistantImage);
   mount(app, "/api/assistant/quiz", assistantQuiz);

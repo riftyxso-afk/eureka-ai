@@ -70,6 +70,34 @@ function loadAiWithEnv(env, fetchImpl) {
   return compile(path.join(ROOT, "lib/ai.ts"));
 }
 
+test("Dahono is opt-in and receives vision input only for a catalog-verified model", async () => {
+  const model = "dahono/kimi-k2.8";
+  const calls = [];
+  const ai = loadAiWithEnv({ DAHONO_API_KEY: "test-only", JUANROUTER_API_KEY: "test-juan" }, async (url, request) => {
+    calls.push(url);
+    if (url.endsWith("/models")) {
+      return Response.json({ data: [{ id: model, vision: true }, { id: "dahono/mimo-v2.6-pro", vision: false }] });
+    }
+    if (url.startsWith("https://gateway.dahono.com/")) {
+      const body = JSON.parse(request.body);
+      assert.equal(request.headers.Authorization, "Bearer test-only");
+      assert.equal(body.model, model);
+      assert.equal(body.stream, true);
+      assert.equal(body.messages.at(-1).content[1].image_url.url, "data:image/png;base64,dGVzdA==");
+    }
+    return streamChunks(["Jawaban"]);
+  });
+  await ai.aiChatStream({ user: "Halo", forChat: true });
+  assert.equal(calls.some(url => url.includes("dahono.com")), false);
+  const result = await ai.aiChatStream({ user: "Jelaskan gambar", forChat: true, model,
+    visionImage: { filename: "test.png", dataUrl: "data:image/png;base64,dGVzdA==" } });
+  assert.equal(result.provider, "Dahono");
+  assert.equal(result.model, model);
+  const requestCount = calls.length;
+  await assert.rejects(ai.aiChatStream({ user: "Halo", forChat: true, model: "dahono/mimo-v2.6-pro" }), /tidak tersedia/);
+  assert.equal(calls.length, requestCount);
+});
+
 test("provider chain orders JuanRouter -> OpenRouter -> NusaRouter (nusarouter.com)", () => {
   const ai = loadAiWithEnv({
     JUANROUTER_API_KEY: "sk-juan",

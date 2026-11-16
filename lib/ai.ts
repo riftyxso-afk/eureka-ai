@@ -52,6 +52,7 @@ export {
   SPEED_MODEL_LISTS_PRO,
 } from "./modelCatalog";
 import { SPEED_MODEL_LISTS, type AiSpeedMode } from "./modelCatalog";
+import { DAHONO_BASE_URL, dahonoApiKey, getDahonoModels } from "./assistant/dahonoGateway";
 
 
 /** Model free untuk OpenAgentic & AIMurah (terverifikasi live dari /models OpenAgentic). */
@@ -558,6 +559,14 @@ export async function aiChatStream(
   const publishesTokens = Boolean(onEvent ?? options.onEvent);
   const mode = options.speedMode ?? "normal";
   const providers = getProviderChain(mode).filter(provider => !options.excludeCiora || provider.name !== "CIORA");
+  if (options.forChat && options.model?.startsWith("dahono/")) {
+    const key = dahonoApiKey();
+    const catalog = key ? await getDahonoModels() : [];
+    if (!key || !catalog.some(model => model.id === options.model)) {
+      throw new Error("Model Dahono yang dipilih sedang tidak tersedia.");
+    }
+    providers.unshift({ baseURL: DAHONO_BASE_URL, apiKey: key, name: "Dahono", model: options.model, defaultModel: options.model });
+  }
   if (!providers.length) throw noTextProviderError();
   const unavailableGateways = new Set<string>();
   const paymentRequiredGateways = new Set<string>();

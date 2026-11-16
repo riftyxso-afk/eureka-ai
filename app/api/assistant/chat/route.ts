@@ -1,5 +1,6 @@
 import { learningContext,observeLearning } from "@/lib/learningPreferences";
 import { NextRequest } from "next/server";
+import { dahonoApiKey, getDahonoModels } from "@/lib/assistant/dahonoGateway";
 import { citedNoteSources } from "@/lib/assistant/citedSources";
 import { normalizeWebResults } from "@/lib/assistant/webSources";
 import type { WebSearchItem } from "@/lib/assistant/types";
@@ -213,7 +214,8 @@ export async function POST(req: NextRequest) {
   // Model spesifik pilihan user (Model Store) — allowlist katalog; id asing
   // diabaikan (mode tier normal) tanpa menolak permintaan.
   const modelRaw = String(raw?.model ?? "").trim();
-  const preferredModel = MODEL_CATALOG_IDS.has(modelRaw) ? modelRaw : undefined;
+  const wantsDahono = modelRaw.startsWith("dahono/");
+  const preferredModel = wantsDahono || MODEL_CATALOG_IDS.has(modelRaw) ? modelRaw : undefined;
 
   // Toggle reasoning dari composer (default ON = thinking real, OFF = model biasa + loading pixel-grid).
   const reasoning = raw?.reasoning !== false;
@@ -303,7 +305,14 @@ export async function POST(req: NextRequest) {
 
   traceTiming("auth, premium, dan rate limit");
 
-  if (!hasAiKey()) {
+  if (wantsDahono) {
+    const models = dahonoApiKey() ? await getDahonoModels() : [];
+    if (!models.some(model => model.id === preferredModel)) {
+      return respondJson({ error: "Model Dahono yang dipilih sedang tidak tersedia. Pilih Otomatis atau coba lagi." }, 503);
+    }
+  }
+
+  if (!wantsDahono && !hasAiKey()) {
     return respondJson(
       { error: "API key AI belum diatur di .env.local." },
       400

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode, type DetailedHTMLProps, type HTMLAttributes } from "react";
 import "./sakuga.css";
+import { loadSakuga } from "@/lib/sound/sakugaFeedback";
 
 type CheckboxElement = HTMLElement & { checked: boolean };
 type ProgressElement = HTMLElement & { set: (value: number) => void };
@@ -17,25 +18,11 @@ declare module "react" {
 }
 
 type Kind = "button" | "checkbox" | "progress";
-const scripts = new Map<Kind, Promise<void>>();
 function useSakuga(kind: Kind) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     let active = true;
-    if (!scripts.has(kind)) {
-      scripts.set(kind, new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = `/sakuga-vfx/${kind}.js`;
-        script.onload = () => customElements.whenDefined(`sakuga-${kind}`).then(() => {
-          const fx = (window as Window & { SakugaFX?: { P: Record<string, string | string[]> } }).SakugaFX;
-          if (fx) Object.assign(fx.P, { shade: "#d9c9f5", line: "#8b5bc4", accent: "#a77be9" });
-          resolve();
-        });
-        script.onerror = () => { scripts.delete(kind); reject(new Error("VFX unavailable")); };
-        document.head.appendChild(script);
-      }));
-    }
-    scripts.get(kind)?.then(() => { if (active) setReady(true); }).catch(() => {});
+    void loadSakuga(kind).then(() => { if (active) setReady(true); }).catch(() => {});
     return () => { active = false; };
   }, [kind]);
   return ready;

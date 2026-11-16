@@ -544,6 +544,7 @@ export default function ChatPage() {
           reactBits
           onModelMenuHeightChange={setModelMenuHeight}
           initialMomoMode={initialSend?.speedMode}
+          initialModel={initialSend?.model}
           onMomoModeChange={setMomoMode}
           userId={getUserId()}
           sending={chat.sending}
