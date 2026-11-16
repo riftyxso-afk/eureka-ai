@@ -774,7 +774,7 @@ export function useAssistantChat(options: {
       const turnToggleOn = loopRef.current.toggleOn;
       const wasActive =
         loopRef.current.status === "active" || loopRef.current.status === null;
-      if (turnToggleOn || (loopRef.current.status === "active" && !turnToggleOn) || (wasActive && !turnToggleOn && loopRef.current.iteration > 0)) {
+      if (!input.model?.startsWith("dahono/") && (turnToggleOn || (loopRef.current.status === "active" && !turnToggleOn) || (wasActive && !turnToggleOn && loopRef.current.iteration > 0))) {
         await sendLoop(targetSessionId, input, turnToggleOn);
       } else {
         await sendTo(targetSessionId, input);

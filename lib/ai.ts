@@ -246,7 +246,7 @@ function appendGatewayModels(
 export function hasAiKey(): boolean {
   // Rantai teks terisi bila minimal satu key tersedia:
   // JuanRouter, OpenRouter, atau NusaRouter (atau NINE_ROUTER_API_KEY di mode 9router).
-  return getProviderChain("normal", true, true).length > 0;
+  return Boolean(dahonoApiKey()) || getProviderChain("normal", true, true).length > 0;
 }
 
 /** Semua provider OpenAI-compatible → embedding & transkripsi tersedia bila ada key. */
@@ -523,6 +523,9 @@ export type AiStreamEvent =
   | { type: "error"; message: string };
 
 export interface AiChatStreamOptions extends AiChatOptions {
+  /** Set only after the authenticated chat route spends a Flagship credit. */
+  allowDahonoFlagship?: boolean;
+  excludeDahono?: boolean;
   /** Abort an interactive generation when its caller stops or leaves. */
   signal?: AbortSignal;
   /** Opt in only when the consumer can discard already emitted text. */
@@ -558,15 +561,21 @@ export async function aiChatStream(
   const emit = onEvent ?? options.onEvent ?? (() => {});
   const publishesTokens = Boolean(onEvent ?? options.onEvent);
   const mode = options.speedMode ?? "normal";
-  const providers = getProviderChain(mode).filter(provider => !options.excludeCiora || provider.name !== "CIORA");
-  if (options.forChat && options.model?.startsWith("dahono/")) {
-    const key = dahonoApiKey();
-    const catalog = key ? await getDahonoModels() : [];
-    if (!key || !catalog.some(model => model.id === options.model)) {
-      throw new Error("Model Dahono yang dipilih sedang tidak tersedia.");
+  const providers: ProviderConfig[] = [];
+  const dahonoKey = options.excludeDahono ? "" : dahonoApiKey();
+  const explicit = options.forChat && options.model?.startsWith("dahono/") ? options.model : undefined;
+  if (dahonoKey || explicit) {
+    const catalog = dahonoKey ? await getDahonoModels() : [];
+    const selected = explicit ? catalog.find(model => model.id === explicit) : undefined;
+    if (explicit && (!selected || (selected.tier === "flagship" && !options.allowDahonoFlagship) || (options.visionImage && !selected.vision))) {
+      throw new Error("Model Dahono yang dipilih sedang tidak tersedia untuk permintaan ini.");
     }
-    providers.unshift({ baseURL: DAHONO_BASE_URL, apiKey: key, name: "Dahono", model: options.model, defaultModel: options.model });
+    const regular = catalog.filter(model => model.tier === "regular" && (!options.visionImage || model.vision));
+    const preferredRegular = regular[mode === "deep" ? 2 : mode === "normal" ? 1 : 0] ?? regular[0];
+    const ordered = [selected, preferredRegular, ...regular].flatMap(model => model ? [model.id] : []);
+    appendGatewayModels(providers, { name: "Dahono", baseURL: DAHONO_BASE_URL, apiKey: dahonoKey }, [...new Set(ordered)].slice(0, 2));
   }
+  providers.push(...getProviderChain(mode).filter(provider => !options.excludeCiora || provider.name !== "CIORA"));
   if (!providers.length) throw noTextProviderError();
   const unavailableGateways = new Set<string>();
   const paymentRequiredGateways = new Set<string>();

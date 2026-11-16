@@ -1,11 +1,12 @@
 import type { ReactNode, Dispatch, SetStateAction } from "react";
 export interface PromptSource { key: string; name: string; description?: string; icon: ReactNode; attach?: boolean; action?: () => void; }
-export interface PromptModel { key: string; name: string; tag?: string; logo?: string; disabled?: boolean; description?: string; }
+export interface PromptModel { key: string; name: string; tag?: string; logo?: string; disabled?: boolean; description?: string; group?: string; }
 export interface PromptCommand { key: string; name: string; description?: string; }
 export interface PromptBarProps {
   placeholder?: string; value?: string; onDraftChange?: Dispatch<SetStateAction<string>>; disabled?: boolean;
   leadingSlot?: ReactNode; voiceSlot?: ReactNode; onSourcesOpen?: () => void; onSourceSelect?: (source: PromptSource) => void;
   sources?: PromptSource[]; commands?: PromptCommand[]; models?: PromptModel[]; defaultModel?: string;
+  modelCreditLabel?: string;
   efforts?: string[]; defaultEffort?: string; onEffortChange?: (effort: string) => void; busy?: boolean;
   clearOnSend?: boolean;
   onModelMenuHeightChange?: (height: number) => void;

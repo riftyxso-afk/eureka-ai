@@ -1,6 +1,6 @@
 'use client';
 
-import { isValidElement, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, isValidElement, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { animate, useMotionValue, useMotionValueEvent, useReducedMotion } from 'motion/react';
 import ArrowDown01Icon from "kubai-icons-react/icons/chevron-down";
 import Attachment01Icon from "kubai-icons-react/icons/paperclip";
@@ -132,6 +132,7 @@ export default function PromptBar({
   defaultEffort = '',
   onEffortChange,
   onModelMenuHeightChange,
+  modelCreditLabel,
   busy = false,
   clearOnSend = true,
   onSend,
@@ -570,9 +571,11 @@ export default function PromptBar({
           ) : (
             <>
               <span ref={glowRef} className="prompt-bar__glow" aria-hidden="true" />
+              {open === 'model' && <div className="prompt-bar__model-heading"><strong>Pilih model</strong>{modelCreditLabel && <span>{modelCreditLabel}</span>}</div>}
               {list.map((row, i) => (
+                <Fragment key={row.key}>
+                {open === 'model' && row.group && list[i - 1]?.group !== row.group && <div className="prompt-bar__model-group">{row.group}</div>}
                 <button
-                  key={row.key}
                   ref={el => {
                     rowRefs.current[i] = el;
                   }}
@@ -601,6 +604,7 @@ export default function PromptBar({
                     </>
                   ) : null}
                 </button>
+                </Fragment>
               ))}
               {list.length === 0 ? <div className="prompt-bar__empty">No matches for “{query}”</div> : null}
             </>

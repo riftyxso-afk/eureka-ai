@@ -70,32 +70,35 @@ function loadAiWithEnv(env, fetchImpl) {
   return compile(path.join(ROOT, "lib/ai.ts"));
 }
 
-test("Dahono is opt-in and receives vision input only for a catalog-verified model", async () => {
+test("Dahono is the primary provider and Flagship requires server authorization", async () => {
   const model = "dahono/kimi-k2.8";
+  const flagship = "dahono/gemini-4-argon";
   const calls = [];
   const ai = loadAiWithEnv({ DAHONO_API_KEY: "test-only", JUANROUTER_API_KEY: "test-juan" }, async (url, request) => {
-    calls.push(url);
     if (url.endsWith("/models")) {
-      return Response.json({ data: [{ id: model, vision: true }, { id: "dahono/mimo-v2.6-pro", vision: false }] });
+      return Response.json({ data: [{ id: model, vision: true }, { id: flagship, vision: true }, { id: "dahono/mimo-v2.6-pro", vision: false }] });
     }
+    const body = JSON.parse(request.body);
+    calls.push([url, body.model]);
     if (url.startsWith("https://gateway.dahono.com/")) {
-      const body = JSON.parse(request.body);
       assert.equal(request.headers.Authorization, "Bearer test-only");
-      assert.equal(body.model, model);
       assert.equal(body.stream, true);
-      assert.equal(body.messages.at(-1).content[1].image_url.url, "data:image/png;base64,dGVzdA==");
+      if (Array.isArray(body.messages.at(-1).content)) assert.equal(body.messages.at(-1).content[1].image_url.url, "data:image/png;base64,dGVzdA==");
     }
     return streamChunks(["Jawaban"]);
   });
-  await ai.aiChatStream({ user: "Halo", forChat: true });
-  assert.equal(calls.some(url => url.includes("dahono.com")), false);
+  const auto = await ai.aiChatStream({ user: "Halo", forChat: true });
+  assert.equal(auto.model, model);
   const result = await ai.aiChatStream({ user: "Jelaskan gambar", forChat: true, model,
     visionImage: { filename: "test.png", dataUrl: "data:image/png;base64,dGVzdA==" } });
   assert.equal(result.provider, "Dahono");
   assert.equal(result.model, model);
   const requestCount = calls.length;
+  await assert.rejects(ai.aiChatStream({ user: "Halo", forChat: true, model: flagship }), /tidak tersedia/);
   await assert.rejects(ai.aiChatStream({ user: "Halo", forChat: true, model: "dahono/mimo-v2.6-pro" }), /tidak tersedia/);
   assert.equal(calls.length, requestCount);
+  const approved = await ai.aiChatStream({ user: "Halo", forChat: true, model: flagship, allowDahonoFlagship: true });
+  assert.equal(approved.model, flagship);
 });
 
 test("provider chain orders JuanRouter -> OpenRouter -> NusaRouter (nusarouter.com)", () => {

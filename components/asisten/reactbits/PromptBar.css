@@ -52,6 +52,9 @@
 }
 
 .prompt-bar__model-copy { display: grid; min-width: 0; gap: 2px; line-height: 1.25; }
+.prompt-bar__model-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 10px 5px; line-height: 1.35; }
+.prompt-bar__model-heading span { color: var(--pb-muted); font-size: 11px; }
+.prompt-bar__model-group { padding: 8px 10px 3px; color: var(--pb-muted); font-weight: 750; font-size: 11px; }
 .prompt-bar__model-copy small { color: var(--pb-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .prompt-bar__menu[data-kind='model'] .prompt-bar__row:disabled { cursor: default; opacity: .65; }
 .prompt-bar__pick--model { min-width: 0; }

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BorderBeam } from "border-beam";
 import PromptBar, { type PromptModel, type PromptSource } from "./reactbits/PromptBar";
-import { DAHONO_LOGO, type DahonoModel } from "@/lib/assistant/dahonoModels";
+import { DAHONO_LOGO, FLAGSHIP_STARTING_CREDITS, type DahonoModel } from "@/lib/assistant/dahonoModels";
 import SpeechInput from "./SpeechInput";
 import AtSign from "kubai-icons-react/icons/at-sign";
 import BookOpen from "kubai-icons-react/icons/book-open";
@@ -307,9 +307,9 @@ export default function Composer({
   const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [speedMode, setSpeedMode] = useState<SpeedMode>("normal");
-  const [dahono, setDahono] = useState<{ ready: boolean; models: DahonoModel[] }>({ ready: false, models: [] });
+  const [dahono, setDahono] = useState<{ ready: boolean; credits: number | null; models: DahonoModel[] }>({ ready: false, credits: null, models: [] });
   useEffect(() => {
-    if (!reactBits || !userId) return;
+    if (!reactBits || !userId || sending) return;
     const request = new AbortController();
     void apiFetch("/api/assistant/models", { signal: request.signal })
       .then(async response => {
@@ -319,7 +319,7 @@ export default function Composer({
       })
       .catch(() => {});
     return () => request.abort();
-  }, [reactBits, userId]);
+  }, [reactBits, userId, sending]);
   const [speedOpen, setSpeedOpen] = useState(false);
   // Model spesifik pilihan user (Model Store) — "" = mode otomatis tier.
   // Menu "+" — semua tool (catatan, web, file, rekam, call, reasoning) di satu tempat.
@@ -642,7 +642,10 @@ export default function Composer({
     const models: PromptModel[] = [
       { key: "auto", name: "Otomatis", logo: "/logo.png", description: "Eureka memilih model mengikuti effort" },
       ...dahono.models.map(model => ({ key: model.id, name: model.name, logo: model.logo,
-        description: "Dahono · Vision", tag: dahono.ready ? undefined : "Belum aktif", disabled: !dahono.ready })),
+        group: model.tier === "flagship" ? "Flagship" : "Reguler",
+        description: `Dahono · ${model.vision ? "Teks + Vision" : "Teks"}`,
+        tag: !dahono.ready ? "Belum aktif" : model.tier === "flagship" ? "1 kredit" : undefined,
+        disabled: !dahono.ready || (model.tier === "flagship" && (dahono.credits ?? 0) <= 0) })),
     ];
     if (!dahono.models.length) models.push({ key: "dahono-unavailable", name: "Dahono", logo: DAHONO_LOGO, tag: "Belum tersedia", disabled: true });
     const sources: PromptSource[] = [
@@ -665,6 +668,7 @@ export default function Composer({
           value={text} onDraftChange={setText} disabled={disabled} busy={sending} placeholder={placeholder ?? "Tanya Eureka apa saja…"}
           sources={sources} commands={[{ key: "quiz", name: "/kuis", description: "Buat kuis dari percakapan" }, { key: "cards", name: "/card", description: "Buat kartu hafalan" }]}
           models={models} defaultModel={initialModel ?? "auto"} efforts={["Kilat", "Seimbang", "Mendalam"]} defaultEffort={initialMomoMode === "fast" ? "Kilat" : initialMomoMode === "deep" ? "Mendalam" : "Seimbang"}
+          modelCreditLabel={dahono.credits !== null ? `${dahono.credits}/${FLAGSHIP_STARTING_CREDITS} kredit Flagship` : undefined}
           onEffortChange={(effort) => onMomoModeChange?.(effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal")}
           onSourcesOpen={() => setMentionOpen(true)} onAttach={() => fileInputRef.current?.click()}
           onSourceSelect={(source) => { if (source.key.startsWith("note:")) setMentionIds((ids) => [...new Set([...ids, source.key.slice(5)])]); setMentionOpen(false); }}
