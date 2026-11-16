@@ -25,6 +25,8 @@ export default function LearningRoomPage() {
   const courseId = String(params.courseId ?? "");
   const lessonId = String(params.lessonId ?? "");
   const [overview, setOverview] = useState<CourseOverview | null>(null);
+  const [discoveredSources, setDiscoveredSources] = useState<CourseLesson["sources"]>([]);
+  const [sourcesLoading, setSourcesLoading] = useState(false);
   const [payload, setPayload] = useState<LessonPayload | null>(null);
   const [panel, setPanel] = useState<"material" | "exercise" | "tutor">("material");
   const [outlineOpen, setOutlineOpen] = useState(false);
@@ -100,6 +102,19 @@ export default function LearningRoomPage() {
     };
   }, [load]);
 
+  useEffect(() => {
+    if (!payload || payload.lesson.id !== lessonId) return;
+    const controller = new AbortController();
+    setDiscoveredSources([]);
+    setSourcesLoading(true);
+    void apiFetch(`/api/courses/${encodeURIComponent(courseId)}/lessons/${encodeURIComponent(lessonId)}/sources`, { signal: controller.signal })
+      .then(async response => response.ok ? response.json() : { sources: [] })
+      .then(data => { if (!controller.signal.aborted) setDiscoveredSources(Array.isArray(data.sources) ? data.sources : []); })
+      .catch(() => {})
+      .finally(() => { if (!controller.signal.aborted) setSourcesLoading(false); });
+    return () => controller.abort();
+  }, [courseId, lessonId, payload]);
+
   const flatLessons = useMemo(() => overview?.course.modules.flatMap((module) => module.lessons) ?? [], [overview]);
   const currentIndex = flatLessons.findIndex((lesson) => lesson.id === lessonId);
   const nextLesson = currentIndex >= 0 ? flatLessons.slice(currentIndex + 1).find((lesson) => overview?.course.sourceKind === "generated" || lesson.status !== "pending") : undefined;
@@ -153,6 +168,7 @@ export default function LearningRoomPage() {
   if (!overview || !payload) return <div className="learning-room"><div className="learning-state" role="alert"><BookOpen size={30} /><h1>Pelajaran belum bisa dibuka</h1><p>{error || "Materi tidak ditemukan."}</p><button className="learning-button learning-button-primary" type="button" onClick={() => void load()}><RefreshCw size={17} />Coba lagi</button><Link className="learning-button learning-button-secondary" href={`/dashboard-v2/kursus/${courseId}`}>Kembali ke silabus</Link></div></div>;
 
   const lesson = payload.lesson;
+  const sources = [...lesson.sources, ...discoveredSources.filter(source => !lesson.sources.some(existing => existing.url === source.url))];
   const completed = progressMap.get(lessonId)?.status === "completed" || attempt?.passed;
   return (
     <div className="learning-room" data-panel={panel} data-outline={outlineOpen}>
@@ -176,7 +192,7 @@ export default function LearningRoomPage() {
             {lesson.objectives.length > 0 && <section className="lesson-objectives"><h2>Setelah pelajaran ini, kamu bisa:</h2><ul>{lesson.objectives.map((objective) => <li key={objective}><MarkdownView inline content={objective} /></li>)}</ul></section>}
             {lesson.blocks.map((block, index) => <LessonBlockView block={block} key={`${block.type}-${index}`} />)}
           </article>
-          {lesson.sources.length > 0 && <section className="lesson-sources"><h2><ExternalLink size={16} />Rujukan materi</h2><ul>{lesson.sources.map((source) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a>{source.note && <p>{source.note}</p>}</li>)}</ul></section>}
+          {(sourcesLoading || sources.length > 0) && <section className="lesson-sources"><h2><ExternalLink size={16} />Rujukan materi</h2>{sourcesLoading && <p role="status">Mencari sumber yang sesuai materi...</p>}<ul>{sources.map((source) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a>{source.note && <p>{source.note}</p>}</li>)}</ul></section>}
           <div className="lesson-material-action"><p>Sudah memahami materinya?</p><button type="button" className="learning-button learning-button-primary" onClick={() => setPanel("exercise")}>Uji pemahamanku <ArrowRight size={17} /></button></div>
           <section className="lesson-exercise" aria-labelledby="exercise-title"><div className="lesson-exercise-heading"><div><h2 id="exercise-title">Cek pemahamanmu</h2><p>Jawab dari materi di atas. Pembahasan muncul setelah kamu mengirim jawaban.</p></div><span className="lesson-pass-mark">Lulus dengan nilai ≥ 70</span></div>
             {lesson.questions.map((question, questionIndex) => { const result = attempt?.results.find((item) => item.questionId === question.id); return <fieldset className="lesson-question" key={question.id}><legend>{questionIndex + 1}. <MarkdownView inline content={question.prompt} /></legend><div className="lesson-options">{question.options.map((option, optionIndex) => { const selected = answers[question.id] === optionIndex; const resultClass = result ? optionIndex === result.correctAnswer ? "is-correct" : selected && !result.isCorrect ? "is-wrong" : "" : ""; return <label className={`lesson-option ${resultClass}`} key={option}><input type="radio" name={question.id} value={optionIndex} checked={selected} disabled={submitting} onChange={() => changeAnswer(question.id, optionIndex)} /> <MarkdownView inline content={option} /></label>; })}</div>{result && <div className="lesson-explanation" role="note"><strong>{result.isCorrect ? "Tepat!" : "Yuk, periksa kembali."}</strong><MarkdownView content={`Jawaban: ${question.options[result.correctAnswer]}

@@ -78,10 +78,12 @@ export async function mountAllRoutes(app: Hono): Promise<number> {
   const courseDetail = await import("@/app/api/courses/[courseId]/route");
   const courseLesson = await import("@/app/api/courses/[courseId]/lessons/[lessonId]/route");
   const courseTutor = await import("@/app/api/courses/[courseId]/lessons/[lessonId]/tutor/route");
+  const courseSources = await import("@/app/api/courses/[courseId]/lessons/[lessonId]/sources/route");
   mount(app, "/api/courses", courses);
   mount(app, "/api/courses/:courseId", courseDetail);
   mount(app, "/api/courses/:courseId/lessons/:lessonId", courseLesson);
   mount(app, "/api/courses/:courseId/lessons/:lessonId/tutor", courseTutor);
+  mount(app, "/api/courses/:courseId/lessons/:lessonId/sources", courseSources);
   count += 4;
 
   // ─── Music Hub (music-hub) ─────────────────────────────

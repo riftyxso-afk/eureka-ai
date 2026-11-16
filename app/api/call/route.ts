@@ -128,7 +128,7 @@ export async function POST(request: Request) {
           };
           try {
             const { system, fallback } = await voiceContext(question, history, signal, () => send({ type: "searching" }), body.studyContext);
-            const result = fallback ? { content: fallback } : await aiChatStream({
+            const result = fallback ? { content: fallback } : await aiChatStream({ excludeCiora: true,
               system,
               user: question, history,
               maxTokens: 180, reasoning: false, speedMode: "fast", signal,
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
     }
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]);
     const { system, fallback } = await voiceContext(question, history, signal, undefined, body.studyContext);
-    const { content } = fallback ? { content: fallback } : await aiChatStream({
+    const { content } = fallback ? { content: fallback } : await aiChatStream({ excludeCiora: true,
       system,
       user: question,
       history,

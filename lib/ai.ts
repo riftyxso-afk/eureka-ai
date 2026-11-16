@@ -275,11 +275,12 @@ export function getProviderChain(speedMode: AiSpeedMode = "normal", _forChat = f
   if (providerMode === "9router") {
     const nineKey = (process.env.NINE_ROUTER_API_KEY ?? NINE_ROUTER_API_KEY).trim();
     const nineUrl = (process.env.NINE_ROUTER_BASE_URL ?? NINE_ROUTER_BASE_URL).trim();
-    if (!nineKey) return [];
-    return models.map(id => {
+    const chain = nineKey ? models.map(id => {
       const model = "jr/" + id;
       return { baseURL: nineUrl, apiKey: nineKey, name: "9Router", model, defaultModel: model };
-    });
+    }) : [];
+    appendGatewayModels(chain, { baseURL: "https://ciora.id/v1", apiKey: (process.env.CIORA_API_KEY ?? "").trim(), name: "CIORA" }, ["ciora-ai-free", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"]);
+    return chain;
   }
 
   const chain: ProviderConfig[] = [];
@@ -313,6 +314,7 @@ export function getProviderChain(speedMode: AiSpeedMode = "normal", _forChat = f
       ...(NUSAROUTER_MODEL_LISTS[speedMode] ?? NUSAROUTER_MODEL_LISTS.normal),
     ]
   );
+  appendGatewayModels(chain, { baseURL: "https://ciora.id/v1", apiKey: (process.env.CIORA_API_KEY ?? "").trim(), name: "CIORA" }, ["ciora-ai-free", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"]);
   return chain;
 }
 
@@ -325,6 +327,7 @@ export function getAiApiConfig(): { baseURL: string; apiKey: string } | null {
 export interface AiChatOptions {
   system?: string;
   signal?: AbortSignal;
+  excludeCiora?: boolean;
   user: string;
   json?: boolean;
   maxTokens?: number;
@@ -554,7 +557,7 @@ export async function aiChatStream(
   const emit = onEvent ?? options.onEvent ?? (() => {});
   const publishesTokens = Boolean(onEvent ?? options.onEvent);
   const mode = options.speedMode ?? "normal";
-  const providers = getProviderChain(mode);
+  const providers = getProviderChain(mode).filter(provider => !options.excludeCiora || provider.name !== "CIORA");
   if (!providers.length) throw noTextProviderError();
   const unavailableGateways = new Set<string>();
   const paymentRequiredGateways = new Set<string>();
@@ -565,7 +568,9 @@ export async function aiChatStream(
   let visionRejected = 0;
 
   const run = async (withVision: boolean) => {
-    for (const provider of providers) {
+    for (const candidate of providers) {
+      const provider = candidate.name === "CIORA" && withVision ? { ...candidate, model: "ciora-vision-free" } : candidate;
+      if (withVision && candidate.name === "CIORA" && candidate.model !== "ciora-ai-free") continue;
       const gatewayKey = provider.name;
       if (unavailableGateways.has(gatewayKey)) continue;
       options.signal?.throwIfAborted();
