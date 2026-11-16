@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { ArrowRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { isLoggedIn } from "@/lib/auth";
@@ -12,6 +13,7 @@ const SITE_URL = "https://www.eureka-ai.web.id";
 export default function LandingPage() {
   const { locale, dict, setLocale } = useI18n();
   const [loggedIn, setLoggedIn] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [playHero, setPlayHero] = useState(false);
   const [heroVideoFailed, setHeroVideoFailed] = useState(false);
   const [playingBenefits, setPlayingBenefits] = useState<string[]>([]);
@@ -89,6 +91,14 @@ export default function LandingPage() {
   return (
     <div className="k-landing [color-scheme:light]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      {showAnnouncement && <aside className="landing-announcement" aria-label={en ? "Eureka promotion" : "Promo Eureka"}>
+        <div className="landing-announcement-content">
+          <span className="landing-announcement-badge">{en ? "FREE ACCESS" : "AKSES GRATIS"}</span>
+          <p>{en ? "Eureka is free for 28 days. Access all Pro features with advanced AI models." : "Eureka gratis selama 28 hari. Akses semua fitur Pro dengan model AI canggih."}</p>
+          <Link href={ctaHref} className="landing-announcement-action">{en ? "Try now" : "Coba sekarang"}<ArrowRight size={15} aria-hidden="true" /></Link>
+        </div>
+        <button type="button" className="landing-announcement-close" aria-label={en ? "Dismiss promotion" : "Tutup pengumuman promo"} onClick={() => setShowAnnouncement(false)}><X size={18} aria-hidden="true" /></button>
+      </aside>}
       <header>
         <div className="mx-auto flex min-h-[70px] max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-3">
           <Link href="/" className="text-3xl font-black tracking-tight text-[#7540D0]">eureka!</Link>
