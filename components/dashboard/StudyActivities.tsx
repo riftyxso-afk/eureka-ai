@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { SakugaButton, SakugaCheckbox } from "@/components/ui/sakuga";
 import MarkdownView from "@/components/asisten/MarkdownView";
 import type { StudyInteraction } from "@/lib/study-interaction";
 
@@ -29,7 +30,7 @@ function Quiz({ question, onSend, disabled }: ActivityProps & { question: Questi
       <button type="button" disabled={disabled} onClick={() => onSend(
         `Aku memilih ${question.options[choice]} untuk soal ${question.prompt}. Bantu jelaskan alasannya.`,
       )}>Bahas jawaban</button>
-      <button type="button" onClick={() => setChoice(null)}>Coba lagi</button>
+      <SakugaButton onClick={() => setChoice(null)}>Coba lagi</SakugaButton>
     </div>}
   </section>;
 }
@@ -46,9 +47,9 @@ function Essay({ question, disabled, onSend }: ActivityProps & { question: NonNu
       placeholder="Tulis penjelasan dengan bahasamu sendiri…"
     /></label>
     <p>{answer.length}/3500 karakter</p>
-    <button type="button" disabled={disabled || !answer.trim()} onClick={() => onSend(
+    <SakugaButton disabled={disabled || !answer.trim()} onClick={() => onSend(
       `Tinjau jawaban esai saya, jelaskan bagian yang tepat, koreksi, dan satu saran perbaikan. Soal: ${question.prompt}\nKriteria: ${question.rubric.join("; ")}\nJawaban: ${answer}`,
-    )}>Minta umpan balik</button>
+    )}>Minta umpan balik</SakugaButton>
   </section>;
 }
 
@@ -69,14 +70,13 @@ export default function StudyActivities({ data, disabled, onSend, storageKey }: 
   return <div className="study-chat-activities">
     {!!data.steps.length && <details className="study-chat-plan">
       <summary>Rencana belajarmu · {completed.length}/{data.steps.length}</summary>
-      {data.steps.map(step => <label key={step}>
-        <input type="checkbox" checked={completed.includes(step)} onChange={() => {
+      {data.steps.map(step => <SakugaCheckbox key={step} disabled={disabled} checked={completed.includes(step)} onChange={() => {
           const next = completed.includes(step) ? completed.filter(item => item !== step) : [...completed, step];
           setCompleted(next);
           try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* The checklist works for this visit. */ }
-        }} />
+        }}>
         <MarkdownView content={step} inline />
-      </label>)}
+      </SakugaCheckbox>)}
     </details>}
     {questions.map((question, index) => <Quiz key={index} question={question} disabled={disabled} onSend={onSend} />)}
     {data.essays?.map((question, index) => <Essay key={index} question={question} disabled={disabled} onSend={onSend} />)}

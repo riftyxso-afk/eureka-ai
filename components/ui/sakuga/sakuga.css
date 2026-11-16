@@ -1,0 +1,30 @@
+.eureka-sakuga {
+  --sk-ink: #37234f;
+  --sk-card: #fcfaff;
+  --sk-pri: #7540d0;
+  --sk-acc: #a77be9;
+  --sk-tick: #7540d0;
+  --sk-fill: #a77be9;
+  --sk-btn-line: #d9caed;
+  --sk-alt-line: #d9caed;
+  --sk-bw: 1px;
+  --sk-r: 12px;
+  --sk-sh: 0 2px 0 #d9caed;
+  --sk-btn-sh: 0 2px 0 #d9caed;
+  --sk-alt-sh: 0 2px 0 #d9caed;
+  max-width: 100%;
+  font-family: inherit;
+}
+.dark .eureka-sakuga { --sk-ink: #eee5ff; --sk-card: #292331; --sk-btn-line: #56416e; --sk-alt-line: #56416e; }
+sakuga-button.eureka-sakuga::part(button) { min-height: 44px; padding: 12px 18px; font: inherit; font-size: 14px; font-weight: 800; white-space: normal; }
+sakuga-checkbox.eureka-sakuga { display: block; margin-block: 12px; }
+sakuga-checkbox.eureka-sakuga[data-checked="true"] { color: var(--learn-muted, #8b8197); }
+sakuga-checkbox.eureka-sakuga[data-checked="true"] > * { text-decoration: line-through; }
+sakuga-checkbox.eureka-sakuga::part(label) { min-height: 44px; line-height: 1.6; }
+sakuga-checkbox.eureka-sakuga::part(box) { width: 28px; height: 28px; border-radius: 8px; }
+.eureka-sakuga-progress { display: block; width: 100%; --sk-progress-width: min(100%, 420px); }
+.eureka-sakuga-progress::part(bar) { border-width: 2px; height: 26px; }
+.eureka-sakuga-progress::part(label) { font: inherit; font-size: 14px; font-weight: 750; border-width: 1px; }
+.sakuga-fallback { min-height: 44px; padding: 10px 18px; border-radius: 12px; background: #7540d0; color: #fff; }
+.sakuga-fallback-check { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+@media (prefers-reduced-motion: reduce) { .eureka-sakuga::part(button), .eureka-sakuga::part(box) { transform: none !important; } }

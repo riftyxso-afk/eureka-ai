@@ -462,6 +462,12 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const emit = (payload: unknown) => sseEvent(encoder, controller, payload);
+      // Keep proxies connected while retrieval/provider reasoning is in progress.
+      // Comments do not invent progress or add text to the model's answer.
+      const heartbeat = setInterval(() => {
+        try { controller.enqueue(encoder.encode(": keep-alive\n\n")); }
+        catch { clearInterval(heartbeat); }
+      }, 15_000);
       let answer = "";
       let modelUsed = "";
       let firstTokenLogged = false;
@@ -770,6 +776,7 @@ export async function POST(req: NextRequest) {
         console.error("[api/assistant/chat] handler:", e);
         emit({ type: "error", message: msg });
       } finally {
+        clearInterval(heartbeat);
         try {
           controller.close();
         } catch {
@@ -785,7 +792,7 @@ export async function POST(req: NextRequest) {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
+      "Cache-Control": "no-store, no-transform",
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     },

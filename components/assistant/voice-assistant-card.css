@@ -1,0 +1,71 @@
+.eureka-voice-card {
+  --stream-fade: 350ms;
+  --stream-ease: cubic-bezier(.22,1,.36,1);
+  --text-swap-dur: 150ms;
+  --text-swap-ease: ease-in-out;
+  --wave-dur: 900ms;
+  --wave-min: .35;
+  --float-dur: 4000ms;
+  --float-distance: 3px;
+  --press-dur: 150ms;
+  --stage-fg: var(--call-ink, #231d2f);
+  --stage-muted: var(--call-muted, #786b86);
+  --stage-surface: var(--call-bg, #fff);
+  --stage-accent: #8756d3;
+  --eva-bubble: color-mix(in srgb, var(--stage-fg) 6%, var(--stage-surface));
+  width: min(calc(100% - 40px), 380px);
+  height: min(100%, 400px);
+  min-height: 0;
+  justify-self: center;
+  align-self: center;
+  color: var(--stage-fg);
+  border-radius: 24px;
+  background: var(--stage-surface);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--stage-fg) 5%, transparent), 0 8px 32px -4px rgb(0 0 0 / .06);
+}
+.eva-beam { width: 100%; height: 100%; border-radius: inherit; }
+.eva-inner { position: relative; height: 100%; min-height: 0; border-radius: 24px; display: flex; flex-direction: column; background: transparent; }
+.eva-top { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; padding: 16px; }
+.eva-top .momo-call-swatch { width: 32px; }
+.eva-top > div { display: grid; gap: 2px; flex: 1; }
+.eva-top strong { font-size: 16px; line-height: 22px; font-weight: 650; }
+.eva-top small { font-size: 12px; color: var(--stage-muted); }
+.eva-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--stage-muted); opacity: .4; }
+.eva-live-dot[data-live="true"] { background: #8c68d7; opacity: 1; }
+.eva-body { position: relative; z-index: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px 24px; display: flex; flex-direction: column; gap: 16px; scrollbar-width: thin; }
+.eva-bubble-row { padding-left: 8px; animation: eva-float var(--float-dur) ease-in-out infinite; }
+@keyframes eva-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--float-distance) * -1)); } }
+.eva-bubble { position: relative; margin: 0; padding: 10px 14px; max-width: 280px; border-radius: 18px; background: var(--eva-bubble); font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.eva-bubble::before { content: ""; position: absolute; bottom: 0; left: -6px; width: 16px; height: 16px; background: var(--eva-bubble); border-bottom-right-radius: 14px; }
+.eva-transcript { margin: 0; padding-left: 32px; font-size: 14px; line-height: 1.6; text-align: right; white-space: pre-wrap; overflow-wrap: anywhere; }
+.eva-stream-word { animation: eva-word var(--stream-fade) var(--stream-ease) both; }
+@keyframes eva-word { from { opacity: 0; filter: blur(1px); } to { opacity: 1; filter: blur(0); } }
+.eva-bottom { position: relative; z-index: 1; margin-top: auto; padding: 12px 24px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.eva-caption { margin: 0; font-size: 12px; line-height: 1.5; text-align: center; color: var(--stage-muted); }
+.eva-text-swap { display: inline-block; transform: translateY(0); filter: blur(0); opacity: 1; transition: transform var(--text-swap-dur) var(--text-swap-ease), filter var(--text-swap-dur) var(--text-swap-ease), opacity var(--text-swap-dur) var(--text-swap-ease); }
+.eva-text-swap.is-exit { transform: translateY(-4px); filter: blur(2px); opacity: 0; }
+.eva-text-swap.is-enter-start { transform: translateY(4px); filter: blur(2px); opacity: 0; transition: none; }
+.eva-mic { width: 48px; height: 48px; flex: none; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--stage-fg) 5%, var(--stage-surface)); color: var(--stage-fg); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--stage-fg) 8%, transparent); transition: transform var(--press-dur) cubic-bezier(.22,1,.36,1); cursor: pointer; touch-action: manipulation; }
+.eva-mic:active { transform: scale(.95); }
+.eva-mic:disabled { opacity: .4; cursor: wait; }
+.eva-mic:focus-visible { outline: 2px solid var(--stage-accent); outline-offset: 4px; }
+.eva-mic[aria-pressed="true"] { color: #ba5969; }
+.eva-wave { display: flex; align-items: center; gap: 2px; height: 20px; transform: scaleY(var(--voice-level,.35)); }
+.eva-wave i { width: 2px; border-radius: 1px; height: 12px; background: currentColor; transform-origin: center; }
+.eva-wave i:first-child,.eva-wave i:last-child { height: 6px; }
+.eva-wave i:nth-child(3) { height: 18px; }
+.eva-wave[data-reactive="true"] i { animation: eva-wave var(--wave-dur) ease-in-out infinite; }
+.eva-wave i:nth-child(2) { animation-delay: -270ms; }
+.eva-wave i:nth-child(3) { animation-delay: -540ms; }
+.eva-wave i:nth-child(4) { animation-delay: -135ms; }
+.eva-wave i:nth-child(5) { animation-delay: -405ms; }
+@keyframes eva-wave { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(var(--wave-min)); } }
+.momo-call.has-voice-card[open] { grid-template-rows: auto minmax(0,1fr) auto auto; }
+.has-voice-card .momo-call-text { max-height: 24dvh; }
+.momo-call.has-voice-card.is-chat-call[open] { grid-template-rows: auto minmax(0,1fr) auto auto; }
+.is-chat-call .eureka-voice-card { grid-row: 3; height: auto; width: min(calc(100% - 32px), 420px); background: transparent; box-shadow: none; }
+.eureka-voice-card.is-compact .eva-top { padding: 8px 16px; }
+.eureka-voice-card.is-compact .eva-bottom { flex-direction: row; justify-content: space-between; padding: 0 16px 14px; gap: 12px; }
+.is-chat-call.has-voice-card .momo-call-text { max-height: none; }
+@media (max-height: 560px) { .eva-top { padding: 8px 16px; } .eva-body { padding: 8px 20px; } .eva-bottom { padding: 8px 16px 12px; gap: 6px; } }
+@media (prefers-reduced-motion: reduce) { .eva-bubble-row,.eva-stream-word,.eva-wave[data-reactive="true"] i { animation: none; } .eva-text-swap,.eva-mic { transition: none; } .eva-mic:active { transform: none; } }

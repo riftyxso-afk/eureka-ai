@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/apiClient";
 import { playCallSound } from "@/lib/sound/cuelume";
 import { useMomoCall, type CallProvider } from "./useMomoCall";
 import "./momo-call.css";
+import VoiceAssistantCard from "./VoiceAssistantCard";
 import LalaCallVideo from "./LalaCallVideo";
 import CallAurora from "./CallAurora";
 import type { StudyCallContext } from "@/lib/audio/studyCallContext";
@@ -31,8 +32,6 @@ function CallScreen({ onClose, chat, studyContext, initialVideo = false }: { onC
     workspaceLinks, workspaceLoading, deleteTitle, confirmWorkspaceDelete, turns, showCurrent, sendText, sendVideoFrame, studyVideo } = useMomoCall(dismiss);
   const waiting = phase === "permission" || phase === "connecting";
   const dialog = useRef<HTMLDialogElement>(null);
-  const cloud = useRef<HTMLSpanElement>(null);
-  const orb = useRef<HTMLDivElement>(null);
   const thread = useRef<HTMLDivElement>(null);
   const followThread = useRef(true);
   const [draft, setDraft] = useState("");
@@ -79,31 +78,17 @@ function CallScreen({ onClose, chat, studyContext, initialVideo = false }: { onC
     return () => { if (element?.open) element.close(); };
   }, []);
 
-  useEffect(() => {
-    if (videoCall || (phase !== "listening" && phase !== "speaking")) return;
-    const orbElement = orb.current;
-    const cloudElement = cloud.current;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let frame: number;
-    let energy = 0;
-    const tick = () => {
-      const sample = level();
-      energy += (sample - energy) * (sample > energy ? 0.36 : 0.12);
-      if (orbElement) orbElement.style.transform = reduced.matches ? "" : `scale(${1 + energy * 0.065})`;
-      if (cloudElement) cloudElement.style.transform = reduced.matches ? "" : `translateY(${energy * -12}%) rotate(${energy * 12}deg)`;
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(frame);
-      orbElement?.style.removeProperty("transform");
-      cloudElement?.style.removeProperty("transform");
-    };
-  }, [level, phase, videoCall]);
 
   function end() {
     stop();
     dismiss();
+  }
+
+  function micAction() {
+    if (phase === "idle" && provider) {
+      setVideoEnabled(initialVideo && provider === "lala");
+      void start(provider, studyContext);
+    } else toggleMute();
   }
 
   function choose(choice: CallProvider) {
@@ -142,7 +127,7 @@ function CallScreen({ onClose, chat, studyContext, initialVideo = false }: { onC
     </div>
   </dialog>;
 
-  return <dialog className={`momo-call${chat ? " is-chat-call" : ""}${videoCall ? " is-video-call" : ""}`} data-provider={provider} ref={dialog} aria-labelledby="momo-call-title"
+  return <dialog className={`momo-call${!videoCall ? " has-voice-card" : ""}${chat ? " is-chat-call" : ""}${videoCall ? " is-video-call" : ""}`} data-provider={provider} ref={dialog} aria-labelledby="momo-call-title"
     onCancel={event => { event.preventDefault(); end(); }}>
     {provider === "lala" && <CallAurora phase={phase} level={level} />}
     <header className="momo-call-header">
@@ -156,14 +141,8 @@ function CallScreen({ onClose, chat, studyContext, initialVideo = false }: { onC
       </div>}
     </header>
     {videoCall ? <LalaCallVideo status={status} caption={captions ? reply : ""} phase={phase}
-      level={level} sendFrame={sendVideoFrame} /> : <div className="momo-call-stage">
-      <div ref={orb} className="momo-call-orb" data-phase={phase} aria-hidden="true">
-        <span ref={cloud} className="momo-call-cloud" />
-      </div>
-      <p className="momo-call-status" role="status">
-        {status}
-      </p>
-    </div>}
+      level={level} sendFrame={sendVideoFrame} /> : <VoiceAssistantCard name={name} phase={phase} status={status} muted={muted} waiting={waiting}
+      captions={captions} transcript={transcript} reply={reply} level={level} onMic={micAction} compact={chat} />}
     <div className="momo-call-text" ref={thread} hidden={videoCall && !workspaceVisible && !studyVideo} aria-label={chat && !videoCall ? "Transkrip panggilan" : undefined}
       onScroll={chat ? event => {
         const el = event.currentTarget;
@@ -195,7 +174,6 @@ function CallScreen({ onClose, chat, studyContext, initialVideo = false }: { onC
       {error && <p className="momo-call-error" role="alert">{error}</p>}
       {!error && phase === "idle" && <p>Ketuk mikrofon untuk mulai ngobrol.</p>}
       {backup && !error && phase === "listening" && !muted && !transcript && <p>Bicara lalu jeda sebentar agar Momo bisa menjawab.</p>}
-      {!chat && !videoCall && captions && phase !== "idle" && (reply || transcript) && <p className="momo-call-caption">{reply || transcript}</p>}
       {workspaceLinks.length > 0 && <p className="momo-call-result-hint">Buka hasilnya kapan saja, atau lanjut ngobrol di sini.</p>}
       {workspaceLinks.map(link => <a key={link.href} href={link.href} className="momo-call-result-link"
         onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) end(); }}>
@@ -220,18 +198,10 @@ function CallScreen({ onClose, chat, studyContext, initialVideo = false }: { onC
         onClick={() => setVideoEnabled(value => !value)}>
         {videoCall ? <Video size={21} aria-hidden="true" /> : <VideoOff size={21} aria-hidden="true" />}
       </button>}
-      <button type="button" disabled={waiting} className="momo-call-control"
-        aria-label={phase === "idle" ? "Mulai panggilan" : muted ? "Aktifkan mikrofon" : "Bisukan mikrofon"}
-        title={phase === "idle" ? "Mulai panggilan" : muted ? "Aktifkan mikrofon" : "Bisukan mikrofon"}
-        aria-pressed={phase === "idle" || waiting ? undefined : muted}
-        onClick={() => {
-          if (phase === "idle") {
-            setVideoEnabled(initialVideo && provider === "lala");
-            void start(provider, studyContext);
-          } else toggleMute();
-        }}>
+      {videoCall && <button type="button" disabled={waiting} className="momo-call-control"
+        aria-label={muted ? "Aktifkan mikrofon" : "Bisukan mikrofon"} aria-pressed={muted} onClick={micAction}>
         {muted ? <MicOff size={21} aria-hidden="true" /> : <Mic size={21} aria-hidden="true" />}
-      </button>
+      </button>}
       <button type="button" className="momo-call-control" onClick={end} title="Akhiri panggilan" aria-label="Akhiri panggilan">
         {videoCall ? <PhoneOff size={20} aria-hidden="true" /> : <X size={22} aria-hidden="true" />}
       </button>

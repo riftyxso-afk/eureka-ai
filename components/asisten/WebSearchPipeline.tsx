@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Globe } from "lucide-react";
-import LoadingStatus from "@/components/ui/LoadingStatus";
+import ChatResponseLoader from "./ChatResponseLoader";
 import { SiteLogo } from "./WebSources";
 import { normalizeWebResults } from "@/lib/assistant/webSources";
 import type { WebSearchItem, WebSearchStage } from "@/lib/assistant/types";
@@ -25,7 +25,7 @@ export default function WebSearchPipeline({ stage, results, query = "", notice }
   const sites = [...new Map(sources.map(source => [source.domain, source])).values()];
   return <section className="web-search-live" aria-label="Progres pencarian web" aria-busy="true">
     <header>
-      <div><LoadingStatus stage={stage === "preparing" ? "synchronizing" : stage === "searching" ? "retrieving" : stage === "writing" ? "combining" : "reading"} detail={STEPS[active].title} compact />
+      <div><ChatResponseLoader stage={stage === "preparing" ? "synchronizing" : stage === "searching" ? "retrieving" : stage === "writing" ? "combining" : "reading"} detail={STEPS[active].title} />
         {query && <p className="web-search-query">{query}</p>}
       </div>
     </header>

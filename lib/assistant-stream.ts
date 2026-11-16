@@ -13,12 +13,12 @@
  *   { type: "done" }
  *   { type: "error", message, upgradeUrl? }
  */
+import { readSseData } from "@/lib/assistant/sse";
 import { apiUrl } from "@/lib/apiClient";
 import { getAccessToken } from "@/lib/supabase/client";
 import type { LoadingStage } from "@/lib/loading-stage";
 import type {
   AssistantSource,
-  ChatAttachment,
   ChatToolOptions,
   WebSearchItem,
   WebSearchStage,
@@ -140,35 +140,26 @@ export async function streamAssistantChat(
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
+    if (!contentType.includes("text/event-stream")) {
+      onEvent({ type: "error", message: "Server belum mengirim aliran jawaban. Silakan coba lagi." });
+      return;
+    }
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data:")) continue;
-        const payload = trimmed.slice(5).trim();
-        if (!payload) continue;
-        try {
-          const ev = JSON.parse(payload) as AssistantStreamEvent;
-          onEvent(ev);
-          // Sound saat AI selesai menjawab
-          if (ev.type === "done") {
-            try {
-              const { playCompletionSound } = await import("@/lib/sound/cuelume");
-              playCompletionSound();
-            } catch {}
-          }
-        } catch {
-          // data malformed — abaikan
-        }
+    for await (const payload of readSseData(res.body)) {
+      if (!payload || payload === "[DONE]") continue;
+      let parsed: unknown;
+      try { parsed = JSON.parse(payload); } catch { continue; }
+      if (!parsed || typeof parsed !== "object" || !("type" in parsed)) continue;
+      const ev = parsed as AssistantStreamEvent;
+      onEvent(ev);
+      if (ev.type === "done") {
+        void import("@/lib/sound/cuelume").then(({ playCompletionSound }) => playCompletionSound()).catch(() => {});
+        return;
       }
+      if (ev.type === "error") return;
+    }
+    if (!controller.signal.aborted) {
+      onEvent({ type: "error", message: "Koneksi terputus sebelum jawaban selesai. Coba lagi ya." });
     }
   })();
 

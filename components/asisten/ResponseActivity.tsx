@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import LoadingStatus from "@/components/ui/LoadingStatus";
+import ChatResponseLoader from "./ChatResponseLoader";
 import type { LoadingStage } from "@/lib/loading-stage";
 
 export default function ResponseActivity({ thinking = "", stage = "thinking", showIndicator = true }: {
@@ -18,7 +18,7 @@ export default function ResponseActivity({ thinking = "", stage = "thinking", sh
 
   if (!showIndicator && !thinking) return null;
   return <div className="response-activity">
-    {showIndicator && <LoadingStatus stage={stage} compact />}
+    {showIndicator && <ChatResponseLoader stage={stage} />}
     {thinking && <div ref={thinkingRef} className="response-activity-thinking">{thinking}</div>}
   </div>;
 }
