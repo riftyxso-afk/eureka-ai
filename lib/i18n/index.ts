@@ -2,7 +2,7 @@
  * i18n — fondasi multi-bahasa (Indonesia / English).
  *
  * Strategi:
- * - URL ber-prefix locale: /pricing → /id/pricing atau /en/pricing
+ * - URL ber-prefix locale: /register → /id/register atau /en/register
  *   (ditangani middleware.ts via redirect + rewrite, tanpa memindahkan
  *   folder halaman — link internal lama tetap aman).
  * - Dictionary dengan fallback: `getDictionary("en")` mengembalikan

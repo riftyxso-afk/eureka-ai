@@ -4,7 +4,8 @@
  * Alur:
  * - /en/pricing (atau /id/...)  → rewrite ke /pricing + header `x-locale`
  *   (folder halaman TIDAK dipindah; link internal lama tetap aman).
- * - /pricing (tanpa prefix)     → redirect 307 ke /{locale}/pricing.
+ * - /pricing (URL lama)         → redirect 308 ke /id/pricing.
+ * - /register (tanpa prefix)    → redirect 307 ke /{locale}/register.
  *   Locale dipilih: cookie eureka_locale > geo (Vercel: IP → negara) > id.
  * - /api, /_next, dan file statis (favicon, robots, sitemap, dll.) dilewati.
  *
@@ -76,6 +77,13 @@ export function middleware(req: NextRequest) {
       sameSite: "lax",
     });
     return res;
+  }
+
+  // Satukan URL harga lama dengan halaman Indonesia di sitemap.
+  if (pathname === "/pricing" || pathname === "/pricing/") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/id/pricing";
+    return NextResponse.redirect(url, 308);
   }
 
   // ── Tanpa prefix: redirect ke /{locale}{path} ──

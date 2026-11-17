@@ -7,6 +7,7 @@ import { toast } from "@/lib/toast";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useI18n } from "@/context/LocaleContext";
 import {
   AlarmClock,
   BookOpen,
@@ -108,6 +109,7 @@ export function activeMenuId(pathname: string): string | null {
 
 export const Sidebar = () => {
   const pathname = usePathname();
+  const { locale } = useI18n();
   const { isPremium } = usePremium();
   const mobileMenu = useRef<HTMLDialogElement>(null);
   const [referralOpen, setReferralOpen] = useState(false);
@@ -183,7 +185,7 @@ export const Sidebar = () => {
             <SidebarItem key={item.id} icon={item.icon} label={item.label} href={item.href} active={activeMenuId(pathname) === item.id} collapsed={compact} />
           ))}
         <div className="eureka-sidebar-actions">
-          <SidebarItem icon={Crown} label={isPremium ? "Top Up Pro" : "Tingkatkan Pro"} href="/pricing" variant="pro" collapsed={compact} />
+          <SidebarItem icon={Crown} label={isPremium ? "Top Up Pro" : "Tingkatkan Pro"} href={`/${locale}/pricing`} variant="pro" collapsed={compact} />
           <button type="button" onClick={() => { if (mobile) mobileMenu.current?.close(); setReferralOpen(true); }} title={compact ? "Bagikan link referral" : undefined} aria-label={compact ? "Bagikan link referral" : undefined} className={`eureka-sidebar-item ${compact ? "is-collapsed" : ""}`}>
             <Share2 size={19} aria-hidden="true" />{!compact && <span>Bagikan referral</span>}
           </button>

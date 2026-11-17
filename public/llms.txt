@@ -18,14 +18,13 @@ Eureka.AI mengubah materi belajar (video YouTube, artikel web, PDF, DOCX, PPTX) 
 
 ## Harga
 
-- Gratis selamanya: chat AI harian, 3 catatan otomatis/bulan, kuis & flashcards dasar
-- Pro Rp 59.000/bulan (bayar sekali, aktif 30 hari): semua fitur tanpa batas
-- Trial gratis 7 hari untuk pengguna baru
+- Akun baru otomatis mendapat 28 hari akses Eureka Pro gratis tanpa data pembayaran.
+- Eureka Pro seharga Rp 15.000 untuk 30 hari, dengan pembayaran sekali tanpa perpanjangan otomatis.
 
 ## Halaman penting
 
 - Beranda: https://www.eureka-ai.web.id/
-- Harga: https://www.eureka-ai.web.id/pricing
+- Harga: https://www.eureka-ai.web.id/id/pricing
 - Daftar: https://www.eureka-ai.web.id/register
 - Program Beta: https://www.eureka-ai.web.id/join
 - Sitemap: https://www.eureka-ai.web.id/sitemap.xml

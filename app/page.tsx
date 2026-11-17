@@ -7,6 +7,7 @@ import { ArrowRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { isLoggedIn } from "@/lib/auth";
+import { TIER_PRICES } from "@/lib/paymentPricing";
 import { useI18n } from "@/context/LocaleContext";
 import { SakugaButton } from "@/components/ui/sakuga";
 
@@ -63,7 +64,7 @@ export default function LandingPage() {
           "@type": "AggregateOffer",
           priceCurrency: "IDR",
           lowPrice: "0",
-          highPrice: "15000",
+          highPrice: String(TIER_PRICES.normal),
         },
         description: dict.hero.subtitle,
       },

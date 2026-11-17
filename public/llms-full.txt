@@ -23,14 +23,13 @@ Platform: web app (PWA, bisa diinstall di HP). Bahasa utama: Indonesia. Target p
 
 ## Harga
 
-- **Gratis (selamanya)**: chat AI Socratic dengan batas harian, 3 catatan otomatis per bulan, kuis & kartu hafalan dasar, streak/XP/papan peringkat. Tanpa kartu kredit.
-- **Pro Rp 59.000/bulan**: bayar sekali, aktif 30 hari (bukan langganan berulang). Semua fitur tanpa batas: chat AI, catatan otomatis, kuis & flashcards, web search real-time, Eureka Draw, kolaborasi, akses fitur baru lebih dulu.
-- **Trial gratis 7 hari**: sekali seumur hidup, semua fitur Pro tanpa bayar.
-- **Pembayaran**: aman via Pakasir — QRIS, e-wallet, dan virtual account. Status premium aktif otomatis setelah pembayaran terverifikasi.
+- **Uji coba 28 hari**: akun baru otomatis mendapat akses Eureka Pro gratis tanpa data pembayaran.
+- **Eureka Pro Rp 15.000 untuk 30 hari**: bayar sekali tanpa perpanjangan otomatis. Pro mencakup chat AI, catatan, kuis, flashcard, konektor, serta tutor suara dan video.
+- **Pembayaran**: checkout melalui Mayar. Akses Pro aktif setelah pembayaran terverifikasi.
 
 ## FAQ singkat
 
-- **Apakah Eureka.AI gratis?** Ya. Paket Gratis tersedia selamanya; upgrade Pro Rp 59.000 (aktif 30 hari) untuk akses tanpa batas.
+- **Apakah Eureka Pro bisa dicoba gratis?** Ya. Akun baru mendapat 28 hari akses Pro gratis. Setelahnya, Pro tersedia seharga Rp 15.000 untuk 30 hari.
 - **Bisa membuat rangkuman dari YouTube?** Bisa. Tempel link video, AI mengekstrak subtitle dan menyusun catatan per bab dengan ringkasan, poin penting, kuis, dan kartu hafalan.
 - **Metode Socratic itu apa?** Cara belajar dengan pertanyaan bertahap: alih-alih memberi jawaban langsung, AI membimbing siswa menemukan sendiri jawabannya sehingga pemahaman lebih dalam.
 - **Untuk jenjang apa cocok?** SMP, SMA, hingga mahasiswa. Jenjang dan mata pelajaran bisa dipilih di profil; AI menyesuaikan bahasa, tingkat kesulitan, dan contoh materi.
@@ -45,7 +44,7 @@ Platform: web app (PWA, bisa diinstall di HP). Bahasa utama: Indonesia. Target p
 ## Halaman penting
 
 - Beranda: https://www.eureka-ai.web.id/
-- Harga: https://www.eureka-ai.web.id/pricing
+- Harga: https://www.eureka-ai.web.id/id/pricing
 - Daftar: https://www.eureka-ai.web.id/register
 - Masuk: https://www.eureka-ai.web.id/login
 - Program Beta: https://www.eureka-ai.web.id/join
@@ -54,5 +53,3 @@ Platform: web app (PWA, bisa diinstall di HP). Bahasa utama: Indonesia. Target p
 ## Kontak
 
 - Email: via dashboard Eureka.AI (menu Pengaturan)
-
-Terakhir diperbarui: Agustus 2026

@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/i18n/metadata";
+import { TIER_PRICES } from "@/lib/paymentPricing";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const price = `Rp ${TIER_PRICES.normal.toLocaleString("id-ID")}`;
   return pageMetadata({
     path: "/pricing",
     title: {
-      id: "Harga Eureka.AI — AI Tutor Socratic Gratis & Pro (Rp 15.000/bulan)",
-      en: "Eureka.AI Pricing — Free & Pro Socratic AI Tutor (Rp 15.000/month)",
+      id: `Harga Eureka AI Pro — ${price} untuk 30 hari`,
+      en: `Eureka AI Pro Pricing — ${price} for 30 days`,
     },
     description: {
-      id: "Akun baru mendapat 28 hari Eureka Pro. Belajar dengan model AI canggih, catatan, kuis interaktif, konektor, dan tutor suara serta video.",
-      en: "New accounts get 28 days of Eureka Pro. Learn with advanced AI models, notes, interactive quizzes, connectors, and voice and video tutoring.",
+      id: `Akun baru otomatis mendapat 28 hari Eureka Pro gratis. Setelahnya, ${price} untuk 30 hari dengan pembayaran sekali dan tanpa perpanjangan otomatis.`,
+      en: `New accounts automatically get 28 days of Eureka Pro for free. After that, ${price} covers 30 days with a one-time payment and no auto-renewal.`,
     },
     ogTitle: {
-      id: "Harga Eureka.AI — Gratis & Pro",
-      en: "Eureka.AI Pricing — Free & Pro",
+      id: "Harga Eureka AI Pro",
+      en: "Eureka AI Pro Pricing",
     },
   });
 }
