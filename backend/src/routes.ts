@@ -27,6 +27,11 @@ function mount(app: Hono, path: string, mod: AnyModule | Promise<AnyModule>) {
  */
 export async function mountAllRoutes(app: Hono): Promise<number> {
   let count = 0;
+  mount(app, "/api/connectors", await import("@/app/api/connectors/route"));
+  mount(app, "/api/connectors/authorize", await import("@/app/api/connectors/authorize/route"));
+  mount(app, "/api/connectors/callback", await import("@/app/api/connectors/callback/route"));
+  mount(app, "/api/connectors/complete", await import("@/app/api/connectors/complete/route"));
+  count += 4;
   mount(app,"/api/learning-profile",await import("@/app/api/learning-profile/route"));
   mount(app,"/api/study-artifacts",await import("@/app/api/study-artifacts/route"));
   mount(app,"/api/training-consent",await import("@/app/api/training-consent/route"));

@@ -23,6 +23,7 @@ export const studyBrowserContextSchema = z.object({ url: z.string().url().max(20
 export type StudyBrowserContext = z.infer<typeof studyBrowserContextSchema>;
 
 export type SavedStudyResponse = {
+  toolCalls?: import("@/lib/connectors/events").ConnectorCall[];
   files?: StudyFile[];
   fileErrors?: string[];
   browser?: StudyBrowserContext;

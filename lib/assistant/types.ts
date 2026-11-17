@@ -72,6 +72,7 @@ export interface AssistantSource {
 }
 
 export interface AssistantChatMessage {
+  toolCalls?: import("@/lib/connectors/events").ConnectorCall[];
   study?: SavedStudyResponse;
   id: string;
   sessionId: string;

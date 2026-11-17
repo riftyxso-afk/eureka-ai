@@ -12,6 +12,7 @@ export type StudyAgentEvent =
   | { type: "status"; stage: "thinking" | "retrieving" | "reading" | "combining" | "synchronizing"; label: string }
   | { type: "sources"; sources: StudySource[] }
   | { type: "token"; text: string }
+  | { type: "tool_call"; call: import("@/lib/connectors/events").ConnectorCall }
   | { type: "reset" }
-  | { type: "done"; learningUpdated?:boolean; messageId?:string; title: string; document: boolean; artifactId?: string; interaction?: StudyInteraction; browser?: StudyBrowserContext; computerUse?: boolean; files?: StudyFile[]; fileErrors?: string[] }
+  | { type: "done"; toolCalls?: import("@/lib/connectors/events").ConnectorCall[]; learningUpdated?:boolean; messageId?:string; title: string; document: boolean; artifactId?: string; interaction?: StudyInteraction; browser?: StudyBrowserContext; computerUse?: boolean; files?: StudyFile[]; fileErrors?: string[] }
   | { type: "error"; message: string };

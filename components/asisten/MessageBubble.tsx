@@ -1,4 +1,5 @@
 "use client";
+import ConnectorCalls from "./ConnectorCalls";
 import TrainingContribution from "@/components/dashboard/TrainingContribution";
 import dynamic from "next/dynamic";
 import {boardMap} from "@/lib/meetBoard";
@@ -198,6 +199,7 @@ export default function MessageBubble({
     >
       {!isStreaming && (avatar ?? <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} />)}
       <div className={`chat-message-assistant-content flex min-w-0 flex-col gap-1.5${isStreaming ? " col-span-full" : ""}`}>
+        <ConnectorCalls calls={message.toolCalls} />
         {isStreaming && webStage && <WebSearchPipeline stage={webStage} results={message.webResults ?? []} query={webQuery} notice={webNotice} />}
         {isStreaming && <ResponseActivity thinking={thinking} stage={displayContent ? "combining" : activity} showIndicator={!webStage} />}
         {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}

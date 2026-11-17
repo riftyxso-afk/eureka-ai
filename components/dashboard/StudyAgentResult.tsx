@@ -1,13 +1,16 @@
 "use client";
+import { connectorCallSchema } from "@/lib/connectors/events";
 
 import { useEffect, useRef, useState } from "react";
 import MarkdownView from "@/components/asisten/MarkdownView";
 import LoadingStatus from "@/components/ui/LoadingStatus";
 import { apiFetch } from "@/lib/apiClient";
+import { readSseData } from "@/lib/assistant/sse";
 import type { StudyAgentEvent } from "@/lib/study-agent-events";
 import type { StudySource } from "@/lib/study-sources-types";
 
 export function useStudyAgent() {
+  const [toolCalls,setToolCalls] = useState<import("@/lib/connectors/events").ConnectorCall[]>([]);
   const [video, setVideo] = useState<import("@/lib/study-video").StudyVideo | null>(null);
   const [mindmap, setMindmap] = useState<import("@/lib/study-mindmap").StudyMapNode[] | null>(null);
   const [browserActivity, setBrowserActivity] = useState<import("@/lib/study-browser").BrowserActivity[]>([]);
@@ -32,6 +35,7 @@ export function useStudyAgent() {
     setBrowserActivity([]);
     setMindmap(null);
     setVideo(null);
+    setToolCalls([]);
     setStatus({ type: "status", stage: "thinking", label: "Menyiapkan ruang belajar…" });
     try {
       const response = await apiFetch("/api/study-agent", {
@@ -45,38 +49,23 @@ export function useStudyAgent() {
         throw new Error(data.error || "Mode Belajar belum bisa dimulai.");
       }
 
-      const decoder = new TextDecoder();
-      const reader = response.body.getReader();
-      let buffer = "";
       let done = false;
       let answer = "";
       let references: StudySource[] = [];
       let clip: import("@/lib/study-video").StudyVideo | undefined;
-      let completed: Extract<StudyAgentEvent, { type: "done" }> | undefined;
-      try {
-        while (!done) {
-          const frame = await reader.read();
-          if (frame.done) break;
-          buffer += decoder.decode(frame.value, { stream: true });
-          let boundary: number;
-          while ((boundary = buffer.indexOf("\n\n")) !== -1) {
-            const message = buffer.slice(0, boundary);
-            buffer = buffer.slice(boundary + 2);
-            if (!message.startsWith("data: ")) continue;
-            const event = JSON.parse(message.slice(6)) as StudyAgentEvent;
-            if (event.type === "video") { clip = event.video; setVideo(clip); }
-            if (event.type === "mindmap") setMindmap(event.nodes);
-            if (event.type === "browser") setBrowserActivity(previous => [...previous.slice(-19), event.activity]);
-            if (event.type === "status") setStatus(event);
-            if (event.type === "sources") { references = event.sources; setSources(event.sources); }
-            if (event.type === "token") { answer += event.text; setText(answer); }
-            if (event.type === "reset") { answer = ""; setText(""); }
-            if (event.type === "error") throw new Error(event.message);
-            if (event.type === "done") { completed = event; setResult(event); done = true; break; }
-          }
-        }
-      } finally {
-        await reader.cancel().catch(() => {});
+      let completed: Extract<StudyAgentEvent,{type:"done"}> | undefined;
+      for await (const data of readSseData(response.body)) {
+        const event = JSON.parse(data) as StudyAgentEvent;
+        if(event.type==="video"){clip=event.video;setVideo(clip);}
+        if(event.type==="mindmap")setMindmap(event.nodes);
+        if(event.type==="browser")setBrowserActivity(previous=>[...previous.slice(-19),event.activity]);
+        if(event.type==="tool_call"){const parsed=connectorCallSchema.safeParse(event.call);if(parsed.success)setToolCalls(previous=>[...previous.filter(c=>c.id!==parsed.data.id),parsed.data]);}
+        if(event.type==="status")setStatus(event);
+        if(event.type==="sources"){references=event.sources;setSources(event.sources);}
+        if(event.type==="token"){answer+=event.text;setText(answer);}
+        if(event.type==="reset"){answer="";setText("");}
+        if(event.type==="error")throw new Error(event.message);
+        if(event.type==="done"){completed=event;setResult(event);done=true;break;}
       }
       if (!done && !request.signal.aborted) throw new Error("Aliran respons terputus. Coba lagi untuk hasil lengkap.");
       return completed ? { ...completed, text: answer, sources: references, video: clip } : undefined;
@@ -95,7 +84,7 @@ export function useStudyAgent() {
     active.current?.abort();
     setError("Penyusunan dihentikan.");
   }
-  return { run, stop, browserActivity, mindmap, video, text, sources, status, result, error, busy };
+  return { run, stop, toolCalls, browserActivity, mindmap, video, text, sources, status, result, error, busy };
 }
 
 export default function StudyAgentResult({ agent }: { agent: ReturnType<typeof useStudyAgent> }) {

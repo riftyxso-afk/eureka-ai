@@ -32,6 +32,7 @@ export interface ClarificationQuestion {
 }
 
 export type AssistantStreamEvent =
+  | { type: "tool_call"; call: import("@/lib/connectors/events").ConnectorCall }
   | { type: "reset" }
   | { type: "activity"; stage: LoadingStage }
   | { type: "meta"; mode?: string; model?: string; skill?: string }

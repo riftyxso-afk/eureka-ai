@@ -25,15 +25,17 @@ function ConnectorDialog({ children, onClose, label }: { children: ReactNode; on
   </dialog>;
 }
 
-export default function ConnectorSettings({ selected, configurationOnly = true }: { selected?: string; configurationOnly?: boolean }) {
+export default function ConnectorSettings({ selected, configurationOnly = false }: { selected?: string; configurationOnly?: boolean }) {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const [query, setQuery] = useState("");
   const [permission, setPermission] = useState<"read" | "write">("read");
+  const [accessKey, setAccessKey] = useState("");
   const [tutorial, setTutorial] = useState<number | null>(null);
   const [disconnect, setDisconnect] = useState<ConnectorId | null>(null);
+  const completion = useRef<Promise<void> | null>(null);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setError("");
@@ -43,6 +45,18 @@ export default function ConnectorSettings({ selected, configurationOnly = true }
       return;
     }
     try {
+      const params = new URLSearchParams(location.search);
+      if (params.get("connection") === "pending") {
+        if (!completion.current) completion.current = (async () => {
+          const response = await apiFetch("/api/connectors/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: params.get("state") }) });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Koneksi belum berhasil disimpan.");
+          const clean = new URL(location.href); clean.searchParams.delete("state"); clean.searchParams.set("connection", "success");
+          history.replaceState(null, "", clean);
+          toast.success("Aplikasi berhasil dihubungkan.");
+        })();
+        await completion.current;
+      }
       const response = await apiFetch("/api/connectors", { signal });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Daftar konektor belum dapat dimuat.");
@@ -50,7 +64,10 @@ export default function ConnectorSettings({ selected, configurationOnly = true }
       if (data.warning) setError(data.warning);
       else if (new URLSearchParams(location.search).get("connection") === "failed") setError("Koneksi belum berhasil. Pilih aplikasi dan hubungkan lagi.");
     } catch (failure) {
-      if (!signal?.aborted) setError((failure as Error).message);
+      if (!signal?.aborted) {
+        setProviders(CONNECTORS.map(provider=>({...provider,ready:false,connection:null})));
+        setError((failure as Error).message);
+      }
     } finally { if (!signal?.aborted) setLoading(false); }
   }, [configurationOnly]);
   useEffect(() => {
@@ -68,10 +85,12 @@ export default function ConnectorSettings({ selected, configurationOnly = true }
     setBusy(current.id);
     setError("");
     try {
-      const response = await apiFetch("/api/connectors/authorize", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: current.id, permission }) });
+      const manual = ["token","microsoft"].includes(current.group);
+      const response = await apiFetch(manual ? "/api/connectors" : "/api/connectors/authorize", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: current.id, permission, ...(manual ? {token:accessKey}: {}) }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
+      if (manual) { setAccessKey(""); toast.success("Aplikasi terhubung."); location.assign("/dashboard-v2/pengaturan/konektor"); return; }
       const url = new URL(result.url);
       if (!["accounts.google.com", "www.canva.com", "api.notion.com"].includes(url.hostname) || url.protocol !== "https:") throw new Error("Alamat login provider tidak valid.");
       location.assign(url.href);
@@ -104,6 +123,7 @@ export default function ConnectorSettings({ selected, configurationOnly = true }
           <div className="connector-pair"><img src="/icons/momo-192.png" alt="Eureka" /><span>↔</span><img src={connectorLogo(current.logo)} alt={current.name} /></div>
           <h1 id="consent-title">Hubungkan {current.name}<br />ke Eureka</h1>
           <p>Gunakan aplikasimu langsung dari percakapan.</p>
+          {["token","microsoft"].includes(current.group) && <label className="connector-token">Token aplikasi {current.name}<input type="password" autoComplete="off" spellCheck={false} value={accessKey} onChange={event=>setAccessKey(event.target.value)} placeholder={current.id==="trello"?"API_KEY:TOKEN":"Token akses dari provider"} /><small>Token diperiksa ke provider lalu disimpan terenkripsi. Jangan masukkan token di chat.</small></label>}
           <div className="connector-permissions">
             <fieldset><legend>Akses aplikasi</legend><div className="connector-segment">
               <label><input type="radio" name="permission" checked={permission === "read"} onChange={() => setPermission("read")} disabled={!!busy} /><span>Hanya baca</span></label>

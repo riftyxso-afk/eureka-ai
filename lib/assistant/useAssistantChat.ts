@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { normalizeWebResults } from "./webSources";
+import { connectorCallSchema } from "@/lib/connectors/events";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { captureChatResponse } from "@/lib/productAnalytics";
@@ -59,6 +60,7 @@ export interface CanvasState {
 }
 
 export interface StreamingState {
+  toolCalls: import("@/lib/connectors/events").ConnectorCall[];
   activity: import("@/lib/loading-stage").LoadingStage;
   content: string;
   thinking: string;
@@ -92,6 +94,7 @@ function buildStoredQuestion(input: ChatSendInput): string {
 
 function newStreaming(): StreamingState {
   return {
+    toolCalls: [],
     activity: "synchronizing",
     content: "",
     thinking: "",
@@ -516,6 +519,9 @@ export function useAssistantChat(options: {
           } else if (ev.type === "token") {
             // Artifact parser: pisahkan tag <artifact> dari teks chat.
             applyParserEvents(parserRef.current?.push(ev.text) ?? []);
+          } else if (ev.type === "tool_call") {
+            const parsed = connectorCallSchema.safeParse(ev.call);
+            if (parsed.success) setStreaming(s => ({...s,toolCalls:[...s.toolCalls.filter(c=>c.id!==parsed.data.id),parsed.data]}));
           } else if (ev.type === "activity") {
             setStreaming(s => ({ ...s, activity: ev.stage }));
           } else if (ev.type === "thinking") {
@@ -868,6 +874,7 @@ export function useAssistantChat(options: {
       list[list.length - 1] = {
         ...last,
         content: streaming.content,
+        toolCalls: streaming.toolCalls,
         sources: streaming.sources,
         webResults: streaming.webResults,
         model: streaming.model,

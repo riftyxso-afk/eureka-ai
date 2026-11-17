@@ -1,5 +1,6 @@
 "use client";
 
+import ConnectorCalls from "@/components/asisten/ConnectorCalls";
 import WebSources from "@/components/asisten/WebSources";
 import StudyResponseTools from "./StudyResponseTools";
 import StudyArtifactDialog from "./StudyArtifactDialog";
@@ -193,7 +194,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         setTitle(response.title);
         setTurns(previous => [...previous, {
           id: replyId, role: "assistant", content: response.text, sources: response.sources, video: response.video,
-          study: { title: response.title, document: response.document, artifactId: response.artifactId, browser: response.browser, computerUse: response.computerUse, files: response.files, fileErrors: response.fileErrors, interaction: response.interaction ?? { steps: [], suggestions: [] } },
+          study: { toolCalls: response.toolCalls, title: response.title, document: response.document, artifactId: response.artifactId, browser: response.browser, computerUse: response.computerUse, files: response.files, fileErrors: response.fileErrors, interaction: response.interaction ?? { steps: [], suggestions: [] } },
         }]);
         if (response.artifactId) setArtifact({ id: response.artifactId });
       }
@@ -292,6 +293,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
           return <Fragment key={turn.id}>
             {latestRun && agent.browserActivity.length > 0 && <StudyBrowserPanel activities={agent.browserActivity} busy={live} />}
             <article className={live ? "study-chat-turn study-chat-live" : "study-chat-turn"} aria-busy={live || undefined}>
+              {turn.role === "assistant" && <ConnectorCalls calls={live ? agent.toolCalls : turn.study?.toolCalls} />}
               {live && agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
               {videos.length === 1 && <div className="study-chat-extras study-chat-video-lead">{videoCards}</div>}
               {(!live || turn.content) && <MessageBubble message={message(turn)} isStreaming={live} videoEnabled={false}

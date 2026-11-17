@@ -1,3 +1,4 @@
+import { connectorCallSchema } from "@/lib/connectors/events";
 import { studyFileSchema } from "@/lib/study-file-types";
 import { studyBrowserContextSchema, studyInteractionSchema, type SavedStudyResponse } from "@/lib/study-interaction";
 /**
@@ -130,6 +131,7 @@ function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
   const browser = studyBrowserContextSchema.safeParse(saved?.browser);
   return {
     study: saved && parsed.success ? {
+      toolCalls: asArray<unknown>(saved.toolCalls).flatMap(value=>{const parsed=connectorCallSchema.safeParse(value);return parsed.success?[parsed.data]:[];}),
       title: typeof saved.title === "string" ? saved.title.slice(0, 120) : "Belajar bersama Momo",
       document: saved.document === true,
       artifactId: typeof saved.artifactId === "string" ? saved.artifactId : undefined,
@@ -155,6 +157,7 @@ function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
             : null,
       similarity: s.similarity != null ? Number(s.similarity) : undefined,
     })),
+    toolCalls: asArray<Record<string,unknown>>(m.sources).filter(s=>s.type==="connector-call").flatMap(s=>{ const parsed=connectorCallSchema.safeParse(s.call); return parsed.success?[parsed.data]:[]; }),
     webResults: normalizeWebResults(asArray<Record<string, unknown>>(m.sources).filter(s => s.type === "web")),
     model: m.model ? String(m.model) : null,
     createdAt: String(m.created_at ?? ""),
@@ -162,6 +165,7 @@ function mapMessage(m: Record<string, unknown>): AssistantChatMessage {
 }
 
 export async function appendMessage(data: {
+  toolCalls?: import("@/lib/connectors/events").ConnectorCall[];
   study?: SavedStudyResponse;
   sessionId: string;
   role: "user" | "assistant";
@@ -176,7 +180,7 @@ export async function appendMessage(data: {
     role: data.role,
     content: data.content,
     mentions: data.mentions ?? [],
-    sources: [...(data.study ? [{ type: "study", ...data.study }] : []), ...(data.sources ?? []), ...normalizeWebResults(data.webResults).map(source => ({ type: "web", ...source }))],
+    sources: [...(data.toolCalls || []).map(call=>({type:"connector-call",call})), ...(data.study ? [{ type: "study", ...data.study }] : []), ...(data.sources ?? []), ...normalizeWebResults(data.webResults).map(source => ({ type: "web", ...source }))],
     model: data.model ?? null,
   });
   if (error) throw error;
@@ -195,6 +199,7 @@ export async function appendMessage(data: {
     mentions: data.mentions ?? [],
     sources: data.sources ?? [],
     study: data.study,
+    toolCalls: data.toolCalls,
     webResults: normalizeWebResults(data.webResults),
     model: data.model ?? null,
     createdAt: new Date().toISOString(),

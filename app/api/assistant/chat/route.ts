@@ -1,3 +1,4 @@
+import { connectorChatContext } from "@/lib/connectors/tools";
 import { learningContext,observeLearning } from "@/lib/learningPreferences";
 import { NextRequest } from "next/server";
 import { dahonoApiKey, getDahonoModels } from "@/lib/assistant/dahonoGateway";
@@ -482,6 +483,7 @@ export async function POST(req: NextRequest) {
         try { controller.enqueue(encoder.encode(": keep-alive\n\n")); }
         catch { clearInterval(heartbeat); }
       }, 15_000);
+      const toolCalls: import("@/lib/connectors/events").ConnectorCall[] = [];
       let answer = "";
       let modelUsed = "";
       let firstTokenLogged = false;
@@ -511,7 +513,13 @@ export async function POST(req: NextRequest) {
           (pending.content === question ||
             pending.content === effectiveQuestion);
         const history = isRetry && prior.length > 0 ? prior.slice(0, -1) : prior;
-        webSearch = shouldAutoSearch(question, history);
+        const connectorContext = await connectorChatContext(userId, sessionId, effectiveQuestion, history,
+          req.signal, detail => emit({ type: "activity", stage: "retrieving", detail }), call => {
+            const index = toolCalls.findIndex(c => c.id === call.id);
+            if (index < 0) toolCalls.push(call); else toolCalls[index] = call;
+            emit({ type: "tool_call", call });
+          });
+        webSearch = !connectorContext && shouldAutoSearch(question, history);
 
         if (!isRetry) {
           await appendMessage({
@@ -667,6 +675,7 @@ export async function POST(req: NextRequest) {
           language: languageFromRequest(req),
         });
         system += "\n" + await learningContext(userId);
+        system += "\n" + connectorContext;
         if (videoContextMd) {
           system += `\n\nMODE "DISKUSI VIDEO":\nPengguna sedang berdiskusi tentang video YouTube (${activeVideoUrl}). Jawab pertanyaan BERDASARKAN transkrip video berikut bila tersedia. Bila transkrip tidak tersedia, akui dengan jujur bahwa kamu tidak bisa membaca isi video, dan JANGAN mengarang kutipan atau klaim dari isi video.\n\n${videoContextMd}`;
         }
@@ -708,7 +717,7 @@ export async function POST(req: NextRequest) {
           let prefix = "";
           const generateAnswer = (model = preferredModel) => aiChatStream(
             {
-              system: system + "\n\n" + autoSearchInstruction(webSearch),
+              system: system + "\n\n" + (connectorContext ? "Jawab berdasarkan hasil konektor. Jangan mencari data akun pengguna di web publik; jika hasil kurang, minta informasi yang diperlukan." : autoSearchInstruction(webSearch)),
               user: userPrompt,
               signal: req.signal,
               onReset: () => { answer = ""; prefix = ""; firstTokenLogged = false; emit({ type: "reset" }); },
@@ -742,7 +751,7 @@ export async function POST(req: NextRequest) {
             }
           );
           let result = await generateAnswer();
-          if (!webSearch && result.content.trimStart().startsWith(WEB_REQUEST_MARKER)) {
+          if (!connectorContext && !webSearch && result.content.trimStart().startsWith(WEB_REQUEST_MARKER)) {
             answer = ""; prefix = ""; firstTokenLogged = false; webSearch = true;
             emit({ type: "reset" });
             await retrieveWeb();
@@ -787,6 +796,7 @@ export async function POST(req: NextRequest) {
           sessionId,
           role: "assistant",
           content: storedAnswer,
+          toolCalls,
           sources,
           webResults,
           model: modelUsed || null,
