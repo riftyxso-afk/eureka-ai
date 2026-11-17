@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           <li><strong>Google Sheets.</strong> Kami membaca nilai sel pada spreadsheet yang kamu tentukan untuk membantu mengolah atau menjelaskan tabel. Dengan izin tulis, kami bisa membuat dan mengisi spreadsheet baru saat diminta.</li>
           <li><strong>Google Slides.</strong> Kami membaca teks dan struktur slide dari presentasi yang kamu tentukan. Dengan izin tulis, kami bisa membuat presentasi baru dan mengisi slide saat diminta.</li>
           <li><strong>Google Calendar.</strong> Kami membaca informasi agenda dari kalender utama, seperti judul, keterangan dan waktu acara, untuk menjawab pertanyaan jadwal. Dengan izin tulis, kami bisa menambahkan acara yang kamu minta.</li>
-          <li><strong>Gmail.</strong> Kami mencari pesan sesuai permintaan. Saat kamu meminta membaca pesan, kami mengambil informasi seperti subjek, pengirim, waktu, cuplikan, dan isi teks untuk membantu menjawab. Izin Gmail yang diminta adalah izin baca.</li>
+          <li><strong>Gmail.</strong> Kami mencari pesan sesuai permintaan. Saat kamu meminta membaca pesan, kami mengambil informasi seperti subjek, pengirim, waktu, cuplikan, dan isi teks untuk membantu menjawab. Jika kamu memberi izin tulis dan meminta draf, Eureka mengirim subjek, isi, dan alamat penerima yang kamu tentukan ke Gmail untuk disimpan sebagai draf.</li>
         </ul>
       </section>
 

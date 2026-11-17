@@ -174,7 +174,7 @@ test('Canva poster starts with real templates and continues using the prior prov
     '@/lib/ai': { aiChatJson: async () => ({ provider: 'canva', action: 'create', query: 'sekolah', id: '' }) },
   });
   const run = (prompt, history) => tools.connectorChatContext('user', 'session', prompt, history, new AbortController().signal, () => {}, e => events.push(e));
-  const first = await run('Buat poster di Canva untuk sekolah', []);
+  const first = await run('Buat poster pakai template Canva untuk sekolah', []);
   assert.match(first, /Poster sekolah/);
   assert.doesNotMatch(first, /cursor:2/);
   const page = events.at(-1);
@@ -184,6 +184,50 @@ test('Canva poster starts with real templates and continues using the prior prov
   assert.equal(queries[1].get('query'), 'sekolah');
   assert.equal(queries[1].get('continuation'), 'cursor:2');
   assert.equal(events.at(-1).canvaSearch.continuation, undefined);
+});
+
+test('Canva checks matching account designs before showing the gallery fallback', async () => {
+  const design = {
+    id: 'DAExisting', title: 'Poster Biologi',
+    thumbnail: { url: 'https://media.canva.com/poster.png', width: 400, height: 600 },
+    urls: { edit_url: 'https://www.canva.com/design/DAExisting/edit' },
+  };
+  for (const items of [[design], []]) {
+    const calls = [];
+    const paths = [];
+    const tools = load('lib/connectors/tools.ts', {
+      './productivity': {},
+      './server': {
+        connectorStates: async () => [{ provider: 'canva', permission: 'read' }],
+        providerFetch: async (_, __, url, body) => {
+          assert.equal(body, undefined);
+          const route = new URL(url);
+          paths.push(route.pathname + route.search);
+          return { items: route.pathname.endsWith('/designs') ? items : [] };
+        },
+      },
+      '@/lib/supabase/admin': { db: () => assert.fail('Searching must not write') },
+      '@/lib/ai': { aiChatJson: async () => ({ provider: 'canva', action: 'create', query: 'biologi', id: '' }) },
+    });
+    const answer = await tools.connectorChatContext('user', 'session', 'Buat poster biologi pakai template Canva', [],
+      new AbortController().signal, () => {}, call => calls.push(call));
+    assert.deepEqual(paths, [
+      '/rest/v1/brand-templates?limit=3&query=biologi',
+      '/rest/v1/brand-templates?limit=3',
+      '/rest/v1/designs?query=biologi',
+    ]);
+    const result = calls.at(-1);
+    if (items.length) {
+      assert.equal(result.label, 'Desain terkait ditemukan');
+      assert.equal(result.previews[0].kind, 'design');
+      assert.equal(result.previews[0].id, design.id);
+    } else {
+      assert.equal(result.label, 'Belum ada template yang cocok');
+      assert.equal(result.previews.length, 0);
+      assert.equal(result.links[0].url, 'https://www.canva.com/templates/');
+      assert.match(answer, /Belum ada poster yang dibuat/);
+    }
+  }
 });
 
 test('Canva autofill uses the live dataset, filters unsupported fields, and polls the job', async () => {
@@ -234,4 +278,111 @@ test('Canva edits the original design only with an explicit target and edit inst
   assert.equal(writes[0].title, undefined);
   await run('Buat salinan desain Canva https://www.canva.com/design/DAExisting/edit dengan judul baru');
   assert.equal(writes[1].type, 'create_from_design');
+});
+
+test('Gmail creates a draft only after a write grant and a clear request', async () => {
+  let permission = 'read';
+  let request;
+  const calls = [];
+  const db = { from: () => ({
+    insert: async () => ({}),
+    update: () => ({ eq() { return this; } }),
+  }) };
+  const tools = load('lib/connectors/tools.ts', {
+    './productivity': {},
+    './server': {
+      connectorStates: async () => [{ provider: 'gmail', permission }],
+      providerFetch: async (_, __, url, body) => {
+        request = { url, raw: Buffer.from(body.message.raw, 'base64url').toString() };
+        return { id: 'draft-1' };
+      },
+    },
+    '@/lib/supabase/admin': { db: () => db },
+    '@/lib/ai': { aiChatJson: async (_, parse) => parse(JSON.stringify({
+      provider: 'gmail', action: 'create', recipient: 'uji@example.com', title: 'Rangkuman', text: 'Halo!',
+    })) },
+  });
+  const run = prompt => tools.connectorChatContext('user', 'session', prompt, [], new AbortController().signal, () => {}, call => calls.push(call), 'gmail');
+  await run('Buat draf Gmail untuk uji@example.com');
+  assert.equal(calls.at(-1).requiredPermission, 'write');
+  assert.equal(request, undefined);
+  permission = 'write';
+  await run('Jangan buat draf Gmail untuk uji@example.com');
+  assert.equal(request, undefined);
+  const result = await run('Buat draf Gmail untuk uji@example.com');
+  assert.match(result, /draft_saved/);
+  assert.match(request.url, /\/drafts$/);
+  assert.match(request.raw, /^To: uji@example.com\r\n/);
+  assert.equal(calls.at(-1).label, 'Draf tersimpan di Gmail');
+});
+
+test('Microsoft and Teams writes use the correct targets and Zotero requires per-item success', async () => {
+  const original = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url, ...options });
+    const result = url.endsWith('/keys/current') ? { userID: '123' }
+      : url.includes('/users/123/items') ? { successful: { 0: { key: 'ITEM' } } } : { id: 'created' };
+    return { ok: true, json: async () => result };
+  };
+  try {
+    const api = load('lib/connectors/productivity.ts', {
+      './server': { accessToken: async (_, __, write) => { assert.equal(write, true); return 'test-token'; } },
+    });
+    const base = { action: 'create', query: '', id: '', title: 'Catatan', text: 'Isi' };
+    await api.productivityTool('user', { ...base, provider: 'onedrive' });
+    assert.equal(requests[0].method, 'PUT');
+    assert.equal(requests[0].body, 'Isi');
+    assert.equal(requests[0].headers['If-None-Match'], '*');
+    await api.productivityTool('user', { ...base, provider: 'teams', id: 'team-guid:19:abc@thread.tacv2' });
+    assert.match(requests[1].url, /channels\/19%3Aabc%40thread.tacv2\/messages$/);
+    assert.deepEqual(JSON.parse(requests[1].body), { body: { contentType: 'text', content: 'Isi' } });
+    const reference = await api.productivityTool('user', { ...base, provider: 'zotero', url: 'https://example.com/referensi' });
+    assert.equal(reference.key, 'ITEM');
+    assert.equal(JSON.parse(requests[3].body)[0].url, 'https://example.com/referensi');
+  } finally { globalThis.fetch = original; }
+});
+
+test('Canva MCP keeps a pending job and resumes it without another create call', async () => {
+  const original = globalThis.fetch;
+  const calls = [];
+  const saved = [];
+  globalThis.fetch = async (_, options) => {
+    const rpc = JSON.parse(options.body);
+    if (rpc.method === 'initialize') {
+      return new Response(JSON.stringify({ id: rpc.id, result: { protocolVersion: '2025-06-18' } }),
+        { headers: { 'Mcp-Session-Id': 'test-session' } });
+    }
+    assert.equal(options.headers['Mcp-Session-Id'], 'test-session');
+    if (rpc.method === 'notifications/initialized') return new Response(null, { status: 202 });
+    calls.push(rpc.params);
+    const payload = rpc.params.name === 'create-design'
+      ? { status: 'pending', job_id: 'job-1', continuation_token: 'private-job-token', polling_policy: { wait_seconds: 66 } }
+      : { status: 'completed', design: { id: 'DA123', edit_url: 'https://www.canva.com/d/test' } };
+    return new Response(JSON.stringify({ id: rpc.id, result: { structuredContent: payload } }));
+  };
+  try {
+    const api = load('lib/connectors/canva-mcp.ts', {
+      'node:timers/promises': { setTimeout: async () => {} },
+      './server': {
+        accessToken: async (_, __, write) => { assert.equal(write, true); return 'test-token'; },
+        seal: value => Buffer.from(JSON.stringify(value)).toString('base64'),
+        unseal: value => JSON.parse(Buffer.from(value, 'base64').toString()),
+      },
+    });
+    const input = { userId: 'user', sessionId: 'session', brief: 'Buat poster di Canva', title: 'Poster',
+      signal: new AbortController().signal, progress: () => {}, savePending: async result => saved.push(result) };
+    assert.equal(api.wantsNewCanvaDesign('Buat poster di Canva, gunakan warna hijau.'), true);
+    assert.equal(api.wantsNewCanvaDesign('Buat poster pakai template Canva.'), false);
+    const pending = await api.generateCanvaDesign(input);
+    assert.equal(pending.job.status, 'in_progress');
+    const job = JSON.parse(Buffer.from(pending.canvaResume.state, 'base64').toString());
+    const resume = { ...pending.canvaResume, state: Buffer.from(JSON.stringify({ ...job, pollAfter: 0 })).toString('base64') };
+    await assert.rejects(api.generateCanvaDesign({ ...input, sessionId: 'other', resume }), /percakapan lain/);
+    const completed = await api.generateCanvaDesign({ ...input, resume });
+    assert.equal(completed.design.urls.edit_url, 'https://www.canva.com/d/test');
+    assert.deepEqual(calls.map(item => item.name), ['create-design', 'get-create-design-async-job']);
+    assert.equal(calls[0].arguments.brief, input.brief);
+    assert.equal(calls[1].arguments.continuation_token, 'private-job-token');
+  } finally { globalThis.fetch = original; }
 });

@@ -23,7 +23,7 @@ export const canvaPreviewSchema = z.object({
   editUrl: canvaUrl(["www.canva.com", "canva.com"]).optional(),
   viewUrl: canvaUrl(["www.canva.com", "canva.com"]).optional(),
   createUrl: canvaUrl(["www.canva.com", "canva.com"]).optional(),
-}).refine(preview => preview.kind === "brand_template" || Boolean(preview.thumbnail));
+}).refine(preview => preview.kind === "brand_template" || Boolean(preview.thumbnail || preview.editUrl || preview.viewUrl));
 export type CanvaPreview = z.infer<typeof canvaPreviewSchema>;
 
 export const canvaSearchSchema = z.object({
@@ -38,6 +38,8 @@ export const connectorCallSchema = z.object({
   updates: z.array(z.string().max(200)).max(5).optional(),
   previews: z.array(canvaPreviewSchema).max(3).optional(),
   canvaSearch: canvaSearchSchema.optional(),
+  requiredPermission: z.enum(["connect", "write"]).optional(),
+  canvaJob: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 });
 export type ConnectorCall = z.infer<typeof connectorCallSchema>;
 export function mergeConnectorCall(calls: ConnectorCall[], next: ConnectorCall) {

@@ -19,7 +19,6 @@ import RefreshCw from "kubai-icons-react/icons/sync";
 import MarkdownView from "./MarkdownView";
 import SourceChips from "./SourceChips";
 import { citedNoteSources } from "@/lib/assistant/citedSources";
-import MomoMessageAvatar from "@/components/asisten/MomoMessageAvatar";
 import ResponseActivity from "@/components/asisten/ResponseActivity";
 import WebSearchPipeline from "./WebSearchPipeline";
 import WebSources from "./WebSources";
@@ -32,7 +31,6 @@ import type { AssistantChatMessage, WebSearchStage } from "@/lib/assistant/types
 
 interface MessageBubbleProps {
     hideActivity?: boolean;
-  avatar?: import("react").ReactNode;
   activity?: import("@/lib/loading-stage").LoadingStage;
   message: AssistantChatMessage;
   isStreaming?: boolean;
@@ -114,7 +112,6 @@ function answerDurationMs(
 export default function MessageBubble({
   hideActivity = false,
   message,
-  avatar,
   isStreaming = false,
   thinking,
   activity = "thinking",
@@ -191,27 +188,16 @@ export default function MessageBubble({
     );
   }
 
-  // Thinking terakhir yang sempat tampil — dipertahankan saat prop thinking
-  // hilang (mis. jawaban selesai) agar tidak kedip. Ditulis di efek, bukan
-  // saat render (mutasi ref saat render = bug + warning react-hooks/refs).
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       className="group chat-message chat-message--assistant"
     >
-      {!isStreaming && (avatar ?? <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} />)}
-      <div className={`chat-message-assistant-content flex min-w-0 flex-col gap-1.5${isStreaming ? " col-span-full" : ""}`}>
+      <div className="chat-message-assistant-content flex min-w-0 flex-col gap-2">
         {isStreaming && webStage && !message.toolCalls?.length && <WebSearchPipeline stage={webStage} results={message.webResults ?? []} query={webQuery} notice={webNotice} />}
         {!hideActivity && (isStreaming || !!message.toolCalls?.length) && <ResponseActivity toolCalls={message.toolCalls} streaming={isStreaming} thinking={isStreaming ? thinking : undefined} stage={displayContent ? "combining" : activity} showIndicator={!webStage || !!message.toolCalls?.length} onCanvaPrompt={onCanvaPrompt} />}
-        {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}
-        <div className="break-words text-clay-dark">
-          {empty || !displayContent ? (
-            null
-          ) : (
-            <MarkdownView content={displayContent} className="break-words text-[14px] leading-relaxed" />
-          )}
-        </div>
+        {displayContent && <MarkdownView content={displayContent} className="chat-answer text-clay-dark" />}
 
         {!isStreaming && onOpenArtifacts && parsedContent?.artifacts.map((artifact, index) => (
           <button

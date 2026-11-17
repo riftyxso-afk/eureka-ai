@@ -6,3 +6,30 @@
 .answer-flow-index { align-self: start; border-radius: 50%; background: rgb(var(--clay-primary) / .12); color: rgb(var(--clay-dark)); line-height: 26px; text-align: center; font-size: 11px; font-weight: 850; font-variant-numeric: tabular-nums; }
 
 .answer-quote { margin-block: 16px; padding-inline-start: 14px; border-inline-start: 3px solid rgb(var(--clay-primary) / .55); color: rgb(var(--clay-muted)); }
+
+/* Keep KaTeX's internal fraction and baseline metrics separate from prose. */
+:is(.asisten-md, .asisten-md-inline) .katex {
+  font-size: 1.04em;
+  word-break: normal;
+  overflow-wrap: normal;
+  color: inherit;
+}
+:is(.asisten-md, .asisten-md-inline) .katex .base { white-space: nowrap; }
+:is(.asisten-md, .asisten-md-inline) .katex-display {
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: .75em .25em;
+  margin-block: .55em;
+}
+:is(.asisten-md, .asisten-md-inline) .katex-display > .katex {
+  display: block;
+  min-inline-size: max-content;
+  text-align: center;
+}
+:is(.asisten-md, .asisten-md-inline) .katex:not(.katex-display > .katex):has(.mfrac) {
+  display: inline-block;
+  padding-block: .13em;
+  vertical-align: baseline;
+}

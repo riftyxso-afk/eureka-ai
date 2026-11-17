@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Check, Flame, LockKeyhole, Trophy, Zap } from "lucide-react";
 import V2FeaturePage from "@/components/dashboard/V2FeaturePage";
+import ActivityBadges from "@/components/dashboard/ActivityBadges";
 import ActivityCalendar from "@/components/dashboard/ActivityCalendar";
 import { useV2Progress } from "@/components/dashboard/V2Progress";
 import { STREAK_MILESTONES } from "@/lib/streak";
@@ -43,6 +44,7 @@ export default function Page() {
             <div className="account-surface"><Zap size={20} /><span>Total XP</span><strong>{number(stats.xp)}</strong></div>
           </div>
           <ActivityCalendar stats={stats} refresh={refresh} />
+          <ActivityBadges stats={stats} />
           <div className="streak-panels">
             <section className="account-surface">
               <h2>Tujuh hari terakhir</h2>

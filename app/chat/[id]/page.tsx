@@ -414,7 +414,6 @@ export default function ChatPage() {
             !(chat.clarification && chat.clarification.length > 0) &&
             !chat.hasError ? (
             <div className="py-14 text-center">
-              <MomoCompanion mode={momoMode} className="momo-chat-empty" />
               <h2 className="mt-4 flex items-center justify-center gap-2 text-lg font-extrabold text-clay-dark sm:text-xl">
                 {l.emptyTitle}{" "}
                 <Hand trigger="parent" size={22} className="shrink-0 text-clay-primary" />

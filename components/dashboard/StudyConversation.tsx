@@ -12,7 +12,6 @@ import "./study-production.css";
 import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import BookOpen from "kubai-icons-react/icons/book-open";
 import ChevronDown from "kubai-icons-react/icons/chevron-down";
 import Download from "kubai-icons-react/icons/download";
@@ -286,7 +285,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
         </details>}
 
         {!loaded && !error && <ChatSkeleton label="Memuat percakapan belajar…" />}
-        {loaded && !turns.length && !agent.busy && <div className="study-chat-empty"><Image src="/icons/momo-192.png" alt="" width={56} height={56} /><h1>Mau belajar atau membuat apa?</h1><p>Tanya konsep, kirim tautan YouTube, cari sumber, atau buat dokumen bersama Momo.</p></div>}
+        {loaded && !turns.length && !agent.busy && <div className="study-chat-empty"><h1>Mau belajar atau membuat apa?</h1><p>Tanya konsep, kirim tautan YouTube, atau cari sumber belajar.</p></div>}
         {displayedTurns.map((turn, index) => {
           const latestRun = turn.id === liveTurnId;
           const live = agent.busy && latestRun;
@@ -299,8 +298,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
                 onCanvaPrompt={!agent.busy && turn.id === turns.at(-1)?.id
                   ? prompt => void send(prompt, noteId, undefined, undefined, undefined, "canva") : undefined} />}
               {videos.length === 1 && <div className="study-chat-extras study-chat-video-lead">{videoCards}</div>}
-              {(!live || turn.content) && <MessageBubble hideActivity message={message(turn)} isStreaming={live} videoEnabled={false}
-                avatar={!live && <StudyBotAvatar size={32} response={turn.content} still />} />}
+              {(!live || turn.content) && <MessageBubble hideActivity message={message(turn)} isStreaming={live} videoEnabled={false} />}
               {videos.length > 1 && <div className="study-chat-extras">{videoCards}</div>}
               {live && agent.mindmap !== null && <div className="study-chat-extras"><StudyMindmap nodes={agent.mindmap} busy onExplore={() => {}} /></div>}
               {!live && turn.role === "assistant" && <div className="study-chat-extras">

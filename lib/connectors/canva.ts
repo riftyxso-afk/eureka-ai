@@ -48,6 +48,7 @@ export function resolveCanvaPlan(plan: Plan, prompt: string, history: Message[])
   if (target && /^Lihat kolom (?:template|desain) Canva /i.test(prompt)) {
     return { ...plan, id, canvaKind: kind, action: "read" as const };
   }
+  if (target && plan.action === "search") return { ...plan, id, canvaKind: kind, action: "read" as const };
   if (plan.action === "search") return {
     ...plan,
     canvaKind: target?.kind ?? (/\btemplates?\b/i.test(prompt) ? "brand_template" as const : kind),
@@ -78,6 +79,7 @@ export async function executeCanva(user: string, plan: Plan, prompt: string, his
     const list = (term: string, continuation?: string) => api("/brand-templates?" + new URLSearchParams({
       limit: "3", ...(term ? { query: term } : {}), ...(continuation ? { continuation } : {}),
     }));
+    let templateAccessDenied = false;
     try {
       let result = await list(query, next?.continuation);
       const searched = query;
@@ -86,17 +88,42 @@ export async function executeCanva(user: string, plan: Plan, prompt: string, his
         result = await list(query);
       }
       const search: Search = canvaSearchSchema.parse({ query, continuation: result.continuation || undefined });
-      return { ...result, canvaSearch: search, gallery_url: canvaTemplateGallery,
+      if (result.items?.length || search.continuation || next) return { ...result, canvaSearch: search, gallery_url: canvaTemplateGallery,
         message: result.items?.length
           ? `${searched && !query ? "Pencarian tidak menemukan judul yang cocok. Berikut Brand Templates lain yang tersedia. " : ""}Tampilkan template ini sebagai pilihan. Minta pengguna memilih template dan menyebutkan perubahan.`
-          : "Canva tidak mengembalikan Brand Template di halaman ini. Pengguna bisa memilih desainnya atau membuka galeri Canva." };
+          : "Tidak ada Brand Template pada halaman ini." };
     } catch (error) {
-      if (/\(40[13]\)/.test((error as Error).message)) return {
-        error: "Canva belum memberi akses ke Brand Templates. Periksa paket Canva dan hubungkan ulang untuk memberi izin template.",
-        gallery_url: canvaTemplateGallery,
+      const message = (error as Error).message;
+      if (/\(401\)/.test(message)) return {
+        error: "Sesi Canva tidak berlaku. Hubungkan ulang Canva di Pengaturan → Konektor.",
       };
-      throw error;
+      if (!/\(403\)/.test(message)) throw error;
+      templateAccessDenied = true;
     }
+
+    const matchingQuery = plan.query.trim();
+    if (matchingQuery && !next) {
+      progress("Mencari desain di akun Canva…", "Brand Template belum tersedia. Saya cek apakah ada desain terkait di akunmu.");
+      try {
+        const designs = await api("/designs?" + new URLSearchParams({ query: matchingQuery }));
+        if (Array.isArray(designs.items) && designs.items.length) return {
+          items: designs.items.slice(0, 3),
+          canvaResultKind: "design" as const,
+          actionLabel: "Desain terkait ditemukan",
+          message: "Ini desain di akun Canva, bukan Brand Template. Belum ada desain baru yang dibuat. Pengguna bisa memilih satu untuk memeriksa kolom Autofill.",
+        };
+      } catch {
+        signal.throwIfAborted();
+        // Keep the public gallery available when searching account designs is unavailable.
+      }
+    }
+
+    return {
+      items: [],
+      actionLabel: templateAccessDenied ? "Akses Brand Template belum tersedia" : "Belum ada template yang cocok",
+      gallery_url: canvaTemplateGallery,
+      message: "Belum ada poster yang dibuat. Beri jawaban singkat: pengguna bisa membuka galeri Canva, memilih template untuk membuat salinannya, lalu mengirim tautan desain salinan itu agar Eureka memeriksa kolom Autofill. Jika pengguna sudah punya desain Canva, cukup minta tautannya. Jangan mengulang pencarian yang sama atau menawarkan kata kunci lain sebagai satu-satunya langkah.",
+    };
   }
 
   const id = encodeURIComponent(canvaDesignIdSchema.parse(plan.id));
@@ -113,6 +140,7 @@ export async function executeCanva(user: string, plan: Plan, prompt: string, his
   if (plan.action === "read" || !textFields.length) return {
     ...meta,
     textFields,
+    ...(!textFields.length ? { actionLabel: "Desain belum punya kolom teks Autofill" } : {}),
     message: textFields.length
       ? "Tampilkan kolom teks yang tersedia dan tanyakan teks mana yang ingin diisi."
       : "Belum ada kolom teks Autofill. Buka di Canva dan tambahkan label pada elemen teks lewat Bulk Create → Labels.",

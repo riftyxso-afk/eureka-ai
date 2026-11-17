@@ -45,8 +45,10 @@ export default function CanvaResultPreview({ initial, onPrompt }: { initial: Can
     {href ? <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`Buka ${preview.title} di Canva`}>{thumbnail}</a> : thumbnail}
     <figcaption>
       <strong>{preview.title}</strong>
-      {template && onPrompt && <button type="button" className="canva-chat-action"
-        onClick={() => onPrompt(`Lihat kolom template Canva ${preview.id}`)}>Pilih template</button>}
+      {onPrompt && <button type="button" className="canva-chat-action"
+        onClick={() => onPrompt(`Lihat kolom ${template ? "template" : "desain"} Canva ${preview.id}`)}>
+        {template ? "Pilih template" : "Cek kolom Autofill"}
+      </button>}
       {actionUrl && <a href={actionUrl} target="_blank" rel="noopener noreferrer">
         {preview.createUrl ? "Gunakan di Canva" : preview.editUrl ? "Edit di Canva" : "Buka Canva"}
         <ExternalLink size={13} aria-hidden="true" />

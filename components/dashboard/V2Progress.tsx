@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flame, X } from "lucide-react";
+import { X } from "lucide-react";
+import { StreakBadgeEmblem } from "./ActivityBadges";
 import { apiFetch } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { captureProductEvent } from "@/lib/productAnalytics";
@@ -96,7 +97,7 @@ export default function V2Progress({ children }: { children: ReactNode }) {
   return <Context.Provider value={{ stats, loading, error, refresh }}>
     {children}
     {celebration !== null && <aside className="streak-celebration" aria-label="Pencapaian streak">
-      <span className="streak-celebration-icon" aria-hidden="true"><Flame size={30} /></span>
+      <StreakBadgeEmblem days={celebration} />
       <div>
         <p role="status"><strong>{celebration} hari berturut-turut!</strong> Kamu menjaga ritme belajarmu.</p>
         <Link href="/dashboard-v2/aktivitas" onClick={() => setCelebration(null)}>Lihat aktivitas</Link>

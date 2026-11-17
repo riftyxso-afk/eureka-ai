@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronDown, CreditCard, History, Loader2, Printer } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, CreditCard, History, Loader2, Monitor, Plug, Printer, Sparkles } from "lucide-react";
 import { toast } from "@/lib/toast";
 import SlideToConfirm from "@/components/ui/SlideToConfirm";
 import { TIER_PRICES } from "@/lib/paymentPricing";
@@ -42,12 +42,18 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
   const { dict, locale } = useI18n();
   const p = dict.pricing;
   const pricingPath = v2 ? "/dashboard-v2/pricing" : "/pricing";
-  const PERKS = locale === "en"
-    ? ["AI chat and web search", "AI notes with chapters and mindmaps", "Quizzes, flashcards, and comprehension practice", "Voice calls with Momo and Lala", "Study planner and subject tools"]
-    : ["Chat AI dan pencarian web", "Catatan AI lengkap dengan bab dan mindmap", "Kuis, flashcard, dan latihan pemahaman", "Panggilan suara dengan Momo dan Lala", "Jadwal belajar dan pengelolaan mata pelajaran"];
   const en = locale === "en";
+  const features = [
+    { icon: Sparkles, title: en ? "Advanced AI models" : "Model AI canggih", detail: en ? "Choose flagship models for complex questions, with vision for images and documents." : "Pilih model flagship untuk soal rumit, dengan vision untuk gambar dan dokumen." },
+    { icon: Monitor, title: "Computer Use", detail: en ? "Watch Momo work in a live browser and retrieve results. Available on accounts with a browser workspace." : "Lihat Momo bekerja di browser secara live dan ambil hasilnya. Tersedia untuk akun dengan ruang browser." },
+    { icon: BookOpen, title: en ? "Interactive Study mode" : "Mode Belajar interaktif", detail: en ? "Learn with AI courses, notes, concept maps and practice questions right in chat." : "Belajar lewat kursus AI, catatan, peta konsep, dan latihan soal langsung di chat." },
+    { icon: Plug, title: en ? "App connectors" : "Konektor aplikasi", detail: en ? "Work with Canva, Google Drive, and Notion from your conversations." : "Pakai Canva, Google Drive, dan Notion langsung dari percakapanmu." },
+  ];
+  const benefits = en
+    ? ["AI chat and web search", "Flagship model credits", "Quizzes and flashcards", "AI notes, PDF and DOCX", "Voice and video tutoring", "Group study rooms"]
+    : ["Chat AI dan pencarian web", "Kredit model flagship", "Kuis dan flashcard", "Catatan AI, PDF, dan DOCX", "Tutor suara dan video", "Ruang belajar bersama"];
   const router = useRouter();
-  const { isPremium, tier, premiumUntil, freeAccessUntil, loading, refresh } = usePremium();
+  const { isPremium, tier, premiumUntil, freeAccessUntil, welcomeTrialUntil, loading, refresh } = usePremium();
   const [signedIn, setSignedIn] = useState(false);
   const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -368,20 +374,27 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
       </header>}
       <main className="pro-main">
         {!v2 && <Link href="/dashboard-v2" className="pro-back"><ArrowLeft size={15} />{p.backHome}</Link>}
+        <header className="pro-story">
+          <p className="pro-eyebrow">Eureka Pro</p>
+          <h1 id="pro-title">{en ? "Take your learning further." : "Belajar lebih jauh dengan Eureka Pro."}</h1>
+          <p>{en ? "New accounts get 28 days of Pro automatically, with no payment details required." : "Akun baru otomatis mendapatkan 28 hari akses Pro, tanpa perlu memasukkan data pembayaran."}</p>
+        </header>
         <section className="pro-offer" aria-labelledby="pro-title">
-          <div className="pro-story">
-            <p className="pro-eyebrow">EUREKA PRO</p>
-            <h1 id="pro-title">{en ? "Make more of every study session." : "Belajar lebih jauh dengan Momo."}</h1>
-            <p>{en ? "Turn study material into notes, practise what you’ve learned, and ask Momo whenever you get stuck." : "Ubah materi jadi catatan, latihan dengan kuis dan flashcard, lalu tanya Momo kalau ada yang belum dipahami."}</p>
-            <ul className="pro-benefits" aria-label={en ? "Pro benefits" : "Manfaat Pro"}>
-              {PERKS.map(perk => <li key={perk}><Check size={17} aria-hidden="true" />{perk}</li>)}
-            </ul>
-          </div>
-          <section className="pro-checkout" aria-label={freeAccessUntil ? (en ? "Free Pro access" : "Akses Pro gratis") : p.proMonthly}>
-            {freeAccessUntil ? <>
+          <ul className="pro-features" aria-label={en ? "Featured tools" : "Fitur unggulan"}>
+            {features.map(({ icon: Icon, title, detail }) => <li key={title}>
+              <span className="pro-feature-icon"><Icon size={22} strokeWidth={1.7} aria-hidden="true" /></span>
+              <div><h2>{title}</h2><p>{detail}</p></div>
+            </li>)}
+          </ul>
+          <section className="pro-checkout" aria-label={p.proMonthly}>
+            {welcomeTrialUntil ? <>
+              <h2>{en ? "Your Pro trial is active" : "Trial Eureka Pro aktif"}</h2>
+              <p className="pro-payment-note">{en ? "Free access until" : "Akses gratis sampai"} {formatDate(welcomeTrialUntil)}.</p>
+              <Link className="pro-gradient-cta" href="/dashboard-v2">{en ? "Start learning" : "Mulai belajar"}<ArrowRight size={17} aria-hidden="true" /></Link>
+            </> : freeAccessUntil ? <>
               <h2>{en ? "Eureka Pro is free" : "Eureka Pro gratis"}</h2>
               <p className="pro-payment-note">{en ? "All accounts have free access until" : "Semua akun dapat akses gratis sampai"} {new Intl.DateTimeFormat(en ? "en-GB" : "id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(freeAccessUntil))} WIB.</p>
-              <Link className="eureka-pro-cta" href="/dashboard-v2">{en ? "Start learning" : "Mulai belajar"}</Link>
+              <Link className="pro-gradient-cta" href="/dashboard-v2">{en ? "Start learning" : "Mulai belajar"}<ArrowRight size={17} aria-hidden="true" /></Link>
               {tier !== "trial" && <div className="pro-active">
                 <strong>{p.statusActive} · {TIER_LABEL[tier ?? ""] ?? "Pro"}</strong>
                 {premiumUntil && <span>{p.until} {formatDate(premiumUntil)}</span>}
@@ -394,7 +407,10 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
               <strong>{displayPrice}</strong><span>{en ? "/ month" : "/ bulan"}</span>
             </div>
             <p className="pro-payment-note"><CreditCard size={16} aria-hidden="true" />{en ? "One payment for 30 days. No automatic renewal." : "Bayar sekali, aktif 30 hari. Tanpa perpanjangan otomatis."}</p>
-            {loading ? <div className="pro-payment-note"><LoadingStatus stage="synchronizing" detail={en ? "Checking your plan" : "Memeriksa paketmu"} compact /></div> : <>
+            {loading ? <div className="pro-payment-note"><LoadingStatus stage="synchronizing" detail={en ? "Checking your plan" : "Memeriksa paketmu"} compact /></div> : !signedIn ? <>
+              <Link className="pro-gradient-cta" href="/register">{en ? "Try Pro free for 28 days" : "Coba Pro gratis 28 hari"}<ArrowRight size={17} aria-hidden="true" /></Link>
+              <Link className="pro-sign-in" href={`/login?next=${encodeURIComponent(`/${locale}${pricingPath}`)}`}>{en ? "Sign in to your account" : "Masuk ke akunmu"}</Link>
+            </> : <>
               {isPremium && <div className="pro-active">
                 <strong>{p.statusActive} · {TIER_LABEL[tier ?? ""] ?? "Pro"}</strong>
                 {premiumUntil && <span>{p.until} {formatDate(premiumUntil)}</span>}
@@ -415,6 +431,12 @@ export default function PricingContent({ v2 = false }: { v2?: boolean }) {
               <button className="pro-alternative" type="button" disabled={checkoutDisabled} onClick={() => void choosePlan()}>{en ? "Continue without sliding" : "Lanjut tanpa menggeser"}</button>
             </>}
             </>}
+            <div className="pro-included">
+              <h3>{en ? "Included with Pro" : "Termasuk dalam Pro"}</h3>
+              <ul className="pro-benefits">
+                {benefits.map(benefit => <li key={benefit}><Check size={16} aria-hidden="true" />{benefit}</li>)}
+              </ul>
+            </div>
           </section>
         </section>
         {/* ── Riwayat Pembelian (semua status: premium & non-premium) ── */}

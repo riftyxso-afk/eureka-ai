@@ -1,6 +1,6 @@
 /** Server-side Eureka Pro entitlement. */
 import { db } from "./supabase/admin";
-import { getFreeProUntil } from "./free-pro-period";
+import { getFreeProUntil, getWelcomeProUntil } from "./free-pro-period";
 
 export type PremiumTier = "promo" | "normal" | "trial" | null;
 
@@ -9,6 +9,7 @@ export interface PremiumStatus {
   tier: PremiumTier;
   premiumUntil: string | null;
   freeAccessUntil?: string;
+  welcomeTrialUntil?: string;
 }
 
 export type PremiumFeature =
@@ -119,9 +120,7 @@ export function isDevAllAccessEnabled(): boolean {
 }
 
 /** Read the stored entitlement used by billing and payment confirmation. */
-export async function getSubscriptionStatus(
-  userId: string
-): Promise<PremiumStatus> {
+async function readSubscriptionStatus(userId: string, includeWelcomeTrial: boolean): Promise<PremiumStatus> {
   let client;
   try {
     client = db();
@@ -131,7 +130,7 @@ export async function getSubscriptionStatus(
 
   const { data, error } = await client
     .from("users")
-    .select("is_premium, premium_until, premium_tier")
+    .select("is_premium, premium_until, premium_tier, created_at, trial_claimed_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -141,6 +140,19 @@ export async function getSubscriptionStatus(
   const untilMs = data.premium_until
     ? new Date(data.premium_until).getTime()
     : 0;
+
+  // Profile dates only skip the extra lookup for older accounts. Auth owns the actual signup timestamp.
+  const eligibleProfile = includeWelcomeTrial && !data.trial_claimed_at && getWelcomeProUntil(data.created_at, now);
+  const activePaid = data.is_premium === true && data.premium_tier !== "trial" &&
+    (!data.premium_until || untilMs > now);
+  if (eligibleProfile && !activePaid) {
+    const { data: auth, error: authError } = await client.auth.admin.getUserById(userId);
+    if (authError) throw authError;
+    const welcomeTrialUntil = getWelcomeProUntil(auth.user?.created_at, now);
+    if (welcomeTrialUntil) {
+      return { isPremium: true, tier: "trial", premiumUntil: welcomeTrialUntil, welcomeTrialUntil };
+    }
+  }
 
   // Kedaluwarsa lokal → nonaktifkan.
   if (data.is_premium !== true || (data.premium_until && (!Number.isFinite(untilMs) || untilMs <= now))) {
@@ -158,12 +170,17 @@ export async function getSubscriptionStatus(
   };
 }
 
-/** Feature access for a verified account, including the shared free period. */
+/** Read the persisted subscription used to confirm payments. */
+export async function getSubscriptionStatus(userId: string): Promise<PremiumStatus> {
+  return readSubscriptionStatus(userId, false);
+}
+
+/** Feature access includes the welcome trial and the shared free period. */
 export async function getPremiumStatus(userId: string): Promise<PremiumStatus> {
   if (!userId) return NOT_CONFIGURED;
   if (isDevAllAccessEnabled()) return { isPremium: true, tier: "normal", premiumUntil: null };
 
-  const subscription = await getSubscriptionStatus(userId);
+  const subscription = await readSubscriptionStatus(userId, true);
   const freeAccessUntil = getFreeProUntil();
   if (!freeAccessUntil) return subscription;
 
@@ -248,6 +265,11 @@ export async function claimTrial(userId: string): Promise<TrialResult> {
     .maybeSingle();
   if (error || !user) {
     return { ok: false, error: "Data user tidak ditemukan.", status: 404 };
+  }
+
+  const entitlement = await readSubscriptionStatus(userId, true);
+  if (entitlement.welcomeTrialUntil) {
+    return { ok: true, premiumUntil: entitlement.welcomeTrialUntil };
   }
 
   // Sudah pernah claim trial → tolak (sekali seumur hidup).

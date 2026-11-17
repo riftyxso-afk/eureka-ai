@@ -20,7 +20,7 @@ export default function ConnectorCalls({ calls = [], streaming = false, detail, 
   const latest = calls.at(-1);
   const provider = latest && connectorById(latest.provider);
   const label = latest?.status === "completed"
-    ? streaming ? detail || "Menyusun jawaban…" : `${provider?.name || "Konektor"} · Selesai`
+    ? streaming ? detail || "Menyusun jawaban…" : latest.label
     : latest?.label ?? detail;
   const previews = calls.flatMap(call => call.previews ?? []).slice(0, 3);
   const canvaPrompt = streaming ? undefined : onCanvaPrompt;
@@ -51,6 +51,11 @@ export default function ConnectorCalls({ calls = [], streaming = false, detail, 
         </article>;
       })}</div>
     </details>
+    {latest?.requiredPermission && provider && <a className="canva-chat-action"
+      href={`/dashboard-v2/pengaturan/konektor/${provider.id}`} target="_blank" rel="noopener noreferrer">
+      {latest.requiredPermission === "write" ? "Aktifkan baca & tulis" : `Hubungkan ${provider.name}`}
+      <ExternalLink size={13} aria-hidden="true" />
+    </a>}
     {calls.flatMap(call => (call.updates ?? []).map(update => (
       <p className="connector-update" key={`${call.id}:${update}`}>{update}</p>
     )))}
@@ -59,6 +64,8 @@ export default function ConnectorCalls({ calls = [], streaming = false, detail, 
     </div>}
     {canvaPrompt && latest?.canvaSearch?.continuation && <button type="button" className="canva-chat-action"
       onClick={() => canvaPrompt("Tampilkan template Canva berikutnya")}>Template berikutnya</button>}
+    {canvaPrompt && latest?.canvaJob && <button type="button" className="canva-chat-action"
+      onClick={() => canvaPrompt("Cek status desain Canva")}>Cek status desain</button>}
     {gallery && !previews.length && <a className="canva-chat-action" href={gallery.url} target="_blank" rel="noopener noreferrer">
       Buka galeri Canva <ExternalLink size={13} aria-hidden="true" />
     </a>}

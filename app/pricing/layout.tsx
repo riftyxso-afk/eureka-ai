@@ -9,8 +9,8 @@ export async function generateMetadata(): Promise<Metadata> {
       en: "Eureka.AI Pricing — Free & Pro Socratic AI Tutor (Rp 15.000/month)",
     },
     description: {
-      id: "Eureka Pro Rp 15.000 untuk chat AI, catatan, bab, mindmap, kuis, flashcard, dan panggilan suara. Bayar sekali, aktif 30 hari.",
-      en: "Eureka Pro at Rp 15.000 for AI chat, notes, chapters, mindmaps, quizzes, flashcards, and voice calls. Pay once, active 30 days.",
+      id: "Akun baru mendapat 28 hari Eureka Pro. Belajar dengan model AI canggih, catatan, kuis interaktif, konektor, dan tutor suara serta video.",
+      en: "New accounts get 28 days of Eureka Pro. Learn with advanced AI models, notes, interactive quizzes, connectors, and voice and video tutoring.",
     },
     ogTitle: {
       id: "Harga Eureka.AI — Gratis & Pro",

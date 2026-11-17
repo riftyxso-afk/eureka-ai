@@ -27,7 +27,6 @@ import {
   appendMessage,
   getMessages,
   getSession,
-  lastUnansweredUserMessage,
   type AssistantSource,
 } from "@/lib/assistant/store";
 import {
@@ -341,6 +340,9 @@ export async function POST(req: NextRequest) {
 
   traceTiming("guard input");
 
+  const session = await getSession(sessionId, userId);
+  if (!session) return respondJson({ error: "Sesi tidak ditemukan." }, 404);
+
   // ── Klarifikasi prompt ambigu ────────────────────────────────────────
   // Sebelum streaming, nilai prompt dengan panggilan AI ringan. Bila prompt
   // kurang informasi inti, balas JSON pertanyaan pilihan ganda (maks 3) dan
@@ -436,6 +438,7 @@ export async function POST(req: NextRequest) {
           model: "gpt-4o",
           forChat: true,
           premium: isPremiumUser,
+          signal: AbortSignal.any([req.signal, AbortSignal.timeout(1700)]),
         },
         (raw) =>
           extractJsonObject<{
@@ -494,26 +497,23 @@ export async function POST(req: NextRequest) {
       if (webSearch) emit({ type: "pipeline", stage: "preparing" });
 
       try {
-        // Sesi harus milik user ini
-        const session = await getSession(sessionId, userId);
-        if (!session) {
-          emit({ type: "error", message: "Sesi tidak ditemukan." });
-          controller.close();
-          return;
-        }
-
         // Konteks user (profil, progres, subjek, catatan) + riwayat
-        const recentMessages = (await getMessages(sessionId, userId)).slice(-16);
+        const [messages, context, personalization, mentionedNotesMeta, mentionedNoteContents] = await Promise.all([
+          getMessages(sessionId, userId),
+          buildUserContext(userId),
+          learningContext(userId),
+          mentions.length ? getNotesByIds(userId, mentions) : [],
+          mentions.length ? getNotesContentByIds(userId, mentions).catch(() => []) : [],
+        ]);
+        const recentMessages = messages.slice(-16);
         const prior = recentMessages
           .map((m) => ({ role: m.role, content: m.content }));
 
         // Simpan pesan user (idempotent: retry dari pertanyaan yang sama
         // tidak menggandakan pesan; riwayat terakhir yang sama juga dibuang).
-        const pending = await lastUnansweredUserMessage(sessionId);
-        const isRetry =
-          pending !== null &&
-          (pending.content === question ||
-            pending.content === effectiveQuestion);
+        const pending = recentMessages.at(-1);
+        const isRetry = pending?.role === "user" &&
+          (pending.content === question || pending.content === effectiveQuestion);
         const history = isRetry && prior.length > 0 ? prior.slice(0, -1) : prior;
         const connectorHistory = recentMessages.slice(0, history.length).map(({ role, content, toolCalls }) => ({ role, content, toolCalls }));
         const connectorContext = await connectorChatContext(userId, sessionId, effectiveQuestion, connectorHistory,
@@ -535,12 +535,7 @@ export async function POST(req: NextRequest) {
 
         // 1) Konteks user (profil, progres, subjek, catatan)
         emit({ type: "activity", stage: "reading" });
-        const context = await buildUserContext(userId);
         traceTiming("sesi, riwayat, dan konteks user");
-
-        // 2) Meta catatan yang disebut user
-        const mentionedNotesMeta =
-          mentions.length > 0 ? await getNotesByIds(userId, mentions) : [];
         const noteTitleById = new Map(
           context.notes.map((n) => [n.id, n.title] as [string, string])
         );
@@ -550,7 +545,8 @@ export async function POST(req: NextRequest) {
         // seluruh jawaban bila model embedding lokal sedang dimuat/diunduh.
         let ragHits: RagHit[] = [];
         let ragError = "";
-        if (context.notes.length > 0 || mentions.length > 0) {
+        const retrieveNotes = async () => {
+          if (!context.notes.length && !mentions.length) return;
           emit({ type: "activity", stage: "retrieving" });
           let ragTimeout: ReturnType<typeof setTimeout> | undefined;
           try {
@@ -575,9 +571,9 @@ export async function POST(req: NextRequest) {
           } finally {
             if (ragTimeout) clearTimeout(ragTimeout);
           }
-        }
-        sources = toAssistantSources(ragHits);
-        traceTiming("RAG");
+          sources = toAssistantSources(ragHits);
+          traceTiming("RAG");
+        };
 
         // 4a) Tool web search: hasil Firecrawl jadi konteks tambahan.
         //     Hasilnya dikirim juga ke UI (event "web") untuk ditampilkan
@@ -601,7 +597,7 @@ export async function POST(req: NextRequest) {
             : "Belum ada hasil web yang relevan. Jawaban disusun tanpa sumber web." });
         };
 
-        if (webSearch) await retrieveWeb();
+        await Promise.all([retrieveNotes(), webSearch ? retrieveWeb() : undefined]);
 
         // 4b) Tool lampiran: gambar → vision; dokumen → ekstrak teks.
         let attachedDocument: AttachedDocument | null = null;
@@ -677,17 +673,13 @@ export async function POST(req: NextRequest) {
           attachedDocument,
           language: languageFromRequest(req),
         });
-        system += "\n" + await learningContext(userId);
+        system += "\n" + personalization;
         system += "\n" + connectorContext;
         if (videoContextMd) {
           system += `\n\nMODE "DISKUSI VIDEO":\nPengguna sedang berdiskusi tentang video YouTube (${activeVideoUrl}). Jawab pertanyaan BERDASARKAN transkrip video berikut bila tersedia. Bila transkrip tidak tersedia, akui dengan jujur bahwa kamu tidak bisa membaca isi video, dan JANGAN mengarang kutipan atau klaim dari isi video.\n\n${videoContextMd}`;
         }
         // Isi lengkap catatan yang disebut (@) — disuntikkan ke prompt user
         // agar AI selalu membacanya (tidak bergantung pada hasil RAG).
-        const mentionedNoteContents =
-          mentions.length > 0
-            ? await getNotesContentByIds(userId, mentions).catch(() => [])
-            : [];
         const userPrompt = buildUserPrompt({
           question: effectiveQuestion,
           mentions,

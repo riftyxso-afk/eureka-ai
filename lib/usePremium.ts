@@ -15,6 +15,7 @@ export interface PremiumStatus {
   tier: "promo" | "normal" | "trial" | null;
   premiumUntil: string | null;
   freeAccessUntil?: string;
+  welcomeTrialUntil?: string;
 }
 
 const EMPTY: PremiumStatus = { isPremium: false, tier: null, premiumUntil: null };
@@ -85,6 +86,7 @@ function loadForUser(userId: string | null, force = false): Promise<void> {
         tier: data.tier ?? null,
         premiumUntil: data.premiumUntil ?? null,
         freeAccessUntil: data.freeAccessUntil,
+        welcomeTrialUntil: data.welcomeTrialUntil,
       };
       verified = true;
       publish(status, false);

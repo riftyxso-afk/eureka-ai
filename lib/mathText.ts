@@ -18,46 +18,54 @@ const ENV_RE =
 
 /** Ubah \(...\) → $...$, \[...\] → $$...$$, dan bungkus \begin{env} dalam $$...$$. */
 export function normalizeMathDelimiters(text: string): string {
-  if (!text.includes("\\")) return text;
+  // Preserve code samples, including LaTeX commands shown as examples.
+  return text.split(/(^[ \t]*(?:```|~~~)[^\n]*\n[\s\S]*?(?:^[ \t]*(?:```|~~~)[ \t]*$|(?![\s\S]))|`[^`\n]+`)/m)
+    .map((segment, index) => index % 2 ? segment : normalizeProseMath(segment))
+    .join("");
+}
 
-  let out = text;
+function displayMath(value: string) {
+  return "\n\n$$\n" + value.trim() + "\n$$\n\n";
+}
 
-  // 1) \[...\] block → $$...$$ (paling umum untuk rumus besar / turunan).
-  //    Hati-hati jangan menyentuh \\[... yang ada di dalam blok kode —
-  //    output chat AI jarang memuat itu, dan block math jauh lebih sering.
-  out = out.replace(/\\\[([\s\S]*?)\\\]/g, (_m, inner: string) => {
-    const trimmed = inner.trim();
-    return trimmed ? `$$${trimmed}$$` : "$$$$";
+function normalizeProseMath(text: string): string {
+  let out = text
+    .replace(/^([ \t]*)\$\$([^\n]+?)\$\$[ \t]*$/gm, (_match, indent: string, value: string) =>
+      `${indent}$$\n${indent}${value.trim()}\n${indent}$$`)
+    .replace(/\\\[([\s\S]*?)\\\]/g, (match, value: string, offset: number, source: string) => {
+      if (!value.trim()) return match;
+      const lineStart = source.lastIndexOf("\n", offset - 1) + 1;
+      const prefix = source.slice(lineStart, offset);
+      return /\|/.test(prefix) || /^\s*(?:[-*]|\d+\.)\s+/.test(prefix)
+        ? `$\\displaystyle ${value.trim()}$`
+        : displayMath(value);
+    })
+    .replace(/\\\(([^]*?)\\\)/g, (match, value: string) =>
+      value.trim() ? `$${value.trim()}$` : match);
+
+  out = out.replace(ENV_RE, (block, _env: string, _inner: string, offset: number, source: string) => {
+    const before = source.slice(0, offset).trimEnd();
+    const after = source.slice(offset + block.length).trimStart();
+    if (before.endsWith("$") && after.startsWith("$")) return block;
+    const displayOpen = (before.match(/^\s*\$\$\s*$/gm)?.length ?? 0) % 2 === 1;
+    if (displayOpen) return block;
+    return displayMath(block);
   });
 
-  // 2) \(...\) inline → $...$
-  out = out.replace(/\\\(([\s\S]*?)\\\)/g, (_m, inner: string) => {
-    const trimmed = inner.trim();
-    return trimmed ? `$${trimmed}$` : "$$";
-  });
-
-  // 3) Environment \begin{align}...\end{align} dkk → bungkus $$...$$ bila
-  //    belum berada di dalam $$...$$ (hindari dobel bungkus).
-  out = out.replace(ENV_RE, (_m, env: string, inner: string) => {
-    const block = `\\begin{${env}}${inner}\\end{${env}}`;
-    const idx = out.indexOf(block);
-    if (idx < 0) return block;
-    const before = out.slice(0, idx).replace(/\s+$/, "");
-    const after = out.slice(idx + block.length).replace(/^\s+/, "");
-    const prev = before.slice(-2);
-    const next = after.slice(0, 2);
-    // Sudah dibungkus $$...$$ atau $...$? → biarkan.
-    if (prev === "$$" && next === "$$") return block;
-    if (prev.endsWith("$") && next.startsWith("$")) return block;
-    return `$$${block}$$`;
-  });
+  if (!out.includes("\\")) return out;
 
   // 4) Rumus LaTeX tanpa tanda $ (misal di dalam tabel markdown atau baris persamaan).
   //    Banyak model AI menulis `v = \frac{s}{t}` atau `\Sigma F = m \cdot a` mentah.
   //    Bungkus dengan $...$ agar KaTeX dapat merendernya dengan baik.
+  let inDisplay = false;
   out = out
     .split("\n")
     .map((line) => {
+      if (line.trim() === "$$") {
+        inDisplay = !inDisplay;
+        return line;
+      }
+      if (inDisplay) return line;
       // 4a. Jika baris tabel (| Besaran | Rumus |)
       if (line.includes("|")) {
         const cells = line.split("|");
@@ -90,7 +98,7 @@ export function normalizeMathDelimiters(text: string): string {
             const mathPart = listMatch[2].trim();
             return `${prefix} $${mathPart}$`;
           }
-          return `$$${trimmed}$$`;
+          return displayMath(trimmed);
         }
       }
 

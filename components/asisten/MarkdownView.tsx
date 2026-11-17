@@ -34,7 +34,7 @@ function MarkdownView({ content, className = "", inline = false }: MarkdownViewP
     normalized = "$" + normalized.trim() + "$";
   }
   if (inline) return (
-    <span className={className}>
+    <span className={`asisten-md-inline ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkMath]}
         rehypePlugins={[rehypeKatex]}

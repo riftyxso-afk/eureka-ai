@@ -31,7 +31,6 @@
 .courses-v2 .lesson-block .asisten-md p{white-space:normal}
 .courses-v2 .lesson-option{padding:16px;min-width:0}
 .courses-v2 .lesson-option>span{min-width:0;overflow-wrap:anywhere}
-.courses-v2 .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding-block:4px}
 .courses-v2 .lesson-exercise{border:0;margin:0;padding:28px 32px}
 .courses-v2 .lesson-tutor-message .asisten-md{min-width:0;max-width:100%;white-space:normal;font-size:15px}
 .courses-v2 .learning-tutor{grid-column:2;position:static;max-height:none;min-width:0;padding:28px;border:0}

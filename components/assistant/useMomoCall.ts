@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, getClientLocale } from "@/lib/apiClient";
 import { getUserId } from "@/lib/identity";
 import { recordCallTurns } from "./recordCallTurns";
+import { acquireCallMicrophone, microphonePermission } from "./callMicrophone";
 import { readCallReply } from "@/lib/audio/callReply";
 import { runLalaWorkspace, type LalaWorkspaceLink } from "./lalaWorkspace";
 import { readStudyCallContext, type StudyCallContext } from "@/lib/audio/studyCallContext";
@@ -19,6 +20,7 @@ type Session = {
   controller: AbortController;
   context: AudioContext;
   stream?: MediaStream;
+  releaseMicrophone?: () => void;
   socket?: WebSocket;
   capture?: AudioWorkletNode;
   micSource?: MediaStreamAudioSourceNode;
@@ -61,29 +63,6 @@ function errorName(cause: unknown) {
   return cause && typeof cause === "object" && "name" in cause ? cause.name : undefined;
 }
 
-async function microphonePermission(): Promise<PermissionState | undefined> {
-  try {
-    return (await navigator.permissions?.query({ name: "microphone" as PermissionName }))?.state;
-  } catch {
-    // Some mobile browsers don't expose microphone permission via this API.
-    return undefined;
-  }
-}
-
-async function openCallMicrophone(signal: AbortSignal) {
-  try {
-    return await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
-  } catch (cause) {
-    const name = errorName(cause);
-    const granted = name === "NotAllowedError" && await microphonePermission() === "granted";
-    if (!granted && name !== "OverconstrainedError" && name !== "NotReadableError" && name !== "AbortError") throw cause;
-    signal.throwIfAborted();
-    return navigator.mediaDevices.getUserMedia({ audio: true });
-  }
-}
-
 async function microphoneError(cause: unknown) {
   switch (errorName(cause)) {
     case "NotAllowedError":
@@ -93,6 +72,8 @@ async function microphoneError(cause: unknown) {
       if (permission === "denied") return "Akses mikrofon diblokir. Aktifkan izin mikrofon untuk Eureka di pengaturan browser, lalu coba lagi.";
       return "Browser belum bisa membuka mikrofon. Periksa akses mikrofon untuk Eureka dan untuk browser di pengaturan HP.";
     }
+    case "InvalidStateError":
+      return "Mikrofon sedang dipakai panggilan lain di Eureka. Akhiri panggilan itu, lalu coba lagi.";
     case "NotFoundError":
     case "DevicesNotFoundError":
       return "Mikrofon tidak terdeteksi. Periksa sambungan headset atau mikrofon, lalu coba lagi.";
@@ -163,7 +144,8 @@ function dispose(session: Session) {
   session.recorder?.stop();
   session.transcription?.abort();
   disconnectRealtime(session);
-  session.stream?.getTracks().forEach(track => track.stop());
+  if (session.releaseMicrophone) session.releaseMicrophone();
+  else session.stream?.getTracks().forEach(track => track.stop());
   void session.context.close().catch(() => {});
 }
 
@@ -737,7 +719,13 @@ export function useMomoCall(onVoiceEnd?: () => void) {
     void context.resume().catch(() => {});
     let stream: MediaStream;
     try {
-      stream = callBridge.input ? new MediaStream(callBridge.input.getAudioTracks().map(track=>track.clone())) : await openCallMicrophone(session.controller.signal);
+      if (callBridge.input) {
+        stream = new MediaStream(callBridge.input.getAudioTracks().filter(track => track.readyState === "live").map(track => track.clone()));
+      } else {
+        const lease = await acquireCallMicrophone(session.controller.signal);
+        session.releaseMicrophone = lease.release;
+        stream = lease.stream;
+      }
     } catch (cause) {
       if (!isCurrent()) return;
       const message = await microphoneError(cause);
@@ -747,7 +735,8 @@ export function useMomoCall(onVoiceEnd?: () => void) {
 
     try {
       if (!isCurrent()) {
-        stream.getTracks().forEach(track => track.stop());
+        if (session.releaseMicrophone) session.releaseMicrophone();
+        else stream.getTracks().forEach(track => track.stop());
         return;
       }
       session.stream = stream;
@@ -763,7 +752,9 @@ export function useMomoCall(onVoiceEnd?: () => void) {
       session.micSource = source;
       source.connect(mic);
       for (const track of tracks) {
-        track.onended = () => { if (isCurrent()) fail("Mikrofon terputus. Coba mulai panggilan lagi."); };
+        track.onended = () => {
+          if (isCurrent()) fail("Sambungan mikrofon terputus. Ketuk mikrofon untuk menyambung kembali.");
+        };
       }
 
       setPhase("connecting");
