@@ -100,7 +100,10 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     // Verifikasi Google Search Console (property URL prefix).
     verification: {
-      google: "r55Jc2M7F8_mVv-0bdIHcatfKxGYSwyR5abbNv3ZwZw",
+      google: [
+        "r55Jc2M7F8_mVv-0bdIHcatfKxGYSwyR5abbNv3ZwZw",
+        "jEjp86qHV436UXxcmRMu84SnUiKkTpANyWvRLBe8uG4",
+      ],
     },
     openGraph: {
       type: "website",
