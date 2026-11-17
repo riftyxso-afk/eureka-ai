@@ -77,7 +77,7 @@ export const dictionaries = {
       title1: "Bukan sekadar jawaban, tapi momen",
       title2: "Eureka!",
       subtitle:
-        "Eureka.AI adalah AI Tutor Socratic untuk pelajar: ubah video, artikel & PDF jadi catatan otomatis, tanya apa saja per bab, kerjakan kuis & kartu hafalan — dan temukan sendiri jawabannya.",
+        "Eureka AI membantu pelajar Indonesia memahami materi. Ubah video dan PDF jadi catatan, belajar dengan tutor AI, lalu berlatih dengan kuis dan kartu hafalan.",
       gratis: "Gratis selamanya untuk fitur dasar — tanpa kartu kredit",
       noteTitle: "Turunan Fungsi — Konsep Dasar",
       noteMeta: "YouTube · 12 menit → catatan otomatis",
@@ -830,7 +830,7 @@ export const dictionaries = {
       title1: "Not just answers — the",
       title2: "Eureka!",
       subtitle:
-        "Eureka.AI is a Socratic AI Tutor for students: turn videos, articles & PDFs into auto-generated notes, ask anything per chapter, take quizzes & flashcards — and discover the answers yourself.",
+        "Eureka AI helps Indonesian students learn with a Socratic AI tutor. Turn videos and PDFs into study notes, then practice with quizzes and flashcards.",
       gratis: "Free forever for core features — no credit card required",
       noteTitle: "Derivatives — Core Concepts",
       noteMeta: "YouTube · 12 min → auto notes",

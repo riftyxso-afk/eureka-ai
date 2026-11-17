@@ -62,12 +62,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const dict = getDictionary(locale);
   const title =
     locale === "en"
-      ? "Eureka.AI — Socratic AI Tutor for Students"
-      : "Eureka.AI — AI Tutor Socratic untuk Pelajar Indonesia";
-  const description =
-    locale === "en"
-      ? "Eureka.AI is a Socratic AI Tutor for students: turn videos, articles & PDFs into auto-generated notes, ask anything per chapter, take quizzes & flashcards, and study together in real time. Not just answers — it guides you to your Eureka moment!"
-      : "Eureka.AI adalah AI Tutor Socratic untuk pelajar Indonesia: ubah video, artikel & PDF jadi catatan otomatis, tanya apa saja per bab, kerjakan kuis & kartu hafalan, dan belajar bersama teman secara real-time. Bukan sekadar memberi jawaban, tapi membimbingmu menemukan momen Eureka!";
+      ? "Eureka AI — Socratic AI Tutor for Indonesian Students"
+      : "Eureka AI — Tutor AI untuk Pelajar Indonesia";
+  const description = dict.hero.subtitle;
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -109,7 +106,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: "website",
       locale: ogLocale(locale),
-      siteName: "Eureka.AI",
+      siteName: "Eureka AI",
       title,
       description,
       url: SITE_URL,

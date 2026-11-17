@@ -38,7 +38,7 @@ export default function LandingPage() {
     "@graph": [
       {
         "@type": "Organization",
-        name: "Eureka.AI",
+        name: "Eureka AI",
         url: SITE_URL,
         logo: `${SITE_URL}/logo.png`,
         description: dict.hero.subtitle,
@@ -47,13 +47,13 @@ export default function LandingPage() {
       {
         "@type": "WebSite",
         name: "Eureka AI",
-        alternateName: "Eureka.AI",
+        alternateName: ["Eureka", "Eureka.AI", "eureka-ai.web.id"],
         url: SITE_URL + "/",
         inLanguage: locale,
       },
       {
         "@type": "SoftwareApplication",
-        name: "Eureka.AI",
+        name: "Eureka AI",
         applicationCategory: "EducationalApplication",
         operatingSystem: "Web",
         url: SITE_URL,
@@ -102,7 +102,7 @@ export default function LandingPage() {
       </aside>}
       <header>
         <div className="mx-auto flex min-h-[70px] max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-3">
-          <Link href="/" className="text-3xl font-black tracking-tight text-[#7540D0]">eureka!</Link>
+          <Link href={`/${locale}`} aria-label="Eureka AI" className="text-3xl font-black tracking-tight text-[#7540D0]">eureka!</Link>
           <nav aria-label={en ? "Main navigation" : "Navigasi utama"} className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-bold">
             <a href="#fitur">{en ? "Features" : "Fitur"}</a>
             <Link href={`/${locale}/pricing`}>{en ? "Pricing" : "Harga"}</Link>
@@ -139,8 +139,11 @@ export default function LandingPage() {
           </div>
           <div>
             <h1 className="mx-auto max-w-md text-balance text-3xl font-black leading-tight sm:text-4xl">
-              {en ? "A fun way to learn and understand anything!" : "Cara paling seru untuk belajar dan memahami apa saja!"}
+              {en ? "Learn with Eureka AI" : "Belajar lebih seru dengan Eureka AI"}
             </h1>
+            <p className="mx-auto mt-3 max-w-sm text-balance">
+              {en ? "An AI tutor for Indonesian students, with study notes, quizzes, and flashcards." : "Tutor AI untuk pelajar Indonesia, dengan catatan belajar, kuis, dan kartu hafalan."}
+            </p>
             <div className="mx-auto mt-8 grid max-w-[330px] gap-3">
               <SakugaButton variant="primary" fallbackHref={ctaHref} onClick={startLearning} className="w-full">{ctaLabel}</SakugaButton>
               {!loggedIn && <SakugaButton variant="secondary" fallbackHref="/login" onClick={() => router.push("/login")} className="w-full">{en ? "I already have an account" : "Aku sudah punya akun"}</SakugaButton>}
