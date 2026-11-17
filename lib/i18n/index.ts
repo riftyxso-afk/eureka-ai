@@ -23,7 +23,7 @@ export function isLocale(v: string | null | undefined): v is Locale {
 /** Tambah prefix locale ke path (mis. "/pricing" + "en" → "/en/pricing"). */
 export function localePath(locale: Locale, path: string): string {
   const clean = path.startsWith("/") ? path : `/${path}`;
-  return `/${locale}${clean}`;
+  return clean === "/" ? `/${locale}` : `/${locale}${clean}`;
 }
 
 /** Alternates (canonical + hreflang) untuk path di locale tertentu. */
