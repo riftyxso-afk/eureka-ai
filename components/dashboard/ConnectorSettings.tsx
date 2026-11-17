@@ -130,8 +130,9 @@ export default function ConnectorSettings({ selected, configurationOnly = false 
               {!!current.write.length && <label><input type="radio" name="permission" checked={permission === "write"} onChange={() => setPermission("write")} disabled={!!busy} /><span>Baca & tulis</span></label>}
             </div></fieldset>
             <ul>{[...current.read, ...(permission === "write" ? current.write : [])].map(item => <li key={item}><Check size={16} />{item}</li>)}</ul>
-            <div className="connector-account-note"><ShieldCheck size={18} /><span>Pilih akun dan file yang boleh diakses di halaman resmi {current.name}. Izin dapat kamu cabut dari Pengaturan.</span></div>
+            <div className="connector-account-note"><ShieldCheck size={18} /><span>Tinjau akun dan izin di halaman resmi {current.name}. Izin dapat kamu cabut dari Pengaturan.</span></div>
           </div>
+          {current.group === "google" && <p>Informasi Google yang digunakan untuk menjawab permintaan dapat diproses oleh penyedia AI dan muncul dalam riwayat chat. <a href="/privacy" className="underline underline-offset-4">Kebijakan Privasi</a></p>}
           {!current.ready && <p className="connector-not-ready" role="status">Pengelola sedang menyiapkan koneksi {current.name}. Tombol akan aktif setelah konfigurasi selesai.</p>}
           {error && <p className="connector-error" role="alert">{error}</p>}
           <div className="connector-consent-actions"><Link href="/dashboard-v2/pengaturan/konektor">Batal</Link><button disabled={!current.ready || !!busy} onClick={() => void connect()}>{busy ? <Loader2 className="connector-spin" size={17} /> : <ExternalLink size={16} />}Lanjut ke {current.name}</button></div>

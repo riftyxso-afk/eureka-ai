@@ -35,6 +35,9 @@ const MAINTENANCE_MODE = false; // Ubah ke true untuk menonaktifkan mode pemelih
 export function middleware(req: NextRequest) {
   const { pathname, search, hash } = req.nextUrl;
 
+  // Alamat dokumen publik dipakai pada layar persetujuan OAuth.
+  if (pathname === "/privacy" || pathname === "/terms") return NextResponse.next();
+
   // ── MODE PEMELIHARAAN ──
   // Block semua halaman. Hanya izinkan:
   //  - /maintenance (halaman pemeliharaan itu sendiri)

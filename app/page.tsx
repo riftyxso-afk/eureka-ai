@@ -233,6 +233,7 @@ export default function LandingPage() {
           <div>
             <Link href="/" className="text-3xl font-black">eureka!</Link>
             <p className="mt-3 text-sm text-violet-100">{en ? "A study buddy for every curious mind." : "Teman belajar untuk setiap rasa ingin tahu."}</p>
+            <p className="mt-3 text-sm text-violet-100">{en ? "Use Google to sign in, or connect Google apps separately to study with your files and organize your work." : "Masuk dengan Google atau hubungkan layanan Google secara terpisah untuk belajar dari file dan mengatur kegiatan belajarmu."}</p>
           </div>
           <div className="grid content-start gap-3 text-sm">
             <h2 className="font-black">{en ? "Product" : "Produk"}</h2>
@@ -246,6 +247,8 @@ export default function LandingPage() {
           <div className="grid content-start gap-3 text-sm">
             <h2 className="font-black">{en ? "Help" : "Bantuan"}</h2>
             <Link href="/join">{en ? "Join Eureka" : "Gabung Eureka"}</Link>
+            <a href="/privacy">{en ? "Privacy Policy" : "Kebijakan Privasi"}</a>
+            <a href="/terms">{en ? "Terms of Service" : "Syarat Layanan"}</a>
           </div>
         </div>
       </footer>
