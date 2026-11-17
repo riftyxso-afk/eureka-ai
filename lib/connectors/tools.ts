@@ -211,12 +211,20 @@ export async function connectorChatContext(userId: string, sessionId: string, pr
     if (isWrite) await db().from("connector_actions").update({ result }).eq("user_id", userId).eq("request_id", requestId);
     const record = result as {error?:string;job?:{status?:string}};
     const links: ConnectorCall["links"] = [];
+    const linkFields = plan.provider === "canva"
+      ? ["edit_url", "view_url"]
+      : ["webViewLink", "htmlLink", "html_url", "webUrl", "url", "edit_url"];
     const collect = (value: unknown, depth=0) => {
       if (!value || typeof value!=="object" || depth>7 || links.length>=8) return;
       const item=value as Record<string,unknown>;
-      for(const field of ["webViewLink","htmlLink","html_url","webUrl","url","edit_url"]){
+      for(const field of linkFields){
         const url=item[field];
-        if(typeof url==="string" && url.startsWith("https://") && !links.some(l=>l.url===url)) links.push({title:String(item.name||item.title||"Buka hasil").slice(0,160),url});
+        if(typeof url==="string" && url.startsWith("https://") && !links.some(l=>l.url===url)) {
+          const title = plan.provider === "canva"
+            ? (field === "edit_url" ? "Edit di Canva" : "Lihat desain Canva")
+            : String(item.name || item.title || "Buka hasil");
+          links.push({ title: title.slice(0,160), url });
+        }
       }
       Object.values(item).forEach(child=>{if(Array.isArray(child))child.slice(0,12).forEach(v=>collect(v,depth+1));else collect(child,depth+1);});
     };
