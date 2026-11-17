@@ -10,7 +10,7 @@ function load(file,mocks={}){
     {module,exports:module.exports,require:name=>{
       if(name in mocks)return mocks[name];
       const source=path.join(path.dirname(file),name+'.ts');
-      return name.startsWith('.')&&fs.existsSync(source)?load(source):require(name);
+      return name.startsWith('.')&&fs.existsSync(source)?load(source,mocks):require(name);
     },Buffer,process,console,AbortSignal,URL,URLSearchParams,fetch,setTimeout,TextDecoder});
   return module.exports;
 }
@@ -33,7 +33,7 @@ test('tool call reports running before connection lookup settles and reports fai
   const events=[];
   const tools=load('lib/connectors/tools.ts',{
     './productivity':{},'@/lib/ai':{},'@/lib/supabase/admin':{},
-    './catalog':{CONNECTORS:[{id:'canva',name:'Canva'}]},
+    './catalog':load('lib/connectors/catalog.ts'),
     './server':{connectorStates:()=>gate},
   });
   const pending=tools.connectorChatContext('user','session','Cari di Canva',[],new AbortController().signal,()=>{},call=>events.push(call));
@@ -144,4 +144,94 @@ test('Canva tool updates preserve verified previews and exclude unrelated thumbn
   assert.equal(completed.previews[0].thumbnail.url,design.thumbnail.url);
   assert.equal(completed.links[0].url,design.urls.edit_url);
   assert.equal(connectorCallSchema.parse({...events[0],updates:undefined,previews:undefined}).status,'running');
+});
+
+test('Canva poster starts with real templates and continues using the prior provider cursor', async () => {
+  const events = [];
+  const queries = [];
+  const tools = load('lib/connectors/tools.ts', {
+    './productivity': {},
+    './server': {
+      connectorStates: async () => [{ provider: 'canva', permission: 'read' }],
+      providerFetch: async (user, provider, url, body) => {
+        assert.equal(user, 'user');
+        assert.equal(provider, 'canva');
+        assert.equal(body, undefined);
+        const request = new URL(url);
+        assert.equal(request.pathname, '/rest/v1/brand-templates');
+        queries.push(request.searchParams);
+        return {
+          items: [{
+            id: 'DETemplateA', title: 'Poster sekolah',
+            create_url: 'https://www.canva.com/design/DATemplate/remix',
+            thumbnail: { url: 'https://document-export.canva.com/thumbnail.png', width: 400, height: 600 },
+          }],
+          continuation: queries.length === 1 ? 'cursor:2' : undefined,
+        };
+      },
+    },
+    '@/lib/supabase/admin': { db: () => assert.fail('Searching does not need a write claim') },
+    '@/lib/ai': { aiChatJson: async () => ({ provider: 'canva', action: 'create', query: 'sekolah', id: '' }) },
+  });
+  const run = (prompt, history) => tools.connectorChatContext('user', 'session', prompt, history, new AbortController().signal, () => {}, e => events.push(e));
+  const first = await run('Buat poster di Canva untuk sekolah', []);
+  assert.match(first, /Poster sekolah/);
+  assert.doesNotMatch(first, /cursor:2/);
+  const page = events.at(-1);
+  assert.equal(page.previews[0].kind, 'brand_template');
+  assert.equal(page.previews[0].createUrl, 'https://www.canva.com/design/DATemplate/remix');
+  await run('Tampilkan template Canva berikutnya', [{ role: 'assistant', content: 'Berikut template Canva', toolCalls: [page] }]);
+  assert.equal(queries[1].get('query'), 'sekolah');
+  assert.equal(queries[1].get('continuation'), 'cursor:2');
+  assert.equal(events.at(-1).canvaSearch.continuation, undefined);
+});
+
+test('Canva autofill uses the live dataset, filters unsupported fields, and polls the job', async () => {
+  const requests = [];
+  const stages = [];
+  const { executeCanva } = load('lib/connectors/canva.ts', {
+    'node:timers/promises': { setTimeout: async () => {} },
+    '@/lib/ai': { aiChatJson: async (_, parse) => parse(JSON.stringify({ fields: { JUDUL: 'Hemat energi', FOTO: 'wrong type', UNKNOWN: 'omit' } })) },
+    './server': { providerFetch: async (_, __, url, body) => {
+      const path = new URL(url).pathname;
+      requests.push({ path, body });
+      if (path.endsWith('/dataset')) return { dataset: { JUDUL: { type: 'text' }, FOTO: { type: 'image' } } };
+      if (path.endsWith('/autofills')) return { job: { id: 'job-1', status: 'in_progress' } };
+      if (path.endsWith('/autofills/job-1')) return { job: { status: 'success', result: { design: { id: 'DAResult' } } } };
+      return {};
+    } },
+  });
+  const result = await executeCanva('user', { action: 'autofill', id: 'DETemplateA', title: 'Poster baru', canvaKind: 'brand_template' },
+    'Isi judul template Canva DETemplateA dengan Hemat energi', [], new AbortController().signal, label => stages.push(label));
+  assert.equal(result.job.status, 'success');
+  assert.equal(requests[1].path, '/rest/v1/brand-templates/DETemplateA/dataset');
+  assert.deepEqual(JSON.parse(JSON.stringify(requests[2].body)), {
+    type: 'create_from_brand_template', brand_template_id: 'DETemplateA', title: 'Poster baru',
+    data: { JUDUL: { type: 'text', text: 'Hemat energi' } },
+  });
+  assert.equal(requests[3].path, '/rest/v1/autofills/job-1');
+  assert.equal(requests[4].path, '/rest/v1/designs/DAResult');
+  assert.equal(stages.length, 2);
+});
+
+test('Canva edits the original design only with an explicit target and edit instruction', async () => {
+  const writes = [];
+  const { executeCanva, resolveCanvaPlan } = load('lib/connectors/canva.ts', {
+    '@/lib/ai': { aiChatJson: async (_, parse) => parse('{"fields":{"JUDUL":"Judul baru"}}') },
+    './server': { providerFetch: async (_, __, url, body) => {
+      if (body) { writes.push(body); return { job: { status: 'success' } }; }
+      return url.endsWith('/dataset') ? { dataset: { JUDUL: { type: 'text' } } } : {};
+    } },
+  });
+  const plan = { action: 'autofill', id: 'DAExisting', title: '', canvaKind: 'design' };
+  const run = prompt => executeCanva('user', plan, prompt, [], new AbortController().signal, () => {});
+  assert.equal(resolveCanvaPlan(plan, 'Edit judul desain ini', []).action, 'search');
+  await run('Edit judul desain ini');
+  assert.equal(writes.length, 0);
+  await run('Edit judul desain Canva https://www.canva.com/design/DAExisting/edit');
+  assert.equal(writes[0].type, 'update_design');
+  assert.equal(writes[0].design_id, 'DAExisting');
+  assert.equal(writes[0].title, undefined);
+  await run('Buat salinan desain Canva https://www.canva.com/design/DAExisting/edit dengan judul baru');
+  assert.equal(writes[1].type, 'create_from_design');
 });

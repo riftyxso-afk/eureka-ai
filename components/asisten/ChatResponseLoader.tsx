@@ -31,6 +31,6 @@ export default function ChatResponseLoader({ stage, detail, icon, iconKey = "orb
         </motion.span>
       </AnimatePresence>
     </span>
-    <span className={busy ? "ai-status-shimmer" : ""} style={{ fontSize: 13, lineHeight: 1.6 }}>{detail || labels[stage]}{detail ? "" : "…"}</span>
+    <span className={busy ? "ai-status-shimmer" : ""} style={{ minWidth: 0, overflowWrap: "anywhere", fontSize: 13, lineHeight: 1.6 }}>{detail || labels[stage]}{detail ? "" : "…"}</span>
   </div>;
 }

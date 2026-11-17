@@ -41,6 +41,7 @@ interface MessageBubbleProps {
   webQuery?: string;
   webNotice?: string | null;
   onRetry?: () => void;
+  onCanvaPrompt?: (prompt: string) => void;
   onOpenArtifacts?: (id: string) => void;
   /** Pesan user sebelumnya — dipakai hitung lama AI menjawab. */
   prevMessage?: AssistantChatMessage | null;
@@ -121,6 +122,7 @@ export default function MessageBubble({
   webQuery,
   webNotice,
   onRetry,
+  onCanvaPrompt,
   onOpenArtifacts,
   prevMessage,
   onViewVideo,
@@ -201,7 +203,7 @@ export default function MessageBubble({
       {!isStreaming && (avatar ?? <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} />)}
       <div className={`chat-message-assistant-content flex min-w-0 flex-col gap-1.5${isStreaming ? " col-span-full" : ""}`}>
         {isStreaming && webStage && !message.toolCalls?.length && <WebSearchPipeline stage={webStage} results={message.webResults ?? []} query={webQuery} notice={webNotice} />}
-        {!hideActivity && (isStreaming || !!message.toolCalls?.length) && <ResponseActivity toolCalls={message.toolCalls} streaming={isStreaming} thinking={isStreaming ? thinking : undefined} stage={displayContent ? "combining" : activity} showIndicator={!webStage || !!message.toolCalls?.length} />}
+        {!hideActivity && (isStreaming || !!message.toolCalls?.length) && <ResponseActivity toolCalls={message.toolCalls} streaming={isStreaming} thinking={isStreaming ? thinking : undefined} stage={displayContent ? "combining" : activity} showIndicator={!webStage || !!message.toolCalls?.length} onCanvaPrompt={onCanvaPrompt} />}
         {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}
         <div className="break-words text-clay-dark">
           {empty || !displayContent ? (

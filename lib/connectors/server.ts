@@ -82,11 +82,12 @@ export async function accessToken(userId: string, id: ConnectorId, write = false
   refreshes.set(lock, refresh);
   return refresh;
 }
-export async function providerFetch(userId: string, id: ConnectorId, url: string, body?: unknown) {
+export async function providerFetch(userId: string, id: ConnectorId, url: string, body?: unknown, signal?: AbortSignal) {
   const token = await accessToken(userId, id, body !== undefined);
+  const timeout = AbortSignal.timeout(20000);
   const response = await fetch(url, { method: body === undefined ? "GET" : "POST", headers: {
     Authorization: "Bearer " + token, "Content-Type": "application/json", ...(id === "notion" ? { "Notion-Version": "2022-06-28" } : {}),
-  }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(20000) });
+  }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}), signal: signal ? AbortSignal.any([timeout, signal]) : timeout });
   if (!response.ok) throw new Error(`${connectorById(id)?.name} gagal memproses permintaan (${response.status}).`);
   const value = await response.text();
   return JSON.parse(value || "{}");

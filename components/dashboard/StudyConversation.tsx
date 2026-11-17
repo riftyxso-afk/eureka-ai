@@ -1,6 +1,7 @@
 "use client";
 
 import ConnectorCalls from "@/components/asisten/ConnectorCalls";
+import { connectorForPrompt, isCanvaFollowUp } from "@/lib/connectors/intent";
 import WebSources from "@/components/asisten/WebSources";
 import StudyResponseTools from "./StudyResponseTools";
 import StudyArtifactDialog from "./StudyArtifactDialog";
@@ -166,6 +167,8 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
     const text = prompt.trim();
     if (!text || !loaded || sending.current) return;
     if (text.length > 6000) { setError("Tulis pesan maksimal 6.000 karakter."); return; }
+    const latest = turns.slice(-2).reverse().find(turn => turn.role === "assistant");
+    if (!connector && (connectorForPrompt(text) === "canva" || isCanvaFollowUp(text, latest?.study?.toolCalls))) connector = "canva";
     if (!connector && detectImageIntent(text).isImageRequest) {
       setTurns(previous => [...previous, { id: crypto.randomUUID(), role: "user", content: text, sources: [] }]);
       setImagePrompt(text);
@@ -187,7 +190,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       ...previous, { id: crypto.randomUUID(), role: "user", content: text, sources: [] },
     ]);
     try {
-      const response = await agent.run(text, { connector, sessionId, noteId: selectedNote, browser: browserSelected, speedMode, sourceText, activity, artifactId });
+      const response = await agent.run(text, { connector, sessionId, noteId: selectedNote, browser: !connector && browserSelected, speedMode, sourceText, activity, artifactId });
       if (response) {
         if(response.learningUpdated&&!notifiedLearning.current){notifiedLearning.current=true;toast.success("Personalisasi gaya belajar diperbarui",{description:"Sesuai izin akunmu. Ini tidak melatih bobot model."});}
         setTitle(response.title);
@@ -292,7 +295,9 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
           return <Fragment key={turn.id}>
             {latestRun && agent.browserActivity.length > 0 && <StudyBrowserPanel activities={agent.browserActivity} busy={live} />}
             <article className={live ? "study-chat-turn study-chat-live" : "study-chat-turn"} aria-busy={live || undefined}>
-              {turn.role === "assistant" && <ConnectorCalls calls={live ? agent.toolCalls : turn.study?.toolCalls} streaming={live} stage={agent.status?.stage} detail={live ? agent.status?.label : undefined} />}
+              {turn.role === "assistant" && <ConnectorCalls calls={live ? agent.toolCalls : turn.study?.toolCalls} streaming={live} stage={agent.status?.stage} detail={live ? agent.status?.label : undefined}
+                onCanvaPrompt={!agent.busy && turn.id === turns.at(-1)?.id
+                  ? prompt => void send(prompt, noteId, undefined, undefined, undefined, "canva") : undefined} />}
               {videos.length === 1 && <div className="study-chat-extras study-chat-video-lead">{videoCards}</div>}
               {(!live || turn.content) && <MessageBubble hideActivity message={message(turn)} isStreaming={live} videoEnabled={false}
                 avatar={!live && <StudyBotAvatar size={32} response={turn.content} still />} />}

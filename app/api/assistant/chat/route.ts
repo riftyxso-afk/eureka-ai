@@ -515,7 +515,8 @@ export async function POST(req: NextRequest) {
           (pending.content === question ||
             pending.content === effectiveQuestion);
         const history = isRetry && prior.length > 0 ? prior.slice(0, -1) : prior;
-        const connectorContext = await connectorChatContext(userId, sessionId, effectiveQuestion, history,
+        const connectorHistory = recentMessages.slice(0, history.length).map(({ role, content, toolCalls }) => ({ role, content, toolCalls }));
+        const connectorContext = await connectorChatContext(userId, sessionId, effectiveQuestion, connectorHistory,
           req.signal, detail => emit({ type: "activity", stage: "retrieving", detail }), call => {
             const index = toolCalls.findIndex(c => c.id === call.id);
             if (index < 0) toolCalls.push(call); else toolCalls[index] = call;

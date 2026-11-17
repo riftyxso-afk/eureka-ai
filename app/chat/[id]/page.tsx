@@ -23,6 +23,7 @@ import type { NoteCreatePrefs } from "@/components/note/NoteCreateWizard";
 import ChatSidebar, { MobileSessionButton } from "@/components/asisten/ChatSidebar";
 import MessageBubble from "@/components/asisten/MessageBubble";
 import ResponseActivity from "@/components/asisten/ResponseActivity";
+import { connectorForPrompt, isCanvaFollowUp } from "@/lib/connectors/intent";
 import FollowUpActions from "@/components/asisten/FollowUpActions";
 import MomoCompanion, { type MomoMode } from "@/components/asisten/MomoCompanion";
 import ChatSkeleton from "@/components/asisten/ChatSkeleton";
@@ -403,7 +404,9 @@ export default function ChatPage() {
           {initialSend && (initialPending || chat.loading || chat.sending) && chat.renderedMessages.length === 0 && !chat.hasError && !chat.clarification ? (
             <div className="mx-auto w-full max-w-3xl space-y-4">
               <MessageBubble message={{ id: "pending-user", sessionId, role: "user", content: initialSend.question, mentions: initialSend.mentions, sources: [], model: null, createdAt: new Date().toISOString() }} />
-              {chat.streaming.webStage ? <WebSearchPipeline stage={chat.streaming.webStage ?? "preparing"} results={chat.streaming.webResults} query={chat.streaming.webQuery} notice={chat.streaming.webNotice} /> : <ResponseActivity stage={chat.streaming.activity} thinking={chat.streaming.thinking} />}
+              {chat.streaming.webStage && !chat.streaming.toolCalls.length
+                ? <WebSearchPipeline stage={chat.streaming.webStage} results={chat.streaming.webResults} query={chat.streaming.webQuery} notice={chat.streaming.webNotice} />
+                : <ResponseActivity stage={chat.streaming.activity} thinking={chat.streaming.thinking} toolCalls={chat.streaming.toolCalls} />}
             </div>
           ) : chat.loading && chat.messages.length === 0 && !chat.sending ? (
             <ChatSkeleton label={locale === "en" ? "Loading conversation…" : "Memuat percakapan…"} />
@@ -442,6 +445,8 @@ export default function ChatPage() {
                       isStreaming={chat.sending && idx === chat.renderedMessages.length - 1 && m.id.startsWith("stream-")}
                       thinking={chat.sending && idx === chat.renderedMessages.length - 1 ? chat.streaming.thinking : null}
                       prevMessage={prevMsg}
+                      onCanvaPrompt={!chat.sending && idx === chat.renderedMessages.length - 1
+                        ? question => void chat.handleSend({ question, mentions: [], connector: "canva" }) : undefined}
                       onOpenArtifacts={(id) => { setActiveArtifactId(id); chat.openCanvas(); }}
                       videoEnabled={isBeta}
                       onViewVideo={(url) => {
@@ -563,6 +568,11 @@ export default function ChatPage() {
           }}
           onSend={async (input) => {
             if (input.connector) { await chat.handleSend(input); return; }
+            const latest = chat.renderedMessages.slice(-2).reverse().find(message => message.role === "assistant");
+            if (connectorForPrompt(input.question) === "canva" || isCanvaFollowUp(input.question, latest?.toolCalls)) {
+              await chat.handleSend({ ...input, connector: "canva" });
+              return;
+            }
             const noteAction = parseNoteCommand(input.question);
             if (noteAction) {
               setTaskCommand(null);

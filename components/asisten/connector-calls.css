@@ -4,10 +4,13 @@
 
 .connector-flow {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   width: min(100%, 560px);
   margin-bottom: 4px;
 }
+
+.connector-process > summary > svg { flex-shrink: 0; }
 
 .connector-update {
   margin: 5px 0;
@@ -66,3 +69,22 @@
 .dark .canva-result-preview figcaption a { color: #c5a5f7; }
 .canva-result-preview a:focus-visible { outline: 2px solid #a487d8; outline-offset: -2px; }
 .canva-result-fallback { padding: 12px; font-size: 13px; }
+
+.canva-chat-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 44px;
+  padding-inline: 12px;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  color: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.canva-chat-action:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+.canva-chat-action:focus-visible { outline: 2px solid #a487d8; outline-offset: 2px; }
