@@ -81,6 +81,7 @@ export function buildAssistantChatBody(
     sessionId: input.sessionId,
     userId: input.userId,
     question: input.question,
+    connector: input.connector,
     mentions: input.mentions ?? [],
     webSearch: input.webSearch === true,
     attachment: input.attachment ?? null,

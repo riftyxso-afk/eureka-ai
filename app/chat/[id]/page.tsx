@@ -93,6 +93,7 @@ export default function ChatPage() {
       if (!parsed.prompt || (parsed.sessionId && parsed.sessionId !== sessionId)) return null;
       return {
         question: parsed.prompt,
+        connector: parsed.connector,
         mentions: Array.isArray(parsed.mentions) ? parsed.mentions : [],
         webSearch: parsed.webSearch === true,
         attachment:
@@ -561,6 +562,7 @@ export default function ChatPage() {
             setWizardPrompt(null);
           }}
           onSend={async (input) => {
+            if (input.connector) { await chat.handleSend(input); return; }
             const noteAction = parseNoteCommand(input.question);
             if (noteAction) {
               setTaskCommand(null);
@@ -599,12 +601,12 @@ export default function ChatPage() {
               return;
             }
             // "buat gambar" → generate gambar AI sesuai topik percakapan.
-            if (detectImageIntent(input.question).isImageRequest) {
+            if (!input.connector && !input.attachment && detectImageIntent(input.question).isImageRequest) {
               setImagePrompt(input.question);
               setImageNonce((n) => n + 1);
               return;
             }
-            if (detectNoteIntent(input.question).isNoteRequest && !chat.loop.toggleOn) {
+            if (!input.connector && detectNoteIntent(input.question).isNoteRequest && !chat.loop.toggleOn) {
               // Topik yang sedang dibahas di chat ikut jadi materi catatan —
               // hanya untuk beta tester (akses lewat /join). Non-beta tetap
               // bisa buat catatan seperti biasa (tanpa konteks percakapan).

@@ -94,4 +94,8 @@ Microsoft access token yang dimasukkan manual bukan koneksi OAuth tahan lama. Ji
 
 Chat dan Belajar mengirim event SSE tool_call dengan id, provider, action, status, label, dan tautan hasil. Kartu menerima perubahan running, completed, error, atau pending dari eksekusi server. Event dikirim saat pekerjaan berlangsung melalui aliran yang sama dengan token jawaban AI. Riwayat kartu disimpan dalam metadata sources pesan, sehingga tidak memerlukan kolom baru di ai_chat_messages.
 
+Di prompt bar, buka + → Konektor. Semua 17 aplikasi tampil dengan logo, pencarian, dan status koneksi. Pilihan aktif tampil sebagai pill yang dapat dihapus. Permintaan membawa id konektor ke backend dan tidak boleh dialihkan diam-diam ke aplikasi lain. Aplikasi belum terhubung membuka pengaturan di tab baru agar draft chat tetap ada.
+
+Permintaan seperti “buat poster di Canva” menuju konektor, bukan generator gambar bawaan. Untuk membuat poster, koneksi Canva harus memiliki izin baca & tulis. Selama tool bekerja, logo aplikasi menggantikan orb pada indikator streaming yang sama. Detail proses dan tautan hasil dapat dibuka melalui baris status, lalu ditutup kembali.
+
 Tindakan dan kemampuan tersedia sesuai tabel. Implementasi ini menjalankan satu aksi konektor per giliran. Alur multiaplikasi otomatis dalam satu giliran, editor blok baru, sinkronisasi sumber berkala, dan perizinan ruang kolaborasi masih memerlukan tahap pengembangan tersendiri.

@@ -7,6 +7,8 @@
  * yang langsung di-generate AI dengan overlay progress.
  */
 
+import { connectorForPrompt } from "@/lib/connectors/intent";
+
 export interface NoteIntent {
   /** True bila prompt meminta pembuatan catatan. */
   isNoteRequest: boolean;
@@ -41,6 +43,7 @@ function extractTopic(prompt: string, url?: string): string {
 
 export function detectNoteIntent(prompt: string): NoteIntent {
   const text = String(prompt ?? "").trim();
+  if (connectorForPrompt(text)) return { isNoteRequest: false, isYoutube: false, topic: "" };
   const isNoteRequest = NOTE_REQUEST_RE.test(text);
 
   const urlMatch = URL_RE.exec(text);

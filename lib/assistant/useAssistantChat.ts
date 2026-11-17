@@ -499,6 +499,7 @@ export function useAssistantChat(options: {
           sessionId: targetSessionId,
           userId,
           question: input.question,
+          connector: input.connector,
           mentions: input.mentions,
           webSearch: input.webSearch,
           attachment: input.attachment,
@@ -780,7 +781,7 @@ export function useAssistantChat(options: {
       const turnToggleOn = loopRef.current.toggleOn;
       const wasActive =
         loopRef.current.status === "active" || loopRef.current.status === null;
-      if (!input.model?.startsWith("dahono/") && (turnToggleOn || (loopRef.current.status === "active" && !turnToggleOn) || (wasActive && !turnToggleOn && loopRef.current.iteration > 0))) {
+      if (!input.connector && !input.model?.startsWith("dahono/") && (turnToggleOn || (loopRef.current.status === "active" && !turnToggleOn) || (wasActive && !turnToggleOn && loopRef.current.iteration > 0))) {
         await sendLoop(targetSessionId, input, turnToggleOn);
       } else {
         await sendTo(targetSessionId, input);

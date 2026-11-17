@@ -29,7 +29,6 @@ import { detectImageIntent } from "@/lib/assistant/imageIntent";
 import ChatSkeleton from "@/components/asisten/ChatSkeleton";
 import PromptBar from "@/components/asisten/reactbits/PromptBar";
 import SpeechInput from "@/components/asisten/SpeechInput";
-import LoadingStatus from "@/components/ui/LoadingStatus";
 import ResearchStudio from "@/components/dashboard/ResearchStudio";
 import "@/app/dashboard-v2/study-flows.css";
 import "./research-studio.css";
@@ -163,11 +162,11 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
 
   const [imagePrompt, setImagePrompt] = useState<string | null>(null);
 
-  async function send(prompt: string, selectedNote = noteId, sourceText?: string, activity?: StudyActivity, artifactId?: string) {
+  async function send(prompt: string, selectedNote = noteId, sourceText?: string, activity?: StudyActivity, artifactId?: string, connector?: string) {
     const text = prompt.trim();
     if (!text || !loaded || sending.current) return;
     if (text.length > 6000) { setError("Tulis pesan maksimal 6.000 karakter."); return; }
-    if (detectImageIntent(text).isImageRequest) {
+    if (!connector && detectImageIntent(text).isImageRequest) {
       setTurns(previous => [...previous, { id: crypto.randomUUID(), role: "user", content: text, sources: [] }]);
       setImagePrompt(text);
       return;
@@ -188,7 +187,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
       ...previous, { id: crypto.randomUUID(), role: "user", content: text, sources: [] },
     ]);
     try {
-      const response = await agent.run(text, { sessionId, noteId: selectedNote, browser: browserSelected, speedMode, sourceText, activity, artifactId });
+      const response = await agent.run(text, { connector, sessionId, noteId: selectedNote, browser: browserSelected, speedMode, sourceText, activity, artifactId });
       if (response) {
         if(response.learningUpdated&&!notifiedLearning.current){notifiedLearning.current=true;toast.success("Personalisasi gaya belajar diperbarui",{description:"Sesuai izin akunmu. Ini tidak melatih bobot model."});}
         setTitle(response.title);
@@ -206,7 +205,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
   useEffect(() => {
     if (!loaded || !pending || autoStarted.current) return;
     autoStarted.current = true;
-    void send(pending.prompt, pending.noteId);
+    void send(pending.prompt, pending.noteId, undefined, undefined, undefined, pending.connector);
     // A pending handoff is consumed once per mounted conversation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, pending]);
@@ -293,10 +292,9 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
           return <Fragment key={turn.id}>
             {latestRun && agent.browserActivity.length > 0 && <StudyBrowserPanel activities={agent.browserActivity} busy={live} />}
             <article className={live ? "study-chat-turn study-chat-live" : "study-chat-turn"} aria-busy={live || undefined}>
-              {turn.role === "assistant" && <ConnectorCalls calls={live ? agent.toolCalls : turn.study?.toolCalls} />}
-              {live && agent.status && <LoadingStatus stage={agent.status.stage} detail={agent.status.label} />}
+              {turn.role === "assistant" && <ConnectorCalls calls={live ? agent.toolCalls : turn.study?.toolCalls} streaming={live} stage={agent.status?.stage} detail={live ? agent.status?.label : undefined} />}
               {videos.length === 1 && <div className="study-chat-extras study-chat-video-lead">{videoCards}</div>}
-              {(!live || turn.content) && <MessageBubble message={message(turn)} isStreaming={live} videoEnabled={false}
+              {(!live || turn.content) && <MessageBubble hideActivity message={message(turn)} isStreaming={live} videoEnabled={false}
                 avatar={!live && <StudyBotAvatar size={32} response={turn.content} still />} />}
               {videos.length > 1 && <div className="study-chat-extras">{videoCards}</div>}
               {live && agent.mindmap !== null && <div className="study-chat-extras"><StudyMindmap nodes={agent.mindmap} busy onExplore={() => {}} /></div>}
@@ -351,7 +349,7 @@ export default function StudyConversation({ sessionId, initialMessages, initialT
           ]}
           background="transparent" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="transparent" width={760} radius={18} maxRows={5} commands={[]} defaultEffort="Seimbang"
           models={[]} efforts={["Kilat", "Seimbang", "Mendalam"]} onEffortChange={effort => setSpeedMode(effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal")}
-          onSend={prompt => { void send(prompt); }} onStop={agent.stop}
+          onSend={(prompt, options) => { void send(prompt, noteId, undefined, undefined, undefined, options.connector); }} onStop={agent.stop}
           voiceSlot={<SpeechInput userId={getUserId()} disabled={!loaded || agent.busy} onText={text => setDraft(previous => (previous + " " + text).trim())} onError={setMicError} />}
         />
       </div>

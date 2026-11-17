@@ -94,6 +94,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
   /** Buat sesi → simpan prompt → animasi → pindah ke /chat/[id]. */
   const launchChat = useCallback(
     async (input: {
+      connector?: string;
       question: string;
       mentions: string[];
       webSearch?: boolean;
@@ -104,17 +105,17 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
       if (launching) return;
       setLaunchError(null);
       setNeedsLogin(false);
-      const command = parseNoteCommand(input.question);
+      const command = !input.connector && parseNoteCommand(input.question);
       if (command) {
         setTaskCommand(null);
         setNoteCommand(command);
         return;
       }
 
-      const task = parseTaskCommand(input.question);
+      const task = !input.connector && parseTaskCommand(input.question);
       if (task) { setNoteCommand(null); setTaskCommand(task); return; }
 
-      if (mayManageNote(input.question)) {
+      if (!input.connector && mayManageNote(input.question)) {
         if (planningLock.current) return;
         planningLock.current = true;
         setPlanningAction(true);
@@ -123,7 +124,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
         setPlanningAction(false);
         if (proposal) { setTaskCommand(null); setNoteCommand(proposal); return; }
       }
-      if (mayManageTask(input.question)) {
+      if (!input.connector && mayManageTask(input.question)) {
         if (planningLock.current) return;
         planningLock.current = true;
         setPlanningAction(true);
@@ -134,14 +135,14 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
       }
 
       // Permintaan "buat gambar" → generate gambar AI (sesuai deskripsi/topik).
-      if (detectImageIntent(input.question).isImageRequest) {
+      if (!input.connector && !input.attachment && detectImageIntent(input.question).isImageRequest) {
         setImagePrompt(input.question);
         return;
       }
 
       // Permintaan "buat catatan" → tanya preferensi dulu (wizard F&Q),
       // lalu generate catatan + overlay loading.
-      if (detectNoteIntent(input.question).isNoteRequest) {
+      if (!input.connector && detectNoteIntent(input.question).isNoteRequest) {
         setWizardPrompt(input.question);
         return;
       }
@@ -186,6 +187,7 @@ export default function AssistantHub({ standalone = false }: { standalone?: bool
         PENDING_PROMPT_KEY,
         JSON.stringify({
           prompt: input.question,
+          connector: input.connector,
           mentions: input.mentions,
           webSearch: input.webSearch === true,
           attachment: input.attachment ?? null,

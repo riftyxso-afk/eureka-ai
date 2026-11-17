@@ -12,6 +12,8 @@
  * (topik yang sedang dibahas) supaya gambar TIDAK menyimpang ke topik lain.
  */
 
+import { connectorForPrompt } from "@/lib/connectors/intent";
+
 export interface ImageIntent {
   /** True bila prompt meminta pembuatan gambar. */
   isImageRequest: boolean;
@@ -51,6 +53,7 @@ function extractDescription(prompt: string): string {
 
 export function detectImageIntent(prompt: string): ImageIntent {
   const text = String(prompt ?? "").trim();
+  if (connectorForPrompt(text)) return { isImageRequest: false, description: "", needsContext: false };
   const isImageRequest = IMAGE_REQUEST_RE.test(text);
   if (!isImageRequest) {
     return { isImageRequest: false, description: "", needsContext: false };

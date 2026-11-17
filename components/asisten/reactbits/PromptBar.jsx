@@ -17,6 +17,10 @@ import PlusSignIcon from "kubai-icons-react/icons/circle-plus";
 import Tick02Icon from "kubai-icons-react/icons/circle-check";
 import { loadSakuga, showSakugaTyping } from "@/lib/sound/sakugaFeedback";
 import './PromptBar.css';
+import ConnectorPicker from '../ConnectorPicker';
+import { connectorById, connectorLogo } from '@/lib/connectors/catalog';
+import { connectorForPrompt } from '@/lib/connectors/intent';
+import { Plug as PlugIcon } from 'lucide-react';
 
 const HugeiconsIcon = ({ icon: Icon, ...props }) => <Icon {...props} />;
 
@@ -138,6 +142,7 @@ export default function PromptBar({
   clearOnSend = true,
   onSend,
   onStop,
+  connectors = true,
   onAttach,
   onDictate,
   background = '#27272a',
@@ -177,6 +182,9 @@ export default function PromptBar({
   const [attachments, setAttachments] = useState([]);
   const [modelKey, setModelKey] = useState(defaultModel);
   const [plusOpen, setPlusOpen] = useState(false);
+  const [connectorOpen, setConnectorOpen] = useState(false);
+  const [selectedConnector, setSelectedConnector] = useState('');
+  const connector = connectorById(selectedConnector);
   const [modelOpen, setModelOpen] = useState(false);
   const [effortOpen, setEffortOpen] = useState(false);
   const [effortIndex, setEffortIndex] = useState(() => {
@@ -190,7 +198,7 @@ export default function PromptBar({
 
   const model = models.find(m => m.key === modelKey && !m.disabled) ?? models[0];
   const token = dismissed ? null : parseToken(draft);
-  const open = plusOpen ? 'at' : (token?.kind ?? (modelOpen ? 'model' : effortOpen ? 'effort' : null));
+  const open = connectorOpen ? 'connectors' : plusOpen ? 'at' : (token?.kind ?? (modelOpen ? 'model' : effortOpen ? 'effort' : null));
   useLayoutEffect(() => {
     if (open !== 'model' || !menuRef.current) {
       onModelMenuHeightChange?.(0);
@@ -204,8 +212,9 @@ export default function PromptBar({
     return () => observer.disconnect();
   }, [open, onModelMenuHeightChange]);
   const query = plusOpen ? '' : (token?.query ?? '');
+  const menuSources = plusOpen && connectors ? [{ key: 'connectors-menu', name: 'Konektor', description: 'Canva, Drive, Notion dan aplikasi lain', icon: <PlugIcon size={17} />, action: () => setConnectorOpen(true) }, ...sources] : sources;
   const list = open === 'at'
-    ? sources.filter(source => (plusOpen || !source.action) && source.name.toLowerCase().includes(query))
+    ? menuSources.filter(source => (plusOpen || !source.action) && source.name.toLowerCase().includes(query))
     : open === 'slash'
       ? commands.filter(command => command.name.replace(/^\//, '').toLowerCase().startsWith(query))
       : open === 'model' ? models : [];
@@ -220,6 +229,7 @@ export default function PromptBar({
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) focusInput();
   };
   const closeMenus = () => {
+    setConnectorOpen(false);
     setPlusOpen(false);
     setModelOpen(false);
     setEffortOpen(false);
@@ -249,13 +259,13 @@ export default function PromptBar({
   }, [open]);
 
   useEffect(() => {
-    if (!plusOpen && !modelOpen && !effortOpen) return undefined;
+    if (!plusOpen && !modelOpen && !effortOpen && !connectorOpen) return undefined;
     const onDown = e => {
       if (!rootRef.current?.contains(e.target)) closeMenus();
     };
     document.addEventListener('pointerdown', onDown);
     return () => document.removeEventListener('pointerdown', onDown);
-  }, [plusOpen, modelOpen, effortOpen, closeMenus]);
+  }, [plusOpen, modelOpen, effortOpen, connectorOpen, closeMenus]);
 
   useLayoutEffect(() => {
     const el = inputRef.current;
@@ -437,7 +447,7 @@ export default function PromptBar({
 
   const send = () => {
     if (!canSend || busy) return;
-    latest.current.onSend?.(draft.trim(), { attachments, model, effort: level });
+    latest.current.onSend?.(draft.trim(), { attachments, model, effort: level, connector: selectedConnector || connectorForPrompt(draft) });
     if (clearOnSend) setDraft('');
     setAttachments([]);
     setDismissed(false);
@@ -520,13 +530,13 @@ export default function PromptBar({
         <div
           ref={menuRef}
           className="prompt-bar__menu"
-          role={open === 'effort' ? 'dialog' : 'listbox'}
+          role={open === 'effort' || open === 'connectors' ? 'dialog' : 'listbox'}
           aria-label={
-            open === 'at' ? 'Sources' : open === 'slash' ? 'Commands' : open === 'model' ? 'Models' : 'Effort'
+            open === 'connectors' ? 'Konektor' : open === 'at' ? 'Sources' : open === 'slash' ? 'Commands' : open === 'model' ? 'Models' : 'Effort'
           }
           data-kind={open}
         >
-          {open === 'effort' ? (
+          {open === 'connectors' ? <ConnectorPicker selected={selectedConnector} onSelect={id => {setSelectedConnector(id);closeMenus();focusInputForMenu();}} onClose={() => {setConnectorOpen(false);setPlusOpen(true);requestAnimationFrame(()=>rootRef.current?.querySelector('[aria-label="Tambah file dan alat"]')?.focus());}} /> : open === 'effort' ? (
             <>
               <div className="prompt-bar__effort-head">
                 <span className="prompt-bar__effort-title">Effort</span>
@@ -625,6 +635,7 @@ export default function PromptBar({
         }}
       >
         <canvas ref={sparkRef} className="prompt-bar__sparks" aria-hidden="true" />
+        {connectors && connector && <div className="prompt-bar__connector-pill"><img src={connectorLogo(connector.logo)} alt="" /><span>{connector.name}</span><button type="button" disabled={busy} aria-label={`Hapus konektor ${connector.name}`} onClick={() => setSelectedConnector('')}>×</button></div>}
         {attachments.length > 0 ? (
           <div className="prompt-bar__chips">
             {attachments.map((file, i) => (
@@ -671,7 +682,7 @@ export default function PromptBar({
         />
 
         <div className="prompt-bar__bar">
-          {sources.length > 0 && <button
+          {(sources.length > 0 || connectors) && <button
             type="button"
             className="prompt-bar__tool"
             aria-label="Tambah file dan alat"

@@ -97,3 +97,25 @@ test('SSE exposes tool updates before the network stream is closed',async()=>{
   controller.close();
   assert.equal((await iterator.next()).done,true);
 });
+
+test('Canva poster requests bypass native image and note generation',()=>{
+  const catalog=load('lib/connectors/catalog.ts');
+  const intent=load('lib/connectors/intent.ts',{'./catalog':catalog});
+  const image=load('lib/assistant/imageIntent.ts',{'@/lib/connectors/intent':intent});
+  const note=load('lib/assistant/noteIntent.ts',{'@/lib/connectors/intent':intent});
+  assert.equal(image.detectImageIntent('Buatkan poster hemat energi di Canva').isImageRequest,false);
+  assert.equal(image.detectImageIntent('Buatkan gambar kucing').isImageRequest,true);
+  assert.equal(note.detectNoteIntent('Buat catatan di Notion tentang energi').isNoteRequest,false);
+  assert.equal(intent.connectorForPrompt('Buat poster di Canva'),'canva');
+});
+
+test('selected connector routes a plain prompt and cannot silently switch apps',async()=>{
+  const catalog=load('lib/connectors/catalog.ts');
+  const events=[];
+  const tools=load('lib/connectors/tools.ts',{'./catalog':catalog,'./productivity':{},'./server':{connectorStates:async()=>[{provider:'notion',permission:'read'},{provider:'canva',permission:'read'}]},'@/lib/supabase/admin':{},
+    '@/lib/ai':{aiChatJson:async()=>({provider:'canva',action:'search'})}});
+  const result=await tools.connectorChatContext('user','session','Cari materi itu',[],new AbortController().signal,()=>{},call=>events.push(call),'notion');
+  assert.equal(events[0].provider,'notion');
+  assert.equal(events.at(-1).status,'error');
+  assert.match(result,/tidak sesuai konektor/);
+});

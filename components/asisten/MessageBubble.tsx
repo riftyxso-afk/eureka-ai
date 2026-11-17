@@ -32,6 +32,7 @@ import { findYoutubeLink } from "@/lib/assistant/videoUrl";
 import type { AssistantChatMessage, WebSearchStage } from "@/lib/assistant/types";
 
 interface MessageBubbleProps {
+    hideActivity?: boolean;
   avatar?: import("react").ReactNode;
   activity?: import("@/lib/loading-stage").LoadingStage;
   message: AssistantChatMessage;
@@ -111,6 +112,7 @@ function answerDurationMs(
  * dengan markdown, sumber, state streaming & error.
  */
 export default function MessageBubble({
+  hideActivity = false,
   message,
   avatar,
   isStreaming = false,
@@ -199,9 +201,9 @@ export default function MessageBubble({
     >
       {!isStreaming && (avatar ?? <MomoMessageAvatar question={prevMessage?.role === "user" ? prevMessage.content : ""} response={message.content} />)}
       <div className={`chat-message-assistant-content flex min-w-0 flex-col gap-1.5${isStreaming ? " col-span-full" : ""}`}>
-        <ConnectorCalls calls={message.toolCalls} />
+        {!isStreaming && <ConnectorCalls calls={message.toolCalls} />}
         {isStreaming && webStage && <WebSearchPipeline stage={webStage} results={message.webResults ?? []} query={webQuery} notice={webNotice} />}
-        {isStreaming && <ResponseActivity thinking={thinking} stage={displayContent ? "combining" : activity} showIndicator={!webStage} />}
+        {isStreaming && !hideActivity && <ResponseActivity toolCalls={message.toolCalls} thinking={thinking} stage={displayContent ? "combining" : activity} showIndicator={!webStage || !!message.toolCalls?.length} />}
         {/* Thinking di paling atas saat sudah dijawab — biar keliatan hasil thinking */}
         <div className="break-words text-clay-dark">
           {empty || !displayContent ? (

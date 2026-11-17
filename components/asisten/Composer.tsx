@@ -1,5 +1,6 @@
 "use client";
 import DocumentLogo from "@/components/ui/DocumentLogo";
+import { connectorForPrompt } from "@/lib/connectors/intent";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -23,7 +24,7 @@ import Sparkles from "kubai-icons-react/icons/sparkles";
 import Terminal from "kubai-icons-react/icons/terminal";
 import Check from "kubai-icons-react/icons/circle-check";
 import Plus from "kubai-icons-react/icons/circle-plus";
-import { Plug, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import type { ChatAttachment } from "@/lib/assistant/types";
 import {
@@ -84,6 +85,7 @@ export interface MentionOption {
 }
 
 export interface ComposerSendInput {
+  connector?: string;
   question: string;
   mentions: string[];
   webSearch?: boolean;
@@ -623,6 +625,7 @@ export default function Composer({
     if (!question || sending || disabled) return;
     onSend({
       question,
+      connector: connectorForPrompt(question),
       mentions: mentionIds,
       attachment: attachment ?? null,
       speedMode,
@@ -649,7 +652,6 @@ export default function Composer({
     ];
     if (!dahono.models.length) models.push({ key: "dahono-unavailable", name: "Dahono", logo: DAHONO_LOGO, tag: "Belum tersedia", disabled: true });
     const sources: PromptSource[] = [
-      { key: "connectors", name: "Konektor", description: "Hubungkan Canva, Drive, dan aplikasi belajar", icon: <Plug size={16} />, action: () => { window.location.assign("/dashboard-v2/pengaturan/konektor"); } },
       ...(onCall && !sending ? [{ key: "momo-call", name: "Panggilan Momo atau Lala", description: "Panggilan suara dan kamera untuk Lala", icon: <PhoneCall trigger="parent" size={16} />, action: onCall }] : []),
       { key: "file", name: "Foto & file", description: "Pilih dari perangkat", icon: <Paperclip trigger="parent" size={16} />, attach: true },
       ...notes.filter((note) => !mentionIds.includes(note.id)).map((note) => ({ key: `note:${note.id}`, name: note.title, description: note.subject || "Catatan", icon: <BookOpen trigger="parent" size={16} /> })),
@@ -675,7 +677,7 @@ export default function Composer({
           onSourceSelect={(source) => { if (source.key.startsWith("note:")) setMentionIds((ids) => [...new Set([...ids, source.key.slice(5)])]); setMentionOpen(false); }}
           onSend={(question, options) => {
             if (!question.trim() || disabled || sending) return;
-            onSend({ question, mentions: mentionIds, attachment: attachment ?? null, model: options.model && !options.model.disabled && options.model.key !== "auto" ? options.model.key : undefined, speedMode: options.effort === "Kilat" ? "fast" : options.effort === "Mendalam" ? "deep" : "normal", reasoning, solveThenGuide: stgOnce || undefined });
+            onSend({ question, connector: options.connector, mentions: mentionIds, attachment: attachment ?? null, model: options.model && !options.model.disabled && options.model.key !== "auto" ? options.model.key : undefined, speedMode: options.effort === "Kilat" ? "fast" : options.effort === "Mendalam" ? "deep" : "normal", reasoning, solveThenGuide: stgOnce || undefined });
             setMentionIds([]); setAttachment(null); setAttachError(null); setStgOnce(false);
           }}
           onStop={onStop} background="rgb(var(--clay-cream))" color="rgb(var(--clay-dark))" menuBackground="rgb(var(--clay-cream))" sparkColor="#a983e8" width={760} radius={18} maxRows={5}

@@ -7,6 +7,7 @@ import type { ChatAttachment } from "@/lib/assistant/types";
 export const PENDING_PROMPT_KEY = "eureka_pending_prompt";
 
 export interface PendingPrompt {
+  connector?: string;
   prompt: string;
   sessionId?: string;
   mentions?: string[];

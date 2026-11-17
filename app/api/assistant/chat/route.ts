@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
     sessionId?: unknown;
     userId?: unknown;
     question?: unknown;
+    connector?: unknown;
     mentions?: unknown;
     webSearch?: unknown;
     attachment?: unknown;
@@ -357,6 +358,7 @@ export async function POST(req: NextRequest) {
     !clarificationsSkipped &&
     !webSearch &&
     !attachment &&
+    !raw?.connector &&
     shouldAssessClarification(question)
   ) {
     try {
@@ -518,7 +520,7 @@ export async function POST(req: NextRequest) {
             const index = toolCalls.findIndex(c => c.id === call.id);
             if (index < 0) toolCalls.push(call); else toolCalls[index] = call;
             emit({ type: "tool_call", call });
-          });
+          }, typeof raw?.connector === "string" ? raw.connector : undefined);
         webSearch = !connectorContext && shouldAutoSearch(question, history);
 
         if (!isRetry) {

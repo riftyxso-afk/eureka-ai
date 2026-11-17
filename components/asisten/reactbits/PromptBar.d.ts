@@ -9,8 +9,9 @@ export interface PromptBarProps {
   modelCreditLabel?: string;
   efforts?: string[]; defaultEffort?: string; onEffortChange?: (effort: string) => void; busy?: boolean;
   clearOnSend?: boolean;
+  connectors?: boolean;
   onModelMenuHeightChange?: (height: number) => void;
-  onSend?: (text: string, options: { attachments: string[]; model?: PromptModel; effort: string }) => void;
+  onSend?: (text: string, options: { attachments: string[]; model?: PromptModel; effort: string; connector?: string }) => void;
   onStop?: () => void; onAttach?: () => void | string | string[] | Promise<void | string | string[]>;
   background?: string; color?: string; menuBackground?: string; sparkColor?: string; width?: number; radius?: number; maxRows?: number; className?: string;
 }

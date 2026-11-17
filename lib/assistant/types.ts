@@ -17,6 +17,7 @@ export interface ChatAttachment {
 
 /** Opsi tool yang aktif saat mengirim pesan. */
 export interface ChatToolOptions {
+  connector?: string;
   /** Cari info tambahan di web (Firecrawl) sebelum menjawab. */
   webSearch?: boolean;
   /** File/gambar yang dilampirkan user (opsional). */

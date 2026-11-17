@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import ChatResponseLoader from "./ChatResponseLoader";
 import type { LoadingStage } from "@/lib/loading-stage";
+import ConnectorCalls from "./ConnectorCalls";
+import type { ConnectorCall } from "@/lib/connectors/events";
 
-export default function ResponseActivity({ thinking = "", stage = "thinking", showIndicator = true }: {
+export default function ResponseActivity({ thinking = "", stage = "thinking", showIndicator = true, toolCalls = [] }: {
+  toolCalls?: ConnectorCall[];
   thinking?: string | null;
   stage?: LoadingStage;
   showIndicator?: boolean;
@@ -18,7 +20,7 @@ export default function ResponseActivity({ thinking = "", stage = "thinking", sh
 
   if (!showIndicator && !thinking) return null;
   return <div className="response-activity">
-    {showIndicator && <ChatResponseLoader stage={stage} />}
+    {showIndicator && <ConnectorCalls calls={toolCalls} streaming stage={stage} />}
     {thinking && <div ref={thinkingRef} className="response-activity-thinking">{thinking}</div>}
   </div>;
 }

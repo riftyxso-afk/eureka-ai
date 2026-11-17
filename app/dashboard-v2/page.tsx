@@ -197,7 +197,7 @@ export default function DashboardV2() {
     setInputError("");
     setDraft(value);
   }
-  async function askMomo(question: string) {
+  async function askMomo(question: string, connector?: string) {
     if ((!question && !imageAttachment) || chatLock.current || attachmentLock.current) return;
     chatLock.current = true;
     setOpeningChat(true);
@@ -216,6 +216,7 @@ export default function DashboardV2() {
       }
       const pending: PendingPrompt = {
         prompt: question || "Tolong jelaskan isi gambar ini.",
+        connector,
         attachment: imageAttachment,
         sessionId: data.session.id,
         speedMode: effort === "Kilat" ? "fast" : effort === "Mendalam" ? "deep" : "normal",
@@ -274,9 +275,10 @@ export default function DashboardV2() {
       });
     }
   }
-  function submit(text: string) {
+  function submit(text: string, options?: {connector?: string}) {
     if (!isPremium) { router.push("/dashboard-v2/pricing"); return; }
     if (generation.busy || chatLock.current || attachmentLock.current) return;
+    if (options?.connector) { void askMomo(text.trim(), options.connector); return; }
     if (imageAttachment) { void askMomo(text.trim()); return; }
     if (mode === "ask") { void askMomo(text.trim()); return; }
     if (files.length) { setInputError(""); setNoteRequest({ prompt: text.trim() || "Buat catatan dari materi terlampir", files: [...files] }); return; }
