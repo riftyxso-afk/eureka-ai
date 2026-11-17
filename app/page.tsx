@@ -46,8 +46,9 @@ export default function LandingPage() {
       },
       {
         "@type": "WebSite",
-        name: "Eureka.AI",
-        url: SITE_URL,
+        name: "Eureka AI",
+        alternateName: "Eureka.AI",
+        url: SITE_URL + "/",
         inLanguage: locale,
       },
       {
@@ -58,7 +59,6 @@ export default function LandingPage() {
         url: SITE_URL,
         inLanguage: locale,
         datePublished: "2026-08-15",
-        dateModified: "2026-08-15",
         offers: {
           "@type": "AggregateOffer",
           priceCurrency: "IDR",
@@ -105,7 +105,8 @@ export default function LandingPage() {
           <Link href="/" className="text-3xl font-black tracking-tight text-[#7540D0]">eureka!</Link>
           <nav aria-label={en ? "Main navigation" : "Navigasi utama"} className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-bold">
             <a href="#fitur">{en ? "Features" : "Fitur"}</a>
-            <Link href="/pricing">{en ? "Pricing" : "Harga"}</Link>
+            <Link href={`/${locale}/pricing`}>{en ? "Pricing" : "Harga"}</Link>
+            <Link href={`/${locale}/register`}>{en ? "Sign up" : "Daftar"}</Link>
             <select aria-label={en ? "Site language" : "Bahasa situs"} value={locale} onChange={(event) => setLocale(event.target.value === "en" ? "en" : "id")} className="rounded-lg bg-transparent p-2">
               <option value="id">Indonesia</option>
               <option value="en">English</option>
@@ -238,7 +239,7 @@ export default function LandingPage() {
           <div className="grid content-start gap-3 text-sm">
             <h2 className="font-black">{en ? "Product" : "Produk"}</h2>
             <a href="#fitur">{en ? "Study tools" : "Fitur belajar"}</a>
-            <Link href="/pricing">{en ? "Pricing" : "Harga"}</Link>
+            <Link href={`/${locale}/pricing`}>{en ? "Pricing" : "Harga"}</Link>
           </div>
           <div className="grid content-start gap-3 text-sm">
             <h2 className="font-black">{en ? "App" : "Aplikasi"}</h2>
@@ -246,7 +247,8 @@ export default function LandingPage() {
           </div>
           <div className="grid content-start gap-3 text-sm">
             <h2 className="font-black">{en ? "Help" : "Bantuan"}</h2>
-            <Link href="/join">{en ? "Join Eureka" : "Gabung Eureka"}</Link>
+            <Link href={`/${locale}/register`}>{en ? "Create an account" : "Daftar Eureka"}</Link>
+            <Link href={`/${locale}/login`}>{en ? "Sign in" : "Masuk"}</Link>
             <a href="/privacy">{en ? "Privacy Policy" : "Kebijakan Privasi"}</a>
             <a href="/terms">{en ? "Terms of Service" : "Syarat Layanan"}</a>
           </div>

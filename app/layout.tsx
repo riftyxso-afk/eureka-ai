@@ -91,7 +91,7 @@ export async function generateMetadata(): Promise<Metadata> {
     // notifikasi web di iOS) — ikon pakai /logo.png yang sudah tersedia.
     manifest: "/manifest.webmanifest",
     icons: {
-      icon: "/logo.png",
+      icon: [{ url: "/logo.png", type: "image/png", sizes: "512x512" }],
       apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
     },
     appleWebApp: {
