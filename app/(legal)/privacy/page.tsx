@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           <li>Data akun seperti nama, alamat email, identitas akun, dan profil belajar yang kamu isi.</li>
           <li>Materi yang kamu masukkan seperti percakapan, catatan, lampiran, dan tautan, serta hasil belajar yang tersimpan. Saat memakai fitur suara atau video, media diproses sesuai fitur yang kamu pilih.</li>
           <li>Data transaksi seperti paket, nominal, dan status pembayaran. Pembayaran diproses melalui penyedia pembayaran yang ditampilkan saat checkout.</li>
-          <li>Data teknis dan penggunaan seperti informasi perangkat, sesi, dan peristiwa penggunaan fitur. Situs menggunakan cookie atau penyimpanan lokal untuk sesi dan preferensi, serta PostHog untuk mengukur penggunaan.</li>
+          <li>Data teknis dan penggunaan seperti informasi perangkat, sesi, dan peristiwa penggunaan fitur. Situs menggunakan cookie atau penyimpanan lokal untuk sesi dan preferensi, serta PostHog dan Google Analytics untuk mengukur penggunaan.</li>
         </ul>
         <p>Kami menggunakan data tersebut untuk menjalankan akun dan fitur belajar, menjaga keamanan, menangani pembayaran dan dukungan, serta memahami penggunaan layanan.</p>
       </section>

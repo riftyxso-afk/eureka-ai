@@ -29,6 +29,7 @@ import LevelUpOverlay from "@/components/dashboard/LevelUpOverlay";
 import PremiumSuccessPopup from "@/components/PremiumSuccessPopup";
 import SoundInitializer from "@/components/SoundInitializer";
 import ProductAnalytics from "@/components/ProductAnalytics";
+import { googleMeasurementId } from "@/lib/googleAnalytics";
 import {
   alternatesFor,
   getDictionary,
@@ -152,6 +153,13 @@ export default async function RootLayout({
           }}
         />
         <link rel="preload" as="image" href="/loading/momo-blink.gif" media="(prefers-reduced-motion: no-preference)" />
+        {googleMeasurementId && (
+          <Script
+            id="eureka-google-tag"
+            src={`https://www.googletagmanager.com/gtag/js?id=${googleMeasurementId}`}
+            strategy="afterInteractive"
+          />
+        )}
         <MomoSplash />
         <LocaleProvider initialLocale={locale}>
           <ThemeProvider>

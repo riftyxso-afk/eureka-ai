@@ -8,7 +8,7 @@ const isDev = process.env.NODE_ENV === "development";
 // untuk aplikasi ini — dicatat sebagai keputusan di change security-hardening).
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://www.youtube.com${isDev ? " 'unsafe-eval'" : ""};
+  script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://www.youtube.com https://www.googletagmanager.com${isDev ? " 'unsafe-eval'" : ""};
   script-src-attr 'none';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;

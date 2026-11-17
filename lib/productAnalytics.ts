@@ -1,3 +1,5 @@
+import { captureGoogleEvent, captureGooglePageView } from "./googleAnalytics";
+
 type Event =
   | { name: "v2_account_page_viewed"; properties: { surface: "streaks" | "profil" | "pricing" } }
   | { name: "streak_milestone_celebrated"; properties: { days: number } }
@@ -37,6 +39,7 @@ function getAnalytics() {
 }
 
 export function captureProductEvent(event: Event) {
+  captureGoogleEvent(event.name, event.properties);
   void getAnalytics().then(posthog => posthog?.capture(event.name, event.properties)).catch(() => { sdk = undefined; });
 }
 
@@ -54,10 +57,12 @@ export function resetAnalyticsUser() {
 }
 
 export function capturePageView(pathname: string) {
+  captureGooglePageView(pathname);
   const page = pathname.replace(/\/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, "/:id");
   void getAnalytics().then(posthog => posthog?.capture("$pageview", { page })).catch(() => { sdk = undefined; });
 }
 
 export function captureChatResponse() {
+  captureGoogleEvent("chat_response_received");
   void getAnalytics().then(posthog => posthog?.capture("chat_response_received")).catch(() => { sdk = undefined; });
 }
