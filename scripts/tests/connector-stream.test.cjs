@@ -1,12 +1,17 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
+const path=require('node:path');
 const vm=require('node:vm');
 const ts=require('typescript');
 function load(file,mocks={}){
   const module={exports:{}};
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,
-    {module,exports:module.exports,require:name=>name in mocks?mocks[name]:require(name),Buffer,process,console,AbortSignal,URLSearchParams,fetch,setTimeout,TextDecoder});
+    {module,exports:module.exports,require:name=>{
+      if(name in mocks)return mocks[name];
+      const source=path.join(path.dirname(file),name+'.ts');
+      return name.startsWith('.')&&fs.existsSync(source)?load(source):require(name);
+    },Buffer,process,console,AbortSignal,URL,URLSearchParams,fetch,setTimeout,TextDecoder});
   return module.exports;
 }
 test('connector credential encryption round-trips and rejects tampering',()=>{
@@ -118,4 +123,25 @@ test('selected connector routes a plain prompt and cannot silently switch apps',
   assert.equal(events[0].provider,'notion');
   assert.equal(events.at(-1).status,'error');
   assert.match(result,/tidak sesuai konektor/);
+});
+
+test('Canva tool updates preserve verified previews and exclude unrelated thumbnail URLs',async()=>{
+  const catalog=load('lib/connectors/catalog.ts');
+  const {connectorCallSchema}=load('lib/connectors/events.ts');
+  const events=[];
+  const design={id:'DAabc123',title:'Poster Hemat Energi',thumbnail:{url:'https://media.canva.com/thumbnail.png?signature=test',width:365,height:547},
+    urls:{edit_url:'https://www.canva.com/design/DAabc123/edit'}};
+  const tools=load('lib/connectors/tools.ts',{'./catalog':catalog,'./productivity':{},
+    './server':{connectorStates:async()=>[{provider:'canva',permission:'read'}],providerFetch:async()=>({items:[design,{...design,id:'DAbad',thumbnail:{...design.thumbnail,url:'https://media.canva.com.example.org/fake.png'}}]})},
+    '@/lib/supabase/admin':{},'@/lib/ai':{aiChatJson:async()=>({provider:'canva',action:'search',query:'hemat energi',id:''})}});
+  await tools.connectorChatContext('user','session','Cari poster di Canva',[],new AbortController().signal,()=>{},call=>events.push(call),'canva');
+  assert.deepEqual(events.map(call=>call.status),['running','running','completed']);
+  assert.equal(events[0].updates.length,0);
+  assert.equal(events[1].updates.length,1);
+  const completed=connectorCallSchema.parse(events[2]);
+  assert.equal(completed.updates.length,2);
+  assert.equal(completed.previews.length,1);
+  assert.equal(completed.previews[0].thumbnail.url,design.thumbnail.url);
+  assert.equal(completed.links[0].url,design.urls.edit_url);
+  assert.equal(connectorCallSchema.parse({...events[0],updates:undefined,previews:undefined}).status,'running');
 });
