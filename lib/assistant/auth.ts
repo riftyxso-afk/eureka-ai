@@ -12,10 +12,11 @@
  * (hanya untuk pengembangan lokal, tidak pernah aktif di produksi).
  */
 import { db, isSupabaseConfigured } from "../supabase/admin";
-import { getPremiumStatus } from "../premium";
+import { hasPremiumAccess } from "../premium";
 
 export interface AssistantAuthResult {
   userId: string;
+  createdAt?: string;
   error?: string;
   status?: number;
 }
@@ -82,7 +83,7 @@ export async function requireAuth(
   if (paramUserId && data.user.id !== paramUserId) {
     return { userId: "", error: "Akses ditolak.", status: 403 };
   }
-  return { userId: data.user.id };
+  return { userId: data.user.id, createdAt: data.user.created_at };
 }
 
 /**
@@ -100,7 +101,7 @@ export async function authorizeAssistantUser(
 /** Authenticate first so a supplied user ID cannot borrow another account's Pro access. */
 export async function requirePro(authHeader: string | null, paramUserId?: string): Promise<AssistantAuthResult> {
   const auth = await requireAuth(authHeader, paramUserId);
-  if (!auth.userId || (await getPremiumStatus(auth.userId)).isPremium) return auth;
+  if (!auth.userId || await hasPremiumAccess(auth)) return auth;
   return { userId: "", status: 402, error: "Fitur ini tersedia di Eureka Pro." };
 }
 

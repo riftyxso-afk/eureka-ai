@@ -13,7 +13,6 @@ import {
   aiChatStream,
   extractJsonObject,
   hasAiKey,
-  MODEL_CATALOG,
   MODEL_CATALOG_IDS,
   type AiSpeedMode,
 } from "@/lib/ai";
@@ -45,7 +44,7 @@ import {
 import {
   authorizeAssistantUser,
 } from "@/lib/assistant/auth";
-import { enforcePremium, getPremiumStatus, UPGRADE_URL } from "@/lib/premium";
+import { hasPremiumAccess, UPGRADE_URL } from "@/lib/premium";
 import {
   SAFETY_REFUSAL_ID,
   guardInput,
@@ -259,32 +258,6 @@ export async function POST(req: NextRequest) {
   const sessionId = rawSessionId;
   const userId = auth.userId;
 
-  // ── Gating premium: kuota chat harian untuk free; web search wajib Pro. ──
-  const premiumChat = await enforcePremium(userId, "assistant-chat");
-  if (!premiumChat.ok) {
-    return respondJson(
-      { error: premiumChat.error, upgradeUrl: premiumChat.upgradeUrl },
-      premiumChat.status ?? 402
-    );
-  }
-  // Status premium → rantai model (Pro = model pintar di depan, free = model
-  // murah) + gerbang model premiumOnly.
-  const isPremiumUser = (await getPremiumStatus(userId)).isPremium;
-  // Model premiumOnly (mis. GPT-6 Astra) — khusus pengguna Pro. Free user yang
-  // mengirimnya (UI lama/klien iseng) ditolak dengan pesan upgrade yang jelas.
-  if (preferredModel) {
-    const entry = MODEL_CATALOG.find((m) => m.id === preferredModel);
-    if (entry?.premiumOnly && !isPremiumUser) {
-      return respondJson(
-        {
-          error: `Model ${entry.name} khusus pengguna Pro.`,
-          upgradeUrl: UPGRADE_URL,
-        },
-        402
-      );
-    }
-  }
-
   if (!checkRateLimit(userId)) {
     return respondJson(
       { error: "Terlalu banyak permintaan. Tunggu sebentar ya." },
@@ -306,6 +279,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // These checks are independent after the account has been authenticated.
+  const [isPremiumUser, session, inputVerdict] = await Promise.all([
+    hasPremiumAccess(auth),
+    getSession(sessionId, userId),
+    guardInput(question).catch(cause => {
+      console.error("[api/assistant/chat] guardInput:", cause);
+      return null;
+    }),
+  ]);
+  if (!session) return respondJson({ error: "Sesi tidak ditemukan." }, 404);
+  if (inputVerdict && (!inputVerdict.allowed || inputVerdict.topicRedirect)) {
+    return respondJson({ error: SAFETY_REFUSAL_ID }, 400);
+  }
+
+  if (!isPremiumUser) {
+    return respondJson({ error: "Chat asisten AI tersedia di Eureka Pro.", upgradeUrl: UPGRADE_URL }, 402);
+  }
+
   traceTiming("auth, premium, dan rate limit");
 
   const selectedDahono = wantsDahono && dahonoApiKey()
@@ -324,24 +315,6 @@ export async function POST(req: NextRequest) {
       400
     );
   }
-
-  // ── Guardrails keamanan AI (NVIDIA NIM + heuristik lokal) ──────────
-  // Input diblokir SEBELUM LLM dipanggil. Redirect topik juga ditolak
-  // di sini dengan pesan sopan (klien menampilkannya sebagai error toast).
-  try {
-    const inputVerdict = await guardInput(question);
-    if (!inputVerdict.allowed || inputVerdict.topicRedirect) {
-      return respondJson({ error: SAFETY_REFUSAL_ID }, 400);
-    }
-  } catch (e) {
-    // Guardrail tidak boleh memutus chat bila ia sendiri error.
-    console.error("[api/assistant/chat] guardInput:", e);
-  }
-
-  traceTiming("guard input");
-
-  const session = await getSession(sessionId, userId);
-  if (!session) return respondJson({ error: "Sesi tidak ditemukan." }, 404);
 
   // ── Klarifikasi prompt ambigu ────────────────────────────────────────
   // Sebelum streaming, nilai prompt dengan panggilan AI ringan. Bila prompt

@@ -219,7 +219,7 @@ export async function buildProgressSummary(userId: string): Promise<string> {
  * Catatan: ringkasan catatan di-muat (ringkas) agar AI tahu isi topik user.
  */
 export async function buildUserContext(userId: string): Promise<AssistantContext> {
-  const [profileRow, subjectRows, notes] = await Promise.all([
+  const [profileRow, subjectRows, notes, progressSummary] = await Promise.all([
     db()
       .from("users")
       .select("name, username, profile_data, profile_md")
@@ -230,6 +230,7 @@ export async function buildUserContext(userId: string): Promise<AssistantContext
       .select("name")
       .order("name"),
     listNotesMeta(userId),
+    buildProgressSummary(userId),
   ]);
 
   const profileMd = profileRow?.data
@@ -246,7 +247,7 @@ export async function buildUserContext(userId: string): Promise<AssistantContext
     subjectList,
     hasBadges: typeof profileName === "string" && profileName.trim().length > 0,
     progressSummary:
-      (await buildProgressSummary(userId)) ||
+      progressSummary ||
       "- Belum ada data progres (kolom XP/streak kosong).",
     notes,
   };

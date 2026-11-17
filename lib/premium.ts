@@ -130,7 +130,7 @@ async function readSubscriptionStatus(userId: string, includeWelcomeTrial: boole
 
   const { data, error } = await client
     .from("users")
-    .select("is_premium, premium_until, premium_tier, created_at, trial_claimed_at")
+    .select("is_premium, premium_until, premium_tier, created_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -142,7 +142,7 @@ async function readSubscriptionStatus(userId: string, includeWelcomeTrial: boole
     : 0;
 
   // Profile dates only skip the extra lookup for older accounts. Auth owns the actual signup timestamp.
-  const eligibleProfile = includeWelcomeTrial && !data.trial_claimed_at && getWelcomeProUntil(data.created_at, now);
+  const eligibleProfile = includeWelcomeTrial && getWelcomeProUntil(data.created_at, now);
   const activePaid = data.is_premium === true && data.premium_tier !== "trial" &&
     (!data.premium_until || untilMs > now);
   if (eligibleProfile && !activePaid) {
@@ -187,6 +187,13 @@ export async function getPremiumStatus(userId: string): Promise<PremiumStatus> {
   return subscription.isPremium
     ? { ...subscription, freeAccessUntil }
     : { isPremium: true, tier: "trial", premiumUntil: freeAccessUntil, freeAccessUntil };
+}
+
+/** Feature gates already hold a verified Supabase session, including its signup time. */
+export async function hasPremiumAccess(account: { userId: string; createdAt?: string }): Promise<boolean> {
+  if (!account.userId) return false;
+  if (isDevAllAccessEnabled() || getFreeProUntil() || getWelcomeProUntil(account.createdAt)) return true;
+  return (await getSubscriptionStatus(account.userId)).isPremium;
 }
 
 /** Catat satu pemakaian fitur (dipanggil setelah berhasil). */
